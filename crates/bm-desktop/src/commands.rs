@@ -680,13 +680,30 @@ fn confirm_discard(key: u64) -> bool {
 
 // ------------------------------------------------------------------ File, Save and Save As
 
+/// What a Save As file type writes.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum SaveType {
+    Document,
+    /// The older document file format (version 0, spec 04d-C).
+    OlderDocument,
+    Formatted,
+}
+
 /// The Save As file types, in the reference program's order for each kind of document (spec 04d-B), as far as
 /// BrailleMaker writes them; the first is chosen when the dialog opens, every time.
-fn save_types(braille: bool) -> &'static [(&'static str, &'static str)] {
+fn save_types(braille: bool) -> &'static [(&'static str, &'static str, SaveType)] {
     if braille {
-        &[("Braille document (*.dxb)", "dxb"), ("Formatted braille (*.brf)", "brf")]
+        &[
+            ("Braille document (*.dxb)", "dxb", SaveType::Document),
+            ("Braille document, older format (*.dxb)", "dxb", SaveType::OlderDocument),
+            ("Formatted braille (*.brf)", "brf", SaveType::Formatted),
+        ]
     } else {
-        &[("Print document (*.dxp)", "dxp"), ("Formatted text (*.prf)", "prf")]
+        &[
+            ("Print document (*.dxp)", "dxp", SaveType::Document),
+            ("Print document, older format (*.dxp)", "dxp", SaveType::OlderDocument),
+            ("Formatted text (*.prf)", "prf", SaveType::Formatted),
+        ]
     }
 }
 
@@ -704,11 +721,11 @@ fn save(key: Option<u64>, as_new: bool) -> bool {
     let own = if braille { "dxb" } else { "dxp" };
     if !as_new && saved {
         if let Some(p) = path.as_ref().filter(|p| p.extension().is_some_and(|e| e.eq_ignore_ascii_case(own))) {
-            return write_document(key, p);
+            return write_document(key, p, 1);
         }
     }
     let types = save_types(braille);
-    let wildcard = types.iter().map(|(label, ext)| format!("{label}|*.{ext}")).collect::<Vec<_>>().join("|");
+    let wildcard = types.iter().map(|(label, ext, _)| format!("{label}|*.{ext}")).collect::<Vec<_>>().join("|");
     // The name proposed: the document's own, with the extension of the first type.
     let stem = name.rsplit_once('.').map_or(name.as_str(), |(s, _)| s).to_string();
     let f = app::frame();
@@ -726,19 +743,25 @@ fn save(key: Option<u64>, as_new: bool) -> bool {
         return false;
     }
     let Some(chosen) = dialog.get_path().map(std::path::PathBuf::from) else { return false };
-    // A name typed with the extension of one of the types gives that type; otherwise the chosen type does.
-    let typed = chosen.extension().and_then(|e| e.to_str()).and_then(|e| types.iter().find(|t| t.1.eq_ignore_ascii_case(e)));
-    let ext = typed.or_else(|| types.get(dialog.get_filter_index().max(0) as usize)).map_or(own, |t| t.1);
-    let chosen = if chosen.extension().is_some_and(|e| e.eq_ignore_ascii_case(ext)) { chosen } else { chosen.with_extension(ext) };
-    match ext {
-        "brf" => write_formatted(key, &chosen, true),
-        "prf" => write_formatted(key, &chosen, false),
-        _ => write_document(key, &chosen),
+    // The chosen type, unless the name is typed with the extension of another type, which then gives the first
+    // type with that extension.
+    let filter = types.get(dialog.get_filter_index().max(0) as usize).copied().unwrap_or(types[0]);
+    let typed = chosen.extension().and_then(|e| e.to_str()).map(str::to_string);
+    let kind = match typed {
+        Some(e) if !filter.1.eq_ignore_ascii_case(&e) => types.iter().find(|t| t.1.eq_ignore_ascii_case(&e)).copied().unwrap_or(filter),
+        _ => filter,
+    };
+    let chosen = if chosen.extension().is_some_and(|e| e.eq_ignore_ascii_case(kind.1)) { chosen } else { chosen.with_extension(kind.1) };
+    match kind.2 {
+        SaveType::Formatted => write_formatted(key, &chosen, braille),
+        SaveType::OlderDocument => write_document(key, &chosen, 0),
+        SaveType::Document => write_document(key, &chosen, 1),
     }
 }
 
-/// Writes the document as a document file (.dxp or .dxb), then takes that file as its own.
-fn write_document(key: u64, path: &Path) -> bool {
+/// Writes the document as a document file (.dxp or .dxb) in format `version` (1, or 0 for the older format), then
+/// takes that file as its own.
+fn write_document(key: u64, path: &Path, version: u16) -> bool {
     let Some(doc) = app::with(|a| {
         let i = a.index_of(key)?;
         let d = &a.docs[i];
@@ -751,17 +774,25 @@ fn write_document(key: u64, path: &Path) -> bool {
         let same = d.file_styles.len() == styles.len() && d.file_styles.iter().zip(&styles).all(|(f, s)| f.0 == s.0);
         Some(bm_core::dxfile::DxDocument {
             kind: if braille { bm_core::DocumentKind::Braille } else { bm_core::DocumentKind::Print },
-            version: 1,
+            version,
             page_numbering: d.page_numbers,
             translated_line: d.view.translated,
             six_key: braille && d.view.six_key,
-            // A table is named as the file it was read from names it (the program matches names in small letters).
-            tables: std::array::from_fn(|i| {
-                let stored = d.file_settings.get(32 + i * 8..40 + i * 8).map(|b| {
-                    b.iter().take_while(|&&c| c != 0).map(|&c| c as char).collect::<String>()
+            tables: {
+                // A table is named as the file it was read from names it (the program matches names in small letters).
+                let named: [String; 4] = std::array::from_fn(|i| {
+                    let stored = d.file_settings.get(32 + i * 8..40 + i * 8).map(|b| {
+                        b.iter().take_while(|&&c| c != 0).map(|&c| c as char).collect::<String>()
+                    });
+                    stored.filter(|s| s.eq_ignore_ascii_case(&d.tables[i])).unwrap_or_else(|| d.tables[i].clone())
                 });
-                stored.filter(|s| s.eq_ignore_ascii_case(&d.tables[i])).unwrap_or_else(|| d.tables[i].clone())
-            }),
+                // The older format gives older names where its code is among the document's initial codes.
+                if version == 0 {
+                    bm_core::dxfile::older_table_names(&named, |code| d.initial_codes.contains(&format!("[{code}]")))
+                } else {
+                    named
+                }
+            },
             text: shown.to_running(),
             style_index: if same { d.file_styles.iter().map(|f| f.1).collect() } else { Vec::new() },
             styles,

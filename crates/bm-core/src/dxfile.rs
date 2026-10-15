@@ -256,9 +256,43 @@ fn write_block(out: &mut Vec<u8>, values: Option<&[u16]>, strings: &[Vec<u8>]) {
     }
 }
 
-/// Writes a .dxp or .dxb file: the format version 1 a document without embedded objects is saved in (spec 05-B),
-/// the settings block the document was read with (new_settings for a new one) with BrailleMaker's own fields filled
-/// in, the body, and the styles.
+/// The table names a document file in the older format (version 0) gives in place of newer ones (spec 04d-C, from
+/// the reference program's compatibility list): older print-to-braille table, its older scan table (empty: kept),
+/// the newer table, its newer scan table (empty: any), and the code that must be in force for the older name to
+/// apply.
+const OLDER_TABLES: [(&str, &str, &str, &str, &str); 8] = [
+    ("NLAAUP", "", "NLAACP", "", "g1l"),
+    ("BRITIC", "ENGDXN", "BRITIC", "ENGDXP", "caplv1"),
+    ("ENMOCP", "GENDXN", "ENMOCP", "GENDXP", "caplv1"),
+    ("FRANCU", "", "FRANC", "", "g1l"),
+    ("DEUTUP", "", "DEUTCP", "", "g1l"),
+    ("GAELCP", "GENDXN", "GAELCP", "GENDXP", "caplv1"),
+    ("SPANU", "", "SPAN", "", "g1l"),
+    ("SVENUP", "GENDXN", "SVENUP", "GENDXP", "caplv1"),
+];
+
+/// The tables as a document file in the older format names them: the print-to-braille table and its scan table
+/// changed to their older names where the compatibility list has them and its code is in force (`in_force` says
+/// whether a code word, such as "g1l", is among the document's initial codes; inferred from the list, the matcher is
+/// not traced, spec 04d-C); the braille-to-print pair is written as it is.
+pub fn older_table_names(tables: &[String; 4], in_force: impl Fn(&str) -> bool) -> [String; 4] {
+    let mut out = tables.clone();
+    for (old, old_scan, new, new_scan, code) in OLDER_TABLES {
+        if tables[0].eq_ignore_ascii_case(new) && (new_scan.is_empty() || tables[1].eq_ignore_ascii_case(new_scan)) && in_force(code) {
+            out[0] = old.to_string();
+            if !old_scan.is_empty() {
+                out[1] = old_scan.to_string();
+            }
+            break;
+        }
+    }
+    out
+}
+
+/// Writes a .dxp or .dxb file in the document's format version: 1, the version a document without embedded
+/// objects is saved in (spec 05-B), or 0, the older format, which differs only in that number (spec 04d-C; its table
+/// names come from older_table_names). The settings block the document was read with (new_settings for a new one)
+/// with BrailleMaker's own fields filled in, the body, and the styles.
 pub fn write(doc: &DxDocument) -> Vec<u8> {
     let body: Vec<u8> = doc
         .text
@@ -274,7 +308,7 @@ pub fn write(doc: &DxDocument) -> Vec<u8> {
     out.extend_from_slice(&SIGNATURE.to_be_bytes());
     out.extend_from_slice(&2u16.to_be_bytes());
     out.extend_from_slice(&(if doc.kind == DocumentKind::Print { 1u16 } else { 0 }).to_be_bytes());
-    out.extend_from_slice(&1u16.to_be_bytes());
+    out.extend_from_slice(&doc.version.min(1).to_be_bytes());
     let mut s = if doc.settings.len() == SETTINGS { doc.settings.clone() } else { new_settings() };
     for (i, v) in doc.page_numbering.iter().enumerate() {
         s[2 * i..2 * i + 2].copy_from_slice(&v.to_be_bytes());
@@ -416,5 +450,19 @@ mod tests {
         assert_eq!(back.style_index, vec![0, 1]);
         assert_eq!(&back.settings[64..88], &new_settings()[64..88]);
         assert_eq!(write(&back), bytes);
+        // The older format differs only in its version number.
+        let old = write(&DxDocument { version: 0, ..back.clone() });
+        assert_eq!(old[9], 0);
+        assert_eq!(old[10..], bytes[10..]);
+    }
+
+    #[test]
+    fn the_older_format_uses_older_table_names_when_their_code_is_in_force() {
+        let t = |a: &str, b: &str| [a.to_string(), b.to_string(), "AMEBPC".to_string(), "AMEDXB".to_string()];
+        assert_eq!(older_table_names(&t("nlaacp", "NLADXP"), |c| c == "g1l"), t("NLAAUP", "NLADXP"));
+        assert_eq!(older_table_names(&t("nlaacp", "NLADXP"), |_| false), t("nlaacp", "NLADXP"));
+        assert_eq!(older_table_names(&t("BRITIC", "ENGDXP"), |c| c == "caplv1"), t("BRITIC", "ENGDXN"));
+        // The scan table must match where the list names one.
+        assert_eq!(older_table_names(&t("BRITIC", "OTHER"), |_| true), t("BRITIC", "OTHER"));
     }
 }
