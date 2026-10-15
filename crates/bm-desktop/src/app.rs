@@ -52,6 +52,8 @@ pub enum Hyphen {
 pub struct Style {
     pub name: String,
     pub nested: bool,
+    /// The codes that begin and end the style, in running text (codes marked 0x1C ... 0x1F, as the document file
+    /// stores them; a bracket is text).
     pub begin: String,
     pub end: String,
 }
@@ -106,6 +108,10 @@ pub struct Doc {
     pub view: View,
     pub hyphen: Hyphen,
     pub styles: Vec<Style>,
+    /// What the document file it was read from holds that BrailleMaker writes back as read: the 224-byte settings
+    /// block (empty for a new document), and the style names in the file's order with the index the file gives each.
+    pub file_settings: Vec<u8>,
+    pub file_styles: Vec<(String, u16)>,
     pub last_style: Option<Style>,
     pub highlight_anchor: Option<i64>,
     pub last_line_key: String,

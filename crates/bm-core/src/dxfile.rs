@@ -10,8 +10,18 @@
 //! - The body at offset 234: 8-bit text in code page 437, with each formatting code as the byte 0x1C, the code, the
 //!   byte 0x1F; 0x1E is a hard space.
 //!
+//! - After the body, two blocks hold the document's styles (spec 05-B (c)), each: u16 entry count, u16 0, u16 total
+//!   bytes of its strings (each counted with its NUL), u16 0, then one value per entry (2 bytes in the first block,
+//!   none in the second), then the strings, NUL terminated. The first block holds the style names, sorted, with a u16
+//!   index for each; the second holds two strings per style, its beginning codes and its ending codes, codes written
+//!   0x1C code 0x1F.
+//! - Settings +64 to +87 are the Table of Contents settings (spec 05-B (d)); the rest of the 224 bytes are optional
+//!   section descriptors, all zero in a document without optional sections.
+//!
 //! The text is returned as running text (bm_core::doctext): codes marked 0x1C ... 0x1F as in the file, a hard space
-//! as U+00A0, every other byte its code page 437 character; brackets in the text stay text.
+//! as U+00A0, every other byte its code page 437 character; brackets in the text stay text. Writing does the reverse
+//! and keeps the settings bytes a document was read with, so a document saved again keeps what BrailleMaker does not
+//! use itself.
 
 use crate::DocumentKind;
 
@@ -32,6 +42,46 @@ pub struct DxDocument {
     pub tables: [String; 4],
     /// The running text, codes marked 0x1C ... 0x1F (bm_core::doctext).
     pub text: String,
+    /// The styles stored with the document, in the file's order: name, beginning codes, ending codes, each in running
+    /// text (codes marked 0x1C ... 0x1F; a bracket is text).
+    pub styles: Vec<(String, String, String)>,
+    /// The index value the file gives each style name (written back as read).
+    pub style_index: Vec<u16>,
+    /// The 224-byte settings block as read, for writing back what BrailleMaker does not use itself.
+    pub settings: Vec<u8>,
+}
+
+/// The settings block of a new document. Fields BrailleMaker sets itself (page numbering, body length, translated
+/// line, six-key entry, tables) are filled in when the document is written. The others:
+/// - +10 1 and +12 8: constants the reference writes (spec 05).
+/// - +16 2 and +30 1201: the values every sample holds; what the reference gives a new document is not traced
+///   (spec 05-B (d), UNKNOWN), so the sample values are used.
+/// - +64 to +87: the Table of Contents settings the reference's loader sets for a document that has none (spec 05-B
+///   (d), observed), the same values every sample holds: contents style 1, the three switches off, number top level
+///   on, runover 4 and 2, left margins 1 and 1, increment 2, right margins 6 and 6, guide dots '"', maximum runover
+///   off, 0, levels one through 99.
+pub fn new_settings() -> Vec<u8> {
+    let mut s = vec![0u8; SETTINGS];
+    let mut put = |at: usize, v: u16| s[at..at + 2].copy_from_slice(&v.to_be_bytes());
+    put(10, 1);
+    put(12, 8);
+    put(16, 2);
+    put(30, 1201);
+    put(64, 1);
+    put(68, 4);
+    put(70, 2);
+    put(72, 1);
+    put(74, 1);
+    put(76, 2);
+    put(78, 6);
+    put(80, 6);
+    put(84, 0);
+    put(86, 99);
+    s[66] = 0;
+    s[67] = 1;
+    s[82] = b'"';
+    s[83] = 0;
+    s
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -119,6 +169,7 @@ pub fn read(d: &[u8]) -> Result<DxDocument, DxError> {
             b => cp437(b),
         })
         .collect();
+    let (styles, style_index) = read_styles(d, BODY + length).unwrap_or_default();
     Ok(DxDocument {
         kind,
         version,
@@ -127,7 +178,132 @@ pub fn read(d: &[u8]) -> Result<DxDocument, DxError> {
         six_key: u16_at(d, s + 28) != 0,
         tables,
         text,
+        styles,
+        style_index,
+        settings: d[HEADER..BODY].to_vec(),
     })
+}
+
+/// One block after the body: its values (`width` bytes each) and its strings. None when the file ends early or the
+/// block does not add up.
+fn read_block(d: &[u8], at: &mut usize, width: usize) -> Option<(Vec<u16>, Vec<Vec<u8>>)> {
+    let head = d.get(*at..*at + 8)?;
+    let (n, size) = (u16_at(head, 0) as usize, u16_at(head, 4) as usize);
+    *at += 8;
+    let values = (0..n).map(|i| if width == 2 { d.get(*at + 2 * i..*at + 2 * i + 2).map(|v| u16_at(v, 0)) } else { Some(0) }).collect::<Option<Vec<_>>>()?;
+    *at += width * n;
+    let strings: Vec<Vec<u8>> = d.get(*at..*at + size)?.split(|&b| b == 0).map(<[u8]>::to_vec).collect();
+    *at += size;
+    // The strings end in a NUL, so splitting leaves one empty piece after the last.
+    (strings.len() == n + 1 && strings.last().is_some_and(Vec::is_empty)).then(|| (values, strings[..n].to_vec()))
+}
+
+/// A stored style string to running text: codes marked 0x1C ... 0x1F as in the file, so a bracket in a style's text
+/// (",*apt]" in a contents title) stays text.
+fn codes_text(b: &[u8]) -> String {
+    b.iter().map(|&b| match b {
+        0x1C => crate::doctext::OPEN,
+        0x1F => crate::doctext::CLOSE,
+        b => cp437(b),
+    }).collect()
+}
+
+/// The two style blocks after the body.
+fn read_styles(d: &[u8], at: usize) -> Option<(Vec<(String, String, String)>, Vec<u16>)> {
+    let mut at = at;
+    let (index, names) = read_block(d, &mut at, 2)?;
+    let (_, codes) = read_block(d, &mut at, 0)?;
+    if codes.len() != 2 * names.len() {
+        return None;
+    }
+    let styles = names
+        .iter()
+        .enumerate()
+        .map(|(i, n)| (codes_text(n), codes_text(&codes[2 * i]), codes_text(&codes[2 * i + 1])))
+        .collect();
+    Some((styles, index))
+}
+
+/// A character in code page 437; '?' for one it does not have.
+fn to_cp437(c: char) -> u8 {
+    if (c as u32) < 0x80 {
+        return c as u8;
+    }
+    CP437_HIGH.iter().position(|&h| h == c).map_or(b'?', |i| 0x80 + i as u8)
+}
+
+/// A style string in running text to stored bytes.
+fn codes_bytes(t: &str) -> Vec<u8> {
+    t.chars().map(|c| match c {
+        crate::doctext::OPEN => 0x1C,
+        crate::doctext::CLOSE => 0x1F,
+        c => to_cp437(c),
+    }).collect()
+}
+
+/// One block after the body (the layout read_block reads).
+fn write_block(out: &mut Vec<u8>, values: Option<&[u16]>, strings: &[Vec<u8>]) {
+    let size: usize = strings.iter().map(|s| s.len() + 1).sum();
+    for v in [strings.len() as u16, 0, size as u16, 0] {
+        out.extend_from_slice(&v.to_be_bytes());
+    }
+    for v in values.unwrap_or(&[]) {
+        out.extend_from_slice(&v.to_be_bytes());
+    }
+    for s in strings {
+        out.extend_from_slice(s);
+        out.push(0);
+    }
+}
+
+/// Writes a .dxp or .dxb file: the format version 1 a document without embedded objects is saved in (spec 05-B),
+/// the settings block the document was read with (new_settings for a new one) with BrailleMaker's own fields filled
+/// in, the body, and the styles.
+pub fn write(doc: &DxDocument) -> Vec<u8> {
+    let body: Vec<u8> = doc
+        .text
+        .chars()
+        .map(|c| match c {
+            crate::doctext::OPEN => 0x1C,
+            crate::doctext::CLOSE => 0x1F,
+            '\u{a0}' => 0x1E,
+            c => to_cp437(c),
+        })
+        .collect();
+    let mut out = Vec::with_capacity(BODY + body.len() + 2048);
+    out.extend_from_slice(&SIGNATURE.to_be_bytes());
+    out.extend_from_slice(&2u16.to_be_bytes());
+    out.extend_from_slice(&(if doc.kind == DocumentKind::Print { 1u16 } else { 0 }).to_be_bytes());
+    out.extend_from_slice(&1u16.to_be_bytes());
+    let mut s = if doc.settings.len() == SETTINGS { doc.settings.clone() } else { new_settings() };
+    for (i, v) in doc.page_numbering.iter().enumerate() {
+        s[2 * i..2 * i + 2].copy_from_slice(&v.to_be_bytes());
+    }
+    s[18..22].copy_from_slice(&(body.len() as u32).to_be_bytes());
+    s[26..28].copy_from_slice(&u16::from(doc.translated_line).to_be_bytes());
+    s[28..30].copy_from_slice(&u16::from(doc.six_key).to_be_bytes());
+    for (i, t) in doc.tables.iter().enumerate() {
+        let mut name = [0u8; 8];
+        for (j, c) in t.chars().take(8).enumerate() {
+            name[j] = to_cp437(c);
+        }
+        s[32 + i * 8..40 + i * 8].copy_from_slice(&name);
+    }
+    out.extend_from_slice(&s);
+    out.extend_from_slice(&body);
+    // The names as stored are sorted (spec 05-B (c)); a document read from a file keeps its order and index values,
+    // others are sorted by name with each name's place as its index (INTERIM: the reference lists the index values in
+    // its name table's own order, which is not traced).
+    let mut styles: Vec<&(String, String, String)> = doc.styles.iter().collect();
+    let kept = doc.style_index.len() == styles.len();
+    if !kept {
+        styles.sort_by(|a, b| codes_bytes(&a.0).cmp(&codes_bytes(&b.0)));
+    }
+    let index: Vec<u16> = if kept { doc.style_index.clone() } else { (0..styles.len() as u16).collect() };
+    write_block(&mut out, Some(&index), &styles.iter().map(|s| codes_bytes(&s.0)).collect::<Vec<_>>());
+    let codes: Vec<Vec<u8>> = styles.iter().flat_map(|s| [codes_bytes(&s.1), codes_bytes(&s.2)]).collect();
+    write_block(&mut out, None, &codes);
+    out
 }
 
 #[cfg(test)]
@@ -200,8 +376,45 @@ mod tests {
                 let near = |v: &[char]| v[k.saturating_sub(30)..(k + 30).min(v.len())].iter().collect::<String>();
                 panic!("{}: differs at {k}: back {:?} file {:?}", p.display(), near(&a), near(&b));
             }
+            // Written back, the file is the same, byte for byte.
+            let bytes = std::fs::read(&p).unwrap();
+            assert!(!doc.styles.is_empty(), "{}", p.display());
+            let again = write(&doc);
+            if again != bytes {
+                let k = again.iter().zip(&bytes).position(|(x, y)| x != y).unwrap_or(again.len().min(bytes.len()));
+                panic!("{}: written file differs at byte {k} (lengths {} and {})", p.display(), again.len(), bytes.len());
+            }
             count += 1;
         }
         assert!(count > 0);
+    }
+
+    #[test]
+    fn a_new_document_is_written_and_read_back() {
+        let doc = DxDocument {
+            kind: DocumentKind::Braille,
+            version: 1,
+            page_numbering: [4, 4, 2, 2, 1],
+            translated_line: true,
+            six_key: false,
+            tables: ["amerc".into(), "AMEDXP".into(), "AMEBPC".into(), "AMEDXB".into()],
+            text: "\x1cp\x1f,! cat\u{a0}sat [x]".into(),
+            styles: vec![("para.".into(), "\x1cp\x1f".into(), String::new()), ("bold".into(), "\x1ccs~b\x1f".into(), "\x1cce~b\x1f".into())],
+            style_index: Vec::new(),
+            settings: Vec::new(),
+        };
+        let bytes = write(&doc);
+        assert_eq!(&bytes[..10], b"\xFFDSI\x00\x02\x00\x00\x00\x01");
+        let back = read(&bytes).unwrap();
+        assert_eq!(back.text, doc.text);
+        assert_eq!(back.tables, doc.tables);
+        assert_eq!(back.page_numbering, doc.page_numbering);
+        assert!(back.translated_line && !back.six_key);
+        // Styles are stored sorted by name.
+        assert_eq!(back.styles[0], ("bold".into(), "\x1ccs~b\x1f".into(), "\x1cce~b\x1f".into()));
+        assert_eq!(back.styles[1].0, "para.");
+        assert_eq!(back.style_index, vec![0, 1]);
+        assert_eq!(&back.settings[64..88], &new_settings()[64..88]);
+        assert_eq!(write(&back), bytes);
     }
 }

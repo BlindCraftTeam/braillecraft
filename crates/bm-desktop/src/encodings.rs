@@ -88,6 +88,16 @@ impl Encoding {
         map
     }
 
+    /// The cell (dot pattern) a character of this encoding stands for, upper and lower case alike; None for a
+    /// character the encoding does not have.
+    pub fn cell_of(&self, c: char) -> Option<usize> {
+        let map = self.reverse();
+        map.get(&c)
+            .or_else(|| c.to_lowercase().next().and_then(|l| map.get(&l)))
+            .or_else(|| c.to_uppercase().next().and_then(|u| map.get(&u)))
+            .copied()
+    }
+
     /// This encoding's characters back to cells, for back-translation and for changing encodings. Upper and lower
     /// case stand for the same cell; a character with no cell becomes a blank cell.
     pub fn text_to_cells(&self, text: &str) -> String {

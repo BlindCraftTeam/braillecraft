@@ -109,7 +109,12 @@ pub fn template_style_list(name: &str) -> Vec<Style> {
     template_styles(name)
         .map(|t| {
             t.entries()
-                .map(|(name, begin, end)| Style { name: name.to_string(), nested: !name.ends_with('.'), begin, end })
+                .map(|(name, begin, end)| Style {
+                    name: name.to_string(),
+                    nested: !name.ends_with('.'),
+                    begin: codes_from_dialog(&begin),
+                    end: codes_from_dialog(&end),
+                })
                 .collect()
         })
         .unwrap_or_default()
@@ -117,7 +122,34 @@ pub fn template_style_list(name: &str) -> Vec<Style> {
 
 /// A document's styles as the engine looks them up.
 pub fn style_table(styles: &[Style]) -> StyleTable {
-    StyleTable::from_text(styles.iter().map(|s| (s.name.as_str(), s.begin.as_str(), s.end.as_str())))
+    let bytes = |t: &str| -> Vec<u8> {
+        t.chars()
+            .filter(|&c| (c as u32) < 256)
+            .map(|c| match c {
+                bm_core::doctext::OPEN => 0x1c,
+                bm_core::doctext::CLOSE => 0x1f,
+                c => c as u8,
+            })
+            .collect()
+    };
+    StyleTable::new(styles.iter().map(|s| (s.name.clone(), bytes(&s.begin), bytes(&s.end))).collect())
+}
+
+/// Style codes as a template or a dialog writes them ("[l][kps]") to running text (codes marked 0x1C ... 0x1F).
+pub fn codes_from_dialog(text: &str) -> String {
+    Shown::marked(text).to_running()
+}
+
+/// Style codes in running text as a dialog shows them, each code in brackets.
+pub fn codes_for_dialog(running: &str) -> String {
+    running
+        .chars()
+        .map(|c| match c {
+            bm_core::doctext::OPEN => '[',
+            bm_core::doctext::CLOSE => ']',
+            c => c,
+        })
+        .collect()
 }
 
 /// Translates running text (codes marked 0x1C ... 0x1F, brackets as text; bm_core::doctext) with the rules table

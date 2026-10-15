@@ -628,6 +628,24 @@ pub fn locate(pages: &[Page], pos: usize) -> (usize, usize, usize) {
     before.unwrap_or((1, 1, 1))
 }
 
+/// The text of a formatted file (.brf, .prf) from laid-out pages, as the reference program's page writer writes it
+/// (spec 04d-B): every line of every page with its trailing spaces left off and a line end after it, and a form feed
+/// after every page, the last one included; nothing before the first page or after the last form feed. The line end
+/// is CR LF: the reference opens the file in Windows text mode, which writes each line end as CR LF (spec 04d-B
+/// item 1, inferred from the open mode). The characters are the cells as the pages hold them; the caller maps them
+/// to the chosen encoding.
+pub fn formatted_text(pages: &[Page]) -> String {
+    let mut out = String::new();
+    for page in pages {
+        for line in &page.lines {
+            out.push_str(line.text.trim_end_matches(' '));
+            out.push_str("\r\n");
+        }
+        out.push('\u{c}');
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -750,5 +768,11 @@ mod tests {
         assert_eq!(locate(&pages, 99), (2, 1, 4));
         let pages = format(&m("[p]\nab"), &Layout::braille(8, 2), None);
         assert_eq!(locate(&pages, 0), (1, 1, 3));
+    }
+
+    #[test]
+    fn a_formatted_file_has_trimmed_lines_and_a_form_feed_after_every_page() {
+        let pages = format(&m("[p]\nab cd[pg]ef"), &Layout::braille(8, 2), None);
+        assert_eq!(formatted_text(&pages), "  ab cd\r\n\r\n\u{c}ef\r\n\r\n\u{c}");
     }
 }

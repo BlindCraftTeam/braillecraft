@@ -19,7 +19,7 @@ use bm_core::doctext::Shown;
 use bm_core::table_list::TableList;
 
 // Messages for parts of the program that later build steps bring. They say what is missing and where it comes.
-const PLANNED_SAVE: &str = "Saving needs the BrailleMaker document format, which is built in step 7 of the plan. Until then, copy the text out with Select All and Copy.";
+const PLANNED_EBRAILLE: &str = "eBraille output is built after the formatted braille, document and PEF outputs.";
 const PLANNED_PRINT: &str = "Printing is built in step 9 of the plan.";
 const PLANNED_EMBOSS: &str = "Embossing (Index and Enabling embossers, and emboss to file) is built in step 10 of the plan.";
 const PLANNED_SPELL: &str = "The spell checker (Hunspell dictionaries) is built after the core features of version 1.";
@@ -229,7 +229,13 @@ pub fn run(id: i32, checked: bool) {
         1101 => file_new(),
         1102 => open_file(),
         1103 => close_document(None),
-        1105 | 1106 | 1107 => message(PLANNED_SAVE),
+        1105 if has_doc => {
+            save(None, false);
+        }
+        1106 if has_doc => {
+            save(None, true);
+        }
+        1107 => message(PLANNED_EBRAILLE),
         1109 => translate_document(),
         1111 => print(),
         1112 => emboss(),
@@ -284,7 +290,7 @@ pub fn run(id: i32, checked: bool) {
         2801 => set_grade("[g1l]"),
         2802 => set_grade("[g2u]"),
         2901..=2905 => set_hyphen(id),
-        2606 => message(PLANNED_SAVE),
+        2606 => message(PLANNED_EBRAILLE),
         2608 => add_style(),
         2609 => modify_style(),
         2610 => delete_style(),
@@ -588,7 +594,18 @@ fn open_dx_document(path: &Path) {
         if let Some(i) = a.index_of(key) {
             let d = &mut a.docs[i];
             d.dirty = false;
+            d.saved = true;
             d.path = Some(path.to_path_buf());
+            // The document's own styles, as the reference program loads them from the file (spec 05-B (c)).
+            if !doc.styles.is_empty() {
+                d.styles = doc
+                    .styles
+                    .iter()
+                    .map(|(name, begin, end)| Style { name: name.clone(), nested: !name.ends_with('.'), begin: begin.clone(), end: end.clone() })
+                    .collect();
+            }
+            d.file_styles = doc.styles.iter().map(|s| s.0.clone()).zip(doc.style_index.iter().copied()).collect();
+            d.file_settings = doc.settings.clone();
             d.view.translated = doc.translated_line;
             d.view.six_key = braille && doc.six_key;
             d.page_numbers = doc.page_numbering;
@@ -656,12 +673,220 @@ fn confirm_discard(key: u64) -> bool {
     }
     match yes_no_cancel(&format!("Document \"{name}\" not saved!  Save changes?")) {
         None => false,
-        Some(true) => {
-            message(PLANNED_SAVE);
-            false
-        }
+        Some(true) => save(Some(key), false),
         Some(false) => true,
     }
+}
+
+// ------------------------------------------------------------------ File, Save and Save As
+
+/// The Save As file types, in the reference program's order for each kind of document (spec 04d-B), as far as
+/// BrailleMaker writes them; the first is chosen when the dialog opens, every time.
+fn save_types(braille: bool) -> &'static [(&'static str, &'static str)] {
+    if braille {
+        &[("Braille document (*.dxb)", "dxb"), ("Formatted braille (*.brf)", "brf")]
+    } else {
+        &[("Print document (*.dxp)", "dxp"), ("Formatted text (*.prf)", "prf")]
+    }
+}
+
+/// File, Save (`as_new` false) and File, Save As (true) for the document with this key (the active one when None).
+/// A document read from or saved to a document file (.dxp, .dxb) is saved there again; any other is asked about.
+/// Returns false when nothing was saved.
+fn save(key: Option<u64>, as_new: bool) -> bool {
+    let Some(key) = key.or_else(|| app::with(|a| a.doc().map(|d| d.key))) else { return false };
+    let Some((kind, path, saved, name)) =
+        app::with(|a| a.index_of(key).map(|i| (a.docs[i].kind, a.docs[i].path.clone(), a.docs[i].saved, a.docs[i].name.clone())))
+    else {
+        return false;
+    };
+    let braille = kind == DocKind::Braille;
+    let own = if braille { "dxb" } else { "dxp" };
+    if !as_new && saved {
+        if let Some(p) = path.as_ref().filter(|p| p.extension().is_some_and(|e| e.eq_ignore_ascii_case(own))) {
+            return write_document(key, p);
+        }
+    }
+    let types = save_types(braille);
+    let wildcard = types.iter().map(|(label, ext)| format!("{label}|*.{ext}")).collect::<Vec<_>>().join("|");
+    // The name proposed: the document's own, with the extension of the first type.
+    let stem = name.rsplit_once('.').map_or(name.as_str(), |(s, _)| s).to_string();
+    let f = app::frame();
+    let dialog = FileDialog::builder(&f)
+        .with_message("Save As")
+        .with_wildcard(&wildcard)
+        .with_default_file(&format!("{stem}.{own}"))
+        .with_style(FileDialogStyle::Save | FileDialogStyle::OverwritePrompt)
+        .build();
+    if let Some(dir) = path.as_ref().and_then(|p| p.parent()) {
+        dialog.set_directory(&dir.to_string_lossy());
+    }
+    dialog.set_filter_index(0);
+    if dialog.show_modal() != wxdragon::id::ID_OK {
+        return false;
+    }
+    let Some(chosen) = dialog.get_path().map(std::path::PathBuf::from) else { return false };
+    // A name typed with the extension of one of the types gives that type; otherwise the chosen type does.
+    let typed = chosen.extension().and_then(|e| e.to_str()).and_then(|e| types.iter().find(|t| t.1.eq_ignore_ascii_case(e)));
+    let ext = typed.or_else(|| types.get(dialog.get_filter_index().max(0) as usize)).map_or(own, |t| t.1);
+    let chosen = if chosen.extension().is_some_and(|e| e.eq_ignore_ascii_case(ext)) { chosen } else { chosen.with_extension(ext) };
+    match ext {
+        "brf" => write_formatted(key, &chosen, true),
+        "prf" => write_formatted(key, &chosen, false),
+        _ => write_document(key, &chosen),
+    }
+}
+
+/// Writes the document as a document file (.dxp or .dxb), then takes that file as its own.
+fn write_document(key: u64, path: &Path) -> bool {
+    let Some(doc) = app::with(|a| {
+        let i = a.index_of(key)?;
+        let d = &a.docs[i];
+        let braille = d.kind == DocKind::Braille;
+        let shown = d.shown();
+        // Braille is stored in North American ASCII braille, whatever encoding it is shown in.
+        let shown = if braille { translation::convert_braille(&shown, a.encoding(), encodings::find(encodings::DEFAULT)) } else { shown };
+        let styles: Vec<(String, String, String)> = d.styles.iter().map(|s| (s.name.clone(), s.begin.clone(), s.end.clone())).collect();
+        // The file's style order and index values are kept while the style names are the ones it was read with.
+        let same = d.file_styles.len() == styles.len() && d.file_styles.iter().zip(&styles).all(|(f, s)| f.0 == s.0);
+        Some(bm_core::dxfile::DxDocument {
+            kind: if braille { bm_core::DocumentKind::Braille } else { bm_core::DocumentKind::Print },
+            version: 1,
+            page_numbering: d.page_numbers,
+            translated_line: d.view.translated,
+            six_key: braille && d.view.six_key,
+            // A table is named as the file it was read from names it (the program matches names in small letters).
+            tables: std::array::from_fn(|i| {
+                let stored = d.file_settings.get(32 + i * 8..40 + i * 8).map(|b| {
+                    b.iter().take_while(|&&c| c != 0).map(|&c| c as char).collect::<String>()
+                });
+                stored.filter(|s| s.eq_ignore_ascii_case(&d.tables[i])).unwrap_or_else(|| d.tables[i].clone())
+            }),
+            text: shown.to_running(),
+            style_index: if same { d.file_styles.iter().map(|f| f.1).collect() } else { Vec::new() },
+            styles,
+            settings: d.file_settings.clone(),
+        })
+    }) else {
+        return false;
+    };
+    let bytes = bm_core::dxfile::write(&doc);
+    if let Err(e) = std::fs::write(path, &bytes) {
+        message(&format!("{}: {e}", path.display()));
+        return false;
+    }
+    app::with(|a| {
+        if let Some(i) = a.index_of(key) {
+            let d = &mut a.docs[i];
+            d.path = Some(path.to_path_buf());
+            d.name = path.file_name().map_or_else(|| d.name.clone(), |n| n.to_string_lossy().into_owned());
+            d.untitled = false;
+            d.saved = true;
+            d.dirty = false;
+            d.file_settings = bytes[10..234].to_vec();
+            // As written: read back, the file gives its own order and index values.
+            if let Ok(back) = bm_core::dxfile::read(&bytes) {
+                d.file_styles = back.styles.iter().map(|s| s.0.clone()).zip(back.style_index.iter().copied()).collect();
+                d.styles = back
+                    .styles
+                    .iter()
+                    .map(|(name, begin, end)| Style { name: name.clone(), nested: !name.ends_with('.'), begin: begin.clone(), end: end.clone() })
+                    .collect();
+            }
+            child_title_update(d);
+        }
+        a.set_title();
+    });
+    true
+}
+
+fn child_title_update(d: &app::Doc) {
+    app::child_set_title(&d.frame, &d.full_name());
+}
+
+/// The encodings Save As offers for formatted braille, in the reference program's order (spec 04d-B (a), (f)):
+/// "12.4 Compatible (CAPS)", the national encodings, "Unicode Braille Patterns"; the first is chosen every time.
+fn brf_encodings() -> Vec<String> {
+    let mut list = vec!["12.4 Compatible (CAPS)".to_string()];
+    list.extend(encodings::all().iter().map(|e| e.name.clone()));
+    list.push("Unicode Braille Patterns".to_string());
+    list
+}
+
+/// One cell (dot pattern) as the chosen encoding writes it into a formatted braille file (spec 04d-B (f)): CAPS is
+/// North American ASCII braille in capitals; a national encoding writes its character as one byte when it is 0 to
+/// 255 and '#' otherwise (the reference writes a character its code page cannot hold as '#'); Unicode braille writes
+/// the cell in UTF-8.
+fn brf_cell(out: &mut Vec<u8>, choice: usize, pattern: usize) {
+    let all = encodings::all();
+    if choice == 0 {
+        let c = encodings::find(encodings::DEFAULT).cell_char(pattern).to_ascii_uppercase();
+        out.push(if c.is_ascii() { c as u8 } else { b'#' });
+    } else if let Some(e) = all.get(choice - 1) {
+        let c = e.cell_char(pattern) as u32;
+        out.push(if c <= 0xFF { c as u8 } else { b'#' });
+    } else {
+        let mut buf = [0u8; 4];
+        out.extend_from_slice(char::from_u32(0x2800 + pattern as u32).unwrap_or(' ').encode_utf8(&mut buf).as_bytes());
+    }
+}
+
+/// Save As formatted braille (.brf) for a braille document or formatted text (.prf) for a print document: the
+/// document laid out into pages and written as the reference program's page writer writes them (spec 04d-B). The
+/// document itself keeps its own file and name.
+fn write_formatted(key: u64, path: &Path, braille: bool) -> bool {
+    let choice = if braille {
+        let list = brf_encodings();
+        let refs: Vec<&str> = list.iter().map(String::as_str).collect();
+        let f = app::frame();
+        let d = SingleChoiceDialog::builder(&f, "Braille encoding of the file:", "Formatted braille", &refs).build();
+        d.set_selection(0);
+        if d.show_modal() != wxdragon::id::ID_OK {
+            return false;
+        }
+        d.get_selection().max(0) as usize
+    } else {
+        0
+    };
+    let Some((pages, shown_in)) = app::with(|a| {
+        let i = a.index_of(key)?;
+        let shown = a.docs[i].shown();
+        Some((a.laid_out(i, &shown), a.encoding()))
+    }) else {
+        return false;
+    };
+    let mut out = Vec::new();
+    if braille {
+        // The pages hold the document's characters in the encoding it is shown in; page numbers the formatter adds
+        // are North American ASCII braille.
+        let numbers = encodings::find(encodings::DEFAULT);
+        // Each character with whether the formatter added it, laid out as format::formatted_text lays it out.
+        let chars = pages.iter().flat_map(|p| {
+            p.lines.iter().flat_map(|l| {
+                let line: Vec<(char, bool)> = l.text.trim_end_matches(' ').chars().zip(l.sources.iter().map(Option::is_none)).collect();
+                line.into_iter().chain([('\r', false), ('\n', false)])
+            }).chain([('\u{c}', false)])
+        });
+        for (c, formatter) in chars {
+            match c {
+                '\r' | '\n' | '\u{c}' | ' ' | '\u{a0}' => out.push(if c == '\u{a0}' { b' ' } else { c as u8 }),
+                c => {
+                    let cell = if formatter { numbers.cell_of(c) } else { shown_in.cell_of(c) };
+                    match cell {
+                        Some(p) => brf_cell(&mut out, choice, p),
+                        None => out.push(b'*'),
+                    }
+                }
+            }
+        }
+    } else {
+        out.extend_from_slice(bm_core::format::formatted_text(&pages).replace('\u{a0}', " ").as_bytes());
+    }
+    if let Err(e) = std::fs::write(path, &out) {
+        message(&format!("{}: {e}", path.display()));
+        return false;
+    }
+    true
 }
 
 /// File, Close (and the close box of a document window).
@@ -1395,8 +1620,16 @@ fn add_style() {
             doc.styles.push(Style {
                 name,
                 nested,
-                begin: if begin.is_empty() { based.as_ref().map(|s| s.begin.clone()).unwrap_or_default() } else { begin },
-                end: if end.is_empty() { based.map(|s| s.end).unwrap_or_default() } else { end },
+                begin: if begin.is_empty() {
+                    based.as_ref().map(|s| s.begin.clone()).unwrap_or_default()
+                } else {
+                    crate::translation::codes_from_dialog(&begin)
+                },
+                end: if end.is_empty() {
+                    based.map(|s| s.end).unwrap_or_default()
+                } else {
+                    crate::translation::codes_from_dialog(&end)
+                },
             });
             doc.last_line_key.clear();
         }
@@ -1416,8 +1649,8 @@ fn modify_style() {
     let load = move |d: &Dlg| {
         if let Some(name) = d.selected_text(8) {
             if let Some(s) = app::with(|a| a.doc().and_then(|doc| doc.styles.iter().find(|s| s.name == name).cloned())) {
-                d.set_text(12, &s.begin);
-                d.set_text(14, &s.end);
+                d.set_text(12, &crate::translation::codes_for_dialog(&s.begin));
+                d.set_text(14, &crate::translation::codes_for_dialog(&s.end));
                 // The code fields come disabled in the dialog resource; with a style chosen they can be edited.
                 for cid in 11..=14 {
                     d.enable(cid, true);
@@ -1475,8 +1708,15 @@ fn modify_style() {
         app::with(|a| {
             if let Some(doc) = a.doc_mut() {
                 if let Some(s) = doc.styles.iter_mut().find(|s| s.name == name) {
-                    s.begin = begin;
-                    s.end = end;
+                    // A field is taken back only when it was changed, so text in a style that reads like a bracket
+                    // (a braille cell in a contents title) is not made into a code by showing it.
+                    use crate::translation::{codes_for_dialog, codes_from_dialog};
+                    if begin != codes_for_dialog(&s.begin) {
+                        s.begin = codes_from_dialog(&begin);
+                    }
+                    if end != codes_for_dialog(&s.end) {
+                        s.end = codes_from_dialog(&end);
+                    }
                 }
                 doc.last_line_key.clear();
             }
