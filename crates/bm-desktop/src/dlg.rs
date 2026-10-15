@@ -33,6 +33,9 @@ pub enum Value {
 
 const XRC: &str = include_str!("../../../ui-native/dialogs.xrc");
 
+/// Room a push button needs beside its text: the padding and border each side.
+const BUTTON_PADDING: i32 = 24;
+
 /// Loads the dialog resources; call once at start.
 pub fn load_resources() -> Result<(), String> {
     let res = XmlResource::get();
@@ -70,8 +73,123 @@ impl Dlg {
         if let Some(t) = title {
             dialog.set_label(t);
         }
-        dialog.centre();
-        Dlg { id, dialog }
+        let d = Dlg { id, dialog };
+        d.fit_labels();
+        d.dialog.centre();
+        d
+    }
+
+    /// The dialogs are laid out in dialog units for the font of the system they came from. Where a one-line label
+    /// needs more room in this system's font, the whole dialog is widened in proportion, positions and widths alike,
+    /// so its layout stays as it is; text that runs over several lines is then wrapped to its width, as Windows
+    /// static text wraps by itself.
+    fn fit_labels(&self) {
+        if cfg!(not(windows)) {
+            self.fit_drop_downs();
+        }
+        let mut factor = 1.0f64;
+        let mut several_lines = Vec::new();
+        for (cid, kind) in self.controls() {
+            let Some(w) = self.win(*cid) else { continue };
+            let (best, given) = (w.get_best_size(), w.get_size());
+            if given.width <= 0 {
+                continue;
+            }
+            // The size a control is given becomes its minimum, so its best height is never less than that; the
+            // number of lines it holds comes from the height of one line of its font.
+            let line = w.get_text_extent("Ag").height.max(1);
+            let needed = match kind {
+                Ctl::Static if given.height >= 2 * line => {
+                    several_lines.push(*cid);
+                    continue;
+                }
+                Ctl::Check | Ctl::Radio | Ctl::Static | Ctl::Box => best.width,
+                // A button's best size has a minimum width of its own; its text and the button's padding are what
+                // must fit.
+                Ctl::Button => {
+                    let label = w.get_label().unwrap_or_default().replace('&', "");
+                    w.get_text_extent(&label).width + BUTTON_PADDING
+                }
+                _ => continue,
+            };
+            factor = factor.max(needed as f64 / given.width as f64);
+        }
+        if factor > 1.0 {
+            for (cid, _) in self.controls() {
+                if let Some(w) = self.win(*cid) {
+                    let (p, s) = (w.get_position(), w.get_size());
+                    w.move_window((p.x as f64 * factor).round() as i32, p.y);
+                    w.set_size(Size::new((s.width as f64 * factor).ceil() as i32, s.height));
+                }
+            }
+            let c = self.dialog.get_client_size();
+            self.dialog.set_client_size(Size::new((c.width as f64 * factor).ceil() as i32, c.height));
+        }
+        for cid in several_lines {
+            if let Some(s) = self.win(cid).and_then(|w| w.as_widget::<StaticText>()) {
+                s.wrap(s.get_size().width);
+            }
+        }
+    }
+
+    /// A drop-down list is given the height of its open list, as in Windows dialogs, where that height sizes the
+    /// list and the closed box is one row (12 dialog units) high. Elsewhere the given height would size the closed
+    /// box, so it takes its own height, which is more than that row: what lies below the row moves down by the
+    /// difference, a group around it grows, and the dialog grows. A Windows list box shortens itself to whole rows,
+    /// which keeps it clear of a control placed just below its edge; here such a list ends above that control.
+    fn fit_drop_downs(&self) {
+        let row = dialog_units(&self.dialog, 0, 12).height;
+        let mut drop_downs: Vec<(i32, i32)> = self
+            .controls()
+            .iter()
+            .filter(|(_, kind)| *kind == Ctl::Combo)
+            .filter_map(|(cid, _)| self.win(*cid).map(|w| (w.get_position().y, *cid)))
+            .collect();
+        drop_downs.sort();
+        for (_, cid) in drop_downs {
+            let Some(w) = self.win(cid) else { continue };
+            let (p, s) = (w.get_position(), w.get_size());
+            w.set_min_size(Size::new(-1, -1));
+            let height = w.get_best_size().height;
+            w.set_size(Size::new(s.width, height));
+            let extra = height - row;
+            for (other, kind) in self.controls() {
+                let Some(o) = self.win(*other).filter(|_| *other != cid) else { continue };
+                let (op, os) = (o.get_position(), o.get_size());
+                let beside = op.x < p.x + s.width && p.x < op.x + os.width;
+                if *kind == Ctl::List && beside && op.y < p.y {
+                    // Ended above the drop-down below.
+                    continue;
+                } else if extra > 0 && op.y >= p.y + row / 2 {
+                    o.move_window(op.x, op.y + extra);
+                } else if extra > 0 && op.y < p.y && op.y + os.height > p.y + row / 2 {
+                    o.set_min_size(Size::new(-1, -1));
+                    o.set_size(Size::new(os.width, os.height + extra));
+                }
+            }
+            if extra > 0 {
+                let c = self.dialog.get_client_size();
+                self.dialog.set_client_size(Size::new(c.width, c.height + extra));
+            }
+        }
+        for (cid, kind) in self.controls() {
+            let Some(l) = self.win(*cid).filter(|_| *kind == Ctl::List) else { continue };
+            let (lp, ls) = (l.get_position(), l.get_size());
+            let below = self
+                .controls()
+                .iter()
+                .filter(|(other, _)| other != cid)
+                .filter_map(|(other, _)| self.win(*other))
+                .map(|o| (o.get_position(), o.get_size()))
+                .filter(|(op, os)| op.x < lp.x + ls.width && lp.x < op.x + os.width)
+                .map(|(op, _)| op.y)
+                .filter(|y| *y > lp.y && *y < lp.y + ls.height)
+                .min();
+            if let Some(y) = below {
+                l.set_min_size(Size::new(-1, -1));
+                l.set_size(Size::new(ls.width, y - lp.y - 2));
+            }
+        }
     }
 
     fn controls(&self) -> &'static [(i32, Ctl)] {
