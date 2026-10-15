@@ -33,6 +33,18 @@ thread_local! {
     static STYLES: RefCell<HashMap<String, Rc<StyleTable>>> = RefCell::new(HashMap::new());
     /// The region Document, Translation Tables lists (a region bit, or all); Western Hemisphere at first.
     static REGION: Cell<u32> = const { Cell::new(1) };
+    /// The folder of the rule scripts coded files are made with (tables/rule-scripts).
+    static RULES: RefCell<Option<std::path::PathBuf>> = const { RefCell::new(None) };
+}
+
+/// A coded braille (.bru) or coded text (.txt) file from a document body as the document file stores it (codes as
+/// 0x1C name 0x1F): the body through the coding script for braille or for print documents, then the line wrapping
+/// script, as the reference program makes these files (spec 04d-C, spec 20).
+pub fn coded(body: &[u8], braille: bool) -> Result<Vec<u8>, String> {
+    let folder = RULES.with(|r| r.borrow().clone()).ok_or("The rule scripts were not found.")?;
+    let open = |name: &str| bm_core::rule_script::RuleScript::open(&folder.join(name)).map_err(|e| format!("{name}: {e}"));
+    let mut scripts = [open(if braille { "coded-braille.rules" } else { "coded-text.rules" })?, open("coded-wrap.rules")?];
+    bm_core::rule_script::run_all(&mut scripts, body).map_err(|e| e.to_string())
 }
 
 /// Reads the table index and the list of table sets by language from `folder`; translation reports an error until
@@ -45,6 +57,7 @@ pub fn load(folder: &Path) -> Result<usize, String> {
     let mut braille = print.clone();
     braille.print_document = false;
     TABLES.with(|t| *t.borrow_mut() = Some(set));
+    RULES.with(|r| *r.borrow_mut() = Some(folder.join("rule-scripts")));
     LANGUAGES.with(|l| *l.borrow_mut() = Some((print, braille)));
     LIST.with(|l| *l.borrow_mut() = list);
     Ok(n)

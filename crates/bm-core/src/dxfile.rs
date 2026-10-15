@@ -256,6 +256,20 @@ fn write_block(out: &mut Vec<u8>, values: Option<&[u16]>, strings: &[Vec<u8>]) {
     }
 }
 
+/// Running text (codes marked 0x1C ... 0x1F) as a document file stores its body: 8-bit code page 437, codes as the
+/// bytes 0x1C and 0x1F, a hard space as 0x1E.
+pub fn body_bytes(running: &str) -> Vec<u8> {
+    running
+        .chars()
+        .map(|c| match c {
+            crate::doctext::OPEN => 0x1C,
+            crate::doctext::CLOSE => 0x1F,
+            '\u{a0}' => 0x1E,
+            c => to_cp437(c),
+        })
+        .collect()
+}
+
 /// The table names a document file in the older format (version 0) gives in place of newer ones (spec 04d-C, from
 /// the reference program's compatibility list): older print-to-braille table, its older scan table (empty: kept),
 /// the newer table, its newer scan table (empty: any), and the code that must be in force for the older name to
@@ -294,16 +308,7 @@ pub fn older_table_names(tables: &[String; 4], in_force: impl Fn(&str) -> bool) 
 /// names come from older_table_names). The settings block the document was read with (new_settings for a new one)
 /// with BrailleMaker's own fields filled in, the body, and the styles.
 pub fn write(doc: &DxDocument) -> Vec<u8> {
-    let body: Vec<u8> = doc
-        .text
-        .chars()
-        .map(|c| match c {
-            crate::doctext::OPEN => 0x1C,
-            crate::doctext::CLOSE => 0x1F,
-            '\u{a0}' => 0x1E,
-            c => to_cp437(c),
-        })
-        .collect();
+    let body = body_bytes(&doc.text);
     let mut out = Vec::with_capacity(BODY + body.len() + 2048);
     out.extend_from_slice(&SIGNATURE.to_be_bytes());
     out.extend_from_slice(&2u16.to_be_bytes());

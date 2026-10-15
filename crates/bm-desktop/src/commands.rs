@@ -689,6 +689,8 @@ enum SaveType {
     Formatted,
     /// Refreshable braille (.lbf, spec 04d-D).
     Refreshable,
+    /// Coded braille (.bru) or coded text (.txt): the body with its codes written out (spec 04d-C).
+    Coded,
 }
 
 /// The Save As file types, in the reference program's order for each kind of document (spec 04d-B), as far as
@@ -699,6 +701,7 @@ fn save_types(braille: bool) -> &'static [(&'static str, &'static str, SaveType)
             ("Braille document (*.dxb)", "dxb", SaveType::Document),
             ("Braille document, older format (*.dxb)", "dxb", SaveType::OlderDocument),
             ("Formatted braille (*.brf)", "brf", SaveType::Formatted),
+            ("Coded braille (*.bru)", "bru", SaveType::Coded),
             ("Refreshable braille (*.lbf)", "lbf", SaveType::Refreshable),
         ]
     } else {
@@ -706,6 +709,7 @@ fn save_types(braille: bool) -> &'static [(&'static str, &'static str, SaveType)
             ("Print document (*.dxp)", "dxp", SaveType::Document),
             ("Print document, older format (*.dxp)", "dxp", SaveType::OlderDocument),
             ("Formatted text (*.prf)", "prf", SaveType::Formatted),
+            ("Coded text (*.txt)", "txt", SaveType::Coded),
         ]
     }
 }
@@ -758,6 +762,7 @@ fn save(key: Option<u64>, as_new: bool) -> bool {
     match kind.2 {
         SaveType::Formatted => write_formatted(key, &chosen, braille),
         SaveType::Refreshable => write_refreshable(key, &chosen),
+        SaveType::Coded => write_coded(key, &chosen),
         SaveType::OlderDocument => write_document(key, &chosen, 0),
         SaveType::Document => write_document(key, &chosen, 1),
     }
@@ -910,6 +915,34 @@ fn prf_bytes(pages: &[bm_core::format::Page]) -> Vec<u8> {
             _ => b'#',
         })
         .collect()
+}
+
+/// Save As coded braille (.bru) for a braille document or coded text (.txt) for a print document: the body as the
+/// document file stores it, through the coding and line wrapping rule scripts. The document keeps its own file and
+/// name.
+fn write_coded(key: u64, path: &Path) -> bool {
+    let Some((body, braille)) = app::with(|a| {
+        let i = a.index_of(key)?;
+        let d = &a.docs[i];
+        let braille = d.kind == DocKind::Braille;
+        let shown = d.shown();
+        let shown = if braille { translation::convert_braille(&shown, a.encoding(), encodings::find(encodings::DEFAULT)) } else { shown };
+        Some((bm_core::dxfile::body_bytes(&shown.to_running()), braille))
+    }) else {
+        return false;
+    };
+    let out = match translation::coded(&body, braille) {
+        Ok(o) => o,
+        Err(e) => {
+            message(&e);
+            return false;
+        }
+    };
+    if let Err(e) = std::fs::write(path, out) {
+        message(&format!("{}: {e}", path.display()));
+        return false;
+    }
+    true
 }
 
 /// Save As refreshable braille (.lbf) for a braille document: its running text, braille in North American ASCII
