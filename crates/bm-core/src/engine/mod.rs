@@ -24,6 +24,7 @@
 
 mod callbacks;
 mod chars;
+pub mod compile;
 mod rules;
 mod scan_table;
 mod scanner;
@@ -55,6 +56,8 @@ pub enum EngineError {
     NotEncodable(char),
     /// The table uses a part of the scanner that BrailleMaker does not have yet.
     NotSupported(&'static str),
+    /// A table source (.bmt) has a mistake: the line and what is wrong.
+    Source(String),
 }
 
 impl std::fmt::Display for EngineError {
@@ -64,6 +67,7 @@ impl std::fmt::Display for EngineError {
             EngineError::BadTable(s) => write!(f, "A translation table is damaged or of an unknown kind: {s}"),
             EngineError::NotEncodable(c) => write!(f, "The character {c} (U+{:04X}) cannot be translated.", *c as u32),
             EngineError::NotSupported(s) => write!(f, "The translation table uses {s}, which BrailleMaker does not have yet."),
+            EngineError::Source(s) => write!(f, "A translation table source has a mistake: {s}"),
         }
     }
 }
@@ -121,6 +125,28 @@ impl Translator {
             line_flags: 0,
             bracket_codes: None,
         })
+    }
+
+    /// Compiles a table source (.bmt, see `compile`) and makes a translator from it; no table files are needed.
+    pub fn from_source(source: &str) -> Result<Translator, EngineError> {
+        let c = compile::compile(source)?;
+        let rules = RuleTable::read(&c.table)?;
+        Ok(Translator {
+            rules: Rc::new(rules),
+            scan: c.scan,
+            chitab: Chitab::default(),
+            styles: None,
+            languages: None,
+            output_mode: OUTPUT_MODE_DOCUMENT,
+            line_flags: 0,
+            bracket_codes: None,
+        })
+    }
+
+    /// Uses this character table (codes, cases and Unicode forms) in place of the one the translator has.
+    pub fn with_chitab(mut self, chitab: Chitab) -> Translator {
+        self.chitab = chitab;
+        self
     }
 
     pub fn with_styles(mut self, styles: StyleTable) -> Translator {
@@ -274,6 +300,32 @@ mod tests {
         let Some(f) = folder() else { return };
         let t = Translator::open(&f, "enuncb.btb", "gendxb.sct").unwrap();
         assert_eq!(t.translate(",! cat sat4").unwrap(), "The cat sat.");
+    }
+
+    /// BrailleMaker's own table source from the repository's tables folder.
+    fn shipped(name: &str) -> Translator {
+        let path = format!("{}/../../tables/{name}", env!("CARGO_MANIFEST_DIR"));
+        let text = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{path}: {e}"));
+        Translator::from_source(&text).unwrap_or_else(|e| panic!("{path}: {e}"))
+    }
+
+    #[test]
+    fn shipped_english_tables() {
+        let forward = shipped("en-ueb-g2-forward.bmt");
+        let cases = [
+            ("The", ",!"),
+            ("The cat sat.", ",! cat sat4"),
+            ("THE CAT", ",,! ,,cat"),
+            ("THE BIG RED DOG ran", ",,,! big r$ dog,' ran"),
+            ("He said 123 and 4.5", ",he sd #abc & #d4e"),
+            ("café", "caf^/e"),
+            ("[es~h1.]Chapter One[ee~h1.]", "\u{1c}es~h1.\u{1f},*apt] ,\"o\u{1c}ee~h1.\u{1f}"),
+        ];
+        for (text, braille) in cases {
+            assert_eq!(forward.translate(text).unwrap(), braille, "{text}");
+        }
+        let back = shipped("en-ueb-g2-back.bmt");
+        assert_eq!(back.translate(",! cat sat4").unwrap(), "The cat sat.");
     }
 
     #[test]
