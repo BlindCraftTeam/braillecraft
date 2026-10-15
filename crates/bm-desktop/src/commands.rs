@@ -831,6 +831,52 @@ fn brf_cell(out: &mut Vec<u8>, choice: usize, pattern: usize) {
     }
 }
 
+/// The bytes of a formatted braille file from a braille document's pages (spec 04d-B): each line without its
+/// trailing spaces, every character of it (spaces too) through the cell table into the chosen encoding, CR LF after
+/// each line and a form feed after each page. A character with no cell is written '*'. The pages hold the document's
+/// characters in the encoding it is shown in (`shown_in`); page numbers the formatter adds are North American ASCII
+/// braille.
+fn brf_bytes(pages: &[bm_core::format::Page], shown_in: &encodings::Encoding, choice: usize) -> Vec<u8> {
+    let numbers = encodings::find(encodings::DEFAULT);
+    let mut out = Vec::new();
+    for page in pages {
+        for line in &page.lines {
+            let text = line.text.trim_end_matches(' ');
+            for (c, source) in text.chars().zip(&line.sources) {
+                // A space and a hard space are the blank cell.
+                let cell = match c {
+                    ' ' | '\u{a0}' => Some(0),
+                    c if source.is_none() => numbers.cell_of(c),
+                    c => shown_in.cell_of(c),
+                };
+                match cell {
+                    Some(p) => brf_cell(&mut out, choice, p),
+                    None => out.push(b'*'),
+                }
+            }
+            out.extend_from_slice(b"\r\n");
+        }
+        out.push(0x0C);
+    }
+    out
+}
+
+/// The bytes of a formatted text file from a print document's pages (spec 04d-B): bm_core::format::formatted_text
+/// in the code page the reference program chooses first, Western European (ISO-8859-1); a character it cannot hold is
+/// written '#', and a hard space is a space.
+/// INTERIM: the reference offers a list of code pages for formatted text; until that list is traced, the first is
+/// used.
+fn prf_bytes(pages: &[bm_core::format::Page]) -> Vec<u8> {
+    bm_core::format::formatted_text(pages)
+        .chars()
+        .map(|c| match c {
+            '\u{a0}' => b' ',
+            c if (c as u32) <= 0xFF => c as u32 as u8,
+            _ => b'#',
+        })
+        .collect()
+}
+
 /// Save As formatted braille (.brf) for a braille document or formatted text (.prf) for a print document: the
 /// document laid out into pages and written as the reference program's page writer writes them (spec 04d-B). The
 /// document itself keeps its own file and name.
@@ -855,33 +901,7 @@ fn write_formatted(key: u64, path: &Path, braille: bool) -> bool {
     }) else {
         return false;
     };
-    let mut out = Vec::new();
-    if braille {
-        // The pages hold the document's characters in the encoding it is shown in; page numbers the formatter adds
-        // are North American ASCII braille.
-        let numbers = encodings::find(encodings::DEFAULT);
-        // Each character with whether the formatter added it, laid out as format::formatted_text lays it out.
-        let chars = pages.iter().flat_map(|p| {
-            p.lines.iter().flat_map(|l| {
-                let line: Vec<(char, bool)> = l.text.trim_end_matches(' ').chars().zip(l.sources.iter().map(Option::is_none)).collect();
-                line.into_iter().chain([('\r', false), ('\n', false)])
-            }).chain([('\u{c}', false)])
-        });
-        for (c, formatter) in chars {
-            match c {
-                '\r' | '\n' | '\u{c}' | ' ' | '\u{a0}' => out.push(if c == '\u{a0}' { b' ' } else { c as u8 }),
-                c => {
-                    let cell = if formatter { numbers.cell_of(c) } else { shown_in.cell_of(c) };
-                    match cell {
-                        Some(p) => brf_cell(&mut out, choice, p),
-                        None => out.push(b'*'),
-                    }
-                }
-            }
-        }
-    } else {
-        out.extend_from_slice(bm_core::format::formatted_text(&pages).replace('\u{a0}', " ").as_bytes());
-    }
+    let out = if braille { brf_bytes(&pages, shown_in, choice) } else { prf_bytes(&pages) };
     if let Err(e) = std::fs::write(path, &out) {
         message(&format!("{}: {e}", path.display()));
         return false;
@@ -1963,6 +1983,29 @@ fn about() {
 mod tests {
     use super::*;
     use crate::app::open_styles;
+
+    #[test]
+    fn formatted_braille_in_caps_national_and_unicode_encodings() {
+        let doc = Shown::plain(",! cat\u{a0}sat");
+        let pages = bm_core::format::format(&doc, &bm_core::format::Layout::braille(12, 2), None);
+        let na = encodings::find(encodings::DEFAULT);
+        assert_eq!(brf_bytes(&pages, na, 0), b",! CAT SAT\r\n\r\n\x0c".to_vec());
+        // North American English, not in capitals.
+        let pos = 1 + encodings::all().iter().position(|e| e.id == encodings::DEFAULT).unwrap();
+        assert_eq!(brf_bytes(&pages, na, pos), b",! cat sat\r\n\r\n\x0c".to_vec());
+        // Unicode braille: every cell, the blank ones too, in the braille block.
+        let unicode = 1 + encodings::all().len();
+        assert_eq!(String::from_utf8(brf_bytes(&pages, na, unicode)).unwrap(), "⠠⠮⠀⠉⠁⠞⠀⠎⠁⠞\r\n\r\n\u{c}");
+        // A character no cell stands for.
+        let pages = bm_core::format::format(&Shown::plain("a\u{e9}"), &bm_core::format::Layout::braille(12, 1), None);
+        assert_eq!(brf_bytes(&pages, na, 0), b"A*\r\n\x0c".to_vec());
+    }
+
+    #[test]
+    fn formatted_text_is_western_european() {
+        let pages = bm_core::format::format(&Shown::plain("Caf\u{e9} \u{3b1}"), &bm_core::format::Layout::print(20, 1), None);
+        assert_eq!(prf_bytes(&pages), b"Caf\xe9 #\r\n\x0c".to_vec());
+    }
 
     #[test]
     fn finds_whole_words_both_ways() {
