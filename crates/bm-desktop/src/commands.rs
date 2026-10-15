@@ -14,6 +14,7 @@ use crate::dlg::Dlg;
 use crate::documents;
 use crate::encodings;
 use crate::translation;
+use bm_core::table_list::TableList;
 
 // Messages for parts of the program that later build steps bring. They say what is missing and where it comes.
 const PLANNED_SAVE: &str = "Saving needs the BrailleMaker document format, which is built in step 7 of the plan. Until then, copy the text out with Select All and Copy.";
@@ -24,7 +25,6 @@ const PLANNED_HELP: &str = "The BrailleMaker help is written with the features i
 const PLANNED_TEMPLATES: &str = "Templates are built with the BrailleMaker document format in step 7 of the plan.";
 const PLANNED_PICTURES: &str = "Pictures are built after the core features of version 1.";
 const PLANNED_FORMATTER: &str = "This needs the page formatter, built in step 8 of the plan.";
-const PLANNED_TABLES: &str = "The translation table list by region is not part of this version yet; documents translate with the tables they name (new documents: English, Unified English Braille), and Document, Learning Tables sets the grade.";
 
 const FORMS: &[&str] = &["11 x 11.5 inches", "11 x 8.5 inches (Letter)", "A4 (297 x 210 mm)", "11.5 x 11 inches (tractor)"];
 const STYLE_SHOW: &[&str] = &["Recommended and In-Use Styles", "All Styles", "Styles In-Use", "Only Recommended Styles"];
@@ -221,7 +221,10 @@ pub fn run(id: i32, checked: bool) {
                 d.set_text(31, "1");
             });
         }
-        2701..=2706 => message(PLANNED_TABLES),
+        2701..=2705 => set_region(TableList::region_bit((id - 2701) as usize)),
+        2706 => set_region(bm_core::table_list::ALL_REGIONS),
+        9000..=9399 => choose_language((id - crate::menu::LANGUAGE_BASE) as usize),
+        9500..=9509 => choose_learning_step((id - crate::menu::COURSE_BASE) as usize),
         2801 => set_grade("[g1l]"),
         2802 => set_grade("[g2u]"),
         2901..=2905 => set_hyphen(id),
@@ -383,10 +386,18 @@ fn open_dx_document(path: &Path) {
             d.path = Some(path.to_path_buf());
             d.view.translated = doc.translated_line;
             d.view.six_key = braille && doc.six_key;
-            // The document's own tables, as the file names them.
-            if doc.tables.iter().all(|t| !t.is_empty()) {
-                d.tables = doc.tables.clone();
-            }
+            // The document's own tables, as the file names them, matched to the table list: a set the list holds
+            // stays; when only the print-to-braille rules table (or a learning step) is listed, the other three are
+            // that language's; a table the list does not hold gives the tables of a new document.
+            let stored: [String; 4] = doc.tables.clone().map(|t| t.to_lowercase());
+            d.tables = match translation::with_list(|l| l.entry_for(&stored).map(|(e, _)| l.entries[e].tables.clone())) {
+                Some(listed) => {
+                    let mut t = stored.clone();
+                    t[1..].clone_from_slice(&listed[1..]);
+                    t
+                }
+                None => translation::DEFAULT_TABLES.map(str::to_string),
+            };
         }
         a.apply_view();
     });
@@ -1024,22 +1035,78 @@ fn printer_setup(global: bool) {
 /// The grade codes Document, Learning Tables takes out of the initial codes before it puts its own in.
 const GRADE_CODES: [&str; 10] = ["[g1]", "[g1l]", "[g1u]", "[g1.5]", "[g1.5l]", "[g1.5u]", "[g2]", "[g2l]", "[g2u]", "[vrn~inf]"];
 
-/// Document, Learning Tables: the tables stay; the grade code in the document's initial codes changes to `code`
-/// ([g1l] uncontracted, [g2u] fully contracted). Tables without such grades leave the code without effect.
-fn set_grade(code: &str) {
+/// The initial codes with every grade code taken out and `code` put at their end.
+fn regrade(initial: &str, code: &str) -> String {
+    let mut out = initial.to_string();
+    for g in GRADE_CODES {
+        out = out.replace(g, "");
+    }
+    out.push_str(code);
+    out
+}
+
+/// Gives the active document `tables` and initial codes changed by `initial`, then refreshes the menus and the
+/// translated line.
+fn set_document_tables(tables: Option<[String; 4]>, initial: impl FnOnce(&str) -> String) {
     app::with(|a| {
         if let Some(d) = a.doc_mut() {
-            let mut initial = d.initial_codes.clone();
-            for g in GRADE_CODES {
-                initial = initial.replace(g, "");
+            if let Some(t) = tables {
+                d.tables = t;
             }
-            initial.push_str(code);
-            d.initial_codes = initial;
+            d.initial_codes = initial(&d.initial_codes);
             d.last_line_key.clear();
             d.dirty = true;
         }
+        a.refresh_menus();
         a.update_status();
     });
+}
+
+/// The language entry of the active document, its step in use, and the entry.
+fn active_entry() -> Option<(usize, Option<usize>, bm_core::table_list::TableSetEntry)> {
+    let tables = app::with(|a| a.doc().map(|d| d.tables.clone()))?;
+    translation::with_list(|l| l.entry_for(&tables).map(|(e, s)| (e, s, l.entries[e].clone())))
+}
+
+/// Document, Learning Tables, Uncontracted or Fully Contracted: the document's language gives its four tables back
+/// (a learning step in use ends), and the grade code in the initial codes changes to `code` ([g1l] uncontracted,
+/// [g2u] fully contracted). The tables themselves do not change; tables without grade codes ignore them.
+fn set_grade(code: &str) {
+    let tables = active_entry().map(|(_, _, e)| e.tables);
+    set_document_tables(tables, |i| regrade(i, code));
+}
+
+/// Document, Translation Tables, a region: the languages listed are that region's (and those the open documents use).
+fn set_region(region: u32) {
+    translation::set_region(region);
+    app::with(|a| a.refresh_menus());
+}
+
+/// Document, Translation Tables, a language: the document takes that entry's four tables, and every grade code
+/// leaves its initial codes.
+fn choose_language(entry: usize) {
+    let Some(tables) = translation::with_list(|l| l.entries.get(entry).map(|e| e.tables.clone())) else { return };
+    set_document_tables(Some(tables), |i| regrade(i, ""));
+}
+
+/// Document, Learning Tables, a learning course: a list of its steps; the step chosen takes the place of the
+/// print-to-braille rules table, the language's other three tables staying.
+fn choose_learning_step(course: usize) {
+    let Some((entry, step, e)) = active_entry() else { return };
+    let courses = translation::with_list(|l| l.courses(entry));
+    let Some(c) = courses.get(course) else { return };
+    let names: Vec<String> = c.steps.iter().map(|&s| e.steps[s].name.clone()).collect();
+    let choices: Vec<&str> = names.iter().map(String::as_str).collect();
+    let frame = app::frame();
+    let dialog = SingleChoiceDialog::builder(&frame, "Learning step:", &format!("{} - Learning Tables", c.name), &choices).build();
+    dialog.set_selection(step.and_then(|s| c.steps.iter().position(|&x| x == s)).unwrap_or(0) as i32);
+    if dialog.show_modal() != wxdragon::id::ID_OK {
+        return;
+    }
+    let Some(&s) = c.steps.get(dialog.get_selection().max(0) as usize) else { return };
+    let mut tables = e.tables.clone();
+    tables[0] = e.steps[s].table.clone();
+    set_document_tables(Some(tables), |i| i.to_string());
 }
 
 fn set_hyphen(id: i32) {

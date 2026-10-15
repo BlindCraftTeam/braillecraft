@@ -46,10 +46,26 @@ pub fn command_id(menu: i32) -> i32 {
 /// The first id of the open-document items at the end of the View menu (above the wxWidgets standard ids).
 pub const DOCUMENT_BASE: i32 = 6100;
 
+/// The first id of the language items of Document, Translation Tables (entry number added), as the menu ids the
+/// list items have.
+pub const LANGUAGE_BASE: i32 = 9000;
+/// The first id of the learning-course items of Document, Learning Tables (up to ten).
+pub const COURSE_BASE: i32 = 9500;
+pub const COURSE_MAX: usize = 10;
+/// Separators the program puts in: before the language items; before and after the course items.
+const LANGUAGE_SEPARATOR: i32 = 8999;
+const COURSE_SEPARATORS: [i32; 2] = [9498, 9499];
+
 pub struct Menus {
     pub items: HashMap<i32, MenuItem>,
     pub view: Menu,
     pub documents: Vec<i32>,
+    /// Document, Translation Tables and Document, Learning Tables, and the items the program put in them.
+    pub tables: Option<Menu>,
+    pub learning: Option<Menu>,
+    pub learning_item: Option<MenuItem>,
+    pub languages: Vec<i32>,
+    pub courses: Vec<i32>,
 }
 
 impl Menus {
@@ -85,9 +101,77 @@ impl Menus {
             self.documents.push(id);
         }
     }
+
+    /// The language items after the region items of Document, Translation Tables: (entry number, shown name), in
+    /// order, after a separator; the active document's entry checked.
+    pub fn set_languages(&mut self, list: &[(usize, String)], active: Option<usize>) {
+        let Some(menu) = &self.tables else { return };
+        for id in self.languages.drain(..) {
+            remove(menu, id);
+        }
+        remove(menu, LANGUAGE_SEPARATOR);
+        if list.is_empty() {
+            return;
+        }
+        menu.append(LANGUAGE_SEPARATOR, "-", "", ItemKind::Separator);
+        for (entry, name) in list {
+            let id = LANGUAGE_BASE + *entry as i32;
+            if let Some(item) = menu.append(id, &name.replace('&', "&&"), "", ItemKind::Check) {
+                item.check(Some(*entry) == active);
+            }
+            self.languages.push(id);
+        }
+    }
+
+    /// The learning courses ("name...") between Uncontracted and Fully Contracted, with a separator on each side;
+    /// `checked` is the command id to check: 2801, 2802 or a course item. The submenu is available only when the
+    /// language has learning steps.
+    pub fn set_courses(&mut self, names: &[String], has_steps: bool, checked: i32) {
+        if let Some(item) = &self.learning_item {
+            item.enable(has_steps);
+        }
+        let Some(menu) = &self.learning else { return };
+        for id in self.courses.drain(..) {
+            remove(menu, id);
+        }
+        for id in COURSE_SEPARATORS {
+            remove(menu, id);
+        }
+        if !names.is_empty() {
+            let mut pos = 1;
+            menu.insert(pos, COURSE_SEPARATORS[0], "-", "", ItemKind::Separator);
+            pos += 1;
+            for (i, name) in names.iter().take(COURSE_MAX).enumerate() {
+                let id = COURSE_BASE + i as i32;
+                if let Some(item) = menu.insert(pos, id, &format!("{}...", name.replace('&', "&&")), "", ItemKind::Check) {
+                    item.check(id == checked);
+                }
+                self.courses.push(id);
+                pos += 1;
+            }
+            menu.insert(pos, COURSE_SEPARATORS[1], "-", "", ItemKind::Separator);
+        }
+        self.check(2801, checked == 2801);
+        self.check(2802, checked == 2802);
+    }
 }
 
-fn fill(menu: &Menu, entries: &[Entry], items: &mut HashMap<i32, MenuItem>) {
+/// Deletes an item the program put in, when it is there.
+fn remove(menu: &Menu, id: i32) {
+    if menu.find_item(id).is_some() {
+        menu.delete(id);
+    }
+}
+
+/// The submenus the program fills at run time, found by their labels.
+#[derive(Default)]
+struct Found {
+    tables: Option<Menu>,
+    learning: Option<Menu>,
+    learning_item: Option<MenuItem>,
+}
+
+fn fill(menu: &Menu, entries: &[Entry], items: &mut HashMap<i32, MenuItem>, found: &mut Found) {
     for entry in entries {
         match entry {
             Entry::Item(id, label, kind) => {
@@ -104,8 +188,17 @@ fn fill(menu: &Menu, entries: &[Entry], items: &mut HashMap<i32, MenuItem>) {
             Entry::Separator => menu.append_separator(),
             Entry::Menu(label, sub) => {
                 let submenu = Menu::builder().build();
-                fill(&submenu, sub, items);
-                menu.append_submenu(submenu, label, "");
+                fill(&submenu, sub, items, found);
+                let item = menu.append_submenu(submenu, label, "");
+                let added = item.as_ref().and_then(|i| i.get_sub_menu());
+                match *label {
+                    "&Translation Tables" => found.tables = added,
+                    "Lea&rning Tables" => {
+                        found.learning = added;
+                        found.learning_item = item;
+                    }
+                    _ => {}
+                }
             }
         }
     }
@@ -114,15 +207,25 @@ fn fill(menu: &Menu, entries: &[Entry], items: &mut HashMap<i32, MenuItem>) {
 /// Builds the menu bar and puts it on the main window.
 pub fn install(frame: &MDIParentFrame) -> Menus {
     let mut items = HashMap::new();
+    let mut found = Found::default();
     let mut builder = MenuBar::builder();
     for (label, entries) in MENU_BAR {
         let menu = Menu::builder().build();
-        fill(&menu, entries, &mut items);
+        fill(&menu, entries, &mut items, &mut found);
         builder = builder.append(menu, label);
     }
     let bar = builder.build();
     let view_index = MENU_BAR.iter().position(|(l, _)| *l == "&View").unwrap_or(2);
     let view = bar.get_menu(view_index).expect("View menu");
     frame.set_menu_bar(bar);
-    Menus { items, view, documents: Vec::new() }
+    Menus {
+        items,
+        view,
+        documents: Vec::new(),
+        tables: found.tables,
+        learning: found.learning,
+        learning_item: found.learning_item,
+        languages: Vec::new(),
+        courses: Vec::new(),
+    }
 }

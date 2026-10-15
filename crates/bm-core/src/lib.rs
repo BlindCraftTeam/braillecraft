@@ -6,6 +6,7 @@
 
 pub mod dxfile;
 pub mod engine;
+pub mod table_list;
 
 /// The two kinds of document. A print document holds ink text; a braille document holds braille cells.
 /// The kind decides which translation direction applies and how some codes are written.

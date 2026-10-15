@@ -22,9 +22,11 @@ RELABEL = {3206: "&New in BrailleMaker 0.1", 3211: "&About BrailleMaker..."}
 # Edit menu" (manual, Edit: Highlight). View: "a tick mark (check mark) will appear to the left of some items on this
 # menu" (manual, The View Menu); Full-Page, the three fonts (one of them at a time), Six-Key Entry, Codes and
 # Translated Line are the settings it lists. Hyphen Table: "Only one table can be selected for any given document"
-# (manual, Document: Hyphen Table); shown as a choice group.
-CHECK = {1209, 1301, 1307, 1309, 1310}
-RADIO = {1303, 1304, 1305, 2901, 2902, 2903, 2904, 2905}
+# (manual, Document: Hyphen Table); shown as a choice group. Translation Tables: the program checks the region in
+# force, one of the six (a choice group). Learning Tables: Uncontracted and Fully Contracted are checked by the
+# program, with the learning-course items it puts between them, so they are check items rather than a group.
+CHECK = {1209, 1301, 1307, 1309, 1310, 2801, 2802}
+RADIO = {1303, 1304, 1305, 2701, 2702, 2703, 2704, 2705, 2706, 2901, 2902, 2903, 2904, 2905}
 
 LINE = re.compile(r"^( +)(.*?)(?:\t(.*?))?(?:  \[id (\d+)\])?$")
 

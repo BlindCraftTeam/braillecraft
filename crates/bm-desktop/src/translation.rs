@@ -7,10 +7,11 @@
 //! braille is converted on the way in and out. Codes are shown in documents as [code]; the engine takes them as
 //! 0x1C code 0x1F.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::path::Path;
 
 use bm_core::engine::TableSet;
+use bm_core::table_list::TableList;
 
 use crate::encodings::{self, Encoding};
 
@@ -19,14 +20,33 @@ pub const DEFAULT_TABLES: [&str; 4] = ["enuncp", "enudxp", "enuncb", "gendxb"];
 
 thread_local! {
     static TABLES: RefCell<Option<TableSet>> = const { RefCell::new(None) };
+    static LIST: RefCell<TableList> = RefCell::new(TableList::default());
+    /// The region Document, Translation Tables lists (a region bit, or all); Western Hemisphere at first.
+    static REGION: Cell<u32> = const { Cell::new(1) };
 }
 
-/// Reads the table index from `folder`; translation reports an error until this has run.
+/// Reads the table index and the list of table sets by language from `folder`; translation reports an error until
+/// this has run.
 pub fn load(folder: &Path) -> Result<usize, String> {
     let set = TableSet::open(folder).map_err(|e| e.to_string())?;
     let n = set.entries().len();
     TABLES.with(|t| *t.borrow_mut() = Some(set));
+    let list = TableList::read(folder.join("languages.tsv"))?;
+    LIST.with(|l| *l.borrow_mut() = list);
     Ok(n)
+}
+
+/// Runs `f` with the list of table sets by language.
+pub fn with_list<R>(f: impl FnOnce(&TableList) -> R) -> R {
+    LIST.with(|l| f(&l.borrow()))
+}
+
+pub fn region() -> u32 {
+    REGION.with(Cell::get)
+}
+
+pub fn set_region(region: u32) {
+    REGION.with(|r| r.set(region));
 }
 
 fn with_table<R>(code: &str, f: impl FnOnce(&bm_core::engine::Translator) -> Result<R, String>) -> Result<R, String> {

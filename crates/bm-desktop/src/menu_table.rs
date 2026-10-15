@@ -203,17 +203,17 @@ const M13: &[Entry] = &[
 ];
 
 const M15: &[Entry] = &[
-    Entry::Item(2701, "Western Hemisphere", Kind::Normal),
-    Entry::Item(2702, "Europe", Kind::Normal),
-    Entry::Item(2703, "Asia", Kind::Normal),
-    Entry::Item(2704, "Africa", Kind::Normal),
-    Entry::Item(2705, "Pacific", Kind::Normal),
-    Entry::Item(2706, "All Regions/All Languages", Kind::Normal),
+    Entry::Item(2701, "Western Hemisphere", Kind::Radio),
+    Entry::Item(2702, "Europe", Kind::Radio),
+    Entry::Item(2703, "Asia", Kind::Radio),
+    Entry::Item(2704, "Africa", Kind::Radio),
+    Entry::Item(2705, "Pacific", Kind::Radio),
+    Entry::Item(2706, "All Regions/All Languages", Kind::Radio),
 ];
 
 const M16: &[Entry] = &[
-    Entry::Item(2801, "&Uncontracted", Kind::Normal),
-    Entry::Item(2802, "&Fully Contracted", Kind::Normal),
+    Entry::Item(2801, "&Uncontracted", Kind::Check),
+    Entry::Item(2802, "&Fully Contracted", Kind::Check),
 ];
 
 const M17: &[Entry] = &[

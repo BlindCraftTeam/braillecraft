@@ -1,0 +1,191 @@
+# Translation table sets by language, in list order (the number of a line, from 0, is its entry).
+# Columns, tab-separated: shown name; regions; language code; print-to-braille rules and scan table;
+# braille-to-print rules and scan table; learning steps as TABLE=shown name, separated by " | ".
+Afrikaans (pre-Unified)	Africa	afr-x00	pionier	amedxp	africb	gendxb	
+Afrikaans	Africa	afr	afrucp	enudxp	afrucb	gendxb	
+Albanian	Europe	sqi	sqiacp	gendxp	sqiacb	gendxb	
+Amharic	Africa	amh	amhacp	enbdxp	amhacb	engdxb	
+Arabic (pre-2002 rules)	Asia,Africa	ara-x02	araacp	amedxp	arabcb	gendxb	
+Arabic	Asia,Africa	ara	arab	amedxp	arabcb	gendxb	
+Armenian, Western	Asia	qhy	qhyacp	gendxp	qhyacb	gendxb	
+Armenian, Eastern	Asia	hye	hyaacp	gendxp	hyaacb	gendxb	
+Assamese	Asia	asm	asmacp	gendxp	benacb	gendxb	
+Awadhi	Asia	awa	awaacp	gendxp	hinacb	gendxb	
+Azerbaijani	Asia	aze	azeacp	gendxp	azeacb	gendxb	
+Bashkir	Europe	bak	bakacp	gendxp	bakacb	gendxb	
+Basque	Europe	eus	eusacp	enudxp	eusacb	gendxb	
+Belarusian	Europe	bel	belacp	gendxp	ukracb	gendxb	
+Bengali or Bangla (Bangladesh)	Asia	ben-bgd	benbcp	gendxp	benbcb	gendxb	
+Bengali or Bangla (India)	Asia	ben	benacp	gendxp	benacb	gendxb	
+Bhojpuri	Asia	bho	bhoacp	gendxp	hinacb	gendxb	
+Biblical language studies	America,Europe,Asia,Africa,Pacific	qbi	qbibcp	enudxp	qbibcb	gendxb	
+Bosnian	Europe	bos	bosacp	gendxp	sraacb	gendxb	
+Bulgarian/Uncontracted	Europe	bul	bgaaup	gendxp	bgaaub	gendxb	
+Burmese	Asia	mya	myaacp	gendxp	myaacb	gendxb	
+Catalan	Europe	cat	catacp	gendxp	catacb	gendxb	
+Cebuano	Asia	ceb	cebucp	gendxp	cebucb	gendxb	
+Cherokee	America	chr	chracp	gendxp	enuncb	gendxb	
+Chewa	Africa	nya	nyaacp	enudxp	nyaacb	gendxb	
+Chinese/Mandarin	Asia	cmn	zhmpcp	gendxp	zhmpcb	gendxb	
+Chinese/Taiwan	Asia	qzh	zhtwcp	gendxp	zhtwcb	gendxb	
+Chinese/Yue (Cantonese)	Asia	yue	zhyjcp	gendxp	zhyjcb	gendxb	
+Chittagonian	Asia	ctg	ctgacp	gendxp	benacb	gendxb	
+Chuvash	Europe	chv	chvacp	gendxp	chvacb	gendxb	
+Croatian	Europe	hrv	hraacp	gendxp	hraacb	gendxb	
+Czech	Europe	ces	csaacp	gendxp	csaacb	gendxb	
+Danish (pre-2022 rules)	Europe	dan-x22	danocp	amedxp	danocb	gendxb	
+Danish	Europe	dan	danscp	amedxp	danscb	gendxb	
+Dari	Asia	prs	prsacp	amedxp	farscb	gendxb	
+Dhivehi (Maldivian)	Asia	div	dvaacp	amedxp	arabcb	gendxb	
+Dutch	Europe	nld	nlaacp	nladxp	nlaacb	gendxb	
+Dzongkha	Asia	dzo	dzaacp	gendxp	dzaacb	gendxb	
+EBU Pharmaceutical	Europe	qqp-ebu	qqphcp	qqphcp	qqphcb	qqphcb	
+English/American (Pre-UEB)	America	eng-xna	amerc	amedxp	amebpc	amedxb	amel0402=NLS I.M.B.T. Lesson 4.2 | amel0403=NLS I.M.B.T. Lesson 4.3 | amel0501=NLS I.M.B.T. Lesson 5 | amel0601=NLS I.M.B.T. Lesson 6 | amel0702=NLS I.M.B.T. Lesson 7.2 | amel0705=NLS I.M.B.T. Lesson 7.5 | amel0706=NLS I.M.B.T. Lesson 7.6 | amel0710=NLS I.M.B.T. Lesson 7.10 | amel0801=NLS I.M.B.T. Lesson 8.1 | amel0802=NLS I.M.B.T. Lesson 8.2 | amel0803=NLS I.M.B.T. Lesson 8.3 | amel0901=NLS I.M.B.T. Lesson 9.1 | amel0907=NLS I.M.B.T. Lesson 9.7 | amel1001=NLS I.M.B.T. Lesson 10.1 | amel1002=NLS I.M.B.T. Lesson 10.2 | amets01=TSBVI Cluster 1 | amets03=TSBVI Cluster 3 | amets07=TSBVI Cluster 7 | amets08=TSBVI Cluster 8 | amets09=TSBVI Cluster 9 | amets10=TSBVI Cluster 10 | amets11=TSBVI Cluster 11 | amets12=TSBVI Cluster 12 | amets13=TSBVI Cluster 13 | amets14=TSBVI Cluster 14 | amets15=TSBVI Cluster 15 | amets17=TSBVI Cluster 17 | amets18=TSBVI Cluster 18 | amets19=TSBVI Cluster 19 | amets20=TSBVI Cluster 20 | amets22=TSBVI Cluster 22 | amets24=TSBVI Cluster 24 | amets25=TSBVI Cluster 25 | amets26=TSBVI Cluster 26 | amets28=TSBVI Cluster 28 | amets29=TSBVI Cluster 29 | amets30=TSBVI Cluster 30 | amets31=TSBVI Cluster 31 | amets32=TSBVI Cluster 32 | amets33=TSBVI Cluster 33 | amets34=TSBVI Cluster 34 | amets35=TSBVI Cluster 35 | amets36=TSBVI Cluster 36 | amets38=TSBVI Cluster 38 | amets39=TSBVI Cluster 39 | amets40=TSBVI Cluster 40 | amets41=TSBVI Cluster 41 | amets42=TSBVI Cluster 42 | amets43=TSBVI Cluster 43 | amets44=TSBVI Cluster 44 | amets45=TSBVI Cluster 45 | amets46=TSBVI Cluster 46 | amets48=TSBVI Cluster 48 | amets49=TSBVI Cluster 49 | amets50=TSBVI Cluster 50 | amets51=TSBVI Cluster 51 | amets52=TSBVI Cluster 52 | amets53=TSBVI Cluster 53 | amerc=Grade 2
+English/American Pre-UEB Textbook	America	eng-xnat	amerf	amidxp	amebpc	amedxb	amel0402=NLS I.M.B.T. Lesson 4.2 | amel0403=NLS I.M.B.T. Lesson 4.3 | amel0501=NLS I.M.B.T. Lesson 5 | amel0601=NLS I.M.B.T. Lesson 6 | amel0702=NLS I.M.B.T. Lesson 7.2 | amel0705=NLS I.M.B.T. Lesson 7.5 | amel0706=NLS I.M.B.T. Lesson 7.6 | amel0710=NLS I.M.B.T. Lesson 7.10 | amel0801=NLS I.M.B.T. Lesson 8.1 | amel0802=NLS I.M.B.T. Lesson 8.2 | amel0803=NLS I.M.B.T. Lesson 8.3 | amel0901=NLS I.M.B.T. Lesson 9.1 | amel0907=NLS I.M.B.T. Lesson 9.7 | amel1001=NLS I.M.B.T. Lesson 10.1 | amel1002=NLS I.M.B.T. Lesson 10.2 | amets01=TSBVI Cluster 1 | amets03=TSBVI Cluster 3 | amets07=TSBVI Cluster 7 | amets08=TSBVI Cluster 8 | amets09=TSBVI Cluster 9 | amets10=TSBVI Cluster 10 | amets11=TSBVI Cluster 11 | amets12=TSBVI Cluster 12 | amets13=TSBVI Cluster 13 | amets14=TSBVI Cluster 14 | amets15=TSBVI Cluster 15 | amets17=TSBVI Cluster 17 | amets18=TSBVI Cluster 18 | amets19=TSBVI Cluster 19 | amets20=TSBVI Cluster 20 | amets22=TSBVI Cluster 22 | amets24=TSBVI Cluster 24 | amets25=TSBVI Cluster 25 | amets26=TSBVI Cluster 26 | amets28=TSBVI Cluster 28 | amets29=TSBVI Cluster 29 | amets30=TSBVI Cluster 30 | amets31=TSBVI Cluster 31 | amets32=TSBVI Cluster 32 | amets33=TSBVI Cluster 33 | amets34=TSBVI Cluster 34 | amets35=TSBVI Cluster 35 | amets36=TSBVI Cluster 36 | amets38=TSBVI Cluster 38 | amets39=TSBVI Cluster 39 | amets40=TSBVI Cluster 40 | amets41=TSBVI Cluster 41 | amets42=TSBVI Cluster 42 | amets43=TSBVI Cluster 43 | amets44=TSBVI Cluster 44 | amets45=TSBVI Cluster 45 | amets46=TSBVI Cluster 46 | amets48=TSBVI Cluster 48 | amets49=TSBVI Cluster 49 | amets50=TSBVI Cluster 50 | amets51=TSBVI Cluster 51 | amets52=TSBVI Cluster 52 | amets53=TSBVI Cluster 53 | amerf=Grade 2
+English/American Pre-UEB Txtbk (Distinct Emphases)	America	eng-xnate	amerf	amedxp	amebpc	amedxb	amel0402=NLS I.M.B.T. Lesson 4.2 | amel0403=NLS I.M.B.T. Lesson 4.3 | amel0501=NLS I.M.B.T. Lesson 5 | amel0601=NLS I.M.B.T. Lesson 6 | amel0702=NLS I.M.B.T. Lesson 7.2 | amel0705=NLS I.M.B.T. Lesson 7.5 | amel0706=NLS I.M.B.T. Lesson 7.6 | amel0710=NLS I.M.B.T. Lesson 7.10 | amel0801=NLS I.M.B.T. Lesson 8.1 | amel0802=NLS I.M.B.T. Lesson 8.2 | amel0803=NLS I.M.B.T. Lesson 8.3 | amel0901=NLS I.M.B.T. Lesson 9.1 | amel0907=NLS I.M.B.T. Lesson 9.7 | amel1001=NLS I.M.B.T. Lesson 10.1 | amel1002=NLS I.M.B.T. Lesson 10.2 | amets01=TSBVI Cluster 1 | amets03=TSBVI Cluster 3 | amets07=TSBVI Cluster 7 | amets08=TSBVI Cluster 8 | amets09=TSBVI Cluster 9 | amets10=TSBVI Cluster 10 | amets11=TSBVI Cluster 11 | amets12=TSBVI Cluster 12 | amets13=TSBVI Cluster 13 | amets14=TSBVI Cluster 14 | amets15=TSBVI Cluster 15 | amets17=TSBVI Cluster 17 | amets18=TSBVI Cluster 18 | amets19=TSBVI Cluster 19 | amets20=TSBVI Cluster 20 | amets22=TSBVI Cluster 22 | amets24=TSBVI Cluster 24 | amets25=TSBVI Cluster 25 | amets26=TSBVI Cluster 26 | amets28=TSBVI Cluster 28 | amets29=TSBVI Cluster 29 | amets30=TSBVI Cluster 30 | amets31=TSBVI Cluster 31 | amets32=TSBVI Cluster 32 | amets33=TSBVI Cluster 33 | amets34=TSBVI Cluster 34 | amets35=TSBVI Cluster 35 | amets36=TSBVI Cluster 36 | amets38=TSBVI Cluster 38 | amets39=TSBVI Cluster 39 | amets40=TSBVI Cluster 40 | amets41=TSBVI Cluster 41 | amets42=TSBVI Cluster 42 | amets43=TSBVI Cluster 43 | amets44=TSBVI Cluster 44 | amets45=TSBVI Cluster 45 | amets46=TSBVI Cluster 46 | amets48=TSBVI Cluster 48 | amets49=TSBVI Cluster 49 | amets50=TSBVI Cluster 50 | amets51=TSBVI Cluster 51 | amets52=TSBVI Cluster 52 | amets53=TSBVI Cluster 53 | amerf=Grade 2
+English/Australian (pre-UEB)	Pacific	eng-aus00	enaucp	amedxp	enaucb	engdxb	
+English/British (pre-2005 rules)	Europe	eng-xuk00	britic	amedxp	engbpc	engdxb	
+English/British (pre-UEB)	Europe	eng-xuk	enbrcp	enbdxp	enbrcb	engdxb	engbe04=Braille in Easy Steps Book 4 | engbe05=Braille in Easy Steps Book 5 | engbe06=Braille in Easy Steps Book 6 | engbe07=Braille in Easy Steps Book 7 | engbe08=Braille in Easy Steps Book 8 | engbe09=Braille in Easy Steps Book 9 | engbe10=Braille in Easy Steps Book 10 | engbe11=Braille in Easy Steps Book 11 | engbe12=Braille in Easy Steps Book 12 | engbe13=Braille in Easy Steps Book 13 | engbe14=Braille in Easy Steps Book 14 | enbfp01=Fingerprint Unit 1 | enbfp04=Fingerprint Unit 4 | enbfp05=Fingerprint Unit 5 | enbfp06=Fingerprint Unit 6 | enbfp07=Fingerprint Unit 7 | enbfp08=Fingerprint Unit 8 | enbfp09=Fingerprint Unit 9 | enbfp10=Fingerprint Unit 10 | enbfp11=Fingerprint Unit 11 | enbfp12=Fingerprint Unit 12 | enbfp13=Fingerprint Unit 13 | enbfp14=Fingerprint Unit 14 | enbfp15=Fingerprint Unit 15 | enbfp16=Fingerprint Unit 16 | enbfp17=Fingerprint Unit 17 | enbfp18=Fingerprint Unit 18 | enbtp01=Take Off Series 1 | enbtp02=Take Off Series 2 | enbtp03=Take Off Series 3 | enbtp04=Take Off Series 4 | enbtp05=Take Off Series 5 | enbtp06=Take Off Series 6 | enbtp07=Take Off Series 7 | enbtp08=Take Off Series 8 | enbtp09=Take Off Series 9 | enbtp10=Take Off Series 10 | enbtp11=Take Off Series 11 | enbtp12=Take Off Series 12
+English/South African (pre-UEB)	Africa	eng-zaf00	briafc	amedxp	engbpc	gendxb	
+English/Unified (UEB)	America,Europe,Asia,Africa,Pacific	eng-xueb	enuncp	enudxp	enuncb	gendxb	engun11=RNZFB STAR Level 1.1 | engun13=RNZFB STAR Level 1.3 | engun15=RNZFB STAR Level 1.5 | engun17=RNZFB STAR Level 1.7 | engun18=RNZFB STAR Level 1.8 | engun19=RNZFB STAR Level 1.9 | engun1a=RNZFB STAR Level 1.10 | engun21=RNZFB STAR Level 2.1 | engun22=RNZFB STAR Level 2.2 | engun23=RNZFB STAR Level 2.3 | engun24=RNZFB STAR Level 2.4 | engun25=RNZFB STAR Level 2.5 | engun26=RNZFB STAR Level 2.6 | engun27=RNZFB STAR Level 2.7 | engun29=RNZFB STAR Level 2.9 | engun2a=RNZFB STAR Level 2.10 | engun31=RNZFB STAR Level 3.1 | engun32=RNZFB STAR Level 3.2 | engun33=RNZFB STAR Level 3.3 | engun34=RNZFB STAR Level 3.4 | engun37=RNZFB STAR Level 3.7 | engun38=RNZFB STAR Level 3.8 | engun39=RNZFB STAR Level 3.9 | engun41=RNZFB STAR Level 4.1 | engun42=RNZFB STAR Level 4.2 | engun43=RNZFB STAR Level 4.3 | engun44=RNZFB STAR Level 4.4 | engun45=RNZFB STAR Level 4.5 | engun46=RNZFB STAR Level 4.6 | engun47=RNZFB STAR Level 4.7 | engun48=RNZFB STAR Level 4.8 | engun49=RNZFB STAR Level 4.9 | engun4a=RNZFB STAR Level 4.10 | engun51=RNZFB STAR Level 5.1 | engun52=RNZFB STAR Level 5.2 | engun53=RNZFB STAR Level 5.3 | engus11=S.A. Syllabus Level 1.1 | engus12=S.A. Syllabus Level 1.2 | engus13=S.A. Syllabus Level 1.3 | engus14=S.A. Syllabus Level 1.4 | engus21=S.A. Syllabus Level 2.1 | engus22=S.A. Syllabus Level 2.2 | engus23=S.A. Syllabus Level 2.3 | engus24=S.A. Syllabus Level 2.4 | engus25=S.A. Syllabus Level 2.5 | engus31=S.A. Syllabus Level 3.1 | engus32=S.A. Syllabus Level 3.2 | engus33=S.A. Syllabus Level 3.3 | engus34=S.A. Syllabus Level 3.4 | enube04=UK UEB Brl Easy Steps Bk 4 | enube05=UK UEB Brl Easy Steps Bk 5 | enube06=UK UEB Brl Easy Steps Bk 6 | enube07=UK UEB Brl Easy Steps Bk 7 | enube08=UK UEB Brl Easy Steps Bk 8 | enube09=UK UEB Brl Easy Steps Bk 9 | enube10=UK UEB Brl Easy Steps Bk 10 | enube11=UK UEB Brl Easy Steps Bk 11 | enube12=UK UEB Brl Easy Steps Bk 12 | enube13=UK UEB Brl Easy Steps Bk 13 | enube14=UK UEB Brl Easy Steps Bk 14 | enufp01=UK UEB Fingerprint Unit 1 | enufp04=UK UEB Fingerprint Unit 4 | enufp05=UK UEB Fingerprint Unit 5 | enufp06=UK UEB Fingerprint Unit 6 | enufp07=UK UEB Fingerprint Unit 7 | enufp08=UK UEB Fingerprint Unit 8 | enufp09=UK UEB Fingerprint Unit 9 | enufp10=UK UEB Fingerprint Unit 10 | enufp11=UK UEB Fingerprint Unit 11 | enufp12=UK UEB Fingerprint Unit 12 | enufp13=UK UEB Fingerprint Unit 13 | enufp14=UK UEB Fingerprint Unit 14 | enufp15=UK UEB Fingerprint Unit 15 | enufp16=UK UEB Fingerprint Unit 16 | enufp17=UK UEB Fingerprint Unit 17 | enufp18=UK UEB Fingerprint Unit 18 | enul0402=NLS I.M.B.T. (UEB) Lesson 4.2 | enul0403=NLS I.M.B.T. (UEB) Lesson 4.3 | enul0501=NLS I.M.B.T. (UEB) Lesson 5.1 | enul0503=NLS I.M.B.T. (UEB) Lesson 5.3 | enul0601=NLS I.M.B.T. (UEB) Lesson 6.1 | enul0702=NLS I.M.B.T. (UEB) Lesson 7.2 | enul0703=NLS I.M.B.T. (UEB) Lesson 7.3 | enul0704=NLS I.M.B.T. (UEB) Lesson 7.4 | enul0705=NLS I.M.B.T. (UEB) Lesson 7.5 | enul0707=NLS I.M.B.T. (UEB) Lesson 7.7 | enul0710=NLS I.M.B.T. (UEB) Lesson 7.10 | enul0801=NLS I.M.B.T. (UEB) Lesson 8.1 | enul0802=NLS I.M.B.T. (UEB) Lesson 8.2 | enul0901=NLS I.M.B.T. (UEB) Lesson 9.1 | enul0903=NLS I.M.B.T. (UEB) Lesson 9.3 | enul1001=NLS I.M.B.T. (UEB) Lesson 10.1 | enul1003=NLS I.M.B.T. (UEB) Lesson 10.3 | enutp00=UK UEB Take Off Series 0 | enutp01=UK UEB Take Off Series 1 | enutp02=UK UEB Take Off Series 2 | enutp03=UK UEB Take Off Series 3 | enutp04=UK UEB Take Off Series 4 | enutp05=UK UEB Take Off Series 5 | enutp06=UK UEB Take Off Series 6 | enutp07=UK UEB Take Off Series 7 | enutp08=UK UEB Take Off Series 8 | enutp09=UK UEB Take Off Series 9 | enutp10=UK UEB Take Off Series 10 | enutp11=UK UEB Take Off Series 11 | enutp12=UK UEB Take Off Series 12 | enuts01=TSBVI Cluster 1 | enuts03=TSBVI Cluster 3 | enuts07=TSBVI Cluster 7 | enuts08=TSBVI Cluster 8 | enuts09=TSBVI Cluster 9 | enuts10=TSBVI Cluster 10 | enuts11=TSBVI Cluster 11 | enuts12=TSBVI Cluster 12 | enuts13=TSBVI Cluster 13 | enuts14=TSBVI Cluster 14 | enuts15=TSBVI Cluster 15 | enuts17=TSBVI Cluster 17 | enuts18=TSBVI Cluster 18 | enuts19=TSBVI Cluster 19 | enuts20=TSBVI Cluster 20 | enuts22=TSBVI Cluster 22 | enuts24=TSBVI Cluster 24 | enuts25=TSBVI Cluster 25 | enuts26=TSBVI Cluster 26 | enuts28=TSBVI Cluster 28 | enuts29=TSBVI Cluster 29 | enuts30=TSBVI Cluster 30 | enuts31=TSBVI Cluster 31 | enuts32=TSBVI Cluster 32 | enuts33=TSBVI Cluster 33 | enuts34=TSBVI Cluster 34 | enuts35=TSBVI Cluster 35 | enuts36=TSBVI Cluster 36 | enuts38=TSBVI Cluster 38 | enuts39=TSBVI Cluster 39 | enuts40=TSBVI Cluster 40 | enuts41=TSBVI Cluster 41 | enuts42=TSBVI Cluster 42 | enuts43=TSBVI Cluster 43 | enuts44=TSBVI Cluster 44 | enuts45=TSBVI Cluster 45 | enuts46=TSBVI Cluster 46 | enuts48=TSBVI Cluster 48 | enuts49=TSBVI Cluster 49 | enuts50=TSBVI Cluster 50 | enuts51=TSBVI Cluster 51 | enuts52=TSBVI Cluster 52 | enuts53=TSBVI Cluster 53 | enumaa=Mangold Method Unit #A.a | enumab=Mangold Method Unit #A.b | enumac=Mangold Method Unit #A.c | enumad=Mangold Method Unit #A.d | enumae=Mangold Method Unit #A.e | enumaf=Mangold Method Unit #A.f | enumag=Mangold Method Unit #A.g | enumah=Mangold Method Unit #A.h | enumai=Mangold Method Unit #A.i | enumba=Mangold Method Unit #B.a | enumbb=Mangold Method Unit #B.b | enumbc=Mangold Method Unit #B.c | enumbd=Mangold Method Unit #B.d | enumbe=Mangold Method Unit #B.e | enumbf=Mangold Method Unit #B.f | enumbg=Mangold Method Unit #B.g | enumbh=Mangold Method Unit #B.h | enumbi=Mangold Method Unit #B.i | enumbj=Mangold Method Unit #B.j | enumca=Mangold Method Unit #C.a | enumcb=Mangold Method Unit #C.b | enumcc=Mangold Method Unit #C.c | enumcd=Mangold Method Unit #C.d | enumce=Mangold Method Unit #C.e | enumcf=Mangold Method Unit #C.f | enumcg=Mangold Method Unit #C.g | enumch=Mangold Method Unit #C.h | enumci=Mangold Method Unit #C.i | enumcj=Mangold Method Unit #C.j | enumck=Mangold Method Unit #C.k | enumcl=Mangold Method Unit #C.l | enumcm=Mangold Method Unit #C.m | enumcn=Mangold Method Unit #C.n | enumco=Mangold Method Unit #C.o | enumcp=Mangold Method Unit #C.p | enumda=Mangold Method Unit #D.a | enumdb=Mangold Method Unit #D.b | enumdc=Mangold Method Unit #D.c | enumdd=Mangold Method Unit #D.d | enumde=Mangold Method Unit #D.e | enumdf=Mangold Method Unit #D.f | enumdg=Mangold Method Unit #D.g | enumdh=Mangold Method Unit #D.h | enumdi=Mangold Method Unit #D.i | enumdj=Mangold Method Unit #D.j | enumdk=Mangold Method Unit #D.k | enumdl=Mangold Method Unit #D.l | enumea=Mangold Method Unit #E.a | enumeb=Mangold Method Unit #E.b | enumec=Mangold Method Unit #E.c | enumed=Mangold Method Unit #E.d | enumee=Mangold Method Unit #E.e | enumef=Mangold Method Unit #E.f | enumeg=Mangold Method Unit #E.g | enumeh=Mangold Method Unit #E.h | enumei=Mangold Method Unit #E.i | enumej=Mangold Method Unit #E.j | enumek=Mangold Method Unit #E.k | enumel=Mangold Method Unit #E.l | enumem=Mangold Method Unit #E.m | enumen=Mangold Method Unit #E.n | enumeo=Mangold Method Unit #E.o
+English/Moon	Europe	eng-xukmoon	enmocp	gendxp	enmocb	engdxb	
+Esperanto	America,Europe,Asia,Africa,Pacific	epo	eoaacp	eoaacp	eoaacb	gendxb	
+Estonian	Europe	est	etaacp	gendxp	etaacb	gendxb	
+Ewe	Africa	ewe	eweacp	gendxp	eweacb	gendxb	
+Faroese	Europe	fao	faoacp	enudxp	faoacb	gendxb	
+Farsi (Persian)/Uncontracted	Asia	fas	farscp	amedxp	farscb	gendxb	
+Filipino	Asia	fil	tlaacp	amedxp	tlaacb	gendxb	
+Finnish/Uncontracted	Europe	fin	finnup	gendxp	finnub	gendxb	
+French/Quebec (pre-Unified)	America	fra-xqu	quebec	fradxp	frabp	gendxb	
+French/Unified	America,Europe	fra-xuf	fruncp	frudxp	fruncb	gendxb	
+French (pre-Unified)	Europe	fra-fra00	franc	fradxp	frabp	gendxb	
+Fulah (Fula)	Africa	ful	fulacp	enudxp	fulacb	gendxb	
+Irish Gaelic	Europe	gle	gaelcp	enudxp	gaelcb	gendxb	
+Irish Gaelic (pre-UIB)	Europe	gle-x15	gae0cp	amedxp	gaelcb	gendxb	
+Galician	Europe	glg	glgacp	enudxp	glgacb	gendxb	
+Georgian	Asia	kat	kaaacp	gendxp	kaaacb	gendxb	
+German	Europe	deu	deutcp	gendxp	deutcb	gendxb	
+Greek (Classical/American)	America	grc-a	elcacp	gendxp	elcacb	gendxb	
+Greek (Modern)/Uncontracted	Europe	ell	elmocp	amedxp	elmocb	gendxb	
+Greenlandic (Kalaallisut)	America	kal	kalacp	enudxp	kalacb	gendxb	
+Guarani	America	grn	grnacp	enudxp	grnacb	gendxb	
+Gujarati	Asia	guj	gujacp	gendxp	gujacb	gendxb	
+Haryanvi	Asia	bgc	bgcacp	gendxp	hinacb	gendxb	
+Hausa	Africa	hau	hauscp	gendxp	hauscb	gendxb	
+Hebrew/American Uncontracted	America	heb-usa	heamup	enudxp	qbibcb	gendxb	
+Hebrew/Israeli Uncontracted	Asia	heb-isr	heisup	heidxp	heisub	gendxb	
+Hiligaynon	Asia	hil	hilacp	gendxp	cebucb	gendxb	
+Hindi	Asia	hin	hinacp	gendxp	hinacb	gendxb	
+Hmong (RPA)	America,Asia	qhm	qhmacp	enudxp	qhmacb	gendxb	
+Hungarian	Europe	hun	huaacp	gendxp	huaacb	gendxb	
+Icelandic	Europe	ise	isaacp	gendxp	isaacb	gendxb	
+Igbo	Africa	ibo	ibaacp	spadxp	ibaacb	gendxb	
+Iloko (Ilokano)	Asia	ilo	iloacp	gendxp	cebucb	gendxb	
+Indonesian	Asia,Pacific	ind	idaacp	idndxp	idaacb	gendxb	
+Ingush	Europe	inh	inhacp	enudxp	inhacb	gendxb	
+IPA Braille	America,Europe,Asia,Africa,Pacific	qip	qipacp	ipadxp	qipacb	gendxb	
+Italian/Uncontracted	Europe	ita	italup	gendxp	italub	gendxb	
+Japanese (Kana)	Asia	jpn	jakncp	gendxp	jakncb	gendxb	
+Javanese	Asia,Pacific	jav	javacp	gendxp	javacb	gendxb	
+Kalanga	Africa	kck	kckacp	enudxp	kckacb	gendxb	
+Kannada	Asia	kan	kanacp	gendxp	kanacb	gendxb	
+Kazakh/Uncontracted	Asia	kaz	kkaacp	gendxp	kkaacb	gendxb	
+Khakas	Asia	kjh	kjhacp	gendxp	kjhacb	gendxb	
+Khmer (Cambodian)	Asia	khm	kmaacp	amedxp	kmaacb	gendxb	
+Kikongo	Africa	kon	konacp	enudxp	konacb	gendxb	
+Kinyarwanda	Africa	kin	kinacp	enudxp	kinacb	gendxb	
+Kirghiz	Asia	kir	kiracp	gendxp	kiracb	gendxb	
+Rundi (Kirundi)	Africa	run	runacp	enudxp	runacb	gendxb	
+Kituba	Africa	ktu	ktuacp	enudxp	ktuacb	gendxb	
+Korean	Asia	kor	korecp	gendxp	korecb	gendxb	
+Kurdish	Asia	kur	kuracp	enudxp	kuracb	gendxb	
+Kurukh	Asia	kru	kruacp	gendxp	hinacb	gendxb	
+Lao	Asia	lao	loaacp	gendxp	loaacb	gendxb	
+Latin Script (English-like) Uncontracted	Asia,Africa	qla	qlaecp	enudxp	qlaecb	gendxb	
+Latin/Uncontracted	Europe	lat	latiup	gendxp	latiub	gendxb	
+Latvian/Uncontracted	Europe	lav	lvaacp	gendxp	lvaacb	gendxb	
+Lango (Leb-Lango)	Africa	laj	lajacp	enudxp	lajacb	gendxb	
+Lisu	Asia	lis	lisucp	enudxp	lisucb	gendxb	
+Lithuanian/Uncontracted	Europe	lit	ltaacp	gendxp	ltaacb	gendxb	
+Luba-Kasai	Africa	lua	luaacp	enudxp	luaacb	gendxb	
+Luxembourgish	Europe	ltz	ltzacp	gendxp	ltzacb	gendxb	
+Macedonian	Europe	mkd	mkdacp	gendxp	mkdacb	gendxb	
+Madurese	Asia	mad	madacp	enudxp	madacb	gendxb	
+Magahi	Asia	mag	magacp	gendxp	hinacb	gendxb	
+Maithili	Asia	mai	maiacp	gendxp	hinacb	gendxb	
+Malagasy	Africa	mlg	mlgacp	enudxp	mlgacb	gendxb	
+Malayalam	Asia	mal	malacp	gendxp	malacb	gendxb	
+Malay	Asia	msa	msaacp	mlydxp	msaacb	gendxb	
+Maltese	Europe	mlt	mtaacp	gendxp	mtaacb	gendxb	
+Marathi	Asia	mar	maracp	gendxp	hinacb	gendxb	
+Arabic Mathematics Braille Code	Asia	qmt-arm	qarmcp	gendxp	qarmcb	gebdxb	
+German Mathematics Braille Code	Europe	qmt-dem	qdemcp	gendxp	qdemcb	gebdxb	
+Math Notation/Nemeth (1972 math mode)	America,Europe,Asia,Africa,Pacific	qmt-xnem72m	qmtncp	amedxp	qmtncb	gebdxb	
+Russian Mathematics Braille Code	Europe	qmt-rum	qrumcp	gendxp	qrumcb	gebdxb	
+Spanish/Portuguese Mathematics Braille Code	Europe	qmt-esm	qspmcp	gendxp	qspmcb	gebdxb	
+Meitei (Manipuri)	Asia	mni	mniacp	gendxp	benacb	gendxb	
+Mi'kmaw	America	mic	micacp	enudxp	micacb	gendxb	
+Mongolian	Asia	mon	mnaacp	gendxp	mnaacb	gendxb	
+Montenegrin	Europe	srp-mne	srpmcp	gendxp	srpmcb	gendxb	
+Ndebele	Africa	nde	nblucp	enudxp	nblucb	gendxb	
+Navajo	America	nav	navacp	gendxp	enuncb	gendxb	
+Nepali	Asia	nep	nepacp	gendxp	hinacb	gendxb	
+Nguni (Xhosa or Zulu)	Africa	qng	qngucp	enudxp	qngucb	gendxb	
+Norwegian	Europe	nor	norscp	amedxp	norscb	gendxb	
+Oriya	Asia	ori	oriacp	gendxp	oriacb	gendxb	
+Oromo	Africa	orm	ormacp	enudxp	ormacb	gendxb	
+Panjabi	Asia	pan	panacp	gendxp	panacb	gendxb	
+Polish	Europe	pol	plaacp	amedxp	plaacb	gendxb	
+Portuguese/Uncontracted	America,Europe	por	ptbrcp	amedxp	ptbrcb	gendxb	
+Pushto	Asia	pus	pusacp	amedxp	farscb	gendxb	
+Quechua	America	que	queacp	enudxp	queacb	gendxb	
+Romanian/Uncontracted	Europe	ron	romacp	fradxp	romacb	gendxb	
+Russian/Uncontracted	Europe,Asia	rus	russup	gendxp	russub	gendxb	
+Sadri	Asia	sck	sckacp	gendxp	hinacb	gendxb	
+Sanskrit	Asia	san	sanacp	gendxp	hinacb	gendxb	
+Santali	Asia	sat	satacp	gendxp	benacb	gendxb	
+Semitic Language Transcription	America,Europe,Asia,Africa,Pacific	qak	qakkcp	enudxp	qbibcb	gendxb	
+Serbian	Europe	srp	sraacp	gendxp	sraacb	gendxb	
+Shona	Africa	sna	snaacp	enudxp	snaacb	gendxb	
+Sindhi	Asia	snd	sndacp	gendxp	hinacb	gendxb	
+Sinhala	Asia	sin	sinacp	gendxp	sinacb	gendxb	
+Slovak	Europe	slk	skaacp	gendxp	skaacb	gendxb	
+Slovenian	Europe	slv	slvacp	slvdxp	slvacb	gendxb	
+Somali	Africa	som	somacp	amedxp	somacb	gendxb	
+Sotho (Southern and Northern (Pedi))	Africa	sot	sotucp	enudxp	sotucb	gendxb	
+Spanish/Reducida	America,Europe	spa-xre	spanr	spadxp	sparcb	gendxb	
+Spanish/Original	America,Europe	spa	span	spadxp	spancb	gendxb	
+Sundanese	Asia	sun	sunacp	enudxp	sunacb	gendxb	
+Swahili General	Africa	swa	swahil	amedxp	swahcb	gendxb	
+Swahili Kenya 2022	Africa	swa-ken	swakcp	amedxp	swakcb	gendxb	
+Swati	Africa	ssw	sswucp	enudxp	sswucb	gendxb	
+Swedish/Uncontracted	Europe	swe	svenup	gendxp	svenub	gendxb	
+Sylheti	Asia	syl	sylacp	gendxp	benacb	gendxb	
+Tagalog	Asia	tgl	tglacp	amedxp	tlaacb	gendxb	
+Tajik	Asia	tgk	tgkacp	gendxp	mnaacb	gendxb	
+Tamil	Asia	tam	tamacp	gendxp	tamacb	gendxb	
+Tatar	Europe	tat	ttaacp	gendxp	ttaacb	gendxb	
+Telugu	Asia	tel	telacp	gendxp	telacb	gendxb	
+Thai	Asia	tha	thaicp	gendxp	thaicb	gendxb	
+Tibetan	Asia	bod	boaacp	gendxp	boaacb	gendxb	
+Tigrinya	Africa	tir	tiracp	enbdxp	tiracb	engdxb	
+Tonga (Chitonga or Zambezi)	Africa	toi	toiacp	enudxp	toiacb	gendxb	
+Tsonga	Africa	tso	tsoucp	amedxp	tsoucb	gendxb	
+Tswana	Africa	tsn	tsnucp	enudxp	sotucb	gendxb	
+Turkish	Europe,Asia	tur	traacp	amedxp	traacb	gendxb	tralp01=Turkey Braille Level 1 | tralp02=Turkey Braille Level 2 | tralp03=Turkey Braille Level 3 | tralp04=Turkey Braille Level 4
+Turkmen	Asia	tuk	tukacp	gendxp	tukacb	gendxb	
+Udmurt	Europe	udm	udmacp	gendxp	udmacb	gendxb	
+Ukrainian/Uncontracted	Europe	ukr	ukracp	gendxp	ukracb	gendxb	
+Umbundu	Africa	umb	umbacp	enudxp	umbacb	gendxb	
+Unicode Debug	Debug	qdu	qqdisu	gendxp	enuncb	gendxb	
+Urdu/Pakistani	Asia	urd-pak	urdpcp	gendxp	urdpcb	gendxb	
+Urdu/Indian	Asia	urd-ind	urdacp	gendxp	urdacb	gendxb	
+Uzbek	Asia	uzb	uzaacp	gendxp	uzaacb	gendxb	
+Venda	Africa	ven	venucp	enudxp	venucb	gendxb	
+Vietnamese/Uncontracted	Asia	vie	vietcp	enudxp	vietcb	gendxb	
+Cymraeg (Welsh)	Europe	cym	cymrcp	enudxp	cymrcb	gendxb	cymla01=Cynllun Cyffwrdd 1 | cymla02=Cynllun Cyffwrdd 2 | cymla03=Cynllun Cyffwrdd 3 | cymla04=Cynllun Cyffwrdd 4 | cymla05=Cynllun Cyffwrdd 5
+Cymraeg (Welsh) (pre-2015)	Europe	cym-x15	cym0cp	enbdxp	cymrcb	gendxb	
+West African Languages	Africa	qaf	qafwcp	gendxp	qafwcb	gendxb	
+Xhosa	Africa	xho	xhoucp	enudxp	qngucb	gendxb	
+Yoruba	Africa	yor	yorucp	spadxp	yorucb	gendxb	
+Zulu	Africa	zul	zulucp	enudxp	qngucb	gendxb	

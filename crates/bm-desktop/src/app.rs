@@ -365,6 +365,7 @@ impl App {
     pub fn refresh_menus(&mut self) {
         let names: Vec<String> = self.docs.iter().map(|d| d.full_name()).collect();
         self.menus.set_documents(&names, self.active);
+        self.refresh_table_menus();
         let Some(d) = self.doc() else { return };
         let v = d.view;
         let hyphen = d.hyphen;
@@ -386,6 +387,40 @@ impl App {
             },
             true,
         );
+    }
+
+    /// Document, Translation Tables: the region in force checked, then the languages of that region and those the
+    /// open documents use, the active document's checked. Document, Learning Tables: the courses of the active
+    /// document's language between Uncontracted and Fully Contracted; checked is the course whose step the document
+    /// uses, else Uncontracted when its initial codes hold a grade 1 code, else Fully Contracted.
+    pub fn refresh_table_menus(&mut self) {
+        let region = crate::translation::region();
+        let item = (0..5).find(|&i| bm_core::table_list::TableList::region_bit(i) == region).map_or(2706, |i| 2701 + i as i32);
+        self.menus.check(item, true);
+        let used: Vec<Option<(usize, Option<usize>)>> =
+            self.docs.iter().map(|d| crate::translation::with_list(|l| l.entry_for(&d.tables))).collect();
+        let active = self.active.and_then(|i| used.get(i).copied().flatten());
+        let listed: Vec<(usize, String)> = crate::translation::with_list(|l| {
+            l.listed(region, |e| used.iter().any(|u| u.map(|x| x.0) == Some(e)))
+                .into_iter()
+                .map(|e| (e, l.entries[e].name.clone()))
+                .collect()
+        });
+        self.menus.set_languages(&listed, active.map(|a| a.0));
+        let (courses, has_steps, step) = match active {
+            Some((entry, step)) => crate::translation::with_list(|l| {
+                (l.courses(entry), !l.entries[entry].steps.is_empty(), step)
+            }),
+            None => (Vec::new(), false, None),
+        };
+        let initial = self.doc().map(|d| d.initial_codes.clone()).unwrap_or_default();
+        let checked = match step.and_then(|s| courses.iter().position(|c| c.steps.contains(&s))) {
+            Some(c) => crate::menu::COURSE_BASE + c as i32,
+            None if initial.contains("[g1") => 2801,
+            None => 2802,
+        };
+        let names: Vec<String> = courses.into_iter().map(|c| c.name).collect();
+        self.menus.set_courses(&names, has_steps, checked);
     }
 
     /// The status line: Current Style, Page, Line, Column; then the translated line.
