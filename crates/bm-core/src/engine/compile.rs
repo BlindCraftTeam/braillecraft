@@ -414,7 +414,10 @@ impl Builder {
             }
             "font" => {
                 let w = string(line, v)?;
-                s.fonts.push(super::chars::latin1(&w).split_whitespace().map(String::from).collect());
+                s.fonts.push(
+                    super::scan_table::Font::parse(&super::chars::latin1(&w))
+                        .ok_or_else(|| err(line, "a font is \"start end words code\""))?,
+                );
             }
             "capital-sign" => s.out_cap = byte_value(line, v)?,
             "capital-end" => s.out_capterm = byte_value(line, v)?,

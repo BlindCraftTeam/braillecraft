@@ -37,7 +37,7 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 pub use callbacks::{LanguageSource, Languages, StyleTable};
-pub use scan_table::ScanTable;
+pub use scan_table::{Font, ScanTable};
 pub use table::RuleTable;
 pub use tableset::{TableEntry, TableSet};
 pub use writer::Chitab;
@@ -228,7 +228,8 @@ impl Translator {
     ) -> Result<Vec<i64>, EngineError> {
         let text = if brackets { text.replace('[', "\u{1c}").replace(']', "\u{1f}") } else { text.to_string() };
         let codes = encode_cp437(&text).map_err(EngineError::NotEncodable)?;
-        let codes: Vec<i64> = scanner::scan(&self.scan, codes)?.into_iter().filter(|&c| c != EOF).collect();
+        // The scanner gets the document's styles too, as the reference hands its scanner the same style lookup.
+        let codes: Vec<i64> = scanner::scan(&self.scan, codes, style)?.into_iter().filter(|&c| c != EOF).collect();
         let mut stack: Vec<Rc<RuleTable>> = vec![self.rules.clone()];
         let mut e = rules::Engine::new(self.rules.clone(), &codes, style, &self.chitab);
         let mut r = e.run();
@@ -341,6 +342,63 @@ mod tests {
         let Some(f) = folder() else { return };
         let t = Translator::open(&f, "enuncb.btb", "gendxb.sct").unwrap();
         assert_eq!(t.translate(",! cat sat4").unwrap(), "The cat sat.");
+    }
+
+    /// Emphasis fonts (the older American scan table): the italic sign in front of each word of a short stretch, two
+    /// in front of the first word and one in front of the last of a stretch of 4 words or more; bold its own sign;
+    /// no sign when the next word starts with "_".
+    #[test]
+    fn emphasis_fonts() {
+        let Some(f) = folder() else { return };
+        let t = Translator::open(&f, "amerc.btb", "amedxp.sct").unwrap();
+        let cases = [
+            ("a [fts~i]big[fte~i] dog", "a .big dog"),
+            ("a [fts~i]one two three[fte~i] dog", "a .\"o .two .?ree dog"),
+            ("a [fts~i]one two three four five[fte~i] dog", "a ..\"o two ?ree f\\r .five dog"),
+            ("[fts~b]Bold words here[fte~b] end", "_.,bold _.^ws _.\"h 5d"),
+            ("THE [fts~i]BIG RED DOG RAN[fte~i] home", ",,! ..,,big ,,r$ ,,dog .,,ran home"),
+            ("[fts~i]_under score[fte~i] x", ".\"u score ;x"),
+        ];
+        for (text, braille) in cases {
+            assert_eq!(t.translate(text).unwrap(), braille, "{text}");
+        }
+    }
+
+    /// Doubled words (the Indonesian scan table): the scanner marks the two copies and the rule table writes the
+    /// doubling sign.
+    #[test]
+    fn doubled_words() {
+        let Some(f) = folder() else { return };
+        let t = Translator::open(&f, "idaacp.btb", "idndxp.sct").unwrap();
+        let cases = [
+            ("anak-anak main bola", ">ak< m*n bola"),
+            ("Anak-Anak", ",>ak-,>ak"),
+            ("buah-buahan", "b+h<>"),
+            ("lari-lari-lari", "lari<-lari"),
+            ("anak anak", ">ak >ak"),
+        ];
+        for (text, braille) in cases {
+            assert_eq!(t.translate(text).unwrap(), braille, "{text}");
+        }
+    }
+
+    /// A sample document translated with its own tables (the older American pair, which uses fonts) and its own
+    /// styles, when BM_DX_SAMPLES names the sample folder; with BM_DX_EXPECTED naming a folder of expected results
+    /// (FILE.txt, from the reference port), the result must be the same.
+    #[test]
+    fn a_sample_document_with_fonts_translates() {
+        let (Some(f), Ok(dir)) = (folder(), std::env::var("BM_DX_SAMPLES")) else { return };
+        let path = std::path::Path::new(&dir).join("dochow.dxp");
+        let d = crate::dxfile::read(&std::fs::read(&path).unwrap()).unwrap();
+        let bytes = |s: &str| s.chars().map(|c| c as u32 as u8).collect::<Vec<u8>>();
+        let styles = StyleTable::new(d.styles.iter().map(|(n, b, e)| (n.clone(), bytes(b), bytes(e))).collect());
+        let t = Translator::open(&f, &format!("{}.btb", d.tables[0]), &format!("{}.sct", d.tables[1])).unwrap();
+        let out = t.translate_marked(&d.text, Some(&styles), Some(&Languages::from_folder(&f).unwrap())).unwrap();
+        assert!(out.starts_with("\u{1c}svpnp2:2:0:0\u{1f}\u{1c}es~h1.\u{1f},,topical ,,how-to ,,guide"), "{}", &out[..80]);
+        if let Ok(expected) = std::env::var("BM_DX_EXPECTED") {
+            let want = std::fs::read_to_string(std::path::Path::new(&expected).join("dochow.txt")).unwrap();
+            assert!(out == want, "differs from the reference port at {:?}", out.chars().zip(want.chars()).position(|(a, b)| a != b));
+        }
     }
 
     /// BrailleMaker's own table source from the repository's tables folder.

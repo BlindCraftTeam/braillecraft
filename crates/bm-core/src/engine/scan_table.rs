@@ -39,8 +39,8 @@ pub struct ScanTable {
     /// 1: a capital passage ends at a word with lower case.
     pub cessation: i64,
     pub map_braces: i64,
-    /// Emphasis fonts: per font its words (not built; English tables have none).
-    pub fonts: Vec<Vec<String>>,
+    /// Emphasis fonts (italic, bold, ...): see `Font`.
+    pub fonts: Vec<Font>,
     pub spare: i64,
     pub cpe: i64,
     pub nxsls: i64,
@@ -63,6 +63,43 @@ pub struct ScanTable {
     /// The range of characters made upper case when words are folded to upper case.
     pub fold_lo: i64,
     pub fold_hi: i64,
+}
+
+/// An emphasis font, one line of the scan table: "start end words code", for example "fts~i fte~i 4 3". Between the
+/// format words [start] and [end] the scanner writes the font's code in front of each word when fewer than `words`
+/// words lie between them (0: always), else twice in front of the first word and once in front of the last.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Font {
+    pub start: String,
+    pub end: String,
+    pub words: i64,
+    pub code: i64,
+}
+
+impl Font {
+    /// Reads a font line the way the reference reads it: two words, then two numbers (each a sign and digits at
+    /// its start); None when the line does not give all four.
+    pub fn parse(text: &str) -> Option<Font> {
+        let mut it = text.split_whitespace();
+        let start = it.next()?.to_string();
+        let end = it.next()?.to_string();
+        let mut number = || -> Option<i64> {
+            let w = it.next()?;
+            let (sign, rest) = match w.as_bytes().first() {
+                Some(b'-') => (-1, &w[1..]),
+                Some(b'+') => (1, &w[1..]),
+                _ => (1, w),
+            };
+            let digits: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
+            if digits.is_empty() {
+                return None;
+            }
+            Some(sign * digits.parse::<i64>().unwrap_or(i64::MAX))
+        };
+        let words = number()?;
+        let code = number()?;
+        Some(Font { start, end, words, code })
+    }
 }
 
 /// "|NNN" is the byte NNN (one to three digits), "||" is "|".
@@ -158,7 +195,11 @@ impl ScanTable {
         let nfonts = num(raw()?, 0, BIG)?;
         let mut fonts = Vec::new();
         for _ in 0..nfonts {
-            fonts.push(text_of(raw()?).split_whitespace().map(String::from).collect());
+            let line: Vec<i64> = raw()?.into_iter().take(39).collect();
+            fonts.push(
+                Font::parse(&text_of(line))
+                    .ok_or_else(|| EngineError::BadTable("a font line needs start, end, words and code".into()))?,
+            );
         }
         let spare = num(raw()?, 0, 3)?;
         let cpe = num(raw()?, 0, 1)?;

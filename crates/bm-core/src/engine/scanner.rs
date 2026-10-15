@@ -10,12 +10,17 @@
 //! - `Scanner::output` writes the words: each word in lower case with the capital sign in front of a capital
 //!   letter, two capital signs in front of an all-capital word, three in front of a capital passage (more than the
 //!   table's number of all-capital words in a row) and the capital termination after it; format words pass
-//!   through.
+//!   through. Between a font's start and end codes it writes the font's code in front of the words (see `Font`),
+//!   and around a doubled word ("anak-anak") the table's doubled-word codes.
 //!
-//! Not built, and refused with an error when a table needs them: emphasis fonts, doubled adjectives,
-//! computer-braille switching for web and mail addresses, two-character format words that start with "$".
+//! The words wait in a ring of 25 that shares one character buffer; the ring is filled to 25 words unless the
+//! buffer has come round again to the next word to write.
+//!
+//! Not built, and refused with an error when a table needs them: computer-braille switching for web and mail
+//! addresses, two-character format words that start with "$".
 
-use super::scan_table::ScanTable;
+use super::callbacks::StyleTable;
+use super::scan_table::{Font, ScanTable};
 use super::EngineError;
 
 pub(crate) const EOF_OUT: i64 = 0x100;
@@ -362,11 +367,16 @@ impl Reader {
 /// A word record.
 #[derive(Clone)]
 struct Word {
+    /// Where the word's characters start in the shared character buffer.
+    start: usize,
     url: i64,
+    /// One more than the place of the hyphen of a doubled word (0: none).
     hyph_pos: usize,
     hyph_n: i64,
-    caps_n: i64,
-    f10: i64,
+    /// The length of the doubled part.
+    dup: usize,
+    /// `hyph_pos` kept once the code in front of the first copy is written (0: none).
+    f10: usize,
     chars: Vec<i64>,
     term: i64,
     /// -1 no letter yet, 0 has small letters, 1 capitals only, 2 format word, 3 two-character format word.
@@ -376,12 +386,13 @@ struct Word {
 }
 
 impl Word {
-    fn new() -> Word {
+    fn new(start: usize) -> Word {
         Word {
+            start,
             url: 0,
             hyph_pos: 0,
             hyph_n: 0,
-            caps_n: 0,
+            dup: 0,
             f10: 0,
             chars: Vec::new(),
             term: 0,
@@ -392,8 +403,21 @@ impl Word {
     }
 }
 
-struct Scanner {
+/// A font while scanning: 0 off, 1 its code in front of each word, 2 a passage about to start, 3 a passage running.
+struct FontState {
+    font: Font,
+    state: u8,
+}
+
+struct Scanner<'a> {
     t: ScanTable,
+    styles: Option<&'a StyleTable>,
+    fonts: Vec<FontState>,
+    /// Where the second font check goes on from.
+    font_k: usize,
+    /// The next free place in the shared character buffer, and the ring slot of the next word to write.
+    pos: usize,
+    head: usize,
     rd: Reader,
     /// The output characters: [0] flag, [1] capital sign, [2] two-character format word, [3] format word,
     /// [4] capital termination, [8] the nxsls setting.
@@ -412,12 +436,10 @@ struct Scanner {
     out: Vec<i64>,
 }
 
-impl Scanner {
-    fn new(t: ScanTable, codes: Vec<i64>) -> Result<Scanner, EngineError> {
-        if !t.fonts.is_empty() {
-            return Err(EngineError::NotSupported("emphasis fonts in the scan table"));
-        }
+impl<'a> Scanner<'a> {
+    fn new(t: ScanTable, codes: Vec<i64>, styles: Option<&'a StyleTable>) -> Scanner<'a> {
         let rd = Reader::new(&t, codes);
+        let fonts = t.fonts.iter().map(|f| FontState { font: f.clone(), state: 0 }).collect();
         let mut c = [0i64; 9];
         c[0] = t.flag;
         c[1] = t.out_cap;
@@ -426,8 +448,13 @@ impl Scanner {
         c[4] = t.out_capterm;
         c[8] = t.nxsls;
         let cessation_on = t.cessation;
-        Ok(Scanner {
+        Scanner {
             t,
+            styles,
+            fonts,
+            font_k: 0,
+            pos: 0,
+            head: 0,
             rd,
             c,
             ring: Default::default(),
@@ -442,7 +469,166 @@ impl Scanner {
             cessation_on,
             queue: Default::default(),
             out: Vec::new(),
-        })
+        }
+    }
+
+    /// The format word, after its flag, is `name` (small and capital letters alike).
+    fn name_is(w: &Word, name: &str) -> bool {
+        let got = &w.chars[1.min(w.chars.len())..];
+        got.len() == name.chars().count()
+            && got.iter().zip(name.chars()).all(|(&c, n)| c < 0x100 && to_lower(c) == n.to_ascii_lowercase() as i64)
+    }
+
+    /// For a style's begin word [es~name] or end word [ee~name], when the document's styles are known: the style
+    /// name (from the word's fifth character) and which codes (0 begin, 1 end).
+    fn style_word(&self, w: &Word) -> Option<(Vec<u8>, i64)> {
+        self.styles?;
+        if w.chars.len() < 4
+            || to_lower(w.chars[1]) != 0x65
+            || !(to_lower(w.chars[2]) == 0x73 || to_lower(w.chars[2]) == 0x65)
+            || w.chars[3] != 0x7e
+        {
+            return None;
+        }
+        let name: Vec<u8> = w.chars[4..]
+            .iter()
+            .take_while(|&&c| c != 0 && c != 0x1f && c != 0x20 && c != 0x60)
+            .take(39)
+            .map(|&c| (c & 0xff) as u8)
+            .collect();
+        Some((name, if to_lower(w.chars[2]) == 0x65 { 1 } else { 0 }))
+    }
+
+    fn style_codes(&self, name: &[u8], which: i64) -> Option<Vec<u8>> {
+        self.styles?.lookup(name, which)
+    }
+
+    /// A code in a style's codes: mode 0 a code that starts with `name`, mode 2 the code `name` itself (followed
+    /// by 0x1F, a space or a backquote).
+    fn find_code(&self, codes: Option<&[u8]>, name: &str, mode: u8) -> bool {
+        let Some(codes) = codes else { return false };
+        let s: Vec<i64> = codes.iter().map(|&b| i64::from(b)).chain([0]).collect();
+        let n: Vec<i64> = name.chars().map(|c| c.to_ascii_lowercase() as i64).chain([0]).collect();
+        let at = |v: &Vec<i64>, k: usize| v.get(k).copied().unwrap_or(0);
+        let mut i = 0;
+        loop {
+            if at(&s, i) == 0 {
+                return false;
+            }
+            while at(&s, i) != 0 && at(&s, i) != self.t.flag {
+                i += 1;
+            }
+            if at(&s, i) == 0 {
+                return false;
+            }
+            i += 1;
+            let mut j = 0;
+            loop {
+                let a = at(&s, i);
+                let a = if a < 0x80 { to_lower(a) } else { a };
+                if a != at(&n, j) || a == 0 {
+                    break;
+                }
+                i += 1;
+                j += 1;
+                if at(&s, i) == 0x7e && mode == 1 {
+                    return true;
+                }
+            }
+            if at(&n, j) == 0 && (mode == 0 || matches!(at(&s, i), 0x1f | 0x20 | 0x60)) {
+                return true;
+            }
+        }
+    }
+
+    /// The word is the font's end code, or the end word of a style whose end codes hold it.
+    fn is_font_end(&self, w: &Word, end: &str) -> bool {
+        if Self::name_is(w, end) {
+            return true;
+        }
+        match self.style_word(w) {
+            Some((name, 1)) => self.find_code(self.style_codes(&name, 1).as_deref(), end, 2),
+            _ => false,
+        }
+    }
+
+    /// True when the font's end code comes, or the waiting words run out, before `n` words that follow a space
+    /// (format words and words joined to the one before are not counted).
+    fn end_before(&self, end: &str, n: i64) -> bool {
+        let mut count = 0;
+        for w in &self.ring {
+            if w.kind > 1 || w.after_space == 0 {
+                if w.kind == 2 && self.is_font_end(w, end) {
+                    return true;
+                }
+                continue;
+            }
+            count += 1;
+            if count == n {
+                return false;
+            }
+        }
+        true
+    }
+
+    /// The next waiting word that is not a format word starts with "_" (looked for up to the ring's last slot,
+    /// without going round).
+    fn next_underscore(&self) -> bool {
+        for (k, w) in self.ring.iter().enumerate() {
+            if self.head + k > 24 {
+                return false;
+            }
+            if w.kind < 2 {
+                return w.chars.first() == Some(&0x5f);
+            }
+        }
+        false
+    }
+
+    /// The doubled part of a word: the longest run of letters before the hyphen equal to the run after it
+    /// (small and capital letters alike; literal pairs skipped). Keeps the word's last value when none is longer.
+    fn dup_len(w: &mut Word) -> usize {
+        let m = w.hyph_pos as i64 - 1;
+        let len = w.chars.len() as i64;
+        let limit = m.min(len - m);
+        let ch = |k: i64| if k >= 0 && k < len { w.chars[k as usize] } else { 0 };
+        let mut dup = w.dup;
+        for k in 1..=limit {
+            let mut bad = false;
+            let (mut x, mut j) = (0i64, 0i64);
+            'compare: while x < k {
+                while ch(m - k + x) == 0x17 {
+                    x += 2;
+                    if k <= x {
+                        break 'compare;
+                    }
+                }
+                while ch(w.hyph_pos as i64 + j) == 0x17 {
+                    j += 2;
+                    if len < w.hyph_pos as i64 + j {
+                        break 'compare;
+                    }
+                }
+                let a = ch(m - k + x);
+                if to_lower(a) != to_lower(ch(w.hyph_pos as i64 + j)) || a == 0x2d || !is_letter(a) {
+                    bad = true;
+                }
+                j += 1;
+                x += 1;
+            }
+            if !bad {
+                dup = k as usize;
+            }
+        }
+        w.dup = dup;
+        dup
+    }
+
+    /// Moves to the hyphen after the current one.
+    fn next_hyphen(w: &mut Word) {
+        if let Some(k) = (w.hyph_pos..w.chars.len()).find(|&k| w.chars[k] == 0x2d) {
+            w.hyph_pos = k + 1;
+        }
     }
 
     /// The character is written literally: it is 0x17 or follows one.
@@ -453,8 +639,9 @@ impl Scanner {
         c == 0x17
     }
 
-    /// Splits the input into words until 25 are waiting, a code starts, or the input ends. False when the input
-    /// had already ended.
+    /// Splits the input into words until 25 are waiting or the input ends; sooner only when the character buffer
+    /// has come round to the next word to write (closer than 0x529 places to it, or with a code still open).
+    /// False when the input had already ended.
     fn fill(&mut self) -> bool {
         if self.end {
             return false;
@@ -463,12 +650,17 @@ impl Scanner {
         loop {
             let mut w = match reuse.take() {
                 None => {
-                    if self.end || self.ring.len() == 25 || (self.flag_seen && !self.ring.is_empty()) {
+                    if self.end || self.ring.len() == 25 {
                         return true;
                     }
-                    Word::new()
+                    if let Some(next) = self.ring.front() {
+                        if self.pos <= next.start && (next.start - self.pos < 0x529 || self.flag_seen) {
+                            return true;
+                        }
+                    }
+                    Word::new(self.pos)
                 }
-                Some(_) => Word::new(),
+                Some(old) => Word::new(old.start),
             };
             let mut url_state: i64 = 0;
             let nwncb_before = self.nwncb;
@@ -535,6 +727,10 @@ impl Scanner {
                 } else if w.kind == 3 && n == 2 {
                     break;
                 }
+                if w.start + w.chars.len() > 0xc7e {
+                    // The word reaches the end of the character buffer.
+                    break;
+                }
                 if w.kind == -1 {
                     if !Self::literal(&w, c) {
                         if is_upper(c) {
@@ -578,8 +774,7 @@ impl Scanner {
             }
             w.term = self.last;
             if w.kind > 1 {
-                let name = text_of(&w.chars[1.min(w.chars.len())..]);
-                if let Some(slot) = self.t.modes.iter().position(|m| *m == name) {
+                if let Some(slot) = self.t.modes.iter().position(|m| Self::name_is(&w, m)) {
                     // The mode words: line ends, spaces and paragraphs change while reading.
                     match slot {
                         0..=2 => self.t.newline = slot as i64,
@@ -595,13 +790,13 @@ impl Scanner {
                     reuse = Some(w);
                     continue;
                 }
-                if name == "nwncb" {
+                if Self::name_is(&w, "nwncb") {
                     self.nwncb = true;
                     reuse = Some(w);
                     continue;
                 }
-                if matches!(name.as_str(), "cpe-l" | "cpe-l-off" | "cpe-fts" | "cpe-fts-off") {
-                    match name.as_str() {
+                if let Some(word) = ["cpe-l", "cpe-l-off", "cpe-fts", "cpe-fts-off"].into_iter().find(|x| Self::name_is(&w, x)) {
+                    match word {
                         "cpe-l" => self.t.cpe_l = 1,
                         "cpe-fts" => self.t.cpe_fts = 1,
                         // Both "off" words clear the same setting.
@@ -612,6 +807,29 @@ impl Scanner {
                 }
                 if self.t.triple_caps == 0 {
                     w.ends_passage = 1;
+                } else if let Some(codes) = self.style_word(&w).map(|(name, which)| self.style_codes(&name, which)) {
+                    // A style's word ends a passage when one of the style's codes does (its first four letters).
+                    let codes: Vec<i64> = codes.unwrap_or_default().into_iter().map(i64::from).chain([0]).collect();
+                    let mut ends = false;
+                    let mut i = 0;
+                    while codes[i] != 0 && !ends {
+                        if codes[i] == 0x1c {
+                            let mut short = Vec::new();
+                            loop {
+                                i += 1;
+                                if !(short.len() < 4 && codes[i] != 0 && codes[i] != 0x7e && codes[i] != 0x1f) {
+                                    break;
+                                }
+                                short.push(to_lower(codes[i]));
+                            }
+                            ends = code_ends_passage(&text_of(&short), self.t.cpe_fts, self.t.cpe_l);
+                            if ends || codes[i] == 0 {
+                                break;
+                            }
+                        }
+                        i += 1;
+                    }
+                    w.ends_passage = ends as i64;
                 } else {
                     let low: Vec<i64> = w.chars.iter().map(|&x| to_lower(x)).collect();
                     let mut short = Vec::new();
@@ -626,6 +844,10 @@ impl Scanner {
             }
             if self.t.icb != 0 && !nwncb_before && url_state == -1 {
                 w.url = 1;
+            }
+            self.pos += w.chars.len() + 1;
+            if self.pos > 0x755 {
+                self.pos = 0;
             }
             self.ring.push_back(w);
         }
@@ -701,10 +923,11 @@ impl Scanner {
                 self.end_of_input();
                 return Ok(());
             }
-            let Some(w) = self.ring.pop_front() else {
+            let Some(mut w) = self.ring.pop_front() else {
                 self.end_of_input();
                 return Ok(());
             };
+            self.head = (self.head + 1) % 25;
             let mut i = 0usize;
             let ordinary;
             if w.kind == 1 && self.t.triple_caps != 0 && self.caps != 2 && !self.caps_break(self.t.triple_caps) {
@@ -724,9 +947,54 @@ impl Scanner {
                 if w.url != 0 {
                     return Err(EngineError::NotSupported("computer-braille switching for addresses"));
                 }
+                // The font codes in front of the word.
+                loop {
+                    if let Some(k) = self.fonts.iter().position(|f| f.state == 2) {
+                        // A passage starts: the code twice.
+                        let code = self.fonts[k].font.code;
+                        self.put(code);
+                        self.fonts[k].state = 3;
+                        self.put(code);
+                        continue;
+                    }
+                    let mut hit = None;
+                    for k in self.font_k..self.fonts.len() {
+                        let (state, end) = (self.fonts[k].state, self.fonts[k].font.end.clone());
+                        if w.after_space != 0 && state == 1 {
+                            // Word by word: the code in front of each word, until the last before the end code.
+                            self.font_k = k + 1;
+                            if self.end_before(&end, 1) {
+                                self.fonts[k].state = 0;
+                            }
+                            hit = Some(k);
+                            break;
+                        }
+                        if state == 3 && self.end_before(&end, 1) {
+                            // The last word of a passage.
+                            self.fonts[k].state = 0;
+                            self.font_k = k + 1;
+                            hit = Some(k);
+                            break;
+                        }
+                    }
+                    match hit {
+                        Some(k) => {
+                            let code = self.fonts[k].font.code;
+                            self.put(code);
+                        }
+                        None => {
+                            self.font_k = 0;
+                            break;
+                        }
+                    }
+                }
                 loop {
                     if w.f10 != 0 && i == w.chars.len() {
-                        return Err(EngineError::NotSupported("doubled adjectives"));
+                        // The doubled word ends with the word: the code after the second copy.
+                        w.f10 = 0;
+                        w.dup = 0;
+                        self.put(self.t.dbl_adj_after);
+                        continue;
                     }
                     if i == w.chars.len() {
                         break;
@@ -742,8 +1010,33 @@ impl Scanner {
                     if i == w.chars.len() && w.url != 0 && (c == 0x2e || c == 0x2c) {
                         return Err(EngineError::NotSupported("computer-braille switching for addresses"));
                     }
-                    if w.hyph_pos != 0 || w.caps_n >= 2 || w.hyph_n > 1 {
-                        return Err(EngineError::NotSupported("doubled adjectives"));
+                    // A doubled word ("anak-anak"): the table's code in front of the first copy and the next code after
+                    // the second.
+                    if w.hyph_pos != 0 && w.chars.get(w.hyph_pos).is_some_and(|&h| is_letter(h)) {
+                        Self::dup_len(&mut w);
+                    }
+                    if w.dup < 2 && w.hyph_n > 1 {
+                        while w.hyph_n > 0 && w.dup < 2 {
+                            Self::next_hyphen(&mut w);
+                            Self::dup_len(&mut w);
+                            w.hyph_n -= 1;
+                        }
+                    }
+                    if w.dup < 2 {
+                        w.dup = 0;
+                        w.hyph_pos = 0;
+                    } else if w.hyph_pos != 0 && i == w.hyph_pos - w.dup {
+                        w.f10 = w.hyph_pos;
+                        w.hyph_pos = 0;
+                        i -= 1;
+                        self.put(self.t.dbl_adj);
+                        continue;
+                    } else if w.f10 != 0 && i == w.f10 + 1 + w.dup {
+                        w.f10 = 0;
+                        w.dup = 0;
+                        i -= 1;
+                        self.put(self.t.dbl_adj_after);
+                        continue;
                     }
                     let mut out_first = None;
                     let fold_words = self.t.fold_words;
@@ -790,13 +1083,28 @@ impl Scanner {
                     && to_lower(w.chars[1]) == 0x6c
                     && to_lower(w.chars[2]) == 0x67
                     && w.chars[3] == 0x7e;
-                if self.t.nxsls != 0 {
-                    let name: Vec<i64> = w.chars.iter().skip(1).take(2).map(|&x| to_lower(x) & 0xff).collect();
-                    let name = text_of(&name);
-                    if name == "cb" {
-                        self.cessation_on = 0;
-                    } else if name == "tx" {
-                        self.cessation_on = 1;
+                if w.kind == 2 {
+                    let codes = self.style_word(&w).and_then(|(name, which)| self.style_codes(&name, which));
+                    // A font starts at its start code (or a style whose codes hold it), unless the next word
+                    // starts with "_": word by word when its end comes within its number of words, else a passage.
+                    for k in 0..self.fonts.len() {
+                        let (start, end, words) =
+                            (self.fonts[k].font.start.clone(), self.fonts[k].font.end.clone(), self.fonts[k].font.words);
+                        if (Self::name_is(&w, &start) || self.find_code(codes.as_deref(), &start, 2))
+                            && !self.next_underscore()
+                        {
+                            self.fonts[k].state = if words == 0 || self.end_before(&end, words) { 1 } else { 2 };
+                        }
+                    }
+                    if self.t.nxsls != 0 {
+                        let first = |k: usize| w.chars.get(k).map_or(0, |&c| to_lower(c));
+                        if !self.find_code(codes.as_deref(), "cb", 0) && (first(1) != 0x63 || first(2) != 0x62) {
+                            if self.find_code(codes.as_deref(), "tx", 0) || (first(1) == 0x74 && first(2) == 0x78) {
+                                self.cessation_on = 1;
+                            }
+                        } else {
+                            self.cessation_on = 0;
+                        }
                     }
                 }
                 for (k, &c) in w.chars.iter().enumerate() {
@@ -821,8 +1129,8 @@ impl Scanner {
 }
 
 /// The scanner's output for `codes` (code page 437 codes): the codes the rule engine reads, ending with 0x100.
-pub(crate) fn scan(t: &ScanTable, codes: Vec<i64>) -> Result<Vec<i64>, EngineError> {
-    let mut s = Scanner::new(t.clone(), codes)?;
+pub(crate) fn scan(t: &ScanTable, codes: Vec<i64>, styles: Option<&StyleTable>) -> Result<Vec<i64>, EngineError> {
+    let mut s = Scanner::new(t.clone(), codes, styles);
     s.run()?;
     Ok(s.out)
 }
