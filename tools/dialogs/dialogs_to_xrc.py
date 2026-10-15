@@ -15,7 +15,7 @@ from xml.sax.saxutils import escape
 
 # Licensing, activation, registration and vendor-specific prompts are not part of BrailleMaker.
 SKIP = {1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009, 1010, 1011, 1012, 1013, 1014, 1015,
-        1056, 1057, 1058, 1059, 1070}
+        1056, 1057, 1059, 1070}
 
 # About (1016) keeps its layout with BrailleMaker's own text; the activation buttons and the original credits are
 # left out (None). Controls 10 to 14 are filled at run time.
@@ -27,17 +27,23 @@ ABOUT_TEXT = {
     15: "Designed, implemented, and tested by:",
     16: "Jeremiah Beasley",
     17: "Braille translation:",
-    18: "liblouis 3.39.0 (LGPL 2.1 or later), until the BrailleMaker engine is complete",
+    18: "the BrailleMaker translation engine and its tables",
     19: "Copyright (c) 2026 Jeremiah Beasley.",
 }
 
 
 # Titles and texts that name another program are replaced.
-TITLES = {1054: "BrailleMaker", 1061: "BrailleMaker Autosave Recovery Wizard"}
+TITLES = {1052: "Selective Contractions", 1054: "BrailleMaker", 1061: "BrailleMaker Autosave Recovery Wizard"}
 TEXTS = {
     (1036, 12): "Allow embedded codes, eg. [[*pg*]]",
     (1037, 16): '<a href="www.example.com">www.example.com</a>',
     (1060, 12): "",
+    # Install JAWS Scripts: the same texts as crates/bm-desktop/src/jaws_install.rs.
+    (1058, 6): "You have one or more JAWS® installations without the most up-to-date script files for "
+               "BrailleMaker.  Installing the most recent script files (included with BrailleMaker) will help "
+               "BrailleMaker to work better with JAWS.",
+    (1058, 7): "Would you like to install the script files?  (Any existing BrailleMaker script files will be backed "
+               "up.)",
 }
 
 

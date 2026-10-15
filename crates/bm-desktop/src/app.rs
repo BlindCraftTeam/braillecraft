@@ -124,6 +124,20 @@ pub struct Shortcuts {
     pub new_line: String,
     pub new_page: String,
     pub new_ref_page: String,
+    /// Page Up and Page Down, and with Control: 0 a screen, 1 a page, 2 to the top of a page.
+    pub page_nav: usize,
+    pub control_page_nav: usize,
+}
+
+impl Shortcuts {
+    /// The settings section the shortcuts are kept in.
+    pub const SECTION: &'static str = "Shortcuts";
+    /// The kept words for the page-navigation choices, in the dialog's order.
+    pub const PAGE_NAV: [&'static str; 3] = ["screen", "page", "pageTop"];
+
+    pub fn page_nav_number(word: &str) -> Option<usize> {
+        Self::PAGE_NAV.iter().position(|w| w.eq_ignore_ascii_case(word))
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -150,15 +164,17 @@ impl Default for Settings {
             encoding: encodings::DEFAULT.to_string(),
             six_key_set: "fdsjkl".to_string(),
             default_views: DefaultViews {
-                translated_font: ViewFont::Braille,
+                // The defaults are the reference program's (spec 18): translated line in the print font, braille
+                // documents with the translated line and six-key entry on, status line Segoe UI 12.
+                translated_font: ViewFont::Print,
                 print_full_page: false,
                 print_codes: false,
                 print_translated: false,
                 braille_font: ViewFont::Print,
                 braille_full_page: false,
                 braille_codes: false,
-                braille_translated: false,
-                six_key: false,
+                braille_translated: true,
+                six_key: true,
             },
             shortcuts: Shortcuts {
                 grade0: "[cz]".into(),
@@ -167,13 +183,15 @@ impl Default for Settings {
                 new_line: "[<]".into(),
                 new_page: "[pg]".into(),
                 new_ref_page: "[lea]".into(),
+                page_nav: 0,
+                control_page_nav: 1,
             },
             fonts: Fonts {
                 print_face: "Courier New".into(),
                 print_size: 12,
                 braille_size: 18,
-                status_face: String::new(),
-                status_size: 9,
+                status_face: "Segoe UI".into(),
+                status_size: 12,
             },
             reader: ReaderSettings::default(),
         }

@@ -13,6 +13,7 @@ use crate::codes::{self, Dynamic, Insert};
 use crate::dlg::Dlg;
 use crate::documents;
 use crate::encodings;
+use crate::settings_store;
 use crate::translation;
 use bm_core::table_list::TableList;
 
@@ -1079,6 +1080,7 @@ fn set_grade(code: &str) {
 /// Document, Translation Tables, a region: the languages listed are that region's (and those the open documents use).
 fn set_region(region: u32) {
     translation::set_region(region);
+    settings_store::save_region(region);
     app::with(|a| a.refresh_menus());
 }
 
@@ -1290,6 +1292,7 @@ fn default_views() {
             braille_translated: d.checked(19),
             six_key: d.checked(20),
         };
+        settings_store::save_default_views(&v);
         app::with(|a| {
             a.settings.default_views = v;
             a.apply_view();
@@ -1316,6 +1319,7 @@ fn internationalization() {
     let uia = d.checked(14);
     d.destroy();
     app::with(|a| a.settings.reader.uia = uia);
+    settings_store::save_internationalization(chosen.as_deref().unwrap_or(&current), uia);
     let Some(new) = chosen else { return };
     if new == current {
         return;
@@ -1370,6 +1374,7 @@ fn global_fonts() {
             if let Some(s) = status_face {
                 f.status_face = s;
             }
+            settings_store::save_fonts(f);
             crate::set_status_font(a);
             a.apply_view();
         });
@@ -1392,7 +1397,9 @@ fn view_preferences() {
         message("You must type exactly six keys in as the \"Six-Key Key Set.\"  The keys you type represent, in order, what you will type for Dots 1, 2, 3, 4, 5, and 6 when entering braille by six-key chording.");
         return;
     }
-    app::with(|a| a.settings.six_key_set = keys.to_lowercase());
+    let keys = keys.to_lowercase();
+    settings_store::save_six_key_set(&keys);
+    app::with(|a| a.settings.six_key_set = keys);
 }
 
 fn shortcut_preferences() {
@@ -1404,14 +1411,8 @@ fn shortcut_preferences() {
     d.set_text(13, &s.new_line);
     d.set_text(15, &s.new_page);
     d.set_text(17, &s.new_ref_page);
-    let radios = app::with(|a| a.memory.get(1022, "").cloned());
-    match radios {
-        Some(v) => d.restore(&v.into_iter().filter(|(c, _)| (19..=25).contains(c)).collect::<Vec<_>>()),
-        None => {
-            d.set_radio(&[19, 20, 21], 0);
-            d.set_radio(&[23, 24, 25], 1);
-        }
-    }
+    d.set_radio(&[19, 20, 21], s.page_nav.min(2));
+    d.set_radio(&[23, 24, 25], s.control_page_nav.min(2));
     if d.show() == 1 {
         let new = app::Shortcuts {
             grade0: d.text(7),
@@ -1420,14 +1421,44 @@ fn shortcut_preferences() {
             new_line: d.text(13),
             new_page: d.text(15),
             new_ref_page: d.text(17),
+            page_nav: d.radio(&[19, 20, 21]).unwrap_or(s.page_nav),
+            control_page_nav: d.radio(&[23, 24, 25]).unwrap_or(s.control_page_nav),
         };
-        let values = d.values();
-        app::with(|a| {
-            a.settings.shortcuts = new;
-            a.memory.put(1022, "", values);
-        });
+        settings_store::save_shortcuts(&new);
+        app::with(|a| a.settings.shortcuts = new);
     }
     d.destroy();
+}
+
+/// At start-up on Windows: offers the JAWS script set in `source` for installing (jaws_install.rs), with the
+/// question of dialog 1058 (Yes 4, No 5, "Do not ask this again" 8). A kept answer is kept as the answer plus one in
+/// the settings section AddIns (1 no, 2 yes). After installing, Yes to the restart question starts the program again.
+#[cfg(windows)]
+pub fn jaws_start_up(source: &std::path::Path) {
+    use crate::jaws_install::{self, OfferAnswer};
+    let section = jaws_install::SETTINGS_SECTION;
+    let restart = jaws_install::at_start_up(
+        source,
+        |key| settings_store::kept_answer(section, key).map(|a| a == 1),
+        |key, install| settings_store::keep_answer(section, key, u32::from(install)),
+        || {
+            let d = open_dialog(1058, None);
+            d.closes_with(4);
+            d.closes_with(5);
+            let closed = d.show();
+            let answer = OfferAnswer { install: closed == 4, do_not_ask_again: d.checked(8) };
+            d.destroy();
+            answer
+        },
+        || yes_no(jaws_install::RESTART_TEXT),
+    );
+    if restart {
+        if let Ok(exe) = std::env::current_exe() {
+            if std::process::Command::new(exe).spawn().is_ok() {
+                std::process::exit(0);
+            }
+        }
+    }
 }
 
 fn about() {

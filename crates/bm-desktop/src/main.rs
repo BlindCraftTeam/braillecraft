@@ -9,8 +9,11 @@ mod dialog_table;
 mod dlg;
 mod documents;
 mod encodings;
+#[cfg(windows)]
+mod jaws_install;
 mod menu;
 mod menu_table;
+mod settings_store;
 mod speech;
 mod translation;
 
@@ -103,6 +106,12 @@ fn main() {
         if let Err(e) = dlg::load_resources() {
             eprintln!("BrailleMaker: {e}");
         }
+        // The settings kept from earlier runs, before the menus are built from them.
+        let mut settings = app::Settings::default();
+        settings_store::load(&mut settings);
+        if let Some(region) = settings_store::load_region() {
+            translation::set_region(region);
+        }
 
         let frame = MDIParentFrame::builder().with_title("BrailleMaker").with_size(Size::new(1000, 720)).build();
         let menus = menu::install(&frame);
@@ -118,12 +127,17 @@ fn main() {
             active: None,
             next_key: 0,
             untitled: [0, 0],
-            settings: app::Settings::default(),
+            settings,
             memory: dlg::Memory::default(),
             last_find: None,
             busy: false,
         });
         app::with(|a| set_status_font(a));
+        // Windows: the JAWS script set shipped beside the program is offered for installing first.
+        #[cfg(windows)]
+        if let Some(dir) = resource_dir("jaws", "../../scripts/jaws", "braillemaker-desktop.jss") {
+            commands::jaws_start_up(&dir);
+        }
 
         frame.on_menu(|e| {
             let id = menu::command_id(e.get_id());

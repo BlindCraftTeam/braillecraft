@@ -71,7 +71,7 @@
       <size>281,9d</size>
     </object>
     <object class="wxStaticText" name="c18">
-      <label>liblouis 3.39.0 (LGPL 2.1 or later), until the BrailleMaker engine is complete</label>
+      <label>the BrailleMaker translation engine and its tables</label>
       <style>wxST_NO_AUTORESIZE</style>
       <pos>4,142d</pos>
       <size>281,9d</size>
@@ -2932,7 +2932,7 @@
     </object>
   </object>
   <object class="wxDialog" name="dlg1052">
-    <title>WeeBee Dots</title>
+    <title>Selective Contractions</title>
     <size>190,182d</size>
     <style>wxDEFAULT_DIALOG_STYLE</style>
     <object class="wxButton" name="wxID_OK">
@@ -3218,6 +3218,36 @@
     <object class="wxTextCtrl" name="c44">
       <pos>252,199d</pos>
       <size>52,13d</size>
+    </object>
+  </object>
+  <object class="wxDialog" name="dlg1058">
+    <title>Install JAWS Scripts</title>
+    <size>192,111d</size>
+    <style>wxDEFAULT_DIALOG_STYLE</style>
+    <object class="wxButton" name="c4">
+      <label>&amp;Yes</label>
+      <pos>89,91d</pos>
+      <size>45,12d</size>
+    </object>
+    <object class="wxButton" name="c5">
+      <label>&amp;No</label>
+      <pos>139,91d</pos>
+      <size>45,12d</size>
+    </object>
+    <object class="wxStaticText" name="c6">
+      <label>You have one or more JAWS® installations without the most up-to-date script files for BrailleMaker.  Installing the most recent script files (included with BrailleMaker) will help BrailleMaker to work better with JAWS.</label>
+      <pos>8,8d</pos>
+      <size>176,36d</size>
+    </object>
+    <object class="wxStaticText" name="c7">
+      <label>Would you like to install the script files?  (Any existing BrailleMaker script files will be backed up.)</label>
+      <pos>8,47d</pos>
+      <size>176,27d</size>
+    </object>
+    <object class="wxCheckBox" name="c8">
+      <label>Do not ask this again</label>
+      <pos>8,79d</pos>
+      <size>176,9d</size>
     </object>
   </object>
   <object class="wxDialog" name="dlg1060">
