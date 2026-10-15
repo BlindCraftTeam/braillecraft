@@ -11,6 +11,7 @@ mod documents;
 mod encodings;
 mod menu;
 mod menu_table;
+mod speech;
 
 use std::path::{Path, PathBuf};
 

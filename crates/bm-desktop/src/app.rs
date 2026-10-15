@@ -14,6 +14,7 @@ use wxdragon_sys as ffi;
 use crate::dlg::Memory;
 use crate::encodings;
 use crate::menu::Menus;
+use crate::speech::ReaderSettings;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum DocKind {
@@ -86,6 +87,8 @@ pub struct Doc {
     pub last_line_key: String,
     pub six_down: HashSet<usize>,
     pub chord: usize,
+    /// Where the caret was when the screen reader announcements last looked: page, line in the document, style.
+    pub reader_at: Option<(usize, usize, String)>,
 }
 
 impl Doc {
@@ -138,6 +141,7 @@ pub struct Settings {
     pub default_views: DefaultViews,
     pub shortcuts: Shortcuts,
     pub fonts: Fonts,
+    pub reader: ReaderSettings,
 }
 
 impl Default for Settings {
@@ -171,6 +175,7 @@ impl Default for Settings {
                 status_face: String::new(),
                 status_size: 9,
             },
+            reader: ReaderSettings::default(),
         }
     }
 }
@@ -420,21 +425,40 @@ impl App {
         if key == self.docs[i].last_line_key {
             return;
         }
-        let enc = self.encoding();
+        let shown = self.translate_line(i, &line);
         let d = &self.docs[i];
-        let shown = match d.kind {
-            DocKind::Print => match bm_louis::translate(&d.table, &crate::codes::strip(&line)) {
-                Ok(cells) => enc.cells_to_text(&cells),
-                Err(e) => e,
-            },
-            DocKind::Braille => match bm_louis::back_translate(&d.table, &enc.text_to_cells(&line)) {
-                Ok(text) => text,
-                Err(e) => e,
-            },
-        };
         d.line.set_value(&shown);
         d.line.set_accessibility_value(&shown);
         self.docs[i].last_line_key = key;
+    }
+
+    /// One line of document `i` translated: a print line into braille (in the display encoding), a braille line
+    /// into print.
+    pub fn translate_line(&self, i: usize, line: &str) -> String {
+        let enc = self.encoding();
+        let d = &self.docs[i];
+        match d.kind {
+            DocKind::Print => match bm_louis::translate(&d.table, &crate::codes::strip(line)) {
+                Ok(cells) => enc.cells_to_text(&cells),
+                Err(e) => e,
+            },
+            DocKind::Braille => match bm_louis::back_translate(&d.table, &enc.text_to_cells(line)) {
+                Ok(text) => text,
+                Err(e) => e,
+            },
+        }
+    }
+
+    /// Where the caret of document `i` is: page and line on the page (1-based, as the status line shows them),
+    /// column (1-based), line in the whole document (0-based), the line's text, and the current style ("None").
+    pub fn caret_place(&self, i: usize) -> (usize, usize, usize, usize, String, String) {
+        let d = &self.docs[i];
+        let value = d.text.get_value();
+        let pos = d.text.get_insertion_point();
+        let (line, column) = line_and_column(&value, pos);
+        let lines = d.lines.max(1) as usize;
+        let style = open_styles(&value, pos).pop().unwrap_or_else(|| crate::speech::NONE.to_string());
+        (line / lines + 1, line % lines + 1, column + 1, line, line_at(&value, pos), style)
     }
 
     pub fn mark_dirty(&mut self) {

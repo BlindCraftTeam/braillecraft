@@ -1233,7 +1233,7 @@ fn default_views() {
 }
 
 fn internationalization() {
-    let current = app::with(|a| a.settings.encoding.clone());
+    let (current, uia) = app::with(|a| (a.settings.encoding.clone(), a.settings.reader.uia));
     let list = encodings::all();
     let names: Vec<&str> = list.iter().map(|e| e.name.as_str()).collect();
     let pos = list.iter().position(|e| e.id == current).map(|p| p as u32);
@@ -1241,13 +1241,15 @@ fn internationalization() {
         d.set_items(7, &["English"], Some(0));
         d.set_items(10, &names, pos);
         d.set_radio(&[11, 12], 0);
-        d.set_checked(14, true);
+        d.set_checked(14, uia);
         d.set_radio(&[15, 16], 0);
     }) else {
         return;
     };
     let chosen = d.selection(10).and_then(|i| list.get(i as usize)).map(|e| e.id.clone());
+    let uia = d.checked(14);
     d.destroy();
+    app::with(|a| a.settings.reader.uia = uia);
     let Some(new) = chosen else { return };
     if new == current {
         return;
