@@ -51,7 +51,11 @@ impl TableSet {
                 language: f.get(3).map_or("", |s| s.trim()).to_string(),
             });
         }
-        let by_code = entries.iter().enumerate().map(|(i, e)| (e.rules.clone(), i)).collect();
+        // A rules code listed more than once (with another scan table) is found by its first line.
+        let mut by_code = HashMap::new();
+        for (i, e) in entries.iter().enumerate() {
+            by_code.entry(e.rules.clone()).or_insert(i);
+        }
         Ok(TableSet { folder, entries, by_code, compiled: RefCell::new(HashMap::new()) })
     }
 
@@ -70,6 +74,19 @@ impl TableSet {
         let Some(&i) = self.by_code.get(&code) else {
             return Err(EngineError::Read(format!("no translation table {rules_code} in {}", self.folder.display())));
         };
+        self.compiled_at(i)
+    }
+
+    /// The translator for a rules table code with a given scan table code (as an export step names the pair).
+    pub fn translator_with_scan(&self, rules_code: &str, scan_code: &str) -> Result<Rc<Translator>, EngineError> {
+        let (rules, scan) = (rules_code.trim().to_lowercase(), scan_code.trim().to_lowercase());
+        let Some(i) = self.entries.iter().position(|e| e.rules == rules && e.scan == scan) else {
+            return Err(EngineError::Read(format!("no translation table {rules_code}+{scan_code} in {}", self.folder.display())));
+        };
+        self.compiled_at(i)
+    }
+
+    fn compiled_at(&self, i: usize) -> Result<Rc<Translator>, EngineError> {
         if let Some(t) = self.compiled.borrow().get(&i) {
             return Ok(t.clone());
         }

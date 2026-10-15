@@ -691,6 +691,8 @@ enum SaveType {
     Refreshable,
     /// Coded braille (.bru) or coded text (.txt): the body with its codes written out (spec 04d-C).
     Coded,
+    /// LaTeX (.tex, spec 22).
+    Latex,
 }
 
 /// The Save As file types, in the reference program's order for each kind of document (spec 04d-B), as far as
@@ -710,6 +712,7 @@ fn save_types(braille: bool) -> &'static [(&'static str, &'static str, SaveType)
             ("Print document, older format (*.dxp)", "dxp", SaveType::OlderDocument),
             ("Formatted text (*.prf)", "prf", SaveType::Formatted),
             ("Coded text (*.txt)", "txt", SaveType::Coded),
+            ("LaTeX (*.tex)", "tex", SaveType::Latex),
         ]
     }
 }
@@ -763,6 +766,7 @@ fn save(key: Option<u64>, as_new: bool) -> bool {
         SaveType::Formatted => write_formatted(key, &chosen, braille),
         SaveType::Refreshable => write_refreshable(key, &chosen),
         SaveType::Coded => write_coded(key, &chosen),
+        SaveType::Latex => write_latex(key, &chosen),
         SaveType::OlderDocument => write_document(key, &chosen, 0),
         SaveType::Document => write_document(key, &chosen, 1),
     }
@@ -906,6 +910,23 @@ fn brf_bytes(pages: &[bm_core::format::Page], shown_in: &encodings::Encoding, ch
 /// space is a space.
 fn prf_bytes(pages: &[bm_core::format::Page], code_page: &str) -> Vec<u8> {
     bm_core::codepages::encode(code_page, &bm_core::format::formatted_text(pages).replace('\u{a0}', " "))
+}
+
+/// Save As LaTeX (.tex) for a print document (translation::latex). The document keeps its own file and name.
+fn write_latex(key: u64, path: &Path) -> bool {
+    let Some(running) = app::with(|a| a.index_of(key).map(|i| a.docs[i].shown().to_running())) else { return false };
+    let out = match translation::latex(&running) {
+        Ok(o) => o,
+        Err(e) => {
+            message(&e);
+            return false;
+        }
+    };
+    if let Err(e) = std::fs::write(path, out) {
+        message(&format!("{}: {e}", path.display()));
+        return false;
+    }
+    true
 }
 
 /// Save As coded braille (.bru) for a braille document or coded text (.txt) for a print document: the body as the

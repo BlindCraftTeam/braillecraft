@@ -475,10 +475,13 @@ mod tests {
     #[test]
     fn every_shipped_table_compiles() {
         let set = shipped_set();
-        assert_eq!(set.entries().len(), 656);
+        // The 656 tables a document can name, and the text export table with its other scan table.
+        assert_eq!(set.entries().len(), 657);
         for e in set.entries() {
-            set.translator(&e.rules).unwrap_or_else(|err| panic!("{}: {err}", e.table));
+            set.translator_with_scan(&e.rules, &e.scan).unwrap_or_else(|err| panic!("{}: {err}", e.table));
         }
+        // A rules code listed twice is found by its first line.
+        assert_eq!(set.entry("txxtxa").map(|e| e.scan.as_str()), Some("gendxp"));
     }
 
     /// A rule that takes no characters and leaves its own condition true matches here at the gamma again and again;

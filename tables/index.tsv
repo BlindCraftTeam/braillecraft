@@ -629,7 +629,8 @@ ttaacb	gendxb	tatar-basic-back	Tatar - basic
 ttaacp	gendxp	tatar-basic-forward	Tatar - basic
 tukacb	gendxb	turkmen-basic-back	Turkmen - basic
 tukacp	gendxp	turkmen-basic-forward	Turkmen - basic
-txxtxa	gendxp	table-txxtxa-forward	
+txxtxa	gendxp	table-txxtxa-forward
+txxtxa	binary	table-txxtxa-binary-forward
 udmacb	gendxb	udmurt-basic-back	Udmurt - basic
 udmacp	gendxp	udmurt-basic-forward	Udmurt - basic
 ukracb	gendxb	belarusian-basic-back	Belarusian - basic

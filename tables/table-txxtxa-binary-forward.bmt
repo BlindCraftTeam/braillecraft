@@ -1,0 +1,420 @@
+# The rules of txxtxa.btb and binary.sct, recreated as BrailleMaker table source.
+table "Print to print, for text export (binary scan)"
+default-char 63
+raw 0
+writer 3
+output 3
+tail-extra 0 0 0
+unknown 0
+
+state s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 s11 s12 s13 s14 s15 s16
+state s17 s18 s19 s20 s21 s22 s23 s24 s25 s26 s27 s28 s29 s30 s31 s32
+state s33 s34 s35 s36 s37 s38 s39 s40 s41 s42 s43 s44 s45 s46 s47 s48
+state s49 s50 s51 s52 s53 s54 s55 s56 s57 s58 s59 s60 s61 s62 s63 s64
+
+class c00 "!\x22#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\x5c]^_`abcdefghijklmnopqrstuvwxyz{|}~\x7f\x80\x81\x82\x83\x84\x85\x86\x87\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f\x90\x91\x92\x93\x94\x95\x96\x97\x98\x99\x9a\x9b\x9d\x9e\x9f\xa0\xa1\xa2\xa3\xa4\xa5\xa6\xa7\xa8\xa9\xaa\xab\xac\xad\xae\xaf\xf6\xf7\xf8\xf9"
+class c01 "\x9c\xb0\xb1\xb2\xb3\xb4\xb5\xb6\xb7\xb8\xb9\xba\xbb\xbc\xbd\xbe\xbf\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf\xd0\xd1\xd2\xd3\xd4\xd5\xd6\xd7\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7\xe8\xe9\xea\xeb\xec\xed\xee\xef\xf0\xf1\xf2\xf3\xf4\xf5\xfa\xfb\xfc\xfd\xfe\xff"
+class c02 ""
+class c03 ""
+class c04 ""
+class c05 ""
+class c06 ""
+class c07 ""
+class c08 ""
+class c09 ""
+class c10 ""
+class c11 ""
+class c12 ""
+class c13 ""
+class c14 ""
+class c15 ""
+class c16 ""
+class c17 ""
+class c18 ""
+class c19 ""
+class c20 ""
+class c21 ""
+class c22 ""
+class c23 ""
+class c24 ""
+class c25 ""
+class c26 ""
+class c27 ""
+class c28 ""
+class c29 ""
+class c30 ""
+class c31 ""
+class c32 ""
+class c33 ""
+class c34 ""
+class c35 ""
+class c36 ""
+class c37 ""
+class c38 ""
+class c39 ""
+class c40 ""
+class c41 ""
+class c42 ""
+class c43 ""
+class c44 ""
+class c45 ""
+class c46 ""
+class c47 ""
+class c48 ""
+class c49 ""
+class c50 ""
+class c51 ""
+class c52 ""
+class c53 ""
+class c54 ""
+class c55 ""
+class c56 ""
+class c57 ""
+class c58 ""
+class c59 ""
+class c60 ""
+class c61 ""
+class c62 ""
+class c63 ""
+
+set x0 = "\x1c" "u" "s" "\x1f" | "\x1c" "o" "s" "\x1f"
+set x1 = c00 | c01 c00
+set x2 = "\x1c" "o" "s" "\x1f" "\xef" "B" "\x1c" "o" "e" "\x1f" | @x1 @x2 | @x3 @x2
+set x3 = "\x1c" "i" "x" "r" "t" "d" "\x1f" | "\x1c" "i" "x" "r" "t" "e" "\x1f" | "\x1c" "i" "x" "r" "t" "s" "\x1f" | "\x1c" "f" "e" "\x1f" | "\x1c" "f" "l" "s" "\x1f" | "\x1c" "f" "l" "\x1f" | "\x1c" "f" "s" "\x1f" | "\x1c" "f" "t" "e" "~" c00 "\x1f" | "\x1c" "f" "t" "s" "~" c00 "\x1f" | "\x1c" "b" "e" "\x1f" | "\x1c" "b" "s" "\x1f" | "\x1c" "p" "e" "\x1f" | "\x1c" "p" "s" "\x1f" | "\x1c" "s" "q" "r" "t" "e" "\x1f" | "\x1c" "s" "q" "r" "t" "s" "\x1f"
+set x4 = "\x1c" "u" "s" "\x1f" "\xec" "E" "\x1c" "u" "e" "\x1f" | @x1 @x4 | @x3 @x4
+set x5 = "\x1c" "o" "s" "\x1f" "\xf1" "K" "\x1c" "o" "e" "\x1f" | @x1 @x5 | @x3 @x5
+set x6 = "\x1c" "b" "a" "r" "\x1f" | @x1 @x6 | @x3 @x6
+set x7 = "\x1c" "o" "s" "\x1f" "\x1c" "b" "a" "r" "\x1f" "\x1c" "o" "e" "\x1f" | @x1 @x7 | @x3 @x7
+set x8 = "\x1c" "o" "s" "\x1f" "\xec" "E" "\x1c" "o" "e" "\x1f" | @x1 @x8 | @x3 @x8
+set x9 = "\x1c" "o" "s" "\x1f" "\xef" "@" "\x1c" "o" "e" "\x1f" | @x1 @x9 | @x3 @x9
+set x10 = "\x1c" "o" "s" "\x1f" "\xef" "D" "\x1c" "o" "e" "\x1f" | @x1 @x10 | @x3 @x10
+set x11 = "\x1c" "u" "s" "\x1f" "\xef" "@" "\x1c" "u" "e" "\x1f" | @x1 @x11 | @x3 @x11
+set x12 = "\x1c" "u" "s" "\x1f" "\xef" "D" "\x1c" "u" "e" "\x1f" | @x1 @x12 | @x3 @x12
+set x13 = "\x1c" "u" "s" "\x1f" "\xef" "B" "\x1c" "u" "e" "\x1f" | @x1 @x13 | @x3 @x13
+set x14 = "\x1c" "o" "s" "\x1f" "\xf2" "B" "\x1c" "o" "e" "\x1f" | @x1 @x14 | @x3 @x14
+set x15 = "\x1c" "o" "s" "\x1f" "~" "\x1c" "o" "e" "\x1f" | @x1 @x15 | @x3 @x15
+
+result 1
+result 2 then set s1
+result 3 when s1 then clear s1
+result 4 then set s2
+result 5 when s2 then clear s2
+
+char "\x00" default "\x00" rules 0
+char "\x01" default "\x01" rules 0
+char "\x02" default "\x02" rules 0
+char "\x03" default "\x03" rules 0
+char "\x04" default "\x04" rules 0
+char "\x05" default "\x05" rules 0
+char "\x06" default "\x06" rules 0
+char "\x07" default "\x07" rules 0
+char "\x08" default "\x08" rules 0
+char "\x09" default "\x09" rules 0
+char "\x0a" default "\x0a" rules 0
+char "\x0b" default "\x0b" rules 0
+char "\x0c" default "\x0c" rules 0
+char "\x0d" default "\x0d" rules 0
+char "\x0e" default "\x0e" rules 0
+char "\x0f" default "\x0f" rules 0
+char "\x10" default "\x10" rules 0
+char "\x11" default "\x11" rules 0
+char "\x12" default "\x12" rules 0
+char "\x13" default "\x13" rules 0
+char "\x14" default "\x14" rules 0
+char "\x15" default "\x15" rules 0
+char "\x16" default "\x16" rules 0
+char "\x17" default "\x17" rules 0
+char "\x18" default "\x18" rules 0
+char "\x19" default "\x19" rules 0
+char "\x1a" default "\x1a" rules 0
+char "\x1b" default "\x1b" rules 0
+char "\x1c" default "\x1c" rules 1
+char "\x1d" default "\x1d" rules 0
+char "\x1e" default "\x1e" rules 0
+char "\x1f" default "\x1f" rules 0
+char " " default " " rules 0
+char "!" default "!" rules 0
+char "\x22" default "\x22" rules 0
+char "#" default "#" rules 0
+char "$" default "$" rules 0
+char "%" default "%" rules 0
+char "&" default "&" rules 0
+char "'" default "'" rules 0
+char "(" default "(" rules 0
+char ")" default ")" rules 0
+char "*" default "*" rules 0
+char "+" default "+" rules 0
+char "," default "," rules 0
+char "-" default "-" rules 0
+char "." default "." rules 0
+char "/" default "/" rules 0
+char "0" default "0" rules 0
+char "1" default "1" rules 0
+char "2" default "2" rules 0
+char "3" default "3" rules 0
+char "4" default "4" rules 0
+char "5" default "5" rules 0
+char "6" default "6" rules 0
+char "7" default "7" rules 0
+char "8" default "8" rules 0
+char "9" default "9" rules 0
+char ":" default ":" rules 0
+char ";" default ";" rules 0
+char "<" default "<" rules 0
+char "=" default "=" rules 0
+char ">" default ">" rules 0
+char "?" default "?" rules 0
+char "@" default "@" rules 0
+char "A" default "A" rules 0
+char "B" default "B" rules 0
+char "C" default "C" rules 0
+char "D" default "D" rules 0
+char "E" default "E" rules 0
+char "F" default "F" rules 0
+char "G" default "G" rules 0
+char "H" default "H" rules 0
+char "I" default "I" rules 0
+char "J" default "J" rules 0
+char "K" default "K" rules 0
+char "L" default "L" rules 0
+char "M" default "M" rules 0
+char "N" default "N" rules 0
+char "O" default "O" rules 0
+char "P" default "P" rules 0
+char "Q" default "Q" rules 0
+char "R" default "R" rules 0
+char "S" default "S" rules 0
+char "T" default "T" rules 0
+char "U" default "U" rules 0
+char "V" default "V" rules 0
+char "W" default "W" rules 0
+char "X" default "X" rules 0
+char "Y" default "Y" rules 0
+char "Z" default "Z" rules 0
+char "[" default "[" rules 0
+char "\x5c" default "\x5c" rules 0
+char "]" default "]" rules 0
+char "^" default "^" rules 0
+char "_" default "_" rules 0
+char "`" default "`" rules 0
+char "a" default "a" rules 0
+char "b" default "b" rules 0
+char "c" default "c" rules 0
+char "d" default "d" rules 0
+char "e" default "e" rules 0
+char "f" default "f" rules 0
+char "g" default "g" rules 0
+char "h" default "h" rules 0
+char "i" default "i" rules 0
+char "j" default "j" rules 0
+char "k" default "k" rules 0
+char "l" default "l" rules 0
+char "m" default "m" rules 0
+char "n" default "n" rules 0
+char "o" default "o" rules 0
+char "p" default "p" rules 0
+char "q" default "q" rules 0
+char "r" default "r" rules 0
+char "s" default "s" rules 0
+char "t" default "t" rules 0
+char "u" default "u" rules 0
+char "v" default "v" rules 0
+char "w" default "w" rules 0
+char "x" default "x" rules 0
+char "y" default "y" rules 0
+char "z" default "z" rules 0
+char "{" default "{" rules 0
+char "|" default "|" rules 0
+char "}" default "}" rules 0
+char "~" default "~" rules 0
+char "\x7f" default "\x7f" rules 0
+char "\x80" default "\x80" rules 0
+char "\x81" default "\x81" rules 0
+char "\x82" default "\x82" rules 0
+char "\x83" default "\x83" rules 0
+char "\x84" default "\x84" rules 0
+char "\x85" default "\x85" rules 0
+char "\x86" default "\x86" rules 0
+char "\x87" default "\x87" rules 0
+char "\x88" default "\x88" rules 0
+char "\x89" default "\x89" rules 0
+char "\x8a" default "\x8a" rules 0
+char "\x8b" default "\x8b" rules 0
+char "\x8c" default "\x8c" rules 0
+char "\x8d" default "\x8d" rules 0
+char "\x8e" default "\x8e" rules 0
+char "\x8f" default "\x8f" rules 0
+char "\x90" default "\x90" rules 0
+char "\x91" default "\x91" rules 0
+char "\x92" default "\x92" rules 0
+char "\x93" default "\x93" rules 0
+char "\x94" default "\x94" rules 0
+char "\x95" default "\x95" rules 0
+char "\x96" default "\x96" rules 0
+char "\x97" default "\x97" rules 0
+char "\x98" default "\x98" rules 0
+char "\x99" default "\x99" rules 0
+char "\x9a" default "\x9a" rules 0
+char "\x9b" default "\x9b" rules 0
+char "\x9c" default "\x9c" rules 0
+char "\x9d" default "\x9d" rules 0
+char "\x9e" default "\x9e" rules 0
+char "\x9f" default "\x9f" rules 0
+char "\xa0" default "\xa0" rules 0
+char "\xa1" default "\xa1" rules 0
+char "\xa2" default "\xa2" rules 0
+char "\xa3" default "\xa3" rules 0
+char "\xa4" default "\xa4" rules 0
+char "\xa5" default "\xa5" rules 0
+char "\xa6" default "\xa6" rules 0
+char "\xa7" default "\xa7" rules 0
+char "\xa8" default "\xa8" rules 0
+char "\xa9" default "\xa9" rules 0
+char "\xaa" default "\xaa" rules 0
+char "\xab" default "\xab" rules 0
+char "\xac" default "\xac" rules 0
+char "\xad" default "\xad" rules 0
+char "\xae" default "\xae" rules 0
+char "\xaf" default "\xaf" rules 0
+char "\xb0" default "\xb0" rules 0
+char "\xb1" default "\xb1" rules 0
+char "\xb2" default "\xb2" rules 0
+char "\xb3" default "\xb3" rules 0
+char "\xb4" default "\xb4" rules 0
+char "\xb5" default "\xb5" rules 0
+char "\xb6" default "\xb6" rules 0
+char "\xb7" default "\xb7" rules 0
+char "\xb8" default "\xb8" rules 0
+char "\xb9" default "\xb9" rules 0
+char "\xba" default "\xba" rules 0
+char "\xbb" default "\xbb" rules 0
+char "\xbc" default "\xbc" rules 0
+char "\xbd" default "\xbd" rules 0
+char "\xbe" default "\xbe" rules 0
+char "\xbf" default "\xbf" rules 0
+char "\xc0" default "\xc0" rules 0
+char "\xc1" default "\xc1" rules 0
+char "\xc2" default "\xc2" rules 0
+char "\xc3" default "\xc3" rules 0
+char "\xc4" default "\xc4" rules 0
+char "\xc5" default "\xc5" rules 0
+char "\xc6" default "\xc6" rules 0
+char "\xc7" default "\xc7" rules 0
+char "\xc8" default "\xc8" rules 0
+char "\xc9" default "\xc9" rules 0
+char "\xca" default "\xca" rules 0
+char "\xcb" default "\xcb" rules 0
+char "\xcc" default "\xcc" rules 0
+char "\xcd" default "\xcd" rules 0
+char "\xce" default "\xce" rules 0
+char "\xcf" default "\xcf" rules 0
+char "\xd0" default "\xd0" rules 0
+char "\xd1" default "\xd1" rules 0
+char "\xd2" default "\xd2" rules 0
+char "\xd3" default "\xd3" rules 0
+char "\xd4" default "\xd4" rules 0
+char "\xd5" default "\xd5" rules 0
+char "\xd6" default "\xd6" rules 0
+char "\xd7" default "\xd7" rules 0
+char "\xd8" default "\xd8" rules 0
+char "\xd9" default "\xd9" rules 0
+char "\xda" default "\xda" rules 0
+char "\xdb" default "\xdb" rules 0
+char "\xdc" default "\xdc" rules 0
+char "\xdd" default "\xdd" rules 0
+char "\xde" default "\xde" rules 0
+char "\xdf" default "\xdf" rules 0
+char "\xe0" default "\xe0" rules 0
+char "\xe1" default "\xe1" rules 0
+char "\xe2" default "\xe2" rules 0
+char "\xe3" default "\xe3" rules 0
+char "\xe4" default "\xe4" rules 0
+char "\xe5" default "\xe5" rules 0
+char "\xe6" default "\xe6" rules 0
+char "\xe7" default "\xe7" rules 0
+char "\xe8" default "\xe8" rules 0
+char "\xe9" default "\xe9" rules 0
+char "\xea" default "\xea" rules 0
+char "\xeb" default "\xeb" rules 0
+char "\xec" default "\xec" rules 0
+char "\xed" default "\xed" rules 0
+char "\xee" default "\xee" rules 0
+char "\xef" default "\xef" rules 0
+char "\xf0" default "\xf0" rules 0
+char "\xf1" default "\xf1" rules 0
+char "\xf2" default "\xf2" rules 0
+char "\xf3" default "\xf3" rules 0
+char "\xf4" default "\xf4" rules 0
+char "\xf5" default "\xf5" rules 0
+char "\xf6" default "\xf6" rules 0
+char "\xf7" default "\xf7" rules 0
+char "\xf8" default "\xf8" rules 0
+char "\xf9" default "\xf9" rules 0
+char "\xfa" default "\xfa" rules 0
+char "\xfb" default "\xfb" rules 0
+char "\xfc" default "\xfc" rules 0
+char "\xfd" default "\xfd" rules 0
+char "\xfe" default "\xfe" rules 0
+char "\xff" default "\xff" rules 0
+
+node 1 "e\x1f" short-set @x2 result 2 consume 3 -> "\x1ce~overrightarrow[\x1f" next 31
+node 2 "\x1f" short-set @x5 result 2 consume 3 -> "\x1ce~dot[\x1f" level 3
+node 3 "" short-set @x6 result 2 consume 3 -> "\x1ce~overline[\x1f" next 4
+node 4 "" short-set @x7 result 2 consume 3 -> "\x1ce~overline[\x1f" next 5
+node 5 "" short-set @x8 result 2 consume 3 -> "\x1ce~overline[\x1f" next 6
+node 6 "" short-set @x9 result 2 consume 3 -> "\x1ce~overleftarrow[\x1f" next 7
+node 7 "" short-set @x10 result 2 consume 3 -> "\x1ce~overleftrightarrow[\x1f" next 8
+node 8 "" short-set @x14 result 2 consume 3 -> "\x1ce~widehat[\x1f" next 9
+node 9 "" short-set @x15 result 2 consume 3 -> "\x1ce~widetilde[\x1f" next 10
+node 10 "" short-set @x4 result 4 consume 3 -> "\x1ce~underline[\x1f" next 11
+node 11 "" short-set @x11 result 4 consume 3 -> "\x1ce~underleftarrow[\x1f" next 12
+node 12 "" short-set @x12 result 4 consume 3 -> "\x1ce~underleftrightarrow[\x1f" next 13
+node 13 "" short-set @x13 result 4 consume 3 -> "\x1ce~underrightarrow[\x1f" next 14
+node 14 "\x1cbolim\x1f" short-set @x0 result 1 consume 3 -> "" next 16
+node 15 "bulim\x1f" short-set @x0 result 1 consume 3 -> "" level 3
+node 16 "lim" short-set @x0 result 1 consume 3 -> "" next 17
+node 17 "\xe2P" short-set @x0 result 1 consume 3 -> "" next 19
+node 18 "S" short-set @x0 result 1 consume 3 -> "" level 3
+node 19 "\xf0?" short-set @x0 result 1 consume 3 -> "" next 23
+node 20 "@" short-set @x0 result 1 consume 3 -> "" next 21
+node 21 "A" short-set @x0 result 1 consume 3 -> "" next 22
+node 22 "[" short-set @x0 result 1 consume 3 -> "" level 3
+node 23 "\xf1p" short-set @x0 result 1 consume 3 -> "" next 27
+node 24 "q" short-set @x0 result 1 consume 3 -> "" next 25
+node 25 "r" short-set @x0 result 1 consume 3 -> "" next 26
+node 26 "s" short-set @x0 result 1 consume 3 -> "" level 3
+node 27 "\xdc3" short-set @x0 result 1 consume 3 -> "" level 4
+node 28 "4" short-set @x0 result 1 consume 3 -> "" next 29
+node 29 "5" short-set @x0 result 1 consume 3 -> "" next 30
+node 30 "6" short-set @x0 result 1 consume 3 -> "" level 1
+node 31 "bar\x1f" none result 3 consume 5 -> "\x1cbar~]\x1f" next 32
+node 32 "os\x1f" none result 3 consume 4 -> "\x1cos~]\x1f" next 33
+node 33 "us\x1f" none result 5 consume 4 -> "\x1cus~]\x1f" end
+
+scan input-mode 2
+scan trailing-blanks 1
+scan flag 36
+scan full-stop 46
+scan newline 1
+scan form-feed "\x15"
+scan paragraph "P"
+scan new-paragraphs 3
+scan rejoin-hyphens 0
+scan spaces 0
+scan tab-width 2
+scan ninmod 1
+scan fold-codes 2
+scan fold-words 2
+scan capital-cessation 0
+scan map-braces 0
+scan spare 0
+scan passage-ends 0
+scan nxsls 0
+scan format-word 29
+scan format-word2 30
+scan capital-sign 0
+scan capital-end 0
+scan address-switching 0
+scan mode-words "" "" "" "" "" "" "" "" "" "" ""
+scan passage-words 0
+scan doubled-adjectives 0

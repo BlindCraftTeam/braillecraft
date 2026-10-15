@@ -37,6 +37,26 @@ thread_local! {
     static RULES: RefCell<Option<std::path::PathBuf>> = const { RefCell::new(None) };
 }
 
+/// A LaTeX file from a print document's running text (codes marked 0x1C ... 0x1F), as the reference program writes
+/// it (spec 22): the text through the text export table (txxtxa with the binary scan table; when that table cannot be
+/// used, the body as the document file stores it goes on unchanged), then the LaTeX rule script, with nothing written
+/// before or after what the script writes.
+pub fn latex(running: &str) -> Result<Vec<u8>, String> {
+    let translated = TABLES.with(|t| {
+        let t = t.borrow();
+        let tr = t.as_ref()?.translator_with_scan("txxtxa", "binary").ok()?;
+        tr.translate_marked(running, None, None).ok()
+    });
+    // The engine writes bytes; its text holds one character per byte.
+    let middle: Vec<u8> = match translated {
+        Some(s) => s.chars().map(|c| c as u32 as u8).collect(),
+        None => bm_core::dxfile::body_bytes(running),
+    };
+    let folder = RULES.with(|r| r.borrow().clone()).ok_or("The rule scripts were not found.")?;
+    let mut script = bm_core::rule_script::RuleScript::open(&folder.join("latex.rules")).map_err(|e| format!("latex.rules: {e}"))?;
+    script.run(&middle).map_err(|e| e.to_string())
+}
+
 /// A coded braille (.bru) or coded text (.txt) file from a document body as the document file stores it (codes as
 /// 0x1C name 0x1F): the body through the coding script for braille or for print documents, then the line wrapping
 /// script, as the reference program makes these files (spec 04d-C, spec 20).
@@ -273,6 +293,17 @@ mod tests {
     fn fwd(text: &str) -> String {
         let na = encodings::find(encodings::DEFAULT);
         forward("enuncp", &Shown::marked(text), "", na, &english()).unwrap().text
+    }
+
+    #[test]
+    fn latex_is_a_whole_document_from_the_text_export_table_and_script() {
+        loaded();
+        let out = String::from_utf8_lossy(&latex(&Shown::marked("Cost 5% & up[p]Next").to_running()).unwrap()).into_owned();
+        assert!(out.starts_with("\\documentclass{article}"), "{out}");
+        assert!(out.contains("\\begin{document}"), "{out}");
+        assert!(out.contains("5\\%") && out.contains("\\&"), "{out}");
+        assert!(out.contains("\\par"), "{out}");
+        assert!(out.trim_end().ends_with("\\end{document}"), "{out}");
     }
 
     #[test]
