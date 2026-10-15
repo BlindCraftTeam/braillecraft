@@ -9,6 +9,7 @@ pub mod dxfile;
 pub mod engine;
 pub mod format;
 pub mod lbf;
+pub mod rule_script;
 pub mod table_list;
 pub mod templates;
 
