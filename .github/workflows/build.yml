@@ -1,0 +1,92 @@
+# Builds BrailleMaker for Linux, Windows and macOS on every push to main and keeps the installers as
+# downloads on the run page (Actions, the run, Artifacts). The macOS build is universal (Apple Silicon and Intel).
+# Builds are unsigned: Windows SmartScreen and macOS Gatekeeper ask before the first launch.
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux
+            os: ubuntu-22.04
+            rust_targets: ""
+            tauri_args: ""
+            bundle_dir: target/release/bundle
+          - name: windows
+            os: windows-latest
+            rust_targets: ""
+            tauri_args: ""
+            bundle_dir: target/release/bundle
+          - name: macos
+            os: macos-latest
+            rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
+            tauri_args: --target universal-apple-darwin
+            bundle_dir: target/universal-apple-darwin/release/bundle
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_targets }}
+
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Linux libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libgl1-mesa-dev libglu1-mesa-dev libfontconfig-dev
+
+      - name: Tests
+        run: cargo test --workspace
+
+      # The native desktop program (wxWidgets): a folder that runs as it is, with its braille fonts, the liblouis
+      # tables and the liblouis licence beside it.
+      - name: Native program
+        shell: bash
+        run: |
+          cargo build --release -p bm-desktop
+          mkdir -p dist/BrailleMaker/liblouis
+          cp target/release/braillemaker-desktop${{ runner.os == 'Windows' && '.exe' || '' }} dist/BrailleMaker/
+          cp -r ui/fonts dist/BrailleMaker/fonts
+          cp -r crates/bm-louis/vendor/liblouis/tables dist/BrailleMaker/liblouis/tables
+          cp crates/bm-louis/vendor/liblouis/COPYING.LESSER crates/bm-louis/vendor/CHANGES-BrailleMaker.txt dist/BrailleMaker/liblouis/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: braillemaker-desktop-${{ matrix.name }}
+          if-no-files-found: error
+          path: dist/BrailleMaker
+
+      - name: Build installers
+        working-directory: crates/bm-shell
+        run: npx -y @tauri-apps/cli@2.12.3 build ${{ matrix.tauri_args }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: braillemaker-${{ matrix.name }}
+          if-no-files-found: error
+          path: |
+            ${{ matrix.bundle_dir }}/msi/*.msi
+            ${{ matrix.bundle_dir }}/nsis/*.exe
+            ${{ matrix.bundle_dir }}/dmg/*.dmg
+            ${{ matrix.bundle_dir }}/deb/*.deb
+            ${{ matrix.bundle_dir }}/rpm/*.rpm
+            ${{ matrix.bundle_dir }}/appimage/*.AppImage

@@ -1,0 +1,445 @@
+//! Program state: the main window, its documents, global settings, and the parts every command shares (status
+//! line, translated line, view settings, menu check marks).
+//!
+//! The state lives in one thread-local cell. Commands never hold it while a dialog is open: a modal dialog runs the
+//! event loop, and events that arrive meanwhile (text changes, focus) must be able to reach the state.
+
+use std::cell::RefCell;
+use std::collections::HashSet;
+use std::path::PathBuf;
+
+use wxdragon::prelude::*;
+use wxdragon_sys as ffi;
+
+use crate::dlg::Memory;
+use crate::encodings;
+use crate::menu::Menus;
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum DocKind {
+    Print,
+    Braille,
+}
+
+impl DocKind {
+    pub fn name(self) -> &'static str {
+        match self {
+            DocKind::Print => "Print Document",
+            DocKind::Braille => "Braille Document",
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ViewFont {
+    Print,
+    Braille,
+    SimBraille,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Hyphen {
+    None,
+    Dashes,
+    DashesHyphens,
+    French,
+    French113,
+}
+
+#[derive(Clone, Debug)]
+pub struct Style {
+    pub name: String,
+    pub nested: bool,
+    pub begin: String,
+    pub end: String,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct View {
+    pub font: ViewFont,
+    pub full_page: bool,
+    pub codes: bool,
+    pub translated: bool,
+    pub six_key: bool,
+}
+
+pub struct Doc {
+    pub key: u64,
+    pub frame: MDIChildFrame,
+    pub text: TextCtrl,
+    pub line: TextCtrl,
+    pub name: String,
+    pub kind: DocKind,
+    pub untitled: bool,
+    pub saved: bool,
+    pub dirty: bool,
+    pub path: Option<PathBuf>,
+    /// liblouis table used for File, Translate and the translated line (Document, Learning Tables changes it).
+    pub table: String,
+    pub cells: u32,
+    pub lines: u32,
+    pub view: View,
+    pub hyphen: Hyphen,
+    pub styles: Vec<Style>,
+    pub last_style: Option<Style>,
+    pub highlight_anchor: Option<i64>,
+    pub last_line_key: String,
+    pub six_down: HashSet<usize>,
+    pub chord: usize,
+}
+
+impl Doc {
+    /// The window name: "Untitled Print Document 1"; "name -- New Braille Document" for a translated or opened
+    /// document not yet saved in the program's own format; "name -- Braille Document" once saved.
+    pub fn full_name(&self) -> String {
+        if self.untitled {
+            self.name.clone()
+        } else {
+            format!("{} -- {}{}", self.name, if self.saved { "" } else { "New " }, self.kind.name())
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct DefaultViews {
+    pub translated_font: ViewFont,
+    pub print_full_page: bool,
+    pub print_codes: bool,
+    pub print_translated: bool,
+    pub braille_font: ViewFont,
+    pub braille_full_page: bool,
+    pub braille_codes: bool,
+    pub braille_translated: bool,
+    pub six_key: bool,
+}
+
+#[derive(Clone, Debug)]
+pub struct Shortcuts {
+    pub grade0: String,
+    pub flush_right_leader: String,
+    pub cbc: String,
+    pub new_line: String,
+    pub new_page: String,
+    pub new_ref_page: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct Fonts {
+    pub print_face: String,
+    pub print_size: i32,
+    pub braille_size: i32,
+    pub status_face: String,
+    pub status_size: i32,
+}
+
+pub struct Settings {
+    pub encoding: String,
+    pub six_key_set: String,
+    pub default_views: DefaultViews,
+    pub shortcuts: Shortcuts,
+    pub fonts: Fonts,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Settings {
+            encoding: encodings::DEFAULT.to_string(),
+            six_key_set: "fdsjkl".to_string(),
+            default_views: DefaultViews {
+                translated_font: ViewFont::Braille,
+                print_full_page: false,
+                print_codes: false,
+                print_translated: false,
+                braille_font: ViewFont::Print,
+                braille_full_page: false,
+                braille_codes: false,
+                braille_translated: false,
+                six_key: false,
+            },
+            shortcuts: Shortcuts {
+                grade0: "[cz]".into(),
+                flush_right_leader: "[fr;p~\"]".into(),
+                cbc: "[cb]".into(),
+                new_line: "[<]".into(),
+                new_page: "[pg]".into(),
+                new_ref_page: "[lea]".into(),
+            },
+            fonts: Fonts {
+                print_face: "Courier New".into(),
+                print_size: 12,
+                braille_size: 18,
+                status_face: String::new(),
+                status_size: 9,
+            },
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct FindSpec {
+    pub find: String,
+    pub replace_with: String,
+    pub match_case: bool,
+    pub backward: bool,
+    pub whole_words: bool,
+}
+
+pub struct App {
+    pub frame: MDIParentFrame,
+    pub status: StatusBar,
+    pub menus: Menus,
+    pub docs: Vec<Doc>,
+    pub active: Option<usize>,
+    pub next_key: u64,
+    pub untitled: [u32; 2],
+    pub settings: Settings,
+    pub memory: Memory,
+    pub last_find: Option<FindSpec>,
+    pub busy: bool,
+}
+
+thread_local! {
+    static APP: RefCell<Option<App>> = const { RefCell::new(None) };
+}
+
+pub fn set(app: App) {
+    APP.with(|a| *a.borrow_mut() = Some(app));
+}
+
+/// Runs `f` with the state. Panics if the state is already in use: commands call it only between dialogs.
+pub fn with<R>(f: impl FnOnce(&mut App) -> R) -> R {
+    APP.with(|a| f(a.borrow_mut().as_mut().expect("program state")))
+}
+
+/// Runs `f` with the state when it is free; for event handlers, which may fire while a command is running.
+pub fn try_with(f: impl FnOnce(&mut App)) {
+    APP.with(|a| {
+        if let Ok(mut guard) = a.try_borrow_mut() {
+            if let Some(app) = guard.as_mut() {
+                f(app);
+            }
+        }
+    });
+}
+
+/// The main window, for parenting dialogs.
+pub fn frame() -> MDIParentFrame {
+    with(|a| a.frame)
+}
+
+// ------------------------------------------------------------------ text positions
+
+/// The text of a control and the caret, selection and positions as character counts (wxWidgets positions count
+/// characters; the controls are created with the rich text style on Windows so a line break counts as one).
+pub fn char_to_byte(s: &str, chars: i64) -> usize {
+    s.char_indices().nth(chars.max(0) as usize).map_or(s.len(), |(b, _)| b)
+}
+
+pub fn byte_to_char(s: &str, byte: usize) -> i64 {
+    s[..byte.min(s.len())].chars().count() as i64
+}
+
+/// Line (0-based) and column (0-based) of a character position.
+pub fn line_and_column(text: &str, pos: i64) -> (usize, usize) {
+    let before = &text[..char_to_byte(text, pos)];
+    let line = before.matches('\n').count();
+    let column = before.rsplit('\n').next().map_or(0, |l| l.chars().count());
+    (line, column)
+}
+
+/// The line the caret is on.
+pub fn line_at(text: &str, pos: i64) -> String {
+    let b = char_to_byte(text, pos);
+    let start = text[..b].rfind('\n').map_or(0, |i| i + 1);
+    let end = text[b..].find('\n').map_or(text.len(), |i| b + i);
+    text[start..end].to_string()
+}
+
+/// The styles open at a position: each [es~name] before it without its [ee~name].
+pub fn open_styles(text: &str, pos: i64) -> Vec<String> {
+    let before = &text[..char_to_byte(text, pos)];
+    let mut open: Vec<String> = Vec::new();
+    let mut rest = before;
+    while let Some(i) = rest.find('[') {
+        rest = &rest[i + 1..];
+        let Some(end) = rest.find(']') else { break };
+        let code = &rest[..end];
+        if let Some(name) = code.strip_prefix("es~") {
+            open.push(name.to_string());
+        } else if let Some(name) = code.strip_prefix("ee~") {
+            if let Some(k) = open.iter().rposition(|n| n == name) {
+                open.remove(k);
+            }
+        }
+        rest = &rest[end + 1..];
+    }
+    open
+}
+
+// ------------------------------------------------------------------ fonts
+
+pub fn font(face: &str, size: i32) -> Option<Font> {
+    Font::builder().with_face_name(face).with_point_size(size).with_family(FontFamily::Modern).build()
+}
+
+impl App {
+    pub fn doc(&self) -> Option<&Doc> {
+        self.active.and_then(|i| self.docs.get(i))
+    }
+
+    pub fn doc_mut(&mut self) -> Option<&mut Doc> {
+        self.active.and_then(move |i| self.docs.get_mut(i))
+    }
+
+    pub fn index_of(&self, key: u64) -> Option<usize> {
+        self.docs.iter().position(|d| d.key == key)
+    }
+
+    pub fn encoding(&self) -> &'static encodings::Encoding {
+        encodings::find(&self.settings.encoding)
+    }
+
+    fn face(&self, font: ViewFont) -> (String, i32) {
+        match font {
+            ViewFont::Print => (self.settings.fonts.print_face.clone(), self.settings.fonts.print_size),
+            ViewFont::Braille => (self.encoding().font_family("Braille"), self.settings.fonts.braille_size),
+            ViewFont::SimBraille => (self.encoding().font_family("SimBraille"), self.settings.fonts.braille_size),
+        }
+    }
+
+    /// The title bar: "BrailleMaker - [name -- New Print Document]". On Windows the system writes it from the
+    /// maximized document window's own title; elsewhere it is set here.
+    pub fn set_title(&self) {
+        let name = self.doc().map(|d| d.full_name());
+        if cfg!(windows) {
+            self.frame.set_label("BrailleMaker");
+        } else {
+            match &name {
+                Some(n) => self.frame.set_label(&format!("BrailleMaker - [{n}]")),
+                None => self.frame.set_label("BrailleMaker"),
+            }
+        }
+    }
+
+    /// Applies the active document's view settings: font, full page, translated line; then the menu marks.
+    pub fn apply_view(&mut self) {
+        let Some(i) = self.active else { return };
+        let (face, mut size) = self.face(self.docs[i].view.font);
+        let d = &self.docs[i];
+        if d.view.full_page {
+            // Full-Page: the font is sized so one whole page (lines by cells) fits the window.
+            let area = d.text.get_client_size();
+            let by_height = area.height * 72 / 96 / (d.lines as i32 + 1);
+            let by_width = area.width * 72 / 96 * 10 / 6 / (d.cells as i32 + 1);
+            size = by_height.min(by_width).max(4);
+        }
+        if let Some(f) = font(&face, size) {
+            d.text.set_font(&f);
+        }
+        let (lface, lsize) = self.face(if d.kind == DocKind::Print { self.settings.default_views.translated_font } else { ViewFont::Print });
+        if let Some(f) = font(&lface, lsize) {
+            d.line.set_font(&f);
+        }
+        d.line.show(d.view.translated);
+        d.frame.layout();
+        self.refresh_menus();
+        self.docs[i].last_line_key.clear();
+        self.update_status();
+    }
+
+    pub fn refresh_menus(&mut self) {
+        let names: Vec<String> = self.docs.iter().map(|d| d.full_name()).collect();
+        self.menus.set_documents(&names, self.active);
+        let Some(d) = self.doc() else { return };
+        let v = d.view;
+        let hyphen = d.hyphen;
+        let highlight = d.highlight_anchor.is_some();
+        let m = &self.menus;
+        m.check(1209, highlight);
+        m.check(1301, v.full_page);
+        m.check(match v.font { ViewFont::Print => 1303, ViewFont::Braille => 1304, ViewFont::SimBraille => 1305 }, true);
+        m.check(1307, v.six_key);
+        m.check(1309, v.codes);
+        m.check(1310, v.translated);
+        m.check(
+            match hyphen {
+                Hyphen::None => 2901,
+                Hyphen::Dashes => 2902,
+                Hyphen::DashesHyphens => 2903,
+                Hyphen::French => 2904,
+                Hyphen::French113 => 2905,
+            },
+            true,
+        );
+    }
+
+    /// The status line: Current Style, Page, Line, Column; then the translated line.
+    pub fn update_status(&mut self) {
+        let Some(i) = self.active else {
+            for (n, t) in ["Current Style:", "Page:", "Line:", "Column:"].iter().enumerate() {
+                self.status.set_status_text(t, n);
+            }
+            return;
+        };
+        let value = self.docs[i].text.get_value();
+        let pos = self.docs[i].text.get_insertion_point();
+        let (line, column) = line_and_column(&value, pos);
+        let lines = self.docs[i].lines.max(1) as usize;
+        let styles = open_styles(&value, pos);
+        let style = match styles.len() {
+            0 => "Current Style: None".to_string(),
+            1 => format!("Current Style: {}", styles[0]),
+            n => format!("Current Style: {} (level {n})", styles[n - 1]),
+        };
+        self.status.set_status_text(&style, 0);
+        self.status.set_status_text(&format!("Page:{}", line / lines + 1), 1);
+        self.status.set_status_text(&format!("Line:{}", line % lines + 1), 2);
+        self.status.set_status_text(&format!("Column:{}", column + 1), 3);
+        self.update_translated_line(&value, pos);
+    }
+
+    /// View, Translated Line: the line the caret is on, translated. A print document shows its braille in the font
+    /// chosen in Global, Default Views; a braille document shows its print.
+    fn update_translated_line(&mut self, value: &str, pos: i64) {
+        let Some(i) = self.active else { return };
+        if !self.docs[i].view.translated {
+            return;
+        }
+        let line = line_at(value, pos);
+        let key = format!("{}|{:?}|{}|{}|{line}", self.docs[i].key, self.docs[i].kind, self.docs[i].table, self.settings.encoding);
+        if key == self.docs[i].last_line_key {
+            return;
+        }
+        let enc = self.encoding();
+        let d = &self.docs[i];
+        let shown = match d.kind {
+            DocKind::Print => match bm_louis::translate(&d.table, &crate::codes::strip(&line)) {
+                Ok(cells) => enc.cells_to_text(&cells),
+                Err(e) => e,
+            },
+            DocKind::Braille => match bm_louis::back_translate(&d.table, &enc.text_to_cells(&line)) {
+                Ok(text) => text,
+                Err(e) => e,
+            },
+        };
+        d.line.set_value(&shown);
+        d.line.set_accessibility_value(&shown);
+        self.docs[i].last_line_key = key;
+    }
+
+    pub fn mark_dirty(&mut self) {
+        if let Some(d) = self.doc_mut() {
+            d.dirty = true;
+        }
+    }
+}
+
+/// The child window's frame functions that the MDI child wrapper does not offer (it is a frame underneath).
+pub fn child_set_title(child: &MDIChildFrame, title: &str) {
+    let c = std::ffi::CString::new(title).unwrap_or_default();
+    unsafe { ffi::wxd_Frame_SetTitle(child.handle_ptr() as *mut ffi::wxd_Frame_t, c.as_ptr()) };
+}
+
+pub fn child_maximize(child: &MDIChildFrame) {
+    unsafe { ffi::wxd_Frame_Maximize(child.handle_ptr() as *mut ffi::wxd_Frame_t, true) };
+}

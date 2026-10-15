@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BrailleMaker</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- The document window shows the active document full size inside the program window, with the
+       translated line at its foot when View, Translated Line is on, and the status line below. -->
+  <div id="document-window">
+    <label for="doc" id="doc-label" class="visually-hidden">Untitled Print Document 1</label>
+    <textarea id="doc" class="print-font" spellcheck="false" wrap="off"></textarea>
+    <!-- View, Translated Line: the yellow line at the foot of the document. It is announced when it changes,
+         because screen reader users rely on it to hear the translation of the line they are on. -->
+    <div id="translated-line" hidden aria-live="polite"><span class="visually-hidden">Translated line: </span><span id="translated-text"></span></div>
+  </div>
+
+  <!-- The status line: Current Style, Page, Line, Column in separate boxes. -->
+  <div class="status-line" role="group" aria-label="Status line">
+    <span id="status-style" class="status-field status-style">Current Style: None</span>
+    <span id="status-page" class="status-field">Page:1</span>
+    <span id="status-line-number" class="status-field">Line:1</span>
+    <span id="status-column" class="status-field">Column:1</span>
+    <span id="status-mode" class="status-field" hidden></span>
+  </div>
+
+  <div id="announce" class="visually-hidden" role="status" aria-live="polite"></div>
+  <input type="file" id="open-file" class="visually-hidden" tabindex="-1" aria-label="Open file" accept=".txt,.brf,.brl,.bru,.prf,.text">
+  <input type="file" id="insert-file" class="visually-hidden" tabindex="-1" aria-label="Insert file" accept=".txt,.brf,.brl,.bru,.prf,.text">
+
+  <script src="fonts/encodings.js"></script>
+  <script src="dialogs.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

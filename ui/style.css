@@ -1,0 +1,233 @@
+/* BrailleMaker: the look of a desktop braille program (system font, window colours, sunken edit area,
+   status line, standard dialogs). Colours are tokens; every text pair meets WCAG 2.2 AA in both colour schemes.
+   Controls are at least 24 px high (WCAG 2.2 target size). */
+:root {
+  --window: #f0f0f0;
+  --window-text: #000000;
+  --field: #ffffff;
+  --field-text: #000000;
+  --edge-dark: #7a7a7a;
+  --edge-light: #ffffff;
+  --caption: #e5e5e5;
+  --muted: #3c3c3c;
+  --focus: #0050c8;
+  --button: #e1e1e1;
+  --button-edge: #707070;
+  --default-edge: #0050c8;
+  --select: #0050c8;
+  --select-text: #ffffff;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --window: #202020;
+    --window-text: #f2f2f2;
+    --field: #191919;
+    --field-text: #f2f2f2;
+    --edge-dark: #8a8a8a;
+    --edge-light: #2b2b2b;
+    --caption: #2b2b2b;
+    --muted: #cfcfcf;
+    --focus: #7fb2ff;
+    --button: #333333;
+    --button-edge: #9a9a9a;
+    --default-edge: #7fb2ff;
+    --select: #7fb2ff;
+    --select-text: #000000;
+  }
+}
+
+:root[data-theme="dark"] {
+  --window: #202020;
+  --window-text: #f2f2f2;
+  --field: #191919;
+  --field-text: #f2f2f2;
+  --edge-dark: #8a8a8a;
+  --edge-light: #2b2b2b;
+  --caption: #2b2b2b;
+  --muted: #cfcfcf;
+  --focus: #7fb2ff;
+  --button: #333333;
+  --button-edge: #9a9a9a;
+  --default-edge: #7fb2ff;
+  --select: #7fb2ff;
+  --select-text: #000000;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; margin: 0; }
+
+body {
+  display: flex;
+  flex-direction: column;
+  background: var(--window);
+  color: var(--window-text);
+  font: 12px/1.35 "Segoe UI", system-ui, -apple-system, "Ubuntu", "Cantarell", sans-serif;
+  overflow: hidden;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0; border: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+/* The document window: a white editing area directly under the menu bar, no frame. */
+#document-window {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--field);
+}
+
+#doc {
+  flex: 1;
+  width: 100%;
+  margin: 0;
+  padding: 1px 3px;
+  border: 0;
+  resize: none;
+  outline: none;
+  background: var(--field);
+  color: var(--field-text);
+  white-space: pre;
+  overflow: auto;
+  tab-size: 8;
+}
+
+/* The caret marks where focus is in the document; no frame is drawn round the editing area. */
+
+/* View, Print Font: the ASCII characters. Braille Font and SimBraille Font: the cells, drawn by the braille fonts
+   (fonts/), which map each ASCII braille character to its dot pattern. The text itself never changes. */
+#doc.print-font { font: 20px/1.25 "Courier New", Courier, "Liberation Mono", "DejaVu Sans Mono", monospace; }
+#doc.braille-font { font: 40px/1.1 "BrailleMaker Braille", "Courier New", monospace; }
+#doc.simbraille-font { font: 40px/1.1 "BrailleMaker SimBraille", "Courier New", monospace; }
+
+/* View, Translated Line: the one-line yellow bar. Braille is drawn in the font chosen in Global, Default Views. */
+#translated-line {
+  padding: 0 3px;
+  height: 28px;
+  font: 20px/28px "Courier New", Courier, "Liberation Mono", monospace;
+  background: #ffff00;
+  color: #000000;
+  white-space: pre;
+  overflow: hidden;
+}
+#translated-line.braille { font: 30px/28px "BrailleMaker Braille", "Courier New", monospace; }
+#translated-line.simbraille { font: 30px/28px "BrailleMaker SimBraille", "Courier New", monospace; }
+
+/* The status line: Current Style, Page, Line, Column in sunken boxes with bold text. */
+.status-line {
+  display: flex;
+  gap: 3px;
+  padding: 2px 2px 1px;
+  border-top: 1px solid var(--edge-dark);
+  background: var(--window);
+}
+
+.status-field {
+  padding: 1px 4px;
+  min-height: 22px;
+  min-width: 90px;
+  border: 1px solid;
+  border-color: var(--edge-dark) var(--edge-light) var(--edge-light) var(--edge-dark);
+  white-space: pre;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.status-style { flex: 0 1 270px; overflow: hidden; text-overflow: ellipsis; }
+#status-page, #status-line-number { flex: 0 0 160px; }
+#status-column { flex: 1 0 90px; }
+
+/* Dialogs. */
+dialog.win-dialog {
+  padding: 0;
+  border: 1px solid var(--edge-dark);
+  background: var(--window);
+  color: var(--window-text);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+}
+
+dialog.win-dialog::backdrop { background: rgba(0, 0, 0, 0.15); }
+
+.caption {
+  margin: 0;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--caption);
+  border-bottom: 1px solid var(--edge-dark);
+}
+
+.win-dialog form { padding: 10px 12px 12px; }
+
+.body { display: flex; flex-direction: column; gap: 6px; }
+.body.two-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+.body.two-columns > .field, .body.two-columns > .choice, .body.two-columns > .static { grid-column: 1 / -1; }
+
+.field { display: flex; flex-direction: column; gap: 2px; }
+.field-num, .field-text, .field-combo { flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; }
+.field-num label, .field-text label, .field-combo label { flex: 1; }
+/* Codes fields (codes edit boxes) run the full width under their label. */
+.field-codes input.codes { width: 100%; }
+
+.static { margin: 0; }
+
+fieldset {
+  margin: 0;
+  padding: 4px 8px 6px;
+  border: 1px solid var(--edge-dark);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+legend { padding: 0 3px; }
+
+.choice { display: flex; align-items: center; gap: 6px; min-height: 24px; }
+.choice input { margin: 0; width: 14px; height: 14px; }
+
+input[type="text"], input[type="number"], select {
+  font: inherit;
+  color: var(--field-text);
+  background: var(--field);
+  border: 1px solid var(--edge-dark);
+  border-radius: 0;
+  min-height: 24px;
+  padding: 2px 4px;
+}
+
+input[type="number"] { width: 6em; }
+input[type="text"] { min-width: 12em; }
+input.codes { font-family: "Courier New", Consolas, monospace; min-width: 16em; }
+select[size] { width: 100%; padding: 0; }
+select[size] option { padding: 1px 4px; }
+select[size] option:checked { background: var(--select); color: var(--select-text); }
+
+button {
+  font: inherit;
+  color: var(--window-text);
+  background: var(--button);
+  border: 1px solid var(--button-edge);
+  border-radius: 0;
+  min-width: 75px;
+  min-height: 24px;
+  padding: 2px 10px;
+}
+
+button.default-button { border: 2px solid var(--default-edge); }
+button.inline-button { align-self: flex-start; }
+
+.buttons { display: flex; justify-content: flex-end; gap: 6px; margin-top: 12px; }
+
+.mnemonic { text-decoration: underline; }
+
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.choice input:focus-visible + span { outline: 1px dotted var(--window-text); outline-offset: 1px; }

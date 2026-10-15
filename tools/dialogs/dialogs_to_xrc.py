@@ -1,0 +1,221 @@
+"""Turns decoded dialog layouts (dialogs-layout.json, from tools/pe_dialog_layout.py) into one wxWidgets XRC file of
+native dialogs, positioned exactly as the layouts give them.
+
+Usage: python3 -I dialogs_to_xrc.py <dialogs-layout.json> <out.xrc> [<out dialog_table.rs>]
+
+Every dialog becomes a wxDialog named dlg<resource id>; every control keeps its position and size in dialog units
+(XRC "d" units, converted by wxWidgets with the dialog font as Windows does), its label with its access key, its
+tab order (document order), and its visible, enabled, default-button, group and style flags. Controls are named
+c<id>; ids 1 and 2 are the standard OK and Cancel (wxID_OK, wxID_CANCEL), as Windows treats them. The sizes are
+client-area sizes (DLGTEMPLATE cx, cy); the program sets each dialog's client size from them when it opens one.
+"""
+import json
+import sys
+from xml.sax.saxutils import escape
+
+# Licensing, activation, registration and vendor-specific prompts are not part of BrailleMaker.
+SKIP = {1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009, 1010, 1011, 1012, 1013, 1014, 1015,
+        1056, 1057, 1058, 1059, 1070}
+
+# About (1016) keeps its layout with BrailleMaker's own text; the activation buttons and the original credits are
+# left out (None). Controls 10 to 14 are filled at run time.
+ABOUT = 1016
+ABOUT_TEXT = {
+    5: None, 6: None, 9: None, 20: None, 21: None, 22: None,
+    7: "BrailleMaker for Windows, Linux and Mac",
+    8: "Version %s",
+    15: "Designed, implemented, and tested by:",
+    16: "Jeremiah Beasley",
+    17: "Braille translation:",
+    18: "liblouis 3.39.0 (LGPL 2.1 or later), until the BrailleMaker engine is complete",
+    19: "Copyright (c) 2026 Jeremiah Beasley.",
+}
+
+
+# Titles and texts that name another program are replaced.
+TITLES = {1054: "BrailleMaker", 1061: "BrailleMaker Autosave Recovery Wizard"}
+TEXTS = {
+    (1036, 12): "Allow embedded codes, eg. [[*pg*]]",
+    (1037, 16): '<a href="www.example.com">www.example.com</a>',
+    (1060, 12): "",
+}
+
+
+def name_of(c):
+    return {1: "wxID_OK", 2: "wxID_CANCEL"}.get(c["id"], "c%d" % c["id"])
+
+
+def label(text):
+    # Win32 and wxWidgets both mark the access key with "&"; text needs XML escaping only.
+    return escape(text or "")
+
+
+def is_box(c):
+    return c["class"] == "Button" and "BS_GROUPBOX" in c["style_flags"]
+
+
+def is_radio(c):
+    return c["class"] == "Button" and any(f in c["style_flags"] for f in ("BS_RADIOBUTTON", "BS_AUTORADIOBUTTON"))
+
+
+def kind_of(c):
+    """The control's kind for the program: how its value is read and kept."""
+    f = c["style_flags"]
+    if c["class"] == "Button":
+        if "BS_GROUPBOX" in f:
+            return "Box"
+        if is_radio(c):
+            return "Radio"
+        if any(k in f for k in ("BS_CHECKBOX", "BS_AUTOCHECKBOX", "BS_3STATE", "BS_AUTO3STATE")):
+            return "Check"
+        return "Button"
+    return {"Static": "Static", "Edit": "Text", "ListBox": "List",
+            "ComboBox": "Combo"}.get(c["class"], "Static")
+
+
+def common(c, out, indent):
+    f = c["style_flags"]
+    out.append('%s<pos>%d,%dd</pos>' % (indent, c["x"], c["y"]))
+    out.append('%s<size>%d,%dd</size>' % (indent, c["width"], c["height"]))
+    if "WS_VISIBLE" not in f:
+        out.append('%s<hidden>1</hidden>' % indent)
+    if "WS_DISABLED" in f:
+        out.append('%s<enabled>0</enabled>' % indent)
+
+
+def control(c, out, group_start):
+    f = c["style_flags"]
+    cls = c["class"]
+    ind = "      "
+    styles = []
+    if cls == "Button":
+        kind = next((x for x in f if x.startswith("BS_") and x in (
+            "BS_PUSHBUTTON", "BS_DEFPUSHBUTTON", "BS_CHECKBOX", "BS_AUTOCHECKBOX", "BS_RADIOBUTTON",
+            "BS_AUTORADIOBUTTON", "BS_GROUPBOX", "BS_3STATE", "BS_AUTO3STATE")), "BS_PUSHBUTTON")
+        if kind == "BS_GROUPBOX":
+            wx = "wxStaticBox"
+        elif kind in ("BS_CHECKBOX", "BS_AUTOCHECKBOX"):
+            wx = "wxCheckBox"
+        elif kind in ("BS_3STATE", "BS_AUTO3STATE"):
+            wx, styles = "wxCheckBox", ["wxCHK_3STATE", "wxCHK_ALLOW_3RD_STATE_FOR_USER"]
+        elif kind in ("BS_RADIOBUTTON", "BS_AUTORADIOBUTTON"):
+            wx = "wxRadioButton"
+            # A group starts where the layout marks one (WS_GROUP) or where a run of radio buttons begins after another
+            # kind of control (dialogs 1028, 1037 and 1051 rely on that).
+            if group_start:
+                styles.append("wxRB_GROUP")
+        else:
+            wx = "wxButton"
+    elif cls == "Static":
+        wx = "wxStaticText"
+        if "SS_CENTER" in f:
+            styles.append("wxALIGN_CENTRE_HORIZONTAL")
+        elif "SS_RIGHT" in f:
+            styles.append("wxALIGN_RIGHT")
+        if "SS_LEFTNOWORDWRAP" in f or "SS_SIMPLE" in f:
+            styles.append("wxST_NO_AUTORESIZE")
+    elif cls == "Edit" or cls.endswith("_CODESEDIT"):
+        wx = "wxTextCtrl"
+        if "ES_MULTILINE" in f:
+            styles.append("wxTE_MULTILINE")
+        if "ES_READONLY" in f:
+            styles.append("wxTE_READONLY")
+        if "ES_PASSWORD" in f:
+            styles.append("wxTE_PASSWORD")
+        if "ES_WANTRETURN" in f:
+            styles.append("wxTE_PROCESS_ENTER")
+    elif cls == "ListBox":
+        wx = "wxListBox"
+        if "LBS_EXTENDEDSEL" in f:
+            styles.append("wxLB_EXTENDED")
+        elif "LBS_MULTIPLESEL" in f:
+            styles.append("wxLB_MULTIPLE")
+        else:
+            styles.append("wxLB_SINGLE")
+        if "LBS_SORT" in f:
+            styles.append("wxLB_SORT")
+        if "LBS_DISABLENOSCROLL" in f:
+            styles.append("wxLB_ALWAYS_SB")
+    elif cls == "ComboBox":
+        wx = "wxComboBox"
+        if "CBS_DROPDOWNLIST" in f:
+            styles.append("wxCB_READONLY")
+        elif "CBS_SIMPLE" in f:
+            styles.append("wxCB_SIMPLE")
+        else:
+            styles.append("wxCB_DROPDOWN")
+        if "CBS_SORT" in f:
+            styles.append("wxCB_SORT")
+    else:
+        wx = "wxStaticText"  # an unknown class is shown as its text so nothing is silently dropped
+    out.append('    <object class="%s" name="%s">' % (wx, name_of(c)))
+    if wx in ("wxButton", "wxCheckBox", "wxRadioButton", "wxStaticBox", "wxStaticText"):
+        out.append('%s<label>%s</label>' % (ind, label(c["text"] if isinstance(c["text"], str) else "")))
+    elif wx == "wxTextCtrl" and isinstance(c["text"], str) and c["text"]:
+        out.append('%s<value>%s</value>' % (ind, label(c["text"])))
+    if wx == "wxButton" and "BS_DEFPUSHBUTTON" in f:
+        out.append('%s<default>1</default>' % ind)
+    if styles:
+        out.append('%s<style>%s</style>' % (ind, "|".join(styles)))
+    common(c, out, ind)
+    out.append('    </object>')
+
+
+def main():
+    dialogs = json.load(open(sys.argv[1], encoding="utf-8"))
+    out = ['<?xml version="1.0" encoding="UTF-8"?>',
+           '<!-- Generated by tools/dialogs/dialogs_to_xrc.py from the dialog layouts; do not edit by hand. -->',
+           '<resource xmlns="http://www.wxwidgets.org/wxxrc" version="2.5.3.0">']
+    written = 0
+    table = []
+    for d in dialogs:
+        rid = d["resource"]
+        if rid in SKIP or "controls" not in d:
+            continue
+        controls = [dict(c, text=TEXTS[(rid, c["id"])]) if (rid, c["id"]) in TEXTS else c for c in d["controls"]]
+        title = TITLES.get(rid, d["title"] or "BrailleMaker")
+        if rid == ABOUT:
+            title = "About BrailleMaker"
+            kept = []
+            for c in controls:
+                if c["id"] in ABOUT_TEXT:
+                    if ABOUT_TEXT[c["id"]] is None:
+                        continue
+                    c = dict(c, text=ABOUT_TEXT[c["id"]])
+                kept.append(c)
+            controls = kept
+        out.append('  <object class="wxDialog" name="dlg%s">' % rid)
+        out.append('    <title>%s</title>' % escape(title))
+        out.append('    <size>%d,%dd</size>' % (d["width"], d["height"]))
+        out.append('    <style>wxDEFAULT_DIALOG_STYLE</style>')
+        # Group boxes first, so they sit behind the controls they frame (Windows draws them that way).
+        for c in controls:
+            if is_box(c):
+                control(c, out, False)
+        previous = None
+        for c in controls:
+            if is_box(c):
+                continue
+            start = is_radio(c) and ("WS_GROUP" in c["style_flags"] or previous is None or not is_radio(previous))
+            control(c, out, start)
+            previous = c
+        out.append('  </object>')
+        written += 1
+        table.append((rid, d["width"], d["height"], [(c["id"], kind_of(c)) for c in controls]))
+    out.append('</resource>')
+    open(sys.argv[2], "w", encoding="utf-8").write("\n".join(out) + "\n")
+    if len(sys.argv) > 3:
+        rs = ["// Generated by tools/dialogs/dialogs_to_xrc.py from the dialog layouts; do not edit by hand.",
+              "// Each dialog: resource id, client width and height in dialog units (DLGTEMPLATE cx, cy), and its",
+              "// controls in tab order with their kind.", "",
+              "use crate::dlg::Ctl;", "",
+              "pub const DIALOGS: &[(i32, i32, i32, &[(i32, Ctl)])] = &["]
+        for rid, w, h, ctls in table:
+            rs.append("    (%d, %d, %d, &[%s])," % (rid, w, h, ", ".join("(%d, Ctl::%s)" % c for c in ctls)))
+        rs.append("];")
+        open(sys.argv[3], "w", encoding="utf-8").write("\n".join(rs) + "\n")
+    print(written, "dialogs written,", len(dialogs) - written, "left out (licensing, activation, vendor prompts)")
+
+
+if __name__ == "__main__":
+    main()

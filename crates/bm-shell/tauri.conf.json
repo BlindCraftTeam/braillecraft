@@ -1,0 +1,38 @@
+{
+  "productName": "BrailleMaker",
+  "version": "0.1.0",
+  "identifier": "net.jb11.braillemaker",
+  "build": {
+    "frontendDist": "../../ui"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "BrailleMaker",
+        "width": 900,
+        "height": 640
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "Productivity",
+    "shortDescription": "Braille translation and embossing",
+    "resources": {
+      "../bm-louis/vendor/liblouis/tables/": "liblouis/tables/",
+      "../bm-louis/vendor/liblouis/COPYING.LESSER": "liblouis/COPYING.LESSER"
+    },
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}
