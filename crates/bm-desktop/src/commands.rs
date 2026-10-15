@@ -687,6 +687,8 @@ enum SaveType {
     /// The older document file format (version 0, spec 04d-C).
     OlderDocument,
     Formatted,
+    /// Refreshable braille (.lbf, spec 04d-D).
+    Refreshable,
 }
 
 /// The Save As file types, in the reference program's order for each kind of document (spec 04d-B), as far as
@@ -697,6 +699,7 @@ fn save_types(braille: bool) -> &'static [(&'static str, &'static str, SaveType)
             ("Braille document (*.dxb)", "dxb", SaveType::Document),
             ("Braille document, older format (*.dxb)", "dxb", SaveType::OlderDocument),
             ("Formatted braille (*.brf)", "brf", SaveType::Formatted),
+            ("Refreshable braille (*.lbf)", "lbf", SaveType::Refreshable),
         ]
     } else {
         &[
@@ -754,6 +757,7 @@ fn save(key: Option<u64>, as_new: bool) -> bool {
     let chosen = if chosen.extension().is_some_and(|e| e.eq_ignore_ascii_case(kind.1)) { chosen } else { chosen.with_extension(kind.1) };
     match kind.2 {
         SaveType::Formatted => write_formatted(key, &chosen, braille),
+        SaveType::Refreshable => write_refreshable(key, &chosen),
         SaveType::OlderDocument => write_document(key, &chosen, 0),
         SaveType::Document => write_document(key, &chosen, 1),
     }
@@ -906,6 +910,26 @@ fn prf_bytes(pages: &[bm_core::format::Page]) -> Vec<u8> {
             _ => b'#',
         })
         .collect()
+}
+
+/// Save As refreshable braille (.lbf) for a braille document: its running text, braille in North American ASCII
+/// braille as the document file stores it, and its styles, through bm_core::lbf. The document keeps its own file
+/// and name.
+fn write_refreshable(key: u64, path: &Path) -> bool {
+    let Some((running, styles)) = app::with(|a| {
+        let i = a.index_of(key)?;
+        let d = &a.docs[i];
+        let shown = translation::convert_braille(&d.shown(), a.encoding(), encodings::find(encodings::DEFAULT));
+        let styles: Vec<(String, String, String)> = d.styles.iter().map(|s| (s.name.clone(), s.begin.clone(), s.end.clone())).collect();
+        Some((shown.to_running(), styles))
+    }) else {
+        return false;
+    };
+    if let Err(e) = std::fs::write(path, bm_core::lbf::write(&running, &styles)) {
+        message(&format!("{}: {e}", path.display()));
+        return false;
+    }
+    true
 }
 
 /// Save As formatted braille (.brf) for a braille document or formatted text (.prf) for a print document: the

@@ -1,0 +1,237 @@
+<xml>
+<!-- The styles that refreshable braille (.lbf) output writes markup for: before the style's text, at each new
+     line within it, and after it; hierarchy styles number their levels from toplevel; requiretext True waits for
+     text before writing "before". Matched by style name in small letters. -->
+  <style name ="Attribution.">
+    <before> $p </before>
+    <hierarchy>False</hierarchy>
+    <toplevel></toplevel>
+    <newline></newline>
+    <after> $p= </after>
+    <requiretext>True</requiretext>
+  </style>
+  <style name ="BB-BoxBegin.">
+    <before> $b </before>
+    <hierarchy>False</hierarchy>
+    <toplevel></toplevel>
+    <newline></newline>
+    <after></after>
+    <requiretext>False</requiretext>
+  </style>
+  <style name ="BE-BoxEnd.">
+    <before> $b= </before>
+    <hierarchy>False</hierarchy>
+    <toplevel></toplevel>
+    <newline></newline>
+    <after></after>
+    <requiretext>False</requiretext>
+  </style>
+  <style name ="BL-BlockProtectlevel.">
+    <before></before>
+    <hierarchy>False</hierarchy>
+    <toplevel></toplevel>
+    <newline></newline>
+    <after> $b= </after>
+    <requiretext>True</requiretext>
+  </style>
+  <style name ="C-Caption.">
+    <before> $cp </before>
+    <hierarchy>False</hierarchy>
+    <toplevel></toplevel>
+    <newline></newline>
+    <after> $cp= </after>
+    <requiretext>True</requiretext>
+  </style>
+  <style name ="C1-ContentsSingleIndent.">
+    <before> $h </before>
+    <hierarchy>True</hierarchy>
+    <toplevel>0</toplevel>
+    <newline> $h </newline>
+    <after></after>
+    <requiretext>True</requiretext>
+  </style>
+  <style name ="Centered.">
+    <before> $h </before>
+    <hierarchy>False</hierarchy>
+    <toplevel></toplevel>
+    <newline></newline>
+    <after></after>
+    <requiretext>True</requiretext>
+  </style>
+  <style name ="CT-Cartoon.">
+    <before> $p </before>
+    <hierarchy>False</hierarchy>
+    <toplevel></toplevel>
+    <newline></newline>
+    <after></after>
+    <requiretext>True</requiretext>
+  </style>
+  <style name ="DirectionsNemeth.">
+    <before> $p </before>
+    <hierarchy>False</hierarchy>
+    <toplevel></toplevel>
+    <newline></newline>
+    <after></after>
+    <requiretext>True</requiretext>
+  </style>
+  <style name ="E1-ExerciseSingIndent.">
+    <before> $\#a </before>
+    <hierarchy>True</hierarchy>
+    <toplevel>1</toplevel>
+    <newline> $\ </newline>
+    <after></after>
+    <requiretext>True</requiretext>
+  </style>
+  <style name ="Footnote.">
+    <before> $n </before>
+    <hierarchy>False</hierarchy>
+    <toplevel></toplevel>
+    <newline></newline>
+    <after> $n= </after>
+    <requiretext>True</requiretext>
+  </style>
+  <style name ="Glossary.">
+    <before> $5 </before>
+    <hierarchy>True</hierarchy>
+    <toplevel>0</toplevel>
+    <newline> $5 </newline>
+    <after></after>
+    <requiretext>True</requiretext>
+  </style>
+  <style name ="G1-GlossarySingleIndent.">
+    <before> $5 </before>
+    <hierarchy>True</hierarchy>
+    <toplevel>0</toplevel>
+    <newline> $5 </newline>
+    <after></after>
+    <requiretext>True</requiretext>
+  </style>
+  <style name ="G2-GlossaryMultiIndent.">
+    <before> $5 </before>
+    <hierarchy>True</hierarchy>
+    <toplevel>0</toplevel>
+    <newline> $5 </newline>
+    <after></after>
+    <requiretext>True</requiretext>
+  </style>
+  <style name ="I1-IndexSingleIndent.">
+    <before> $5 </before>
+    <hierarchy>True</hierarchy>
+    <toplevel>0</toplevel>
+    <newline> $5 </newline>
+    <after></after>
+    <requiretext>True</requiretext>
+  </style>
+  <style name ="L-List.">
+    <before> $\#a </before>
+    <hierarchy>True</hierarchy>
+    <toplevel>1</toplevel>
+    <newline> $\ </newline>
+    <after></after>
+    <requiretext>True</requiretext>
+  </style>
+  <style name ="Poetry.">
+    <before> $l </before>
+    <hierarchy>False</hierarchy>
+    <toplevel></toplevel>
+    <newline></newline>
+    <after> $l= </after>
+    <requiretext>True</requiretext>
+  </style>
+  <style name ="Table.">
+    <before> $tb </before>
+    <hierarchy>False</hierarchy>
+    <toplevel></toplevel>
+    <newline></newline>
+    <after> $tb= </after>
+    <requiretext>True</requiretext>
+  </style>
+  <style name ="TranscriberNote.">
+    <before> $tn </before>
+    <hierarchy>False</hierarchy>
+    <toplevel></toplevel>
+    <newline></newline>
+    <after> $tn= </after>
+    <requiretext>True</requiretext>
+  </style>
+  <style name ="Quote.">
+    <before> $l $l </before>
+    <hierarchy>False</hierarchy>
+    <toplevel></toplevel>
+    <newline></newline>
+    <after> $l= </after>
+    <requiretext>True</requiretext>
+  </style>
+  <style name ="PP-ProsePlay.">
+    <before> $p </before>
+    <hierarchy>False</hierarchy>
+    <toplevel></toplevel>
+    <newline></newline>
+    <after></after>
+    <requiretext>True</requiretext>
+  </style>
+  <style name ="C2-ContentsMultiIndent.">
+    <before> $h </before>
+    <hierarchy>True</hierarchy>
+    <toplevel>0</toplevel>
+    <newline> $h </newline>
+    <after></after>
+    <requiretext>True</requiretext>
+  </style>
+  <style name ="TOC:marker.">
+    <before> $h </before>
+    <hierarchy>True</hierarchy>
+    <toplevel>0</toplevel>
+    <newline> $h </newline>
+    <after> $h= </after>
+    <requiretext>True</requiretext>
+  </style>
+  <style name ="BL-BlockProtectlevel">
+    <before></before>
+    <hierarchy>False</hierarchy>
+    <toplevel></toplevel>
+    <newline></newline>
+    <after> $b= </after>
+    <requiretext>True</requiretext>
+  </style>
+  <style name ="Outline.">
+    <before> $\#a </before>
+    <hierarchy>True</hierarchy>
+    <toplevel>1</toplevel>
+    <newline> $\ </newline>
+    <after></after>
+    <requiretext>True</requiretext>
+  </style>
+  <style name ="I2-IndexMultiIndent.">
+    <before> $5 </before>
+    <hierarchy>True</hierarchy>
+    <toplevel>0</toplevel>
+    <newline> $5 </newline>
+    <after></after>
+    <requiretext>True</requiretext>
+  </style>
+  <style name ="TocEnd">
+    <before>$h=</before>
+    <hierarchy>False</hierarchy>
+    <toplevel></toplevel>
+    <newline></newline>
+    <after></after>
+    <requiretext>False</requiretext>
+  </style>
+  <style name ="PoetryTest.">
+    <before> $l </before>
+    <hierarchy>False</hierarchy>
+    <toplevel></toplevel>
+    <newline>$NLSUB</newline>
+    <after> $l= </after>
+    <requiretext>True</requiretext>
+  </style>
+  <style name ="BL-BlockProtectTest">
+    <before></before>
+    <hierarchy>False</hierarchy>
+    <toplevel></toplevel>
+    <newline></newline>
+    <after> $b= </after>
+    <requiretext>False</requiretext>
+  </style>
+</xml>
