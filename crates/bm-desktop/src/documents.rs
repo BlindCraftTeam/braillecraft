@@ -2,15 +2,12 @@
 //! control) and, under it, the one-line translated line on yellow. The child windows sit maximized in the main
 //! window, as in the reference screenshots.
 
-use std::cell::Cell;
 use std::collections::HashSet;
-use std::ffi::c_void;
-use std::time::{Duration, Instant};
 
 use wxdragon::prelude::*;
 
 use crate::app::{self, child_maximize, child_set_title, Doc, DocKind, Hyphen, View};
-use crate::speech::{self, BrailleLines};
+use crate::speech;
 
 /// Opens a new document window. `name` None makes an untitled one ("Untitled Print Document 1").
 pub fn new_document(kind: DocKind, name: Option<String>, text: &str) -> u64 {
@@ -48,8 +45,9 @@ pub fn new_document(kind: DocKind, name: Option<String>, text: &str) -> u64 {
     line.set_foreground_color(Colour::new(0, 0, 0, 255));
     line.set_accessibility_label("Translated line");
     speech::set_name(line.get_handle(), "Translated line");
-    text_ctrl.set_accessibility_label("BrailleMaker editing window");
-    speech::set_name(text_ctrl.get_handle(), "BrailleMaker editing window");
+    // The name the reference program's document provider gives its editing area.
+    text_ctrl.set_accessibility_label("Document Editing Window");
+    speech::set_name(text_ctrl.get_handle(), "Document Editing Window");
     line.show(view.translated);
 
     let sizer = BoxSizer::builder(Orientation::Vertical).build();
@@ -58,7 +56,6 @@ pub fn new_document(kind: DocKind, name: Option<String>, text: &str) -> u64 {
     child.set_sizer(sizer, true);
 
     wire(key, &child, &text_ctrl);
-    wire_line(&line, &text_ctrl);
 
     let doc = Doc {
         key,
@@ -82,7 +79,6 @@ pub fn new_document(kind: DocKind, name: Option<String>, text: &str) -> u64 {
         last_line_key: String::new(),
         six_down: HashSet::new(),
         chord: 0,
-        reader_at: None,
     };
     app::with(|a| {
         child_set_title(&doc.frame, &doc.full_name());
@@ -162,13 +158,6 @@ fn wire(key: u64, child: &MDIChildFrame, text: &TextCtrl) {
     text.on_key_down(move |e| {
         let mut consumed = false;
         if let WindowEventData::Keyboard(k) = &e {
-            if k.alt_down() && !k.control_down() && !k.shift_down() {
-                if let Some(code) = k.get_key_code() {
-                    if reader_key(key, code) {
-                        return;
-                    }
-                }
-            }
             app::try_with(|a| {
                 let Some(i) = a.index_of(key) else { return };
                 let d = &mut a.docs[i];
@@ -191,14 +180,12 @@ fn wire(key: u64, child: &MDIChildFrame, text: &TextCtrl) {
     text.on_key_up(move |e| {
         if let WindowEventData::Keyboard(k) = &e {
             let mut insert: Option<char> = None;
-            let mut six_mode = false;
             app::try_with(|a| {
                 let Some(i) = a.index_of(key) else { return };
                 let set = a.settings.six_key_set.clone();
                 let enc = a.encoding();
                 let d = &mut a.docs[i];
-                six_mode = d.kind == DocKind::Braille && d.view.six_key;
-                if six_mode {
+                if d.kind == DocKind::Braille && d.view.six_key {
                     if let Some(dot) = six_key_dot(&set, k.get_key_code()) {
                         d.six_down.remove(&dot);
                         // The cell is entered when the last key of the chord is released.
@@ -211,16 +198,9 @@ fn wire(key: u64, child: &MDIChildFrame, text: &TextCtrl) {
             });
             if let Some(c) = insert {
                 t.write_text(&c.to_string());
-                echo_entry(key, Some(c));
-            } else if !k.alt_down() && !k.control_down() {
-                if let Some(code) = k.get_key_code() {
-                    if (32..127).contains(&code) && (!six_mode || code == 32) {
-                        echo_entry(key, None);
-                    }
-                }
             }
             k.event.skip(true);
-            caret_moved(key, k.get_key_code());
+            caret_moved(key);
         }
     });
 
@@ -228,7 +208,7 @@ fn wire(key: u64, child: &MDIChildFrame, text: &TextCtrl) {
         if let WindowEventData::MouseButton(m) = &e {
             m.event.skip(true);
         }
-        caret_moved(key, None);
+        caret_moved(key);
     });
 
     let editor = *text;
@@ -255,19 +235,8 @@ fn wire(key: u64, child: &MDIChildFrame, text: &TextCtrl) {
     });
 }
 
-/// Key codes of the movement keys (wxWidgets WXK_ values).
-const KEY_END: i32 = 312;
-const KEY_HOME: i32 = 313;
-const KEY_UP: i32 = 315;
-const KEY_DOWN: i32 = 317;
-const KEY_PAGE_UP: i32 = 366;
-const KEY_PAGE_DOWN: i32 = 367;
-
-/// Highlight mode and the status line follow the caret. After a movement by key, the screen reader hears what the
-/// reading settings ask for: a new page, a skipped line, a change of style, and in a braille document the line
-/// that was moved to (translated or as braille cells).
-fn caret_moved(key: u64, moved_by: Option<i32>) {
-    let mut said: Option<(*mut c_void, String)> = None;
+/// Highlight mode and the status line follow the caret.
+fn caret_moved(key: u64) {
     app::try_with(|a| {
         let Some(i) = a.index_of(key) else { return };
         let d = &a.docs[i];
@@ -280,178 +249,7 @@ fn caret_moved(key: u64, moved_by: Option<i32>) {
         if a.active == Some(i) {
             a.update_status();
         }
-        let (page, _, _, line_no, line, style) = a.caret_place(i);
-        let before = a.docs[i].reader_at.replace((page, line_no, style.clone()));
-        let (Some(code), Some((old_page, old_line, old_style))) = (moved_by, before) else { return };
-        let r = &a.settings.reader;
-        let vertical = matches!(code, KEY_UP | KEY_DOWN | KEY_PAGE_UP | KEY_PAGE_DOWN | KEY_HOME | KEY_END);
-        let mut parts: Vec<String> = Vec::new();
-        if page != old_page {
-            parts.push(format!("Page {page}"));
-        }
-        if r.skipped_lines && page == old_page && matches!(code, KEY_UP | KEY_DOWN) && line_no.abs_diff(old_line) > 1 {
-            parts.push("line skip".to_string());
-        }
-        if r.style_changes && style != old_style {
-            parts.push(style);
-        }
-        if a.docs[i].kind == DocKind::Braille && vertical && line_no != old_line {
-            match r.braille_lines {
-                BrailleLines::Translated => {
-                    let t = a.translate_line(i, &line);
-                    parts.push(if t.trim().is_empty() { speech::BLANK.to_string() } else { t });
-                }
-                BrailleLines::Cells => parts.push(speech::speak_line_as_cells(&line, r.local_signs)),
-                BrailleLines::Silent => {}
-            }
-        }
-        if !parts.is_empty() {
-            said = Some((a.docs[i].text.get_handle(), parts.join(". ")));
-        }
     });
-    if let Some((widget, text)) = said {
-        speech::announce(widget, &text, false);
-    }
-}
-
-thread_local! {
-    /// The last reading key and when it was pressed, for the keys that do more when pressed twice quickly.
-    static LAST_READING_KEY: Cell<(i32, Option<Instant>)> = const { Cell::new((0, None)) };
-}
-
-fn pressed_twice(code: i32) -> bool {
-    LAST_READING_KEY.with(|c| {
-        let (last, at) = c.get();
-        let now = Instant::now();
-        c.set((code, Some(now)));
-        last == code && at.is_some_and(|t| now.duration_since(t) < Duration::from_millis(500))
-    })
-}
-
-/// The reading keys of the document window (Alt with 7, 8, 9, comma, period, End, U, I, P, W, semicolon); see
-/// speech.rs. Returns true when the key was one of them.
-fn reader_key(key: u64, code: i32) -> bool {
-    let code = if (97..=122).contains(&code) { code - 32 } else { code };
-    const KEYS: [i32; 11] = [55, 56, 57, 44, 46, 59, KEY_END, 85, 73, 80, 87];
-    if !KEYS.contains(&code) {
-        return false;
-    }
-    let twice = pressed_twice(code);
-    let mut said: Option<(*mut c_void, String)> = None;
-    let mut to_line: Option<TextCtrl> = None;
-    app::try_with(|a| {
-        let Some(i) = a.index_of(key) else { return };
-        let widget = a.docs[i].text.get_handle();
-        let (page, line_on_page, column, _, line, style) = a.caret_place(i);
-        let braille = a.docs[i].kind == DocKind::Braille;
-        let coded = a.docs[i].view.codes;
-        let signs = a.settings.reader.local_signs;
-        let mut turned_on = false;
-        if matches!(code, 55 | 59) && !a.docs[i].view.translated {
-            a.docs[i].view.translated = true;
-            a.apply_view();
-            turned_on = true;
-        }
-        let text = match code {
-            55 => {
-                let t = a.translate_line(i, &line);
-                let t = if braille {
-                    if t.trim().is_empty() { speech::BLANK.to_string() } else { t }
-                } else {
-                    speech::speak_line_as_cells(&t, signs)
-                };
-                if turned_on { format!("{}. {t}", speech::TRANSLATED_LINE_ON) } else { t }
-            }
-            56 => style,
-            57 if coded => speech::NO_LOCATION.to_string(),
-            57 => speech::location(page, line_on_page, column),
-            44 => speech::line_position(&line, column, twice),
-            46 if coded => speech::CODED_VIEW.to_string(),
-            46 => speech::line_length(&line, twice),
-            KEY_END if coded => speech::NO_LOCATION.to_string(),
-            KEY_END => {
-                let word = speech::last_word(line.trim_end());
-                if word.is_empty() {
-                    speech::BLANK.to_string()
-                } else if braille {
-                    speech::speak_cells(word, signs)
-                } else {
-                    word.to_string()
-                }
-            }
-            85 => a.settings.reader.cycle_braille_lines().to_string(),
-            73 => a.settings.reader.cycle_style_announcements(),
-            80 => a.settings.reader.cycle_entry_echo(),
-            87 => a.settings.reader.toggle_completed_words().to_string(),
-            _ => {
-                // Alt+semicolon: the focus goes to the start of the translated line; the screen reader speaks it.
-                to_line = Some(a.docs[i].line);
-                if turned_on { speech::TURNING_ON_TRANSLATED_LINE.to_string() } else { String::new() }
-            }
-        };
-        said = Some((widget, text));
-    });
-    if let Some(line) = to_line {
-        line.set_focus();
-        line.set_insertion_point(0);
-    }
-    if let Some((widget, text)) = said {
-        speech::announce(widget, &text, true);
-    }
-    true
-}
-
-/// On the translated line, Alt+semicolon gives the focus back to the editing area.
-fn wire_line(line: &TextCtrl, editor: &TextCtrl) {
-    let editor = *editor;
-    line.on_key_down(move |e| {
-        if let WindowEventData::Keyboard(k) = &e {
-            if k.alt_down() && !k.control_down() && k.get_key_code() == Some(59) {
-                editor.set_focus();
-                return;
-            }
-            k.event.skip(true);
-        }
-    });
-}
-
-/// The echo for braille entry: a cell entered (with six keys, or typed) is spoken by its name when the echo is
-/// characters; the word just completed is spoken as braille cells when a space is typed and the echo is words.
-fn echo_entry(key: u64, entered: Option<char>) {
-    let mut said: Option<(*mut c_void, String)> = None;
-    app::try_with(|a| {
-        let Some(i) = a.index_of(key) else { return };
-        let d = &a.docs[i];
-        if d.kind != DocKind::Braille {
-            return;
-        }
-        let r = &a.settings.reader;
-        let value = d.text.get_value();
-        let pos = d.text.get_insertion_point();
-        let before = &value[..app::char_to_byte(&value, pos)];
-        let typed = entered.or_else(|| before.chars().last());
-        let Some(c) = typed else { return };
-        let text = if c == ' ' {
-            if !r.echo_words() {
-                return;
-            }
-            let line = before.rsplit('\n').next().unwrap_or("").trim_end();
-            let word = line.rsplit(' ').next().unwrap_or("");
-            if word.is_empty() {
-                return;
-            }
-            speech::speak_cells(word, r.local_signs)
-        } else {
-            if !r.echo_characters() {
-                return;
-            }
-            speech::speak_cells(&c.to_string(), r.local_signs)
-        };
-        said = Some((d.text.get_handle(), text));
-    });
-    if let Some((widget, text)) = said {
-        speech::announce(widget, &text, true);
-    }
 }
 
 fn six_key_dot(set: &str, key_code: Option<i32>) -> Option<usize> {

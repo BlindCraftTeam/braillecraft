@@ -87,8 +87,6 @@ pub struct Doc {
     pub last_line_key: String,
     pub six_down: HashSet<usize>,
     pub chord: usize,
-    /// Where the caret was when the screen reader announcements last looked: page, line in the document, style.
-    pub reader_at: Option<(usize, usize, String)>,
 }
 
 impl Doc {
@@ -447,18 +445,6 @@ impl App {
                 Err(e) => e,
             },
         }
-    }
-
-    /// Where the caret of document `i` is: page and line on the page (1-based, as the status line shows them),
-    /// column (1-based), line in the whole document (0-based), the line's text, and the current style ("None").
-    pub fn caret_place(&self, i: usize) -> (usize, usize, usize, usize, String, String) {
-        let d = &self.docs[i];
-        let value = d.text.get_value();
-        let pos = d.text.get_insertion_point();
-        let (line, column) = line_and_column(&value, pos);
-        let lines = d.lines.max(1) as usize;
-        let style = open_styles(&value, pos).pop().unwrap_or_else(|| crate::speech::NONE.to_string());
-        (line / lines + 1, line % lines + 1, column + 1, line, line_at(&value, pos), style)
     }
 
     pub fn mark_dirty(&mut self) {
