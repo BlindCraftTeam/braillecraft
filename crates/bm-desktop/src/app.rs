@@ -68,6 +68,9 @@ pub struct Doc {
     pub key: u64,
     pub frame: MDIChildFrame,
     pub text: TextCtrl,
+    /// The document's status line, the window after the editing area (as in the reference program, where screen
+    /// reader scripts find it there): current style, Page, Line, Column, the character at the caret, Keys.
+    pub status: StaticText,
     pub line: TextCtrl,
     pub name: String,
     pub kind: DocKind,
@@ -156,6 +159,9 @@ pub struct Settings {
     pub shortcuts: Shortcuts,
     pub fonts: Fonts,
     pub reader: ReaderSettings,
+    /// Global, View Preferences: "Use verbose labels for non-ANSI characters in coded view"; the status line then
+    /// shows the character at the caret with its Unicode value, "c {U+XXXX}".
+    pub verbose_labels: bool,
 }
 
 impl Default for Settings {
@@ -194,6 +200,7 @@ impl Default for Settings {
                 status_size: 12,
             },
             reader: ReaderSettings::default(),
+            verbose_labels: false,
         }
     }
 }
@@ -209,7 +216,6 @@ pub struct FindSpec {
 
 pub struct App {
     pub frame: MDIParentFrame,
-    pub status: StatusBar,
     pub menus: Menus,
     pub docs: Vec<Doc>,
     pub active: Option<usize>,
@@ -297,6 +303,66 @@ pub fn open_styles(text: &str, pos: i64) -> Vec<String> {
         rest = &rest[end + 1..];
     }
     open
+}
+
+/// What a document's status line shows, in the reference program's order: the current style text, then the fields
+/// Page:, Line:, Column: (left out in coded view), the character at the caret, and Keys: (each label followed by its
+/// value with no space, as screen reader scripts read "Keys:" and the character after it).
+pub struct StatusLine {
+    pub style: String,
+    /// Page, line and column (1-based); None in coded view (View, Codes), where the reference hides those fields.
+    pub location: Option<(usize, usize, usize)>,
+    pub character: String,
+    /// Six-key entry on: "Keys:6", else "Keys:1".
+    pub six_key: bool,
+    /// Highlighting on: "H" after the number.
+    pub highlight: bool,
+    /// A braille keyboard connected: "+" after the number (when highlighting is off).
+    pub keyboard: bool,
+}
+
+impl StatusLine {
+    pub fn text(&self) -> String {
+        let mut parts = vec![self.style.clone()];
+        if let Some((page, line, column)) = self.location {
+            parts.push(format!("Page:{page}"));
+            parts.push(format!("Line:{line}"));
+            parts.push(format!("Column:{column}"));
+        }
+        parts.push(self.character.clone());
+        let mark = if self.highlight { "H" } else if self.keyboard { "+" } else { "" };
+        parts.push(format!("Keys:{}{mark}", if self.six_key { 6 } else { 1 }));
+        parts.join("  ")
+    }
+}
+
+/// The status line's character field for the character at `pos`: "(end)" at the end of the document; a code as
+/// "[code]", a style start [es~name] as "<name>" and a style end [ee~name] as "</name>"; a hard space as "[']";
+/// otherwise the character, followed by " {U+XXXX}" when verbose labels are on.
+pub fn char_field(text: &str, pos: i64, verbose: bool) -> String {
+    let b = char_to_byte(text, pos);
+    let rest = &text[b.min(text.len())..];
+    let Some(c) = rest.chars().next() else { return "(end)".to_string() };
+    if c == '[' {
+        if let Some(end) = rest.find(']') {
+            let code = &rest[1..end];
+            // "es~" and "ee~" are matched in either case, as the reference compares them.
+            let head = code.get(..3).map(str::to_ascii_lowercase);
+            return match head.as_deref() {
+                Some("es~") => format!("<{}>", &code[3..]),
+                Some("ee~") => format!("</{}>", &code[3..]),
+                _ => format!("[{code}]"),
+            };
+        }
+    }
+    if c == '\u{a0}' {
+        return "[']".to_string();
+    }
+    if verbose {
+        format!("{c} {{U+{:04X}}}", c as u32 & 0xffff)
+    } else {
+        c.to_string()
+    }
 }
 
 // ------------------------------------------------------------------ fonts
@@ -441,28 +507,34 @@ impl App {
         self.menus.set_courses(&names, has_steps, checked);
     }
 
-    /// The status line: Current Style, Page, Line, Column; then the translated line.
+    /// The active document's status line (current style, Page, Line, Column, the character at the caret, Keys);
+    /// then its translated line.
     pub fn update_status(&mut self) {
-        let Some(i) = self.active else {
-            for (n, t) in ["Current Style:", "Page:", "Line:", "Column:"].iter().enumerate() {
-                self.status.set_status_text(t, n);
-            }
-            return;
-        };
+        let Some(i) = self.active else { return };
         let value = self.docs[i].text.get_value();
         let pos = self.docs[i].text.get_insertion_point();
         let (line, column) = line_and_column(&value, pos);
-        let lines = self.docs[i].lines.max(1) as usize;
+        let d = &self.docs[i];
+        let lines = d.lines.max(1) as usize;
         let styles = open_styles(&value, pos);
         let style = match styles.len() {
             0 => "Current Style: None".to_string(),
             1 => format!("Current Style: {}", styles[0]),
             n => format!("Current Style: {} (level {n})", styles[n - 1]),
         };
-        self.status.set_status_text(&style, 0);
-        self.status.set_status_text(&format!("Page:{}", line / lines + 1), 1);
-        self.status.set_status_text(&format!("Line:{}", line % lines + 1), 2);
-        self.status.set_status_text(&format!("Column:{}", column + 1), 3);
+        let status = StatusLine {
+            style,
+            location: (!d.view.codes).then_some((line / lines + 1, line % lines + 1, column + 1)),
+            character: char_field(&value, pos, self.settings.verbose_labels),
+            six_key: d.view.six_key,
+            highlight: d.highlight_anchor.is_some(),
+            // A braille keyboard connection; BrailleMaker has none, so the mark is never shown.
+            keyboard: false,
+        }
+        .text();
+        if d.status.get_label() != status {
+            d.status.set_label(&status);
+        }
         self.update_translated_line(&value, pos);
     }
 
@@ -492,6 +564,11 @@ impl App {
     pub fn translate_line(&self, i: usize, line: &str) -> String {
         let enc = self.encoding();
         let d = &self.docs[i];
+        // A braille document with no braille-to-print table shows the reference program's text for message 0;
+        // screen reader scripts read "Error message 0" on the translated line as "no back-translation".
+        if d.kind == DocKind::Braille && !crate::translation::has_table(&d.tables[2]) {
+            return "Error message 0".to_string();
+        }
         let text = format!("{}{line}", d.initial_codes);
         let r = match d.kind {
             DocKind::Print => crate::translation::forward(&d.tables[0], &text, enc),
@@ -518,4 +595,36 @@ pub fn child_set_title(child: &MDIChildFrame, title: &str) {
 
 pub fn child_maximize(child: &MDIChildFrame) {
     unsafe { ffi::wxd_Frame_Maximize(child.handle_ptr() as *mut ffi::wxd_Frame_t, true) };
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn line(location: Option<(usize, usize, usize)>, six_key: bool, highlight: bool, keyboard: bool) -> String {
+        StatusLine { style: "Current Style: None".into(), location, character: "a".into(), six_key, highlight, keyboard }
+            .text()
+    }
+
+    #[test]
+    fn status_line_fields_and_keys() {
+        assert_eq!(line(Some((1, 2, 3)), false, false, false), "Current Style: None  Page:1  Line:2  Column:3  a  Keys:1");
+        assert!(line(Some((1, 2, 3)), true, false, false).ends_with("Keys:6"));
+        assert!(line(Some((1, 2, 3)), true, true, true).ends_with("Keys:6H"));
+        assert!(line(Some((1, 2, 3)), false, false, true).ends_with("Keys:1+"));
+        // Coded view: no Page, Line or Column.
+        let coded = line(None, false, false, false);
+        assert!(!coded.contains("Page:") && !coded.contains("Line:") && !coded.contains("Column:"));
+    }
+
+    #[test]
+    fn character_field() {
+        assert_eq!(char_field("ab", 0, false), "a");
+        assert_eq!(char_field("ab", 2, false), "(end)");
+        assert_eq!(char_field("é", 0, true), "é {U+00E9}");
+        assert_eq!(char_field("x[pg]y", 1, false), "[pg]");
+        assert_eq!(char_field("[es~h1.]T", 0, false), "<h1.>");
+        assert_eq!(char_field("[EE~h1.]", 0, false), "</h1.>");
+        assert_eq!(char_field("a\u{a0}b", 1, false), "[']");
+    }
 }

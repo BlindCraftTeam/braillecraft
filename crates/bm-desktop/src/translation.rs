@@ -68,6 +68,11 @@ pub fn table_count() -> String {
     })
 }
 
+/// Whether the shipped tables have this rules table code.
+pub fn has_table(code: &str) -> bool {
+    TABLES.with(|t| t.borrow().as_ref().is_some_and(|s| s.entry(code).is_some()))
+}
+
 /// Engine output codes (0x1C ... 0x1F) as documents show them.
 fn shown_codes(s: &str) -> String {
     s.replace('\u{1c}', "[").replace('\u{1f}', "]")

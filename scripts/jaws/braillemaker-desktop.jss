@@ -2089,7 +2089,7 @@ Script SayNextCharacter ()
 		return
 	endIf
 	If IsJawsCursor ()
-	&& GetCurrentWindow () == GetNextWindow (GetFocus ()) then
+	&& GetCurrentWindow () == GetNextWindow (GetNextWindow (GetFocus ())) then
 		SayNextCharacterTranslatedLine ()
 		return
 	endIf
@@ -2149,7 +2149,7 @@ Script SayPriorCharacter ()
 	endIf
 	
 	If IsJawsCursor ()
-	&& GetCurrentWindow () == GetNextWindow (GetFocus ()) then
+	&& GetCurrentWindow () == GetNextWindow (GetNextWindow (GetFocus ())) then
 		SayPriorCharacterTranslatedLine ()
 		return
 	endIf
@@ -2255,7 +2255,7 @@ var
 	let hndDocument = GetCurrentWindow ()
 	SaveCursor ()
 	InvisibleCursor ()
-	let hndTransLine = GetNextWindow (hndDocument)
+	let hndTransLine = GetNextWindow (GetNextWindow (hndDocument))
 	PauseForMovement ()
 	if StringContains (StringLower (GetWindowType (GetCurrentWindow ())), wtUnknown) then
 		let nTransLineShowing = 0
@@ -2309,7 +2309,7 @@ var
 			PauseForMovement () 
 		endIf
 	endIf
-	let hndTransLine = GetNextWindow (GetCurrentWindow ())
+	let hndTransLine = GetNextWindow (GetNextWindow (GetCurrentWindow ()))
 	SaveCursor ()
 	InvisibleCursor ()
 	MoveToWindow (hndTransLine)
@@ -2540,7 +2540,7 @@ var
 	endIf
 	RouteJAWSToPc ()
 	JAWSCursor ()
-	MoveToWindow (GetNextWindow (GetCurrentWindow ()))
+	MoveToWindow (GetNextWindow (GetNextWindow (GetCurrentWindow ())))
 	JawsHome ()
 	if not ITableEntry then
 		SayMessage (OT_STATUS, msgJawsCursorOnTransLine, msgJawsCursorOnTransLine)
@@ -4209,9 +4209,8 @@ HANDLE Function GetStatusLine ()
 var
 	handle hndStatusLine
 
-; BrailleMaker's status line is the status bar of the main window (four fields: Current Style, Page, Line,
-; Column), not a window beside the document's editing area.
-	let hndStatusLine = FindWindow (GetAppMainWindow (GetCurrentWindow ()), wcStatusBar, "")
+; The status line is the window after the document's editing area; the translated line is the one after it.
+	let hndStatusLine = GetNextWindow (GetCurrentWindow ())
 	return hndStatusLine
 
 EndFunction
@@ -4219,21 +4218,11 @@ EndFunction
 
 String Function GetStatusLineText ()
 
-; The status bar's own window text holds only its first field, so its whole line is read as shown on screen:
-; "Current Style: None", "Page:1", "Line:1", "Column:1" in a row.
-var
-	string sText
-
+; The whole status line: Current Style, Page:, Line:, Column:, the character at the caret, Keys:.
 	if !hndStatusLine then
 		let hndStatusLine = GetStatusLine ()
 	endIf
-	SaveCursor ()
-	InvisibleCursor ()
-	MoveToWindow (hndStatusLine)
-	JAWSHome ()
-	let sText = GetLine ()
-	RestoreCursor ()
-	return sText
+	return GetWindowText (hndStatusLine, 0)
 
 EndFunction
 

@@ -1,6 +1,6 @@
 //! Document windows: each open document is a child window holding the editing area (a native multi-line text
-//! control) and, under it, the one-line translated line on yellow. The child windows sit maximized in the main
-//! window, as in the reference screenshots.
+//! control), under it the one-line translated line on yellow, and at the bottom the document's status line. The
+//! child windows sit maximized in the main window, as in the reference screenshots.
 
 use std::collections::HashSet;
 
@@ -34,12 +34,18 @@ pub fn new_document(kind: DocKind, name: Option<String>, text: &str) -> u64 {
     let child = MDIChildFrame::builder(&frame).with_title(&name).build();
     // The rich text style on Windows makes positions count a line break as one character, as on the other systems.
     let style = if cfg!(windows) { TextCtrlStyle::MultiLine | TextCtrlStyle::Rich2 } else { TextCtrlStyle::MultiLine };
-    let text_ctrl = TextCtrl::builder(&child).with_style(style).build();
+    // Control id 0, as the reference program's editing area has: screen reader scripts read the last line of the
+    // document window (the status line) directly when the focused window has id 0.
+    let text_ctrl = TextCtrl::builder(&child).with_id(0).with_style(style).build();
     text_ctrl.set_value(text);
     // A document opens at its start (GTK leaves the caret after the text).
     text_ctrl.set_insertion_point(0);
     text_ctrl.show_position(0);
     text_ctrl.set_modified(false);
+    // The status line is made right after the editing area and the translated line after it: screen reader scripts
+    // find them as the next window and the one after (spec 17).
+    let status = StaticText::builder(&child).with_label("Current Style: None").build();
+    app::with(|a| crate::apply_status_font(a, &status));
     let line = TextCtrl::builder(&child).with_style(TextCtrlStyle::ReadOnly).build();
     line.set_background_color(Colour::new(255, 255, 0, 255));
     line.set_foreground_color(Colour::new(0, 0, 0, 255));
@@ -53,6 +59,7 @@ pub fn new_document(kind: DocKind, name: Option<String>, text: &str) -> u64 {
     let sizer = BoxSizer::builder(Orientation::Vertical).build();
     sizer.add(&text_ctrl, 1, SizerFlag::Expand, 0);
     sizer.add(&line, 0, SizerFlag::Expand, 0);
+    sizer.add(&status, 0, SizerFlag::Expand | SizerFlag::All, 2);
     child.set_sizer(sizer, true);
 
     wire(key, &child, &text_ctrl);
@@ -61,6 +68,7 @@ pub fn new_document(kind: DocKind, name: Option<String>, text: &str) -> u64 {
         key,
         frame: child,
         text: text_ctrl,
+        status,
         line,
         name,
         kind,

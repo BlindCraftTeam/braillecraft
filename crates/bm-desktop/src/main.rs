@@ -20,7 +20,6 @@ mod translation;
 use std::path::{Path, PathBuf};
 
 use wxdragon::prelude::*;
-use wxdragon::widgets::statusbar::FieldStyle;
 
 /// A resource folder: next to the program (installed), in the macOS bundle's Resources, or in the source tree.
 fn resource_dir(installed: &str, source: &str, marker: &str) -> Option<PathBuf> {
@@ -79,14 +78,22 @@ fn add_font(path: &Path) -> bool {
 }
 
 /// The status line font: bold, from Global, Fonts.
-pub fn set_status_font(a: &app::App) {
+pub fn apply_status_font(a: &app::App, status: &StaticText) {
     let f = &a.settings.fonts;
     let mut builder = Font::builder().with_point_size(f.status_size).with_weight(FontWeight::Bold);
     if !f.status_face.is_empty() {
         builder = builder.with_face_name(&f.status_face);
     }
     if let Some(font) = builder.build() {
-        a.status.set_font(&font);
+        status.set_font(&font);
+    }
+}
+
+/// The status line font on every open document's status line.
+pub fn set_status_font(a: &app::App) {
+    for d in &a.docs {
+        apply_status_font(a, &d.status);
+        d.frame.layout();
     }
 }
 
@@ -115,13 +122,9 @@ fn main() {
 
         let frame = MDIParentFrame::builder().with_title("BrailleMaker").with_size(Size::new(1000, 720)).build();
         let menus = menu::install(&frame);
-        let status = frame.create_status_bar(4, menu_status_style(), -1, "statusBar");
-        status.set_status_widths(&[260, 110, 110, -1]);
-        status.set_status_styles(&[FieldStyle::Sunken, FieldStyle::Sunken, FieldStyle::Sunken, FieldStyle::Sunken]);
 
         app::set(app::App {
             frame,
-            status,
             menus,
             docs: Vec::new(),
             active: None,
@@ -132,7 +135,6 @@ fn main() {
             last_find: None,
             busy: false,
         });
-        app::with(|a| set_status_font(a));
         // Windows: the JAWS script set shipped beside the program is offered for installing first.
         #[cfg(windows)]
         if let Some(dir) = resource_dir("jaws", "../../scripts/jaws", "braillemaker-desktop.jss") {
@@ -164,8 +166,4 @@ fn main() {
             commands::message("The braille fonts could not be loaded; Braille Font and SimBraille Font show print characters.");
         }
     });
-}
-
-fn menu_status_style() -> i64 {
-    wxdragon::widgets::statusbar::STB_DEFAULT_STYLE
 }

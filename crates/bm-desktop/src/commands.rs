@@ -600,6 +600,8 @@ fn toggle_highlight() {
                 Some(_) => None,
             };
         }
+        // The Keys field shows highlighting ("H"), as the reference rewrites it on this command.
+        a.update_status();
     });
 }
 
@@ -1383,16 +1385,23 @@ fn global_fonts() {
 }
 
 fn view_preferences() {
-    let set = app::with(|a| a.settings.six_key_set.clone());
+    let (set, verbose) = app::with(|a| (a.settings.six_key_set.clone(), a.settings.verbose_labels));
     let Some(d) = settings_dialog(1034, "", None, |d| {
         d.set_text(7, "0");
+        d.set_checked(9, verbose);
         d.set_items(17, &["Hide All", "Hide Idle", "Show All"], Some(0));
         d.set_text(19, &set);
     }) else {
         return;
     };
     let keys = d.text(19);
+    let verbose = d.checked(9);
     d.destroy();
+    // Check box 9 (verbose labels) sets how the status line shows the character at the caret.
+    app::with(|a| {
+        a.settings.verbose_labels = verbose;
+        a.update_status();
+    });
     if keys.chars().count() != 6 {
         message("You must type exactly six keys in as the \"Six-Key Key Set.\"  The keys you type represent, in order, what you will type for Dots 1, 2, 3, 4, 5, and 6 when entering braille by six-key chording.");
         return;

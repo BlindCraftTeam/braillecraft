@@ -6,10 +6,10 @@ const
 	wcMDIClient = "MDIClient",
 ; the editing area of a document window: a native rich edit control ("Document Editing Window")
 	wcEditor = "RICHEDIT50W",
-; the code editing window of the reference layout; BrailleMaker has no window of this class
+; the dialog edit fields that take codes (Find, Replace, Shortcut Preferences, styles, header, footer, table of
+; contents) have a class of their own in the reference layout; BrailleMaker's are ordinary edit fields, so no window
+; has this class
 	wcCodesEdit = "BrailleMaker_CODESEDIT",
-; the status line: the status bar of the main window
-	wcStatusBar = "msctls_statusbar32",
 
 ; other constants
 	Editor_Control=0,
