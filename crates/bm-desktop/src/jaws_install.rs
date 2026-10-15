@@ -77,7 +77,7 @@ pub fn at_start_up(
     if out_of_date.is_empty() {
         return false;
     }
-    let install = match kept(&key) {
+    let wanted = match kept(&key) {
         Some(answer) => answer,
         None => {
             let answer = offer();
@@ -87,7 +87,7 @@ pub fn at_start_up(
             answer.install
         }
     };
-    if !install {
+    if !wanted {
         return false;
     }
     let mut all = true;
