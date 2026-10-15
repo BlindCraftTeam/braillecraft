@@ -88,6 +88,28 @@ pub fn tables(text: &str) -> Option<[String; 4]> {
     Some([a, b, c, d].map(|s| s.trim().to_lowercase()))
 }
 
+/// A template's page numbering, in the order a document file keeps it: braille page numbers on even pages and on
+/// odd pages, print page numbers on even pages and on odd pages (0 none, 1 upper left, 2 upper right, 3 lower left,
+/// 4 lower right), then the first page whose number is shown. A setting the template leaves out takes the reference
+/// program's default (braille numbers lower right, print numbers upper right, spec 19; numbers from page 1).
+pub fn page_numbers(text: &str) -> [u16; 5] {
+    let corner = |key: &str, default: u16| match setting(text, key) {
+        Some("None") => 0,
+        Some("UpperLeft") => 1,
+        Some("UpperRight") => 2,
+        Some("LowerLeft") => 3,
+        Some("LowerRight") => 4,
+        _ => default,
+    };
+    [
+        corner("BraillePageNumbersEvenPages", 4),
+        corner("BraillePageNumbersOddPages", 4),
+        corner("PrintPageNumbersEvenPages", 2),
+        corner("PrintPageNumbersOddPages", 2),
+        setting(text, "FirstPageNumberDisplayed").and_then(|v| v.parse().ok()).unwrap_or(1),
+    ]
+}
+
 /// A template's styles.
 pub fn styles(text: &str) -> StyleTable {
     StyleTable::from_template_text(text)
@@ -116,5 +138,13 @@ mod tests {
         }
         let names = t.names_sorted();
         assert!(names.windows(2).all(|w| w[0].to_lowercase() <= w[1].to_lowercase()));
+    }
+
+    #[test]
+    fn page_numbering_comes_from_the_template() {
+        let t = shipped();
+        let english = t.text(t.by_name(BUILT_IN_DEFAULT).unwrap()).unwrap();
+        assert_eq!(page_numbers(&english), [4, 4, 2, 2, 2]);
+        assert_eq!(page_numbers("TranslationTables: a+b/c+d\nStyles:\n"), [4, 4, 2, 2, 1]);
     }
 }

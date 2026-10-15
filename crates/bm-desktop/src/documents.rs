@@ -4,13 +4,16 @@
 
 use std::collections::HashSet;
 
+use bm_core::doctext::Shown;
 use wxdragon::prelude::*;
 
 use crate::app::{self, child_maximize, child_set_title, Doc, DocKind, Hyphen, View};
 use crate::speech;
 
-/// Opens a new document window. `name` None makes an untitled one ("Untitled Print Document 1").
-pub fn new_document(kind: DocKind, name: Option<String>, text: &str) -> u64 {
+/// Opens a new document window with `shown` (its text and codes). `name` None makes an untitled one ("Untitled
+/// Print Document 1").
+pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
+    let text = shown.text.as_str();
     let (frame, key, name, untitled, view) = app::with(|a| {
         a.next_key += 1;
         let untitled = name.is_none();
@@ -83,6 +86,12 @@ pub fn new_document(kind: DocKind, name: Option<String>, text: &str) -> u64 {
         template: crate::translation::default_template(),
         cells: if kind == DocKind::Braille { 40 } else { 80 },
         lines: if kind == DocKind::Braille { 25 } else { 50 },
+        page_numbers: crate::translation::template_page_numbers(&crate::translation::default_template()),
+        pages: None,
+        codes: shown.codes.clone(),
+        inner: shown.inner.clone(),
+        last_value: shown.text.clone(),
+        taken: Vec::new(),
         view,
         hyphen: Hyphen::Dashes,
         styles: crate::translation::template_style_list(&crate::translation::default_template()),
@@ -155,9 +164,20 @@ pub fn destroy(key: u64) {
 }
 
 fn wire(key: u64, child: &MDIChildFrame, text: &TextCtrl) {
+    let edited = *text;
     text.on_text_updated(move |_| {
         app::try_with(|a| {
             if let Some(i) = a.index_of(key) {
+                // The codes follow the edit; a code that lost a bracket goes as a whole, as codes do in the
+                // reference program, once this change has been handled.
+                let remains = a.sync_codes(i);
+                if !remains.is_empty() {
+                    wxdragon::call_after(Box::new(move || {
+                        for (from, to) in remains {
+                            edited.replace(from as i64, to as i64, "");
+                        }
+                    }));
+                }
                 a.docs[i].dirty = true;
                 if a.active == Some(i) {
                     a.update_status();
@@ -172,6 +192,13 @@ fn wire(key: u64, child: &MDIChildFrame, text: &TextCtrl) {
         if let WindowEventData::Keyboard(k) = &e {
             app::try_with(|a| {
                 let Some(i) = a.index_of(key) else { return };
+                // Copy and cut keep the selection with its codes, so pasting it brings them back.
+                let code = k.get_key_code().unwrap_or(0);
+                if k.control_down() && (code == 'C' as i32 || code == 'X' as i32 || code == 'c' as i32 || code == 'x' as i32) {
+                    let (from, to) = a.docs[i].text.get_selection();
+                    let part = a.docs[i].shown().slice(from.max(0) as usize, to.max(0) as usize);
+                    a.remember(part);
+                }
                 let d = &mut a.docs[i];
                 if d.kind != DocKind::Braille || !d.view.six_key || k.control_down() || k.alt_down() || k.meta_down() {
                     return;

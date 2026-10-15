@@ -15,6 +15,7 @@ use crate::documents;
 use crate::encodings;
 use crate::settings_store;
 use crate::translation;
+use bm_core::doctext::Shown;
 use bm_core::table_list::TableList;
 
 // Messages for parts of the program that later build steps bring. They say what is missing and where it comes.
@@ -69,6 +70,44 @@ fn open_dialog(id: i32, title: Option<&str>) -> Dlg {
     Dlg::open(&app::frame(), id, title)
 }
 
+/// Document, Page Numbering: the document's own page numbering (from its template or its file), changed on OK. The
+/// four groups are braille page numbers on even and on odd pages, print page numbers on even and on odd pages, each
+/// none, upper left, upper right, lower left, lower right; then the first page number shown.
+fn page_numbering() {
+    const GROUPS: [[i32; 5]; 4] = [[7, 8, 9, 10, 11], [13, 14, 15, 16, 17], [19, 20, 21, 22, 23], [25, 26, 27, 28, 29]];
+    let Some(numbers) = app::with(|a| a.doc().map(|d| d.page_numbers)) else { return };
+    let d = open_dialog(1031, None);
+    for (g, n) in GROUPS.iter().zip(numbers) {
+        d.set_radio(g, n as usize);
+    }
+    d.set_text(31, &numbers[4].to_string());
+    let ok = d.show() == 1;
+    let mut chosen = numbers;
+    for (k, g) in GROUPS.iter().enumerate() {
+        if let Some(i) = d.radio(g) {
+            chosen[k] = i as u16;
+        }
+    }
+    let first = d.number(31);
+    d.destroy();
+    if !ok {
+        return;
+    }
+    // A first page number that is not a number keeps the one the document had.
+    if let Some(n) = first.filter(|n| (1..=9999).contains(n)) {
+        chosen[4] = n as u16;
+    }
+    app::with(|a| {
+        if let Some(doc) = a.doc_mut() {
+            if doc.page_numbers != chosen {
+                doc.page_numbers = chosen;
+                doc.dirty = true;
+            }
+        }
+        a.update_status();
+    });
+}
+
 /// A settings dialog: shown with its last values; the values are kept on OK. Returns the dialog on OK.
 fn settings_dialog(id: i32, key: &'static str, title: Option<&str>, setup: impl FnOnce(&Dlg)) -> Option<Dlg> {
     let d = open_dialog(id, title);
@@ -93,21 +132,46 @@ fn active_text() -> Option<TextCtrl> {
 }
 
 fn insert_text(text: &str) {
+    insert_shown(&Shown::plain(text));
+}
+
+/// Puts `s` (text and codes) in place of the selection, its codes known as codes; the caret goes after it.
+fn insert_shown(s: &Shown) {
     if let Some(t) = active_text() {
         let (from, to) = t.get_selection();
-        t.replace(from, to, text);
-        t.set_insertion_point(from + text.chars().count() as i64);
+        put_at(t, from, to, s);
+        t.set_insertion_point(from + s.text.chars().count() as i64);
         t.set_focus();
     }
 }
 
-fn wrap_selection(before: &str, after: &str) {
+/// Replaces characters `from` to `to` with `s`, and marks its codes in the document.
+fn put_at(t: TextCtrl, from: i64, to: i64, s: &Shown) {
+    t.replace(from, to, &s.text);
+    let at = from.max(0) as usize;
+    app::with(|a| {
+        if let Some(d) = a.doc_mut() {
+            d.codes.extend(s.codes.iter().map(|c| (c.0 + at, c.1 + at)));
+            d.inner.extend(s.inner.iter().map(|c| (c.0 + at, c.1 + at)));
+            d.codes.sort_unstable();
+            d.codes.dedup();
+            d.inner.sort_unstable();
+            d.inner.dedup();
+            d.pages = None;
+            d.last_line_key.clear();
+        }
+        a.update_status();
+    });
+}
+
+/// Puts `before` at the start of the selection and `after` at its end (codes, as a pair); the selection itself is
+/// left as it is.
+fn wrap_selection(before: &Shown, after: &Shown) {
     if let Some(t) = active_text() {
         let (from, to) = t.get_selection();
-        let value = t.get_value();
-        let inner = value[app::char_to_byte(&value, from)..app::char_to_byte(&value, to)].to_string();
-        t.replace(from, to, &format!("{before}{inner}{after}"));
-        let caret = from + (before.chars().count() + inner.chars().count()) as i64;
+        put_at(t, to, to, after);
+        put_at(t, from, from, before);
+        let caret = to + before.text.chars().count() as i64;
         t.set_insertion_point(caret);
         t.set_focus();
     }
@@ -124,25 +188,26 @@ fn select_range(from: i64, to: i64) {
 
 fn insert_code(id: i32) {
     let Some(code) = codes::insert(id) else { return };
+    // What a code item puts in is codes, except the signs and the hard space, which are text.
     match code {
-        Insert::Text(s) => insert_text(s),
-        Insert::Pair(a, b) => wrap_selection(a, b),
+        Insert::Text(s) => insert_shown(&Shown::marked(s)),
+        Insert::Pair(a, b) => wrap_selection(&Shown::marked(a), &Shown::marked(b)),
         Insert::Setting(which) => {
             let s = app::with(|a| {
                 let sc = &a.settings.shortcuts;
                 match which {
-                    Dynamic::Grade0 => sc.grade0.clone(),
-                    Dynamic::Cbc => sc.cbc.clone(),
-                    Dynamic::FlushRightLeader => sc.flush_right_leader.clone(),
-                    Dynamic::NewPage => sc.new_page.clone(),
-                    Dynamic::NewReferencePage => sc.new_ref_page.clone(),
+                    Dynamic::Grade0 => Shown::marked(&sc.grade0),
+                    Dynamic::Cbc => Shown::marked(&sc.cbc),
+                    Dynamic::FlushRightLeader => Shown::marked(&sc.flush_right_leader),
+                    Dynamic::NewPage => Shown::marked(&sc.new_page),
+                    Dynamic::NewReferencePage => Shown::marked(&sc.new_ref_page),
                     Dynamic::TerminationSign => {
-                        if a.doc().is_some_and(|d| d.kind == DocKind::Braille) { ",'".into() } else { "&@".into() }
+                        Shown::plain(if a.doc().is_some_and(|d| d.kind == DocKind::Braille) { ",'" } else { "&@" })
                     }
-                    Dynamic::HardSpace => "\u{a0}".into(),
+                    Dynamic::HardSpace => Shown::plain("\u{a0}"),
                 }
             });
-            insert_text(&s);
+            insert_shown(&s);
         }
     }
 }
@@ -202,7 +267,7 @@ pub fn run(id: i32, checked: bool) {
 
         1501 => {
             if settings_dialog(1062, "", None, fill_table_properties).is_some() {
-                wrap_selection("[htbs]", "[htbe]");
+                wrap_selection(&Shown::marked("[htbs]"), &Shown::marked("[htbe]"));
             }
         }
         1503 => {
@@ -211,17 +276,7 @@ pub fn run(id: i32, checked: bool) {
 
         2601 => embosser_setup(false),
         2602 => printer_setup(false),
-        2604 => {
-            settings_dialog(1031, "", None, |d| {
-                for g in [[7, 8, 9, 10, 11], [13, 14, 15, 16, 17]] {
-                    d.set_radio(&g, 2);
-                }
-                for g in [[19, 20, 21, 22, 23], [25, 26, 27, 28, 29]] {
-                    d.set_radio(&g, 0);
-                }
-                d.set_text(31, "1");
-            });
-        }
+        2604 => page_numbering(),
         2701..=2705 => set_region(TableList::region_bit((id - 2701) as usize)),
         2706 => set_region(bm_core::table_list::ALL_REGIONS),
         9000..=9399 => choose_language((id - crate::menu::LANGUAGE_BASE) as usize),
@@ -462,16 +517,18 @@ fn file_new() {
     let template = state.borrow().current.clone();
     d.destroy();
     if ok {
-        let key = documents::new_document(if braille { DocKind::Braille } else { DocKind::Print }, None, "");
+        let key = documents::new_document(if braille { DocKind::Braille } else { DocKind::Print }, None, &Shown::default());
         if let Some(name) = template {
             let tables = translation::template_tables(&name);
             let styles = translation::template_style_list(&name);
+            let numbers = translation::template_page_numbers(&name);
             app::with(|a| {
                 if let Some(i) = a.index_of(key) {
                     if let Some(t) = tables {
                         a.docs[i].tables = t;
                     }
                     a.docs[i].styles = styles;
+                    a.docs[i].page_numbers = numbers;
                     a.docs[i].template = name;
                     a.docs[i].last_line_key.clear();
                 }
@@ -516,15 +573,17 @@ fn open_dx_document(path: &Path) {
         Err(e) => return message(&e.to_string()),
     };
     let braille = doc.kind == bm_core::DocumentKind::Braille;
-    // Braille is stored in North American ASCII braille; it is shown in the encoding chosen in Internationalization.
-    let text = if braille {
+    // The file's codes are codes and its brackets text. Braille is stored in North American ASCII braille; it is
+    // shown in the encoding chosen in Internationalization.
+    let shown = Shown::from_running(&doc.text);
+    let shown = if braille {
         let to = app::with(|a| a.encoding());
-        translation::convert_braille(&doc.text, encodings::find(encodings::DEFAULT), to)
+        translation::convert_braille(&shown, encodings::find(encodings::DEFAULT), to)
     } else {
-        doc.text
+        shown
     };
     let name = path.file_name().map(|n| n.to_string_lossy().into_owned());
-    let key = documents::new_document(if braille { DocKind::Braille } else { DocKind::Print }, name, &text);
+    let key = documents::new_document(if braille { DocKind::Braille } else { DocKind::Print }, name, &shown);
     app::with(|a| {
         if let Some(i) = a.index_of(key) {
             let d = &mut a.docs[i];
@@ -532,6 +591,7 @@ fn open_dx_document(path: &Path) {
             d.path = Some(path.to_path_buf());
             d.view.translated = doc.translated_line;
             d.view.six_key = braille && doc.six_key;
+            d.page_numbers = doc.page_numbering;
             // The document's own tables, as the file names them, matched to the table list: a set the list holds
             // stays; when only the print-to-braille rules table (or a learning step) is listed, the other three are
             // that language's; a table the list does not hold gives the tables of a new document.
@@ -562,7 +622,8 @@ fn open_file() {
             let braille = matches!(ext.as_str(), "brf" | "brl" | "bru");
             let text = if braille { text.replace('\u{c}', "\n") } else { text };
             let name = path.file_name().map(|n| n.to_string_lossy().into_owned());
-            let key = documents::new_document(if braille { DocKind::Braille } else { DocKind::Print }, name, &text);
+            // A text or braille file holds no codes: all of it is text.
+            let key = documents::new_document(if braille { DocKind::Braille } else { DocKind::Print }, name, &Shown::plain(&text));
             app::with(|a| {
                 if let Some(i) = a.index_of(key) {
                     a.docs[i].dirty = false;
@@ -660,31 +721,30 @@ fn emboss() {
 /// document goes through the engine in one run, as in the reference program; the result keeps the codes, and its
 /// lines and pages are laid out from them.
 fn translate_document() {
-    let Some((text, kind, tables, initial, template, styles, name, untitled)) = app::with(|a| {
+    let Some((text, kind, tables, initial, template, styles, numbers, name, untitled)) = app::with(|a| {
         a.doc().map(|d| {
             let (codes, template, styles) = (d.initial_codes.clone(), d.template.clone(), d.styles.clone());
-            (d.text.get_value(), d.kind, d.tables.clone(), codes, template, styles, d.name.clone(), d.untitled)
+            let (name, numbers) = (d.name.clone(), d.page_numbers);
+            (d.shown(), d.kind, d.tables.clone(), codes, template, styles, numbers, name, d.untitled)
         })
     }) else {
         return;
     };
     let style_table = translation::style_table(&styles);
-    if text.trim().is_empty() {
+    if text.text.trim().is_empty() {
         message("The file that you are trying to translate is empty.");
         return;
     }
     let enc = app::with(|a| a.encoding());
     let to_braille = kind == DocKind::Print;
-    // The document's initial codes are in force from the start; the new document carries them too, so their echo
-    // at the start of the result is left off.
-    let with_codes = format!("{initial}{text}");
+    // The document's initial codes are in force from the start; the new document carries them too.
     let r = if to_braille {
-        translation::forward_document(&tables[0], &with_codes, enc, &style_table)
+        translation::forward(&tables[0], &text, &initial, enc, &style_table)
     } else {
-        translation::back_document(&tables[2], &with_codes, enc, &style_table)
+        translation::back(&tables[2], &text, &initial, enc, &style_table)
     };
     let out = match r {
-        Ok(s) => s.strip_prefix(initial.as_str()).map(str::to_string).unwrap_or(s),
+        Ok(s) => s,
         Err(e) => {
             message(&format!("Translation failed: {e}"));
             return;
@@ -705,6 +765,7 @@ fn translate_document() {
             a.docs[i].initial_codes = initial.clone();
             a.docs[i].template = template.clone();
             a.docs[i].styles = styles.clone();
+            a.docs[i].page_numbers = numbers;
             a.docs[i].dirty = true;
             if to_braille {
                 a.docs[i].cells = 40;
@@ -716,8 +777,18 @@ fn translate_document() {
 // ------------------------------------------------------------------ Edit
 
 fn edit_standard(id: i32) {
-    // The native text control carries out undo, redo and the clipboard commands itself.
+    // The native text control carries out undo, redo and the clipboard commands itself. Copy and cut keep the
+    // selection with its codes, so pasting it brings them back.
     if let Some(t) = active_text() {
+        // Edit, Cut and Edit, Copy.
+        if matches!(id, 1203 | 1204) {
+            let (from, to) = t.get_selection();
+            app::with(|a| {
+                if let Some(part) = a.doc().map(|d| d.shown().slice(from.max(0) as usize, to.max(0) as usize)) {
+                    a.remember(part);
+                }
+            });
+        }
         t.process_menu_command(crate::menu::menu_id(id));
         t.set_focus();
     }
@@ -743,20 +814,45 @@ fn change_case() {
         return;
     }
     let text = t.get_string_selection();
-    let changed = if text == text.to_uppercase() { text.to_lowercase() } else { text.to_uppercase() };
-    t.replace(from, to, &changed);
+    let upper = text != text.to_uppercase();
+    // The text between the codes changes case, piece by piece; the codes are left as they are.
+    let Some(doc) = app::with(|a| a.doc().map(|d| d.shown())) else { return };
+    let (from_c, to_c) = (from.max(0) as usize, to.max(0) as usize);
+    let mut pieces: Vec<(usize, usize)> = Vec::new();
+    let mut at = from_c;
+    for &(s, e) in doc.codes.iter().filter(|c| c.1 > from_c && c.0 < to_c) {
+        if s > at {
+            pieces.push((at, s));
+        }
+        at = at.max(e);
+    }
+    if at < to_c {
+        pieces.push((at, to_c));
+    }
+    for &(s, e) in pieces.iter().rev() {
+        let part: String = doc.text.chars().skip(s).take(e - s).collect();
+        let changed = if upper { part.to_uppercase() } else { part.to_lowercase() };
+        if changed != part && changed.chars().count() == part.chars().count() {
+            t.replace(s as i64, e as i64, &changed);
+        }
+    }
     t.set_selection(from, to);
 }
 
+/// Edit, Goto: a page, line and column of the laid-out pages, as the status line counts them.
 fn goto_position() {
-    let Some((value, pos, lines)) = app::with(|a| a.doc().map(|d| (d.text.get_value(), d.text.get_insertion_point(), d.lines.max(1) as usize))) else {
+    let Some((pages, pos)) = app::with(|a| {
+        let i = a.active?;
+        let shown = a.docs[i].shown();
+        Some((a.laid_out(i, &shown), a.docs[i].text.get_insertion_point()))
+    }) else {
         return;
     };
-    let (line, column) = app::line_and_column(&value, pos);
+    let (page, line, column) = bm_core::format::locate(&pages, pos.max(0) as usize);
     let d = open_dialog(1019, None);
-    d.set_text(7, &(line / lines + 1).to_string());
-    d.set_text(10, &(line % lines + 1).to_string());
-    d.set_text(12, &(column + 1).to_string());
+    d.set_text(7, &page.to_string());
+    d.set_text(10, &line.to_string());
+    d.set_text(12, &column.to_string());
     let ok = d.show() == 1;
     let (page, l, c) = (d.number(7), d.number(10), d.number(12));
     d.destroy();
@@ -771,15 +867,10 @@ fn goto_position() {
         message("You cannot go to pages with numbers less than 1.");
         return;
     }
-    let all: Vec<&str> = value.split('\n').collect();
-    let target = (page as usize - 1) * lines + (l as usize - 1);
-    if target >= all.len() {
-        message("You cannot go to that location in the document.");
-        return;
+    match bm_core::format::position_of(&pages, page as usize, l as usize, c as usize) {
+        Some(offset) => select_range(offset as i64, offset as i64),
+        None => message("You cannot go to that location in the document."),
     }
-    let offset: usize = all[..target].iter().map(|s| s.chars().count() + 1).sum::<usize>()
-        + (c as usize - 1).min(all[target].chars().count());
-    select_range(offset as i64, offset as i64);
 }
 
 fn find_next(spec: &FindSpec, text: &str, from: i64, backward: bool) -> Option<i64> {
@@ -974,7 +1065,7 @@ fn choose_style(dialog: i32) -> Option<Style> {
 }
 
 fn apply_named_style(style: Style) {
-    wrap_selection(&format!("[es~{}]", style.name), &format!("[ee~{}]", style.name));
+    wrap_selection(&Shown::marked(&format!("[es~{}]", style.name)), &Shown::marked(&format!("[ee~{}]", style.name)));
     app::with(|a| {
         if let Some(d) = a.doc_mut() {
             d.last_style = Some(style);
@@ -1014,7 +1105,7 @@ fn set_page_number() {
     let roman = d.radio(&[9, 10]) == Some(1);
     d.destroy();
     if ok {
-        insert_text(&format!("[{}][pv{}]", if roman { "pntr" } else { "pnta" }, page.trim()));
+        insert_shown(&Shown::marked(&format!("[{}][pv{}]", if roman { "pntr" } else { "pnta" }, page.trim())));
     }
 }
 
@@ -1030,7 +1121,13 @@ fn header_footer(dialog: i32, start: &str, end: &str, none: &str) {
     let off = d.radio(&[9, 10, 11, 12]) == Some(3);
     d.destroy();
     if ok {
-        insert_text(&if off { none.to_string() } else { format!("{start}{text}{end}") });
+        // The codes are codes; the header or footer text typed is text.
+        let mut s = Shown::marked(if off { none } else { start });
+        if !off {
+            s.push(&Shown::plain(&text));
+            s.push(&Shown::marked(end));
+        }
+        insert_shown(&s);
     }
 }
 
@@ -1073,7 +1170,7 @@ fn code_list() {
         return;
     }
     if let Some((code, _)) = chosen.and_then(|i| codes::CODE_LIST.get(i as usize)) {
-        insert_text(&format!("[{code}{params}]"));
+        insert_shown(&Shown::marked(&format!("[{code}{params}]")));
     }
 }
 
@@ -1353,10 +1450,13 @@ fn modify_style() {
                 }
                 doc.last_line_key.clear();
                 if everywhere {
-                    let v = doc.text.get_value()
-                        .replace(&format!("[es~{old}]"), &format!("[es~{new}]"))
-                        .replace(&format!("[ee~{old}]"), &format!("[ee~{new}]"));
-                    doc.text.set_value(&v);
+                    // The style's codes are renamed, in the running text where codes are marked; text that only
+                    // reads like the code is left as it is.
+                    let (o, c) = (bm_core::doctext::OPEN, bm_core::doctext::CLOSE);
+                    let running = doc.shown().to_running()
+                        .replace(&format!("{o}es~{old}{c}"), &format!("{o}es~{new}{c}"))
+                        .replace(&format!("{o}ee~{old}{c}"), &format!("{o}ee~{new}{c}"));
+                    doc.set_shown(&Shown::from_running(&running));
                 }
             }
         });
@@ -1467,13 +1567,13 @@ fn internationalization() {
     if new == current {
         return;
     }
-    // Braille documents keep their cells: their text is rewritten in the new encoding's characters.
+    // Braille documents keep their cells: their text is rewritten in the new encoding's characters; codes keep theirs.
     app::with(|a| {
         let before = encodings::find(&current);
         let after = encodings::find(&new);
         for doc in a.docs.iter_mut().filter(|d| d.kind == DocKind::Braille) {
-            let text = after.cells_to_text(&before.text_to_cells(&doc.text.get_value()));
-            doc.text.set_value(&text);
+            let shown = translation::convert_braille(&doc.shown(), before, after);
+            doc.set_shown(&shown);
         }
         a.settings.encoding = new;
         for doc in a.docs.iter_mut() {
@@ -1634,6 +1734,8 @@ mod tests {
 
     #[test]
     fn open_styles_follow_the_codes() {
-        assert_eq!(open_styles("[es~a]x[es~b]y[ee~b]z", 21), vec!["a".to_string()]);
+        assert_eq!(open_styles(&Shown::marked("[es~a]x[es~b]y[ee~b]z"), 21), vec!["a".to_string()]);
+        // Typed brackets are text, not style codes.
+        assert!(open_styles(&Shown::plain("[es~a]x"), 7).is_empty());
     }
 }

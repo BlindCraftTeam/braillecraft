@@ -7,6 +7,7 @@
 pub mod doctext;
 pub mod dxfile;
 pub mod engine;
+pub mod format;
 pub mod table_list;
 pub mod templates;
 

@@ -180,7 +180,29 @@ impl Translator {
         styles: Option<&StyleTable>,
         languages: Option<&Languages>,
     ) -> Result<String, EngineError> {
-        let out = self.engine_output(text, styles, languages)?;
+        let brackets = self.bracket_codes.unwrap_or(self.rules.writer_mode() != 2);
+        self.run(text, styles, languages, brackets)
+    }
+
+    /// Translates a document's running text, whose codes are marked as the reference program keeps them, 0x1C code
+    /// 0x1F; "[" and "]" are text (bm_core::doctext).
+    pub fn translate_marked(
+        &self,
+        text: &str,
+        styles: Option<&StyleTable>,
+        languages: Option<&Languages>,
+    ) -> Result<String, EngineError> {
+        self.run(text, styles, languages, false)
+    }
+
+    fn run(
+        &self,
+        text: &str,
+        styles: Option<&StyleTable>,
+        languages: Option<&Languages>,
+        brackets: bool,
+    ) -> Result<String, EngineError> {
+        let out = self.engine_output(text, styles, languages, brackets)?;
         let mut w = writer::Writer::new(
             &self.chitab,
             self.rules.tail[2],
@@ -202,8 +224,8 @@ impl Translator {
         text: &str,
         style: Option<&StyleTable>,
         languages: Option<&Languages>,
+        brackets: bool,
     ) -> Result<Vec<i64>, EngineError> {
-        let brackets = self.bracket_codes.unwrap_or(self.rules.writer_mode() != 2);
         let text = if brackets { text.replace('[', "\u{1c}").replace(']', "\u{1f}") } else { text.to_string() };
         let codes = encode_cp437(&text).map_err(EngineError::NotEncodable)?;
         let codes: Vec<i64> = scanner::scan(&self.scan, codes)?.into_iter().filter(|&c| c != EOF).collect();

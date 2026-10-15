@@ -10,8 +10,8 @@
 //! - The body at offset 234: 8-bit text in code page 437, with each formatting code as the byte 0x1C, the code, the
 //!   byte 0x1F; 0x1E is a hard space.
 //!
-//! In BrailleMaker's editor a code is written between square brackets, and a code that starts a new line ([<], [p],
-//! [l]) is followed by a line break so the text reads line by line.
+//! The text is returned as running text (bm_core::doctext): codes marked 0x1C ... 0x1F as in the file, a hard space
+//! as U+00A0, every other byte its code page 437 character; brackets in the text stay text.
 
 use crate::DocumentKind;
 
@@ -30,7 +30,7 @@ pub struct DxDocument {
     pub six_key: bool,
     /// Print-to-braille table, its scan table, braille-to-print table, its scan table.
     pub tables: [String; 4],
-    /// The text with codes in square brackets.
+    /// The running text, codes marked 0x1C ... 0x1F (bm_core::doctext).
     pub text: String,
 }
 
@@ -109,35 +109,16 @@ pub fn read(d: &[u8]) -> Result<DxDocument, DxError> {
     });
     let body = d.get(BODY..BODY + length).ok_or(DxError::BodyOutOfRange)?;
 
-    let mut text = String::with_capacity(body.len() + body.len() / 8);
-    // Codes nest (a table-of-contents entry code can hold a style code: 0x1C hl4 0x1C es~para. 0x1F 0x1F), so the
-    // two bytes pair like brackets.
-    let mut open: Vec<usize> = Vec::new();
-    for &b in body {
-        match b {
-            0x1C => {
-                text.push('[');
-                open.push(text.len());
-            }
-            // The editor's form (doctext): the new-line code is a line break; [p] and [l] are followed by one.
-            0x1F => {
-                if let Some(start) = open.pop() {
-                    if open.is_empty() && &text[start..] == "<" {
-                        text.truncate(start - 1);
-                        text.push('\n');
-                    } else {
-                        let line_break = open.is_empty() && crate::doctext::breaks_line(&text[start..]);
-                        text.push(']');
-                        if line_break {
-                            text.push('\n');
-                        }
-                    }
-                }
-            }
-            0x1E => text.push('\u{a0}'),
-            b => text.push(cp437(b)),
-        }
-    }
+    // The running text, codes kept as the file marks them (doctext::OPEN and CLOSE are 0x1C and 0x1F).
+    let text: String = body
+        .iter()
+        .map(|&b| match b {
+            0x1C => crate::doctext::OPEN,
+            0x1F => crate::doctext::CLOSE,
+            0x1E => '\u{a0}',
+            b => cp437(b),
+        })
+        .collect();
     Ok(DxDocument {
         kind,
         version,
@@ -171,9 +152,13 @@ mod tests {
 
     #[test]
     fn reads_codes_hard_spaces_and_code_page_437() {
-        let doc = read(&sample(1, b"\x1ces~h1.\x1fCaf\x82\x1cee~h1.\x1f\x1cp\x1fPage\x1eUp\x1chl4\x1ces~para.\x1f\x1f6\x1c<\x1fEnd")).unwrap();
+        let doc = read(&sample(1, b"\x1ces~h1.\x1fCaf\x82\x1cee~h1.\x1f\x1cp\x1fPage\x1eUp\x1chl4\x1ces~para.\x1f\x1f6\x1c<\x1fEnd [x]")).unwrap();
         assert_eq!(doc.kind, DocumentKind::Print);
-        assert_eq!(doc.text, "[es~h1.]Café[ee~h1.][p]\nPage\u{a0}Up[hl4[es~para.]]6\nEnd");
+        assert_eq!(doc.text, "\x1ces~h1.\x1fCafé\x1cee~h1.\x1f\x1cp\x1fPage\u{a0}Up\x1chl4\x1ces~para.\x1f\x1f6\x1c<\x1fEnd [x]");
+        // In the editor's form the codes are known as codes and the brackets typed in the text stay text.
+        let shown = crate::doctext::Shown::from_running(&doc.text);
+        assert_eq!(shown.text, "[es~h1.]Café[ee~h1.][p]\nPage\u{a0}Up[hl4[es~para.]]6\nEnd [x]");
+        assert_eq!(shown.codes.len(), 4);
         assert!(doc.translated_line);
         assert!(!doc.six_key);
         assert_eq!(doc.tables[0], "amerc");
@@ -207,7 +192,14 @@ mod tests {
             }
             let doc = read(&std::fs::read(&p).unwrap()).unwrap_or_else(|e| panic!("{}: {e}", p.display()));
             assert!(!doc.text.is_empty(), "{}", p.display());
-            assert!(!doc.text.contains('\u{1c}') && !doc.text.contains('\u{1f}'), "{}", p.display());
+            // The editor's form gives back the same running text.
+            let back = crate::doctext::Shown::from_running(&doc.text).to_running();
+            if back != doc.text {
+                let (a, b): (Vec<char>, Vec<char>) = (back.chars().collect(), doc.text.chars().collect());
+                let k = a.iter().zip(&b).position(|(x, y)| x != y).unwrap_or(a.len().min(b.len()));
+                let near = |v: &[char]| v[k.saturating_sub(30)..(k + 30).min(v.len())].iter().collect::<String>();
+                panic!("{}: differs at {k}: back {:?} file {:?}", p.display(), near(&a), near(&b));
+            }
             count += 1;
         }
         assert!(count > 0);

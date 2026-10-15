@@ -4,14 +4,15 @@
 //! A document names its tables by code, as the document files do: the print-to-braille rules table and its scan
 //! table, then the braille-to-print rules table and its scan table. The engine writes and reads braille in North
 //! American ASCII braille; a braille document holds it in the encoding chosen in Global, Internationalization, so
-//! braille is converted on the way in and out. Codes are shown in documents as [code]; the engine takes them as
-//! 0x1C code 0x1F.
+//! braille is converted on the way in and out. A document's codes are kept apart from its text
+//! (bm_core::doctext::Shown); the engine takes them as 0x1C code 0x1F, and brackets in the text as text.
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::path::Path;
 use std::rc::Rc;
 
+use bm_core::doctext::Shown;
 use bm_core::engine::{LanguageSource, Languages, StyleTable, TableSet};
 use bm_core::table_list::TableList;
 use bm_core::templates::{self, Templates};
@@ -78,6 +79,16 @@ pub fn template_tables(name: &str) -> Option<[String; 4]> {
     })
 }
 
+/// A template's page numbering, by its name (the order bm_core::templates::page_numbers gives); the reference
+/// program's default for an unknown template.
+pub fn template_page_numbers(name: &str) -> [u16; 5] {
+    with_templates(|t| {
+        let t = t?;
+        Some(templates::page_numbers(&t.text(t.by_name(name)?).ok()?))
+    })
+    .unwrap_or([4, 4, 2, 2, 1])
+}
+
 /// A template's styles, by its name; none for an unknown template.
 fn template_styles(name: &str) -> Option<Rc<StyleTable>> {
     if let Some(s) = STYLES.with(|s| s.borrow().get(name).cloned()) {
@@ -109,12 +120,13 @@ pub fn style_table(styles: &[Style]) -> StyleTable {
     StyleTable::from_text(styles.iter().map(|s| (s.name.as_str(), s.begin.as_str(), s.end.as_str())))
 }
 
-/// Translates with the rules table `code`, the document's styles and the language switches of the table list.
-fn translate(code: &str, text: &str, styles: &StyleTable, print_document: bool) -> Result<String, String> {
+/// Translates running text (codes marked 0x1C ... 0x1F, brackets as text; bm_core::doctext) with the rules table
+/// `code`, the document's styles and the language switches of the table list.
+fn translate(code: &str, running: &str, styles: &StyleTable, print_document: bool) -> Result<String, String> {
     LANGUAGES.with(|l| {
         let l = l.borrow();
         let languages = l.as_ref().map(|(p, b)| if print_document { p } else { b });
-        with_table(code, |t| t.translate_with(text, Some(styles), languages).map_err(|e| e.to_string()))
+        with_table(code, |t| t.translate_marked(running, Some(styles), languages).map_err(|e| e.to_string()))
     })
 }
 
@@ -155,122 +167,44 @@ pub fn has_table(code: &str) -> bool {
     TABLES.with(|t| t.borrow().as_ref().is_some_and(|s| s.entry(code).is_some()))
 }
 
-/// Engine output codes (0x1C ... 0x1F) as documents show them.
-fn shown_codes(s: &str) -> String {
-    s.replace('\u{1c}', "[").replace('\u{1f}', "]")
+/// The engine's output (running text) in the editor's form, with the echo of the document's initial codes at its
+/// start left off (the document keeps them apart).
+fn result(out: &str, initial: &str) -> Shown {
+    let lead = Shown::marked(initial).to_running();
+    Shown::from_running(out.strip_prefix(lead.as_str()).unwrap_or(out))
 }
 
-/// Print text (codes as [code]) to braille in the display encoding `enc`, with the rules table `code` and the
-/// document's styles.
-pub fn forward(code: &str, text: &str, enc: &Encoding, styles: &StyleTable) -> Result<String, String> {
-    let ascii = translate(code, text, styles, true)?;
-    Ok(convert_braille(&shown_codes(&ascii), encodings::find(encodings::DEFAULT), enc))
+/// Print (a document or a line of one, with its codes) to braille in the display encoding `enc`, with the rules
+/// table `code`, the document's initial codes and its styles. A whole document goes through the engine in one run,
+/// as the reference program's translation run reads the whole document; the result keeps the codes.
+pub fn forward(code: &str, text: &Shown, initial: &str, enc: &Encoding, styles: &StyleTable) -> Result<Shown, String> {
+    let running = format!("{}{}", Shown::marked(initial).to_running(), text.to_running());
+    let out = translate(code, &running, styles, true)?;
+    Ok(convert_braille(&result(&out, initial), encodings::find(encodings::DEFAULT), enc))
 }
 
-/// Braille in the display encoding `enc` (codes as [code]) to print, with the rules table `code` and the document's
-/// styles.
-pub fn back(code: &str, text: &str, enc: &Encoding, styles: &StyleTable) -> Result<String, String> {
+/// Braille (a document or a line of one, in the display encoding `enc`, with its codes) to print, with the rules
+/// table `code`, the document's initial codes and its styles.
+pub fn back(code: &str, text: &Shown, initial: &str, enc: &Encoding, styles: &StyleTable) -> Result<Shown, String> {
     let ascii = convert_braille(text, enc, encodings::find(encodings::DEFAULT));
-    // In braille "[" and "]" are cells, so the engine is given the codes as 0x1C ... 0x1F, in the same places the
-    // document shows them.
-    let marked = marks(&ascii);
-    let print = translate(code, &marked, styles, false)?;
-    Ok(shown_codes(&print))
+    let running = format!("{}{}", Shown::marked(initial).to_running(), ascii.to_running());
+    let out = translate(code, &running, styles, false)?;
+    Ok(result(&out, initial))
 }
 
-/// Engine output (codes as 0x1C ... 0x1F, which nest) in the editor's form (bm_core::doctext): codes in brackets,
-/// the new-line code a line break, the codes that start a new line of their own followed by one.
-fn display_codes(s: &str) -> String {
-    let mut out = String::with_capacity(s.len() + s.len() / 16);
-    let mut open: Vec<usize> = Vec::new();
-    for c in s.chars() {
-        match c {
-            '\u{1c}' => {
-                out.push('[');
-                open.push(out.len());
-            }
-            '\u{1f}' => match open.pop() {
-                Some(start) if open.is_empty() && &out[start..] == "<" => {
-                    out.truncate(start - 1);
-                    out.push('\n');
-                }
-                Some(start) => {
-                    let breaks = open.is_empty() && bm_core::doctext::breaks_line(&out[start..]);
-                    out.push(']');
-                    if breaks {
-                        out.push('\n');
-                    }
-                }
-                None => out.push(']'),
-            },
-            c => out.push(c),
-        }
+/// Braille text from one encoding to another, cell for cell; the codes keep their text.
+pub fn convert_braille(doc: &Shown, from: &Encoding, to: &Encoding) -> Shown {
+    let chars: Vec<char> = doc.text.chars().collect();
+    let mut text = String::with_capacity(doc.text.len());
+    let mut at = 0;
+    let convert = |run: &[char]| to.cells_to_text(&from.text_to_cells(&run.iter().collect::<String>()));
+    for &(start, end) in &doc.codes {
+        text.push_str(&convert(&chars[at.min(start)..start]));
+        text.extend(&chars[start..end.min(chars.len())]);
+        at = end;
     }
-    out
-}
-
-/// A whole print document (in the editor's form) to braille in the display encoding `enc`, in one run of the
-/// engine, as the reference program's translation run reads the whole document: the result is the running braille
-/// with the codes kept, in the editor's form; lines and pages are laid out from the codes.
-pub fn forward_document(code: &str, text: &str, enc: &Encoding, styles: &StyleTable) -> Result<String, String> {
-    let ascii = translate(code, &bm_core::doctext::to_running(text), styles, true)?;
-    Ok(convert_braille(&display_codes(&ascii), encodings::find(encodings::DEFAULT), enc))
-}
-
-/// A whole braille document (in the editor's form, in the display encoding `enc`) to print, in one run of the
-/// engine.
-pub fn back_document(code: &str, text: &str, enc: &Encoding, styles: &StyleTable) -> Result<String, String> {
-    let ascii = convert_braille(text, enc, encodings::find(encodings::DEFAULT));
-    let marked = marks(&bm_core::doctext::to_running(&ascii));
-    Ok(display_codes(&translate(code, &marked, styles, false)?))
-}
-
-/// Each [code] segment, as convert_braille finds them, written 0x1C code 0x1F.
-fn marks(text: &str) -> String {
-    let mut out = String::with_capacity(text.len());
-    let mut rest = text;
-    while let Some(i) = rest.find('[') {
-        let (plain, tail) = rest.split_at(i);
-        out.push_str(plain);
-        match tail.find(']') {
-            Some(j) => {
-                out.push('\u{1c}');
-                out.push_str(&tail[1..j]);
-                out.push('\u{1f}');
-                rest = &tail[j + 1..];
-            }
-            None => {
-                out.push_str(tail);
-                rest = "";
-            }
-        }
-    }
-    out.push_str(rest);
-    out
-}
-
-/// Braille text from one encoding to another; codes written [code] pass unchanged.
-pub fn convert_braille(text: &str, from: &Encoding, to: &Encoding) -> String {
-    let mut out = String::with_capacity(text.len());
-    let mut rest = text;
-    while !rest.is_empty() {
-        let (plain, tail) = match rest.find('[') {
-            Some(i) => rest.split_at(i),
-            None => (rest, ""),
-        };
-        out.push_str(&to.cells_to_text(&from.text_to_cells(plain)));
-        match tail.find(']') {
-            Some(j) if !tail.is_empty() => {
-                out.push_str(&tail[..=j]);
-                rest = &tail[j + 1..];
-            }
-            _ => {
-                out.push_str(&to.cells_to_text(&from.text_to_cells(tail)));
-                rest = "";
-            }
-        }
-    }
-    out
+    text.push_str(&convert(&chars[at.min(chars.len())..]));
+    Shown { text, codes: doc.codes.clone(), inner: doc.inner.clone() }
 }
 
 #[cfg(test)]
@@ -290,29 +224,46 @@ mod tests {
         style_table(&template_style_list(ENGLISH))
     }
 
+    /// Print text whose bracketed runs are codes, to braille in North American, as the editor shows it.
+    fn fwd(text: &str) -> String {
+        let na = encodings::find(encodings::DEFAULT);
+        forward("enuncp", &Shown::marked(text), "", na, &english()).unwrap().text
+    }
+
     #[test]
     fn english_both_ways_with_the_shipped_tables() {
         loaded();
         let na = encodings::find(encodings::DEFAULT);
-        assert_eq!(forward("enuncp", "The cat sat.", na, &english()).unwrap(), ",! cat sat4");
-        assert_eq!(forward("enuncp", "[g1l]The cat sat.", na, &english()).unwrap(), "[g1l],the cat sat4");
-        assert_eq!(back("enuncb", ",! cat sat4", na, &english()).unwrap(), "The cat sat.");
-        assert!(forward("nosuch", "x", na, &english()).is_err());
+        assert_eq!(fwd("The cat sat."), ",! cat sat4");
+        assert_eq!(fwd("[g1l]The cat sat."), "[g1l],the cat sat4");
+        // The document's initial codes are in force and their echo is left off.
+        let s = forward("enuncp", &Shown::plain("The cat sat."), "[g1l]", na, &english()).unwrap();
+        assert_eq!(s.text, ",the cat sat4");
+        assert_eq!(back("enuncb", &Shown::plain(",! cat sat4"), "", na, &english()).unwrap().text, "The cat sat.");
+        assert!(forward("nosuch", &Shown::plain("x"), "", na, &english()).is_err());
         assert_eq!(template_tables(ENGLISH).unwrap(), DEFAULT_TABLES.map(String::from));
+    }
+
+    #[test]
+    fn brackets_in_the_text_are_text_both_ways() {
+        loaded();
+        let na = encodings::find(encodings::DEFAULT);
+        // A print bracket is translated as a bracket, not taken for a code.
+        let s = forward("enuncp", &Shown::plain("See [hds2] now."), "", na, &english()).unwrap();
+        assert!(s.codes.is_empty(), "{s:?}");
+        // The braille cells "]" (er) and "[" (ow) are cells: ",*apt]" is "Chapter".
+        let s = back("enuncb", &Shown::plain(",*apt] ,\"o d[n"), "", na, &english()).unwrap();
+        assert_eq!(s.text, "Chapter One down");
     }
 
     #[test]
     fn template_styles_and_language_codes_take_effect() {
         loaded();
-        let na = encodings::find(encodings::DEFAULT);
         assert_eq!(
-            forward("enuncp", "the cat [es~G1Passage]the cat[ee~G1Passage] the cat", na, &english()).unwrap(),
+            fwd("the cat [es~G1Passage]the cat[ee~G1Passage] the cat"),
             "! cat [es~g1passage]the cat[ee~g1passage] ! cat"
         );
-        assert_eq!(
-            forward("enuncp", "a cat [lnb~qip]ab[lnb] the cat", na, &english()).unwrap(),
-            "a cat [lnb~qip]\";2ab;;[lnb] ! cat"
-        );
+        assert_eq!(fwd("a cat [lnb~qip]ab[lnb] the cat"), "a cat [lnb~qip]\";2ab;;[lnb] ! cat");
     }
 
     #[test]
@@ -325,8 +276,9 @@ mod tests {
         assert!(passage.nested);
         assert!(!styles.iter().find(|s| s.name == "h1.").unwrap().nested);
         styles.push(Style { name: "Mine".to_string(), nested: true, begin: passage.begin, end: passage.end });
+        let text = Shown::marked("the cat [es~Mine]the cat[ee~Mine] the cat");
         assert_eq!(
-            forward("enuncp", "the cat [es~Mine]the cat[ee~Mine] the cat", na, &style_table(&styles)).unwrap(),
+            forward("enuncp", &text, "", na, &style_table(&styles)).unwrap().text,
             "! cat [es~mine]the cat[ee~mine] ! cat"
         );
     }
@@ -335,23 +287,22 @@ mod tests {
     fn braille_in_another_encoding_goes_through_the_engine_in_north_american() {
         loaded();
         let german = encodings::find("german");
-        let shown = forward("enuncp", "The cat sat.", german, &english()).unwrap();
-        assert_eq!(convert_braille(&shown, german, encodings::find(encodings::DEFAULT)), ",! cat sat4");
-        assert_eq!(back("enuncb", &shown, german, &english()).unwrap(), "The cat sat.");
+        let na = encodings::find(encodings::DEFAULT);
+        let shown = forward("enuncp", &Shown::plain("The cat sat."), "", german, &english()).unwrap();
+        assert_eq!(convert_braille(&shown, german, na).text, ",! cat sat4");
+        assert_eq!(back("enuncb", &shown, "", german, &english()).unwrap().text, "The cat sat.");
     }
 
     #[test]
     fn a_whole_document_goes_through_the_engine_with_its_line_codes() {
         loaded();
         let na = encodings::find(encodings::DEFAULT);
-        let print = "[es~h1.]Chapter One[ee~h1.]\nThe cat sat.\nIt was warm.";
-        let braille = forward_document("enuncp", print, na, &english()).unwrap();
-        assert_eq!(braille, "[es~h1.],*apt] ,\"o[ee~h1.]\n,! cat sat4\n,x 0 w>m4");
-        assert_eq!(back_document("enuncb", &braille, na, &english()).unwrap(), "[es~h1.]Chapter One[ee~h1.]\nThe cat sat.\nIt was warm.");
-    }
-
-    #[test]
-    fn braille_codes_become_engine_marks() {
-        assert_eq!(marks("ab[pg]c[x"), "ab\u{1c}pg\u{1f}c[x");
+        let print = Shown::marked("[es~h1.]Chapter One[ee~h1.]\nThe cat sat.\nIt was warm.");
+        let braille = forward("enuncp", &print, "", na, &english()).unwrap();
+        assert_eq!(braille.text, "[es~h1.],*apt] ,\"o[ee~h1.]\n,! cat sat4\n,x 0 w>m4");
+        assert_eq!(braille.codes.len(), 2);
+        let back = back("enuncb", &braille, "", na, &english()).unwrap();
+        assert_eq!(back.text, "[es~h1.]Chapter One[ee~h1.]\nThe cat sat.\nIt was warm.");
+        assert_eq!(back.codes.len(), 2);
     }
 }

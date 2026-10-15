@@ -142,6 +142,7 @@ fn main() {
             memory: dlg::Memory::default(),
             last_find: None,
             busy: false,
+            known: Vec::new(),
         });
         // Windows: the JAWS script set shipped beside the program is offered for installing first.
         #[cfg(windows)]
@@ -163,7 +164,7 @@ fn main() {
             wxdragon::call_after(Box::new(commands::exit_program));
         });
 
-        let key = documents::new_document(app::DocKind::Print, None, "");
+        let key = documents::new_document(app::DocKind::Print, None, &bm_core::doctext::Shown::default());
         app::with(|a| {
             if let Some(i) = a.index_of(key) {
                 a.docs[i].dirty = false;

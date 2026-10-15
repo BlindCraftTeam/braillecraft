@@ -8,6 +8,7 @@ use std::cell::RefCell;
 use std::collections::HashSet;
 use std::path::PathBuf;
 
+use bm_core::doctext::Shown;
 use wxdragon::prelude::*;
 use wxdragon_sys as ffi;
 
@@ -47,7 +48,7 @@ pub enum Hyphen {
     French113,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash)]
 pub struct Style {
     pub name: String,
     pub nested: bool,
@@ -87,6 +88,21 @@ pub struct Doc {
     pub template: String,
     pub cells: u32,
     pub lines: u32,
+    /// Page numbering, in the order the document file keeps it: braille page numbers on even pages and on odd pages,
+    /// print page numbers on even pages and on odd pages (0 none, 1 upper left, 2 upper right, 3 lower left, 4 lower
+    /// right), then the first page whose number is shown.
+    pub page_numbers: [u16; 5],
+    /// The document laid out into pages, with what it was laid out from (a hash of the text, page size, numbering
+    /// and styles); laid out again when any of them changes.
+    pub pages: Option<(u64, std::rc::Rc<Vec<bm_core::format::Page>>)>,
+    /// Which bracketed runs of the text are codes (bm_core::doctext::Shown): a code comes only from a program
+    /// command (a menu, a style, the code list, a file), as in the reference program; brackets typed are text.
+    pub codes: Vec<(usize, usize)>,
+    pub inner: Vec<(usize, usize)>,
+    /// The text as it was when the codes were last brought up to date.
+    pub last_value: String,
+    /// Codes that have gone, with their places, so that an undo putting their text back brings them back.
+    pub taken: Vec<(usize, Shown)>,
     pub view: View,
     pub hyphen: Hyphen,
     pub styles: Vec<Style>,
@@ -98,6 +114,21 @@ pub struct Doc {
 }
 
 impl Doc {
+    /// The document as the editor shows it: its text and which runs are codes.
+    pub fn shown(&self) -> Shown {
+        Shown { text: self.text.get_value(), codes: self.codes.clone(), inner: self.inner.clone() }
+    }
+
+    /// Puts `shown` in the editing area, codes and all.
+    pub fn set_shown(&mut self, shown: &Shown) {
+        // The codes are set first: the change handler then finds nothing changed.
+        self.codes = shown.codes.clone();
+        self.inner = shown.inner.clone();
+        self.last_value = shown.text.clone();
+        self.taken.clear();
+        self.text.set_value(&shown.text);
+    }
+
     /// The window name: "Untitled Print Document 1"; "name -- New Braille Document" for a translated or opened
     /// document not yet saved in the program's own format; "name -- Braille Document" once saved.
     pub fn full_name(&self) -> String {
@@ -228,6 +259,9 @@ pub struct App {
     pub memory: Memory,
     pub last_find: Option<FindSpec>,
     pub busy: bool,
+    /// Text taken out of a document or copied, with its codes, newest last: putting the same text back (paste,
+    /// undo) puts its codes back.
+    pub known: Vec<Shown>,
 }
 
 thread_local! {
@@ -271,31 +305,20 @@ pub fn byte_to_char(s: &str, byte: usize) -> i64 {
     s[..byte.min(s.len())].chars().count() as i64
 }
 
-/// Line (0-based) and column (0-based) of a character position.
-pub fn line_and_column(text: &str, pos: i64) -> (usize, usize) {
-    let before = &text[..char_to_byte(text, pos)];
-    let line = before.matches('\n').count();
-    let column = before.rsplit('\n').next().map_or(0, |l| l.chars().count());
-    (line, column)
-}
-
-/// The line the caret is on.
-pub fn line_at(text: &str, pos: i64) -> String {
+/// The line the caret is on, with its codes.
+pub fn line_of(doc: &Shown, pos: i64) -> Shown {
+    let text = &doc.text;
     let b = char_to_byte(text, pos);
     let start = text[..b].rfind('\n').map_or(0, |i| i + 1);
     let end = text[b..].find('\n').map_or(text.len(), |i| b + i);
-    text[start..end].to_string()
+    doc.slice(byte_to_char(text, start) as usize, byte_to_char(text, end) as usize)
 }
 
-/// The styles open at a position: each [es~name] before it without its [ee~name].
-pub fn open_styles(text: &str, pos: i64) -> Vec<String> {
-    let before = &text[..char_to_byte(text, pos)];
+/// The styles open at a position: each [es~name] code before it without its [ee~name].
+pub fn open_styles(doc: &Shown, pos: i64) -> Vec<String> {
     let mut open: Vec<String> = Vec::new();
-    let mut rest = before;
-    while let Some(i) = rest.find('[') {
-        rest = &rest[i + 1..];
-        let Some(end) = rest.find(']') else { break };
-        let code = &rest[..end];
+    for &(start, _) in doc.codes.iter().take_while(|c| (c.1 as i64) <= pos) {
+        let Some(code) = doc.code_at(start) else { continue };
         if let Some(name) = code.strip_prefix("es~") {
             open.push(name.to_string());
         } else if let Some(name) = code.strip_prefix("ee~") {
@@ -303,7 +326,6 @@ pub fn open_styles(text: &str, pos: i64) -> Vec<String> {
                 open.remove(k);
             }
         }
-        rest = &rest[end + 1..];
     }
     open
 }
@@ -342,21 +364,22 @@ impl StatusLine {
 /// The status line's character field for the character at `pos`: "(end)" at the end of the document; a code as
 /// "[code]", a style start [es~name] as "<name>" and a style end [ee~name] as "</name>"; a hard space as "[']";
 /// otherwise the character, followed by " {U+XXXX}" when verbose labels are on.
-pub fn char_field(text: &str, pos: i64, verbose: bool) -> String {
-    let b = char_to_byte(text, pos);
-    let rest = &text[b.min(text.len())..];
-    let Some(c) = rest.chars().next() else { return "(end)".to_string() };
-    if c == '[' {
-        if let Some(end) = rest.find(']') {
-            let code = &rest[1..end];
-            // "es~" and "ee~" are matched in either case, as the reference compares them.
-            let head = code.get(..3).map(str::to_ascii_lowercase);
-            return match head.as_deref() {
-                Some("es~") => format!("<{}>", &code[3..]),
-                Some("ee~") => format!("</{}>", &code[3..]),
-                _ => format!("[{code}]"),
-            };
-        }
+pub fn char_field(doc: &Shown, pos: i64, verbose: bool) -> String {
+    let at = pos.max(0) as usize;
+    let Some(c) = doc.text.chars().nth(at) else { return "(end)".to_string() };
+    if c == '\n' {
+        // A line break is the new-line code, except the editor's own after [p] or [l] (bm_core::doctext), which is
+        // not part of the document: the field shows what follows it.
+        return if doc.is_own_break(at) { char_field(doc, pos + 1, verbose) } else { "[<]".to_string() };
+    }
+    if let Some(code) = doc.code_at(at) {
+        // "es~" and "ee~" are matched in either case, as the reference compares them.
+        let head = code.get(..3).map(str::to_ascii_lowercase);
+        return match head.as_deref() {
+            Some("es~") => format!("<{}>", &code[3..]),
+            Some("ee~") => format!("</{}>", &code[3..]),
+            _ => format!("[{code}]"),
+        };
     }
     if c == '\u{a0}' {
         return "[']".to_string();
@@ -514,12 +537,14 @@ impl App {
     /// then its translated line.
     pub fn update_status(&mut self) {
         let Some(i) = self.active else { return };
-        let value = self.docs[i].text.get_value();
+        let shown = self.docs[i].shown();
         let pos = self.docs[i].text.get_insertion_point();
-        let (line, column) = line_and_column(&value, pos);
+        // Page, line and column of the caret on the laid-out pages (spec 19 section 4): the ordinal page, the line on
+        // that page and the cell on that line.
+        let location = (!self.docs[i].view.codes)
+            .then(|| bm_core::format::locate(&self.laid_out(i, &shown), pos.max(0) as usize));
         let d = &self.docs[i];
-        let lines = d.lines.max(1) as usize;
-        let styles = open_styles(&value, pos);
+        let styles = open_styles(&shown, pos);
         let style = match styles.len() {
             0 => "Current Style: None".to_string(),
             1 => format!("Current Style: {}", styles[0]),
@@ -527,8 +552,8 @@ impl App {
         };
         let status = StatusLine {
             style,
-            location: (!d.view.codes).then_some((line / lines + 1, line % lines + 1, column + 1)),
-            character: char_field(&value, pos, self.settings.verbose_labels),
+            location,
+            character: char_field(&shown, pos, self.settings.verbose_labels),
             six_key: d.view.six_key,
             highlight: d.highlight_anchor.is_some(),
             // A braille keyboard connection; BrailleMaker has none, so the mark is never shown.
@@ -538,26 +563,28 @@ impl App {
         if d.status.get_label() != status {
             d.status.set_label(&status);
         }
-        self.update_translated_line(&value, pos);
+        self.update_translated_line(&shown, pos);
     }
 
     /// View, Translated Line: the line the caret is on, translated. A print document shows its braille in the font
     /// chosen in Global, Default Views; a braille document shows its print.
-    fn update_translated_line(&mut self, value: &str, pos: i64) {
+    fn update_translated_line(&mut self, shown: &Shown, pos: i64) {
         let Some(i) = self.active else { return };
         if !self.docs[i].view.translated {
             return;
         }
-        let line = line_at(value, pos);
+        let line = line_of(shown, pos);
         let d = &self.docs[i];
         let key = format!(
-            "{}|{:?}|{}|{}|{}|{}|{line}",
+            "{}|{:?}|{}|{}|{}|{}|{}|{:?}",
             d.key,
             d.kind,
             d.tables.join("+"),
             d.initial_codes,
             d.template,
-            self.settings.encoding
+            self.settings.encoding,
+            line.text,
+            line.codes
         );
         if key == self.docs[i].last_line_key {
             return;
@@ -572,7 +599,7 @@ impl App {
     /// One line of document `i` translated: a print line into braille (in the display encoding), a braille line
     /// into print, with the document's initial codes in force. The engine passes those codes through at the start
     /// of what it writes; the translated line leaves them off.
-    pub fn translate_line(&self, i: usize, line: &str) -> String {
+    pub fn translate_line(&self, i: usize, line: &Shown) -> String {
         let enc = self.encoding();
         let d = &self.docs[i];
         // A braille document with no braille-to-print table shows the reference program's text for message 0;
@@ -580,16 +607,78 @@ impl App {
         if d.kind == DocKind::Braille && !crate::translation::has_table(&d.tables[2]) {
             return "Error message 0".to_string();
         }
-        let text = format!("{}{line}", d.initial_codes);
         let styles = crate::translation::style_table(&d.styles);
         let r = match d.kind {
-            DocKind::Print => crate::translation::forward(&d.tables[0], &text, enc, &styles),
-            DocKind::Braille => crate::translation::back(&d.tables[2], &text, enc, &styles),
+            DocKind::Print => crate::translation::forward(&d.tables[0], line, &d.initial_codes, enc, &styles),
+            DocKind::Braille => crate::translation::back(&d.tables[2], line, &d.initial_codes, enc, &styles),
         };
-        match r {
-            Ok(s) => s.strip_prefix(d.initial_codes.as_str()).map(str::to_string).unwrap_or(s),
-            Err(e) => e,
+        r.map(|s| s.text).unwrap_or_else(|e| e)
+    }
+
+    /// Brings document `i`'s codes up to date with its text after an edit (bm_core::doctext::after_edit). Returns
+    /// what is left of codes the edit broke, to be removed (last first).
+    pub fn sync_codes(&mut self, i: usize) -> Vec<(usize, usize)> {
+        let d = &mut self.docs[i];
+        let text = d.text.get_value();
+        if text == d.last_value {
+            return Vec::new();
         }
+        let before = Shown { text: std::mem::take(&mut d.last_value), codes: std::mem::take(&mut d.codes), inner: std::mem::take(&mut d.inner) };
+        let taken = std::mem::take(&mut d.taken);
+        let e = bm_core::doctext::after_edit(&before, &text, &self.known, &taken);
+        let d = &mut self.docs[i];
+        d.codes = e.shown.codes;
+        d.inner = e.shown.inner;
+        d.taken = e.taken;
+        d.last_value = text;
+        if let Some(r) = e.removed {
+            self.remember(r);
+        }
+        e.remains
+    }
+
+    /// Keeps text taken out or copied, with its codes (the last few).
+    pub fn remember(&mut self, s: Shown) {
+        if s.codes.is_empty() {
+            return;
+        }
+        self.known.retain(|k| k.text != s.text);
+        self.known.push(s);
+        if self.known.len() > 32 {
+            self.known.remove(0);
+        }
+    }
+
+    /// Document `i` laid out into pages: its cells per line and lines per page, its styles, and for a braille
+    /// document its braille page numbers. Kept until the text, its codes or any of those changes.
+    pub fn laid_out(&mut self, i: usize, value: &Shown) -> std::rc::Rc<Vec<bm_core::format::Page>> {
+        use std::hash::{Hash, Hasher};
+        let d = &self.docs[i];
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        (&value.text, &value.codes, d.cells, d.lines, d.page_numbers, d.kind == DocKind::Braille, &d.styles).hash(&mut h);
+        let key = h.finish();
+        if let Some((k, pages)) = &d.pages {
+            if *k == key {
+                return pages.clone();
+            }
+        }
+        let braille = d.kind == DocKind::Braille;
+        let (cells, lines) = (d.cells.max(1) as usize, d.lines.max(1) as usize);
+        let mut layout = if braille {
+            bm_core::format::Layout::braille(cells, lines)
+        } else {
+            bm_core::format::Layout::print(cells, lines)
+        };
+        // INTERIM: a print document's own pages carry no number line until the print page layout is traced.
+        if braille {
+            layout.numbers_even = bm_core::format::Corner::from_code(d.page_numbers[0]);
+            layout.numbers_odd = bm_core::format::Corner::from_code(d.page_numbers[1]);
+        }
+        layout.first_number_shown = d.page_numbers[4].max(1) as usize;
+        let styles = crate::translation::style_table(&d.styles);
+        let pages = std::rc::Rc::new(bm_core::format::format(value, &layout, Some(&styles)));
+        self.docs[i].pages = Some((key, pages.clone()));
+        pages
     }
 
     pub fn mark_dirty(&mut self) {
@@ -631,12 +720,17 @@ mod tests {
 
     #[test]
     fn character_field() {
-        assert_eq!(char_field("ab", 0, false), "a");
-        assert_eq!(char_field("ab", 2, false), "(end)");
-        assert_eq!(char_field("é", 0, true), "é {U+00E9}");
-        assert_eq!(char_field("x[pg]y", 1, false), "[pg]");
-        assert_eq!(char_field("[es~h1.]T", 0, false), "<h1.>");
-        assert_eq!(char_field("[EE~h1.]", 0, false), "</h1.>");
-        assert_eq!(char_field("a\u{a0}b", 1, false), "[']");
+        assert_eq!(char_field(&Shown::marked("ab"), 0, false), "a");
+        assert_eq!(char_field(&Shown::marked("ab"), 2, false), "(end)");
+        assert_eq!(char_field(&Shown::marked("é"), 0, true), "é {U+00E9}");
+        assert_eq!(char_field(&Shown::marked("x[pg]y"), 1, false), "[pg]");
+        assert_eq!(char_field(&Shown::marked("[es~h1.]T"), 0, false), "<h1.>");
+        assert_eq!(char_field(&Shown::marked("[EE~h1.]"), 0, false), "</h1.>");
+        assert_eq!(char_field(&Shown::marked("a\u{a0}b"), 1, false), "[']");
+        // A line break is the new-line code; the one the editor adds after [p] is not in the document.
+        assert_eq!(char_field(&Shown::marked("a\nb"), 1, false), "[<]");
+        assert_eq!(char_field(&Shown::marked("[p]\nb"), 3, false), "b");
+        // Brackets typed in the text are text, even when they look like a code.
+        assert_eq!(char_field(&Shown::plain("x[pg]y"), 1, false), "[");
     }
 }
