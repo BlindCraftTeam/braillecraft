@@ -36,7 +36,7 @@ jobs:
             bundle_dir: target/universal-apple-darwin/release/bundle
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -44,7 +44,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
 
@@ -69,7 +69,7 @@ jobs:
           cp -r crates/bm-louis/vendor/liblouis/tables dist/BrailleMaker/liblouis/tables
           cp crates/bm-louis/vendor/liblouis/COPYING.LESSER crates/bm-louis/vendor/CHANGES-BrailleMaker.txt dist/BrailleMaker/liblouis/
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: braillemaker-desktop-${{ matrix.name }}
           if-no-files-found: error
@@ -79,7 +79,7 @@ jobs:
         working-directory: crates/bm-shell
         run: npx -y @tauri-apps/cli@2.12.3 build ${{ matrix.tauri_args }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: braillemaker-${{ matrix.name }}
           if-no-files-found: error
