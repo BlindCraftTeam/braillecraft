@@ -1,0 +1,658 @@
+# Table index: the rules and scan table codes a document names, the table source that recreates them, and its language.
+# rules	scan	table	language
+africb	gendxb	afrikaans-basic-africb-back	Afrikaans - basic
+afrucb	gendxb	afrikaans-basic-back	Afrikaans - basic
+afrucp	enudxp	afrikaans-basic-forward	Afrikaans - basic
+amebpc	amedxb	english-bana-pre-ueb-textbook-de-bana-back	English (BANA Pre-UEB Textbook DE) - BANA
+amel0402	amedxp	english-bana-pre-ueb-textbook-de-bana-amel0402-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amel0403	amedxp	english-bana-pre-ueb-textbook-de-bana-amel0403-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amel0501	amedxp	english-bana-pre-ueb-textbook-de-bana-amel0501-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amel0601	amedxp	english-bana-pre-ueb-textbook-de-bana-amel0601-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amel0702	amedxp	english-bana-pre-ueb-textbook-de-bana-amel0702-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amel0705	amedxp	english-bana-pre-ueb-textbook-de-bana-amel0705-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amel0706	amedxp	english-bana-pre-ueb-textbook-de-bana-amel0706-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amel0710	amedxp	english-bana-pre-ueb-textbook-de-bana-amel0710-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amel0801	amedxp	english-bana-pre-ueb-textbook-de-bana-amel0801-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amel0802	amedxp	english-bana-pre-ueb-textbook-de-bana-amel0802-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amel0803	amedxp	english-bana-pre-ueb-textbook-de-bana-amel0803-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amel0901	amedxp	english-bana-pre-ueb-textbook-de-bana-amel0901-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amel0907	amedxp	english-bana-pre-ueb-textbook-de-bana-amel0907-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amel1001	amedxp	english-bana-pre-ueb-textbook-de-bana-amel1001-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amel1002	amedxp	english-bana-pre-ueb-textbook-de-bana-amel1002-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amerc	amedxp	niso-forward	niso
+amerf	amedxp	english-bana-pre-ueb-textbook-de-bana-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets01	amedxp	english-bana-pre-ueb-textbook-de-bana-amets01-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets03	amedxp	english-bana-pre-ueb-textbook-de-bana-amets03-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets07	amedxp	english-bana-pre-ueb-textbook-de-bana-amets07-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets08	amedxp	english-bana-pre-ueb-textbook-de-bana-amets08-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets09	amedxp	english-bana-pre-ueb-textbook-de-bana-amets09-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets10	amedxp	english-bana-pre-ueb-textbook-de-bana-amets10-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets11	amedxp	english-bana-pre-ueb-textbook-de-bana-amets11-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets12	amedxp	english-bana-pre-ueb-textbook-de-bana-amets12-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets13	amedxp	english-bana-pre-ueb-textbook-de-bana-amets13-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets14	amedxp	english-bana-pre-ueb-textbook-de-bana-amets14-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets15	amedxp	english-bana-pre-ueb-textbook-de-bana-amets15-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets17	amedxp	english-bana-pre-ueb-textbook-de-bana-amets17-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets18	amedxp	english-bana-pre-ueb-textbook-de-bana-amets18-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets19	amedxp	english-bana-pre-ueb-textbook-de-bana-amets19-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets20	amedxp	english-bana-pre-ueb-textbook-de-bana-amets20-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets22	amedxp	english-bana-pre-ueb-textbook-de-bana-amets22-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets24	amedxp	english-bana-pre-ueb-textbook-de-bana-amets24-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets25	amedxp	english-bana-pre-ueb-textbook-de-bana-amets25-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets26	amedxp	english-bana-pre-ueb-textbook-de-bana-amets26-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets28	amedxp	english-bana-pre-ueb-textbook-de-bana-amets28-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets29	amedxp	english-bana-pre-ueb-textbook-de-bana-amets29-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets30	amedxp	english-bana-pre-ueb-textbook-de-bana-amets30-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets31	amedxp	english-bana-pre-ueb-textbook-de-bana-amets31-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets32	amedxp	english-bana-pre-ueb-textbook-de-bana-amets32-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets33	amedxp	english-bana-pre-ueb-textbook-de-bana-amets33-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets34	amedxp	english-bana-pre-ueb-textbook-de-bana-amets34-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets35	amedxp	english-bana-pre-ueb-textbook-de-bana-amets35-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets36	amedxp	english-bana-pre-ueb-textbook-de-bana-amets36-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets38	amedxp	english-bana-pre-ueb-textbook-de-bana-amets38-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets39	amedxp	english-bana-pre-ueb-textbook-de-bana-amets39-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets40	amedxp	english-bana-pre-ueb-textbook-de-bana-amets40-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets41	amedxp	english-bana-pre-ueb-textbook-de-bana-amets41-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets42	amedxp	english-bana-pre-ueb-textbook-de-bana-amets42-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets43	amedxp	english-bana-pre-ueb-textbook-de-bana-amets43-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets44	amedxp	english-bana-pre-ueb-textbook-de-bana-amets44-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets45	amedxp	english-bana-pre-ueb-textbook-de-bana-amets45-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets46	amedxp	english-bana-pre-ueb-textbook-de-bana-amets46-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets48	amedxp	english-bana-pre-ueb-textbook-de-bana-amets48-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets49	amedxp	english-bana-pre-ueb-textbook-de-bana-amets49-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets50	amedxp	english-bana-pre-ueb-textbook-de-bana-amets50-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets51	amedxp	english-bana-pre-ueb-textbook-de-bana-amets51-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets52	amedxp	english-bana-pre-ueb-textbook-de-bana-amets52-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amets53	amedxp	english-bana-pre-ueb-textbook-de-bana-amets53-forward	English (BANA Pre-UEB Textbook DE) - BANA
+amhacb	engdxb	amharic-basic-back	Amharic - basic
+amhacp	enbdxp	amharic-basic-forward	Amharic - basic
+araacp	amedxp	arabic-pre-2002-basic-forward	Arabic pre-2002 - basic
+arab	amedxp	arabic-basic-forward	Arabic - basic
+arabcb	gendxb	arabic-pre-2002-basic-back	Arabic pre-2002 - basic
+asmacp	gendxp	assamese-basic-with-nemeth-forward	Assamese - basic with Nemeth
+awaacp	gendxp	awadhi-basic-with-nemeth-forward	Awadhi - basic with Nemeth
+azeacb	gendxb	azerbaijani-basic-back	Azerbaijani - basic
+azeacp	gendxp	azerbaijani-basic-forward	Azerbaijani - basic
+bakacp	gendxp	bashkir-basic-forward	Bashkir - basic
+belacp	gendxp	belarusian-basic-forward	Belarusian - basic
+benacb	gendxb	assamese-basic-with-nemeth-back	Assamese - basic with Nemeth
+benacp	gendxp	bengali-indian-basic-with-nemeth-forward	Bengali (Indian) - basic with Nemeth
+benbcb	gendxb	bengali-bangladeshi-basic-back	Bengali (Bangladeshi) - basic
+benbcp	gendxp	bengali-bangladeshi-basic-forward	Bengali (Bangladeshi) - basic
+bgaaub	gendxb	bulgarian-basic-back	Bulgarian - basic
+bgaaup	gendxp	bulgarian-basic-forward	Bulgarian - basic
+bgcacp	gendxp	haryanvi-basic-with-nemeth-forward	Haryanvi - basic with Nemeth
+bhoacp	gendxp	bhojpuri-basic-with-nemeth-forward	Bhojpuri - basic with Nemeth
+boaacb	gendxb	tibetan-basic-back	Tibetan - basic
+boaacp	gendxp	tibetan-basic-forward	Tibetan - basic
+bosacp	gendxp	bosnian-basic-forward	Bosnian - basic
+briafc	gendxp	table-briafc-forward	
+britic	gendxp	table-britic-forward	
+catacb	gendxb	catalan-basic-back	Catalan - basic
+catacp	gendxp	catalan-basic-forward	Catalan - basic
+cebucb	gendxb	cebuano-basic-back	Cebuano - basic
+cebucp	gendxp	cebuano-basic-forward	Cebuano - basic
+chracp	gendxp	cherokee-basic-forward	Cherokee - basic
+chvacb	gendxb	bashkir-basic-back	Bashkir - basic
+chvacp	gendxp	chuvash-basic-forward	Chuvash - basic
+copyb	gendxp	table-copyb-forward	
+csaacb	gendxb	czech-basic-back	Czech - basic
+csaacp	gendxp	czech-basic-forward	Czech - basic
+ctgacp	gendxp	chittagonian-basic-forward	Chittagonian - basic
+cym0cp	enudxp	cymraeg-welsh-basic-cym0cp-forward	Cymraeg (Welsh) - basic
+cymla01	enudxp	cymraeg-welsh-basic-cymla01-forward	Cymraeg (Welsh) - basic
+cymla02	enudxp	cymraeg-welsh-basic-cymla02-forward	Cymraeg (Welsh) - basic
+cymla03	enudxp	cymraeg-welsh-basic-cymla03-forward	Cymraeg (Welsh) - basic
+cymla04	enudxp	cymraeg-welsh-basic-cymla04-forward	Cymraeg (Welsh) - basic
+cymla05	enudxp	cymraeg-welsh-basic-cymla05-forward	Cymraeg (Welsh) - basic
+cymrcb	gendxb	cymraeg-welsh-basic-back	Cymraeg (Welsh) - basic
+cymrcp	enudxp	cymraeg-welsh-basic-forward	Cymraeg (Welsh) - basic
+danocb	gendxb	danish-pre-2022-basic-back	Danish (Pre-2022) - basic
+danocp	amedxp	danish-pre-2022-basic-forward	Danish (Pre-2022) - basic
+danscb	gendxb	danish-basic-back	Danish - basic
+danscp	amedxp	danish-basic-forward	Danish - basic
+deutcb	gendxb	german-basic-back	German - basic
+deutcp	gendxp	german-basic-forward	German - basic
+dvaacp	amedxp	dhivehi-basic-forward	Dhivehi - basic
+dzaacb	gendxb	dzongkha-basic-back	Dzongkha - basic
+dzaacp	gendxp	dzongkha-basic-forward	Dzongkha - basic
+elcacb	gendxb	greek-classical-american-basic-back	Greek (Classical-American) - basic
+elcacp	gendxp	greek-classical-american-basic-forward	Greek (Classical-American) - basic
+elmocb	gendxb	greek-modern-basic-back	Greek (Modern) - basic
+elmocp	amedxp	greek-modern-basic-forward	Greek (Modern) - basic
+enaucb	gendxb	table-enaucb-back	
+enaucp	gendxp	table-enaucp-forward	
+enbfp01	enbdxp	english-british-pre-ueb-no-caps-in-literary-enbfp01-forward	English (British Pre-UEB) - no caps in literary
+enbfp04	enbdxp	english-british-pre-ueb-no-caps-in-literary-enbfp04-forward	English (British Pre-UEB) - no caps in literary
+enbfp05	enbdxp	english-british-pre-ueb-no-caps-in-literary-enbfp05-forward	English (British Pre-UEB) - no caps in literary
+enbfp06	enbdxp	english-british-pre-ueb-no-caps-in-literary-enbfp06-forward	English (British Pre-UEB) - no caps in literary
+enbfp07	enbdxp	english-british-pre-ueb-no-caps-in-literary-enbfp07-forward	English (British Pre-UEB) - no caps in literary
+enbfp08	enbdxp	english-british-pre-ueb-no-caps-in-literary-enbfp08-forward	English (British Pre-UEB) - no caps in literary
+enbfp09	enbdxp	english-british-pre-ueb-no-caps-in-literary-enbfp09-forward	English (British Pre-UEB) - no caps in literary
+enbfp10	enbdxp	english-british-pre-ueb-no-caps-in-literary-enbfp10-forward	English (British Pre-UEB) - no caps in literary
+enbfp11	enbdxp	english-british-pre-ueb-no-caps-in-literary-enbfp11-forward	English (British Pre-UEB) - no caps in literary
+enbfp12	enbdxp	english-british-pre-ueb-no-caps-in-literary-enbfp12-forward	English (British Pre-UEB) - no caps in literary
+enbfp13	enbdxp	english-british-pre-ueb-no-caps-in-literary-enbfp13-forward	English (British Pre-UEB) - no caps in literary
+enbfp14	enbdxp	english-british-pre-ueb-no-caps-in-literary-enbfp14-forward	English (British Pre-UEB) - no caps in literary
+enbfp15	enbdxp	english-british-pre-ueb-no-caps-in-literary-enbfp15-forward	English (British Pre-UEB) - no caps in literary
+enbfp16	enbdxp	english-british-pre-ueb-no-caps-in-literary-enbfp16-forward	English (British Pre-UEB) - no caps in literary
+enbfp17	enbdxp	english-british-pre-ueb-no-caps-in-literary-enbfp17-forward	English (British Pre-UEB) - no caps in literary
+enbfp18	enbdxp	english-british-pre-ueb-no-caps-in-literary-enbfp18-forward	English (British Pre-UEB) - no caps in literary
+enbrcb	engdxb	english-british-pre-ueb-no-caps-in-literary-back	English (British Pre-UEB) - no caps in literary
+enbrcp	enbdxp	english-british-pre-ueb-no-caps-in-literary-forward	English (British Pre-UEB) - no caps in literary
+enbtp01	enbdxp	english-british-pre-ueb-no-caps-in-literary-enbtp01-forward	English (British Pre-UEB) - no caps in literary
+enbtp02	enbdxp	english-british-pre-ueb-no-caps-in-literary-enbtp02-forward	English (British Pre-UEB) - no caps in literary
+enbtp03	enbdxp	english-british-pre-ueb-no-caps-in-literary-enbtp03-forward	English (British Pre-UEB) - no caps in literary
+enbtp04	enbdxp	english-british-pre-ueb-no-caps-in-literary-enbtp04-forward	English (British Pre-UEB) - no caps in literary
+enbtp05	enbdxp	english-british-pre-ueb-no-caps-in-literary-enbtp05-forward	English (British Pre-UEB) - no caps in literary
+enbtp06	enbdxp	english-british-pre-ueb-no-caps-in-literary-enbtp06-forward	English (British Pre-UEB) - no caps in literary
+enbtp07	enbdxp	english-british-pre-ueb-no-caps-in-literary-enbtp07-forward	English (British Pre-UEB) - no caps in literary
+enbtp08	enbdxp	english-british-pre-ueb-no-caps-in-literary-enbtp08-forward	English (British Pre-UEB) - no caps in literary
+enbtp09	enbdxp	english-british-pre-ueb-no-caps-in-literary-enbtp09-forward	English (British Pre-UEB) - no caps in literary
+enbtp10	enbdxp	english-british-pre-ueb-no-caps-in-literary-enbtp10-forward	English (British Pre-UEB) - no caps in literary
+enbtp11	enbdxp	english-british-pre-ueb-no-caps-in-literary-enbtp11-forward	English (British Pre-UEB) - no caps in literary
+enbtp12	enbdxp	english-british-pre-ueb-no-caps-in-literary-enbtp12-forward	English (British Pre-UEB) - no caps in literary
+engbe04	gendxp	table-engbe04-forward	
+engbe05	gendxp	table-engbe05-forward	
+engbe06	gendxp	table-engbe06-forward	
+engbe07	gendxp	table-engbe07-forward	
+engbe08	gendxp	table-engbe08-forward	
+engbe09	gendxp	table-engbe09-forward	
+engbe10	gendxp	table-engbe10-forward	
+engbe11	gendxp	table-engbe11-forward	
+engbe12	gendxp	table-engbe12-forward	
+engbe13	gendxp	table-engbe13-forward	
+engbe14	gendxp	table-engbe14-forward	
+engbpc	gendxb	table-engbpc-back	
+engun11	gendxp	table-engun11-forward	
+engun13	gendxp	table-engun13-forward	
+engun15	gendxp	table-engun15-forward	
+engun17	gendxp	table-engun17-forward	
+engun18	gendxp	table-engun18-forward	
+engun19	gendxp	table-engun19-forward	
+engun1a	gendxp	table-engun1a-forward	
+engun21	gendxp	table-engun21-forward	
+engun22	gendxp	table-engun22-forward	
+engun23	gendxp	table-engun23-forward	
+engun24	gendxp	table-engun24-forward	
+engun25	gendxp	table-engun25-forward	
+engun26	gendxp	table-engun26-forward	
+engun27	gendxp	table-engun27-forward	
+engun29	gendxp	table-engun29-forward	
+engun2a	gendxp	table-engun2a-forward	
+engun31	gendxp	table-engun31-forward	
+engun32	gendxp	table-engun32-forward	
+engun33	gendxp	table-engun33-forward	
+engun34	gendxp	table-engun34-forward	
+engun37	gendxp	table-engun37-forward	
+engun38	gendxp	table-engun38-forward	
+engun39	gendxp	table-engun39-forward	
+engun41	gendxp	table-engun41-forward	
+engun42	gendxp	table-engun42-forward	
+engun43	gendxp	table-engun43-forward	
+engun44	gendxp	table-engun44-forward	
+engun45	gendxp	table-engun45-forward	
+engun46	gendxp	table-engun46-forward	
+engun47	gendxp	table-engun47-forward	
+engun48	gendxp	table-engun48-forward	
+engun49	gendxp	table-engun49-forward	
+engun4a	gendxp	table-engun4a-forward	
+engun51	gendxp	table-engun51-forward	
+engun52	gendxp	table-engun52-forward	
+engun53	gendxp	table-engun53-forward	
+engus11	gendxp	table-engus11-forward	
+engus12	gendxp	table-engus12-forward	
+engus13	gendxp	table-engus13-forward	
+engus14	gendxp	table-engus14-forward	
+engus21	gendxp	table-engus21-forward	
+engus22	gendxp	table-engus22-forward	
+engus23	gendxp	table-engus23-forward	
+engus24	gendxp	table-engus24-forward	
+engus25	gendxp	table-engus25-forward	
+engus31	gendxp	table-engus31-forward	
+engus32	gendxp	table-engus32-forward	
+engus33	gendxp	table-engus33-forward	
+engus34	gendxp	table-engus34-forward	
+enmocb	engdxb	english-moon-basic-back	English Moon - basic
+enmocp	gendxp	english-moon-basic-forward	English Moon - basic
+enube04	enudxp	english-ueb-australian-formatting-enube04-forward	English (UEB) - Australian formatting
+enube05	enudxp	english-ueb-australian-formatting-enube05-forward	English (UEB) - Australian formatting
+enube06	enudxp	english-ueb-australian-formatting-enube06-forward	English (UEB) - Australian formatting
+enube07	enudxp	english-ueb-australian-formatting-enube07-forward	English (UEB) - Australian formatting
+enube08	enudxp	english-ueb-australian-formatting-enube08-forward	English (UEB) - Australian formatting
+enube09	enudxp	english-ueb-australian-formatting-enube09-forward	English (UEB) - Australian formatting
+enube10	enudxp	english-ueb-australian-formatting-enube10-forward	English (UEB) - Australian formatting
+enube11	enudxp	english-ueb-australian-formatting-enube11-forward	English (UEB) - Australian formatting
+enube12	enudxp	english-ueb-australian-formatting-enube12-forward	English (UEB) - Australian formatting
+enube13	enudxp	english-ueb-australian-formatting-enube13-forward	English (UEB) - Australian formatting
+enube14	enudxp	english-ueb-australian-formatting-enube14-forward	English (UEB) - Australian formatting
+enufp01	enudxp	english-ueb-australian-formatting-enufp01-forward	English (UEB) - Australian formatting
+enufp04	enudxp	english-ueb-australian-formatting-enufp04-forward	English (UEB) - Australian formatting
+enufp05	enudxp	english-ueb-australian-formatting-enufp05-forward	English (UEB) - Australian formatting
+enufp06	enudxp	english-ueb-australian-formatting-enufp06-forward	English (UEB) - Australian formatting
+enufp07	enudxp	english-ueb-australian-formatting-enufp07-forward	English (UEB) - Australian formatting
+enufp08	enudxp	english-ueb-australian-formatting-enufp08-forward	English (UEB) - Australian formatting
+enufp09	enudxp	english-ueb-australian-formatting-enufp09-forward	English (UEB) - Australian formatting
+enufp10	enudxp	english-ueb-australian-formatting-enufp10-forward	English (UEB) - Australian formatting
+enufp11	enudxp	english-ueb-australian-formatting-enufp11-forward	English (UEB) - Australian formatting
+enufp12	enudxp	english-ueb-australian-formatting-enufp12-forward	English (UEB) - Australian formatting
+enufp13	enudxp	english-ueb-australian-formatting-enufp13-forward	English (UEB) - Australian formatting
+enufp14	enudxp	english-ueb-australian-formatting-enufp14-forward	English (UEB) - Australian formatting
+enufp15	enudxp	english-ueb-australian-formatting-enufp15-forward	English (UEB) - Australian formatting
+enufp16	enudxp	english-ueb-australian-formatting-enufp16-forward	English (UEB) - Australian formatting
+enufp17	enudxp	english-ueb-australian-formatting-enufp17-forward	English (UEB) - Australian formatting
+enufp18	enudxp	english-ueb-australian-formatting-enufp18-forward	English (UEB) - Australian formatting
+enul0402	enudxp	english-ueb-australian-formatting-enul0402-forward	English (UEB) - Australian formatting
+enul0403	enudxp	english-ueb-australian-formatting-enul0403-forward	English (UEB) - Australian formatting
+enul0501	enudxp	english-ueb-australian-formatting-enul0501-forward	English (UEB) - Australian formatting
+enul0503	enudxp	english-ueb-australian-formatting-enul0503-forward	English (UEB) - Australian formatting
+enul0601	enudxp	english-ueb-australian-formatting-enul0601-forward	English (UEB) - Australian formatting
+enul0702	enudxp	english-ueb-australian-formatting-enul0702-forward	English (UEB) - Australian formatting
+enul0703	enudxp	english-ueb-australian-formatting-enul0703-forward	English (UEB) - Australian formatting
+enul0704	enudxp	english-ueb-australian-formatting-enul0704-forward	English (UEB) - Australian formatting
+enul0705	enudxp	english-ueb-australian-formatting-enul0705-forward	English (UEB) - Australian formatting
+enul0707	enudxp	english-ueb-australian-formatting-enul0707-forward	English (UEB) - Australian formatting
+enul0710	enudxp	english-ueb-australian-formatting-enul0710-forward	English (UEB) - Australian formatting
+enul0801	enudxp	english-ueb-australian-formatting-enul0801-forward	English (UEB) - Australian formatting
+enul0802	enudxp	english-ueb-australian-formatting-enul0802-forward	English (UEB) - Australian formatting
+enul0901	enudxp	english-ueb-australian-formatting-enul0901-forward	English (UEB) - Australian formatting
+enul0903	enudxp	english-ueb-australian-formatting-enul0903-forward	English (UEB) - Australian formatting
+enul1001	enudxp	english-ueb-australian-formatting-enul1001-forward	English (UEB) - Australian formatting
+enul1003	enudxp	english-ueb-australian-formatting-enul1003-forward	English (UEB) - Australian formatting
+enumaa	enudxp	english-ueb-australian-formatting-enumaa-forward	English (UEB) - Australian formatting
+enumab	enudxp	english-ueb-australian-formatting-enumab-forward	English (UEB) - Australian formatting
+enumac	enudxp	english-ueb-australian-formatting-enumac-forward	English (UEB) - Australian formatting
+enumad	enudxp	english-ueb-australian-formatting-enumad-forward	English (UEB) - Australian formatting
+enumae	enudxp	english-ueb-australian-formatting-enumae-forward	English (UEB) - Australian formatting
+enumaf	enudxp	english-ueb-australian-formatting-enumaf-forward	English (UEB) - Australian formatting
+enumag	enudxp	english-ueb-australian-formatting-enumag-forward	English (UEB) - Australian formatting
+enumah	enudxp	english-ueb-australian-formatting-enumah-forward	English (UEB) - Australian formatting
+enumai	enudxp	english-ueb-australian-formatting-enumai-forward	English (UEB) - Australian formatting
+enumba	enudxp	english-ueb-australian-formatting-enumba-forward	English (UEB) - Australian formatting
+enumbb	enudxp	english-ueb-australian-formatting-enumbb-forward	English (UEB) - Australian formatting
+enumbc	enudxp	english-ueb-australian-formatting-enumbc-forward	English (UEB) - Australian formatting
+enumbd	enudxp	english-ueb-australian-formatting-enumbd-forward	English (UEB) - Australian formatting
+enumbe	enudxp	english-ueb-australian-formatting-enumbe-forward	English (UEB) - Australian formatting
+enumbf	enudxp	english-ueb-australian-formatting-enumbf-forward	English (UEB) - Australian formatting
+enumbg	enudxp	english-ueb-australian-formatting-enumbg-forward	English (UEB) - Australian formatting
+enumbh	enudxp	english-ueb-australian-formatting-enumbh-forward	English (UEB) - Australian formatting
+enumbi	enudxp	english-ueb-australian-formatting-enumbi-forward	English (UEB) - Australian formatting
+enumbj	enudxp	english-ueb-australian-formatting-enumbj-forward	English (UEB) - Australian formatting
+enumca	enudxp	english-ueb-australian-formatting-enumca-forward	English (UEB) - Australian formatting
+enumcb	enudxp	english-ueb-australian-formatting-enumcb-forward	English (UEB) - Australian formatting
+enumcc	enudxp	english-ueb-australian-formatting-enumcc-forward	English (UEB) - Australian formatting
+enumcd	enudxp	english-ueb-australian-formatting-enumcd-forward	English (UEB) - Australian formatting
+enumce	enudxp	english-ueb-australian-formatting-enumce-forward	English (UEB) - Australian formatting
+enumcf	enudxp	english-ueb-australian-formatting-enumcf-forward	English (UEB) - Australian formatting
+enumcg	enudxp	english-ueb-australian-formatting-enumcg-forward	English (UEB) - Australian formatting
+enumch	enudxp	english-ueb-australian-formatting-enumch-forward	English (UEB) - Australian formatting
+enumci	enudxp	english-ueb-australian-formatting-enumci-forward	English (UEB) - Australian formatting
+enumcj	enudxp	english-ueb-australian-formatting-enumcj-forward	English (UEB) - Australian formatting
+enumck	enudxp	english-ueb-australian-formatting-enumck-forward	English (UEB) - Australian formatting
+enumcl	enudxp	english-ueb-australian-formatting-enumcl-forward	English (UEB) - Australian formatting
+enumcm	enudxp	english-ueb-australian-formatting-enumcm-forward	English (UEB) - Australian formatting
+enumcn	enudxp	english-ueb-australian-formatting-enumcn-forward	English (UEB) - Australian formatting
+enumco	enudxp	english-ueb-australian-formatting-enumco-forward	English (UEB) - Australian formatting
+enumcp	enudxp	english-ueb-australian-formatting-enumcp-forward	English (UEB) - Australian formatting
+enumda	enudxp	english-ueb-australian-formatting-enumda-forward	English (UEB) - Australian formatting
+enumdb	enudxp	english-ueb-australian-formatting-enumdb-forward	English (UEB) - Australian formatting
+enumdc	enudxp	english-ueb-australian-formatting-enumdc-forward	English (UEB) - Australian formatting
+enumdd	enudxp	english-ueb-australian-formatting-enumdd-forward	English (UEB) - Australian formatting
+enumde	enudxp	english-ueb-australian-formatting-enumde-forward	English (UEB) - Australian formatting
+enumdf	enudxp	english-ueb-australian-formatting-enumdf-forward	English (UEB) - Australian formatting
+enumdg	enudxp	english-ueb-australian-formatting-enumdg-forward	English (UEB) - Australian formatting
+enumdh	enudxp	english-ueb-australian-formatting-enumdh-forward	English (UEB) - Australian formatting
+enumdi	enudxp	english-ueb-australian-formatting-enumdi-forward	English (UEB) - Australian formatting
+enumdj	enudxp	english-ueb-australian-formatting-enumdj-forward	English (UEB) - Australian formatting
+enumdk	enudxp	english-ueb-australian-formatting-enumdk-forward	English (UEB) - Australian formatting
+enumdl	enudxp	english-ueb-australian-formatting-enumdl-forward	English (UEB) - Australian formatting
+enumea	enudxp	english-ueb-australian-formatting-enumea-forward	English (UEB) - Australian formatting
+enumeb	enudxp	english-ueb-australian-formatting-enumeb-forward	English (UEB) - Australian formatting
+enumec	enudxp	english-ueb-australian-formatting-enumec-forward	English (UEB) - Australian formatting
+enumed	enudxp	english-ueb-australian-formatting-enumed-forward	English (UEB) - Australian formatting
+enumee	enudxp	english-ueb-australian-formatting-enumee-forward	English (UEB) - Australian formatting
+enumef	enudxp	english-ueb-australian-formatting-enumef-forward	English (UEB) - Australian formatting
+enumeg	enudxp	english-ueb-australian-formatting-enumeg-forward	English (UEB) - Australian formatting
+enumeh	enudxp	english-ueb-australian-formatting-enumeh-forward	English (UEB) - Australian formatting
+enumei	enudxp	english-ueb-australian-formatting-enumei-forward	English (UEB) - Australian formatting
+enumej	enudxp	english-ueb-australian-formatting-enumej-forward	English (UEB) - Australian formatting
+enumek	enudxp	english-ueb-australian-formatting-enumek-forward	English (UEB) - Australian formatting
+enumel	enudxp	english-ueb-australian-formatting-enumel-forward	English (UEB) - Australian formatting
+enumem	enudxp	english-ueb-australian-formatting-enumem-forward	English (UEB) - Australian formatting
+enumen	enudxp	english-ueb-australian-formatting-enumen-forward	English (UEB) - Australian formatting
+enumeo	enudxp	english-ueb-australian-formatting-enumeo-forward	English (UEB) - Australian formatting
+enuncb	gendxb	en-ueb-g2-back	English (UEB) - Australian formatting
+enuncp	enudxp	en-ueb-g2-forward	English (UEB) - Australian formatting
+enutp00	enudxp	english-ueb-australian-formatting-enutp00-forward	English (UEB) - Australian formatting
+enutp01	enudxp	english-ueb-australian-formatting-enutp01-forward	English (UEB) - Australian formatting
+enutp02	enudxp	english-ueb-australian-formatting-enutp02-forward	English (UEB) - Australian formatting
+enutp03	enudxp	english-ueb-australian-formatting-enutp03-forward	English (UEB) - Australian formatting
+enutp04	enudxp	english-ueb-australian-formatting-enutp04-forward	English (UEB) - Australian formatting
+enutp05	enudxp	english-ueb-australian-formatting-enutp05-forward	English (UEB) - Australian formatting
+enutp06	enudxp	english-ueb-australian-formatting-enutp06-forward	English (UEB) - Australian formatting
+enutp07	enudxp	english-ueb-australian-formatting-enutp07-forward	English (UEB) - Australian formatting
+enutp08	enudxp	english-ueb-australian-formatting-enutp08-forward	English (UEB) - Australian formatting
+enutp09	enudxp	english-ueb-australian-formatting-enutp09-forward	English (UEB) - Australian formatting
+enutp10	enudxp	english-ueb-australian-formatting-enutp10-forward	English (UEB) - Australian formatting
+enutp11	enudxp	english-ueb-australian-formatting-enutp11-forward	English (UEB) - Australian formatting
+enutp12	enudxp	english-ueb-australian-formatting-enutp12-forward	English (UEB) - Australian formatting
+enuts01	enudxp	english-ueb-australian-formatting-enuts01-forward	English (UEB) - Australian formatting
+enuts03	enudxp	english-ueb-australian-formatting-enuts03-forward	English (UEB) - Australian formatting
+enuts07	enudxp	english-ueb-australian-formatting-enuts07-forward	English (UEB) - Australian formatting
+enuts08	enudxp	english-ueb-australian-formatting-enuts08-forward	English (UEB) - Australian formatting
+enuts09	enudxp	english-ueb-australian-formatting-enuts09-forward	English (UEB) - Australian formatting
+enuts10	enudxp	english-ueb-australian-formatting-enuts10-forward	English (UEB) - Australian formatting
+enuts11	enudxp	english-ueb-australian-formatting-enuts11-forward	English (UEB) - Australian formatting
+enuts12	enudxp	english-ueb-australian-formatting-enuts12-forward	English (UEB) - Australian formatting
+enuts13	enudxp	english-ueb-australian-formatting-enuts13-forward	English (UEB) - Australian formatting
+enuts14	enudxp	english-ueb-australian-formatting-enuts14-forward	English (UEB) - Australian formatting
+enuts15	enudxp	english-ueb-australian-formatting-enuts15-forward	English (UEB) - Australian formatting
+enuts17	enudxp	english-ueb-australian-formatting-enuts17-forward	English (UEB) - Australian formatting
+enuts18	enudxp	english-ueb-australian-formatting-enuts18-forward	English (UEB) - Australian formatting
+enuts19	enudxp	english-ueb-australian-formatting-enuts19-forward	English (UEB) - Australian formatting
+enuts20	enudxp	english-ueb-australian-formatting-enuts20-forward	English (UEB) - Australian formatting
+enuts22	enudxp	english-ueb-australian-formatting-enuts22-forward	English (UEB) - Australian formatting
+enuts24	enudxp	english-ueb-australian-formatting-enuts24-forward	English (UEB) - Australian formatting
+enuts25	enudxp	english-ueb-australian-formatting-enuts25-forward	English (UEB) - Australian formatting
+enuts26	enudxp	english-ueb-australian-formatting-enuts26-forward	English (UEB) - Australian formatting
+enuts28	enudxp	english-ueb-australian-formatting-enuts28-forward	English (UEB) - Australian formatting
+enuts29	enudxp	english-ueb-australian-formatting-enuts29-forward	English (UEB) - Australian formatting
+enuts30	enudxp	english-ueb-australian-formatting-enuts30-forward	English (UEB) - Australian formatting
+enuts31	enudxp	english-ueb-australian-formatting-enuts31-forward	English (UEB) - Australian formatting
+enuts32	enudxp	english-ueb-australian-formatting-enuts32-forward	English (UEB) - Australian formatting
+enuts33	enudxp	english-ueb-australian-formatting-enuts33-forward	English (UEB) - Australian formatting
+enuts34	enudxp	english-ueb-australian-formatting-enuts34-forward	English (UEB) - Australian formatting
+enuts35	enudxp	english-ueb-australian-formatting-enuts35-forward	English (UEB) - Australian formatting
+enuts36	enudxp	english-ueb-australian-formatting-enuts36-forward	English (UEB) - Australian formatting
+enuts38	enudxp	english-ueb-australian-formatting-enuts38-forward	English (UEB) - Australian formatting
+enuts39	enudxp	english-ueb-australian-formatting-enuts39-forward	English (UEB) - Australian formatting
+enuts40	enudxp	english-ueb-australian-formatting-enuts40-forward	English (UEB) - Australian formatting
+enuts41	enudxp	english-ueb-australian-formatting-enuts41-forward	English (UEB) - Australian formatting
+enuts42	enudxp	english-ueb-australian-formatting-enuts42-forward	English (UEB) - Australian formatting
+enuts43	enudxp	english-ueb-australian-formatting-enuts43-forward	English (UEB) - Australian formatting
+enuts44	enudxp	english-ueb-australian-formatting-enuts44-forward	English (UEB) - Australian formatting
+enuts45	enudxp	english-ueb-australian-formatting-enuts45-forward	English (UEB) - Australian formatting
+enuts46	enudxp	english-ueb-australian-formatting-enuts46-forward	English (UEB) - Australian formatting
+enuts48	enudxp	english-ueb-australian-formatting-enuts48-forward	English (UEB) - Australian formatting
+enuts49	enudxp	english-ueb-australian-formatting-enuts49-forward	English (UEB) - Australian formatting
+enuts50	enudxp	english-ueb-australian-formatting-enuts50-forward	English (UEB) - Australian formatting
+enuts51	enudxp	english-ueb-australian-formatting-enuts51-forward	English (UEB) - Australian formatting
+enuts52	enudxp	english-ueb-australian-formatting-enuts52-forward	English (UEB) - Australian formatting
+enuts53	enudxp	english-ueb-australian-formatting-enuts53-forward	English (UEB) - Australian formatting
+eoaacb	gendxb	esperanto-basic-back	Esperanto - basic
+eoaacp	eoaacp	esperanto-basic-forward	Esperanto - basic
+etaacb	gendxb	estonian-basic-back	Estonian - basic
+etaacp	gendxp	estonian-basic-forward	Estonian - basic
+eusacb	gendxb	basque-basic-back	Basque - basic
+eusacp	enudxp	basque-basic-forward	Basque - basic
+eweacb	gendxb	ewe-basic-back	Ewe - basic
+eweacp	gendxp	ewe-basic-forward	Ewe - basic
+faoacb	gendxb	faroese-basic-back	Faroese - basic
+faoacp	enudxp	faroese-basic-forward	Faroese - basic
+farscb	gendxb	farsi-persian-basic-back	Farsi (Persian) - basic
+farscp	amedxp	farsi-persian-basic-forward	Farsi (Persian) - basic
+finnub	gendxb	finnish-basic-back	Finnish - basic
+finnup	gendxp	finnish-basic-forward	Finnish - basic
+frabp	gendxb	table-frabp-back	
+franc	gendxp	table-franc-forward	
+fruncb	gendxb	francais-2006-abrege-back	Francais 2006 - abrege
+fruncp	frudxp	francais-2006-abrege-forward	Francais 2006 - abrege
+fulacb	gendxb	fulah-fula-basic-back	Fulah (Fula) - basic
+fulacp	enudxp	fulah-fula-basic-forward	Fulah (Fula) - basic
+gae0cp	enudxp	irish-gae0cp-forward	Irish
+gaelcb	gendxb	irish-back	Irish
+gaelcp	enudxp	irish-forward	Irish
+glgacb	gendxb	galician-basic-back	Galician - basic
+glgacp	enudxp	galician-basic-forward	Galician - basic
+grnacb	gendxb	guarani-basic-back	Guarani - basic
+grnacp	enudxp	guarani-basic-forward	Guarani - basic
+gujacb	gendxb	gujarati-basic-with-nemeth-back	Gujarati - basic with Nemeth
+gujacp	gendxp	gujarati-basic-with-nemeth-forward	Gujarati - basic with Nemeth
+hauscb	gendxb	hausa-basic-back	Hausa - basic
+hauscp	gendxp	hausa-basic-forward	Hausa - basic
+heamub	gendxb	table-heamub-back	
+heamup	enudxp	hebrew-american-basic-forward	Hebrew (American) - basic
+heisub	gendxb	hebrew-israeli-basic-back	Hebrew (Israeli) - basic
+heisup	heidxp	hebrew-israeli-basic-forward	Hebrew (Israeli) - basic
+hilacp	gendxp	hiligaynon-basic-forward	Hiligaynon - basic
+hinacb	gendxb	awadhi-basic-with-nemeth-back	Awadhi - basic with Nemeth
+hinacp	gendxp	hindi-basic-with-nemeth-forward	Hindi - basic with Nemeth
+hraacb	gendxb	croatian-basic-back	Croatian - basic
+hraacp	gendxp	croatian-basic-forward	Croatian - basic
+huaacb	gendxb	hungarian-basic-back	Hungarian - basic
+huaacp	gendxp	hungarian-basic-forward	Hungarian - basic
+hyaacb	gendxb	armenian-eastern-basic-back	Armenian (Eastern) - basic
+hyaacp	gendxp	armenian-eastern-basic-forward	Armenian (Eastern) - basic
+ibaacb	gendxb	igbo-basic-back	Igbo - basic
+ibaacp	spadxp	igbo-basic-forward	Igbo - basic
+idaacb	gendxb	indonesian-basic-back	Indonesian - basic
+idaacp	idndxp	indonesian-basic-forward	Indonesian - basic
+iloacp	gendxp	iloko-ilokano-basic-forward	Iloko (Ilokano) - basic
+inhacb	gendxb	ingush-basic-back	Ingush - basic
+inhacp	enudxp	ingush-basic-forward	Ingush - basic
+isaacb	gendxb	icelandic-basic-back	Icelandic - basic
+isaacp	gendxp	icelandic-basic-forward	Icelandic - basic
+italub	gendxb	italiano-back	Italiano
+italup	gendxp	italiano-forward	Italiano
+jakncb	gendxb	japanese-kana-basic-back	Japanese (Kana) - basic
+jakncp	gendxp	japanese-kana-basic-forward	Japanese (Kana) - basic
+javacb	gendxb	javanese-basic-back	Javanese - basic
+javacp	gendxp	javanese-basic-forward	Javanese - basic
+kaaacb	gendxb	georgian-basic-back	Georgian - basic
+kaaacp	gendxp	georgian-basic-forward	Georgian - basic
+kalacb	gendxb	greenlandic-kalaallisut-basic-back	Greenlandic (Kalaallisut) - basic
+kalacp	enudxp	greenlandic-kalaallisut-basic-forward	Greenlandic (Kalaallisut) - basic
+kanacb	gendxb	kannada-basic-with-nemeth-back	Kannada - basic with Nemeth
+kanacp	gendxp	kannada-basic-with-nemeth-forward	Kannada - basic with Nemeth
+kckacb	gendxb	kalanga-basic-back	Kalanga - basic
+kckacp	enudxp	kalanga-basic-forward	Kalanga - basic
+kinacb	gendxb	kinyarwanda-basic-back	Kinyarwanda - basic
+kinacp	enudxp	kinyarwanda-basic-forward	Kinyarwanda - basic
+kiracb	gendxb	kirghiz-basic-back	Kirghiz - basic
+kiracp	gendxp	kirghiz-basic-forward	Kirghiz - basic
+kjhacb	gendxb	khakas-basic-back	Khakas - basic
+kjhacp	gendxp	khakas-basic-forward	Khakas - basic
+kkaacb	gendxb	kazakh-basic-back	Kazakh - basic
+kkaacp	gendxp	kazakh-basic-forward	Kazakh - basic
+kmaacb	gendxb	khmer-basic-back	Khmer - basic
+kmaacp	amedxp	khmer-basic-forward	Khmer - basic
+konacb	gendxb	kongo-kikongo-basic-back	Kongo (Kikongo) - basic
+konacp	enudxp	kongo-kikongo-basic-forward	Kongo (Kikongo) - basic
+korecb	gendxb	korean-basic-back	Korean - basic
+korecp	gendxp	korean-basic-forward	Korean - basic
+kruacp	gendxp	kurukh-basic-forward	Kurukh - basic
+ktuacb	gendxb	kituba-basic-back	Kituba - basic
+ktuacp	enudxp	kituba-basic-forward	Kituba - basic
+kuracb	gendxb	kurdish-basic-back	Kurdish - basic
+kuracp	enudxp	kurdish-basic-forward	Kurdish - basic
+lajacb	gendxb	lango-leb-lango-basic-back	Lango (Leb-Lango) - basic
+lajacp	enudxp	lango-leb-lango-basic-forward	Lango (Leb-Lango) - basic
+latiub	gendxb	latin-basic-back	Latin - basic
+latiup	gendxp	latin-basic-forward	Latin - basic
+lisucb	gendxb	lisu-basic-back	Lisu - basic
+lisucp	enudxp	lisu-basic-forward	Lisu - basic
+loaacb	gendxb	lao-basic-with-nemeth-back	Lao - basic with Nemeth
+loaacp	gendxp	lao-basic-with-nemeth-forward	Lao - basic with Nemeth
+ltaacb	gendxb	lithuanian-basic-back	Lithuanian - basic
+ltaacp	gendxp	lithuanian-basic-forward	Lithuanian - basic
+ltzacb	gendxb	luxembourgish-basic-back	Luxembourgish - basic
+ltzacp	gendxp	luxembourgish-basic-forward	Luxembourgish - basic
+luaacb	gendxb	luba-kasai-luba-lulua-basic-back	Luba-Kasai (Luba-Lulua) - basic
+luaacp	enudxp	luba-kasai-luba-lulua-basic-forward	Luba-Kasai (Luba-Lulua) - basic
+lvaacb	gendxb	latvian-basic-back	Latvian - basic
+lvaacp	gendxp	latvian-basic-forward	Latvian - basic
+madacb	gendxb	madurese-basic-back	Madurese - basic
+madacp	enudxp	madurese-basic-forward	Madurese - basic
+magacp	gendxp	magahi-basic-with-nemeth-forward	Magahi - basic with Nemeth
+maiacp	gendxp	maithili-basic-with-nemeth-forward	Maithili - basic with Nemeth
+malacb	gendxb	malayalam-basic-with-nemeth-back	Malayalam - basic with Nemeth
+malacp	gendxp	malayalam-basic-with-nemeth-forward	Malayalam - basic with Nemeth
+maracp	gendxp	marathi-basic-with-nemeth-forward	Marathi - basic with Nemeth
+micacb	gendxb	mi-kmaq-basic-back	Mi'kmaq - basic
+micacp	enudxp	mi-kmaq-basic-forward	Mi'kmaq - basic
+mkdacb	gendxb	macedonian-basic-back	Macedonian - basic
+mkdacp	gendxp	macedonian-basic-forward	Macedonian - basic
+mlgacb	gendxb	malagasy-basic-back	Malagasy - basic
+mlgacp	enudxp	malagasy-basic-forward	Malagasy - basic
+mnaacb	gendxb	mongolian-basic-back	Mongolian - basic
+mnaacp	gendxp	mongolian-basic-forward	Mongolian - basic
+mniacp	gendxp	meitei-manipuri-basic-with-nemeth-forward	Meitei (Manipuri) - basic with Nemeth
+msaacb	gendxb	malay-basic-back	Malay - basic
+msaacp	mlydxp	malay-basic-forward	Malay - basic
+mtaacb	gendxb	maltese-basic-back	Maltese - basic
+mtaacp	gendxp	maltese-basic-forward	Maltese - basic
+myaacb	gendxb	burmese-basic-back	Burmese - basic
+myaacp	gendxp	burmese-basic-forward	Burmese - basic
+navacp	gendxp	navajo-basic-forward	Navajo - basic
+nblucb	gendxb	ndebele-basic-back	Ndebele - basic
+nblucp	enudxp	ndebele-basic-forward	Ndebele - basic
+nepacp	gendxp	nepali-basic-forward	Nepali - basic
+nlaacb	gendxb	dutch-basic-back	Dutch - basic
+nlaacp	nladxp	dutch-basic-forward	Dutch - basic
+norscb	gendxb	norse-back	Norse
+norscp	amedxp	norse-forward	Norse
+nyaacb	gendxb	nyanja-chewa-basic-back	Nyanja (Chewa) - basic
+nyaacp	enudxp	nyanja-chewa-basic-forward	Nyanja (Chewa) - basic
+oriacb	gendxb	oriya-basic-with-nemeth-back	Oriya - basic with Nemeth
+oriacp	gendxp	oriya-basic-with-nemeth-forward	Oriya - basic with Nemeth
+ormacb	gendxb	oromo-basic-back	Oromo - basic
+ormacp	enudxp	oromo-basic-forward	Oromo - basic
+panacb	gendxb	panjabi-basic-with-nemeth-back	Panjabi - basic with Nemeth
+panacp	gendxp	panjabi-basic-with-nemeth-forward	Panjabi - basic with Nemeth
+pionier	gendxp	table-pionier-forward	
+plaacb	gendxb	polish-basic-back	Polish - basic
+plaacp	amedxp	polish-basic-forward	Polish - basic
+prsacp	amedxp	dari-basic-forward	Dari - basic
+ptbrcb	gendxb	portuguese-uncontracted-basic-back	Portuguese Uncontracted - basic
+ptbrcp	amedxp	portuguese-uncontracted-basic-forward	Portuguese Uncontracted - basic
+pusacp	amedxp	pushto-basic-forward	Pushto - basic
+qafwcb	gendxb	table-qafwcb-back	
+qafwcp	enudxp	west-african-languages-basic-forward	West African Languages - basic
+qakkcp	enudxp	semitic-language-transcription-basic-forward	Semitic language transcription - basic
+qarmcb	gendxb	table-qarmcb-back	
+qarmcp	gendxp	table-qarmcp-forward	
+qbibcb	gendxb	hebrew-american-basic-back	Hebrew (American) - basic
+qbibcp	enudxp	biblical-original-language-studies-basic-forward	Biblical original language studies - basic
+qcyrub	gendxb	table-qcyrub-back	
+qdemcb	gendxb	table-qdemcb-back	
+qdemcp	gendxp	table-qdemcp-forward	
+qhmacb	gendxb	hmong-rpa-basic-back	Hmong (RPA) - basic
+qhmacp	enudxp	hmong-rpa-basic-forward	Hmong (RPA) - basic
+qhyacb	gendxb	armenian-western-basic-back	Armenian (Western) - basic
+qhyacp	gendxp	armenian-western-basic-forward	Armenian (Western) - basic
+qindub	gendxb	table-qindub-back	
+qipacb	gendxb	ipa-basic-back	IPA - basic
+qipacp	ipadxp	ipa-basic-forward	IPA - basic
+qlaecb	gendxb	latin-script-english-like-uncontracted-basic-back	Latin Script (English-like) Uncontracted - basic
+qlaecp	enudxp	latin-script-english-like-uncontracted-basic-forward	Latin Script (English-like) Uncontracted - basic
+qmtncb	gebdxb	math-notation-nemeth-1972-math-mode-only-basic-back	Math notation (Nemeth 1972 math mode only) - Basic
+qmtncp	amedxp	math-notation-nemeth-1972-math-mode-only-basic-forward	Math notation (Nemeth 1972 math mode only) - Basic
+qngucb	gendxb	nguni-xhosa-or-zulu-basic-back	Nguni (Xhosa or Zulu) - basic
+qngucp	enudxp	nguni-xhosa-or-zulu-basic-forward	Nguni (Xhosa or Zulu) - basic
+qqdisu	gendxp	table-qqdisu-forward	
+qqphcb	qqphcb	ebu-pharmaceutical-back	EBU Pharmaceutical
+qqphcp	qqphcp	ebu-pharmaceutical-forward	EBU Pharmaceutical
+qrumcb	gendxb	table-qrumcb-back	
+qrumcp	gendxp	table-qrumcp-forward	
+qspmcb	gendxb	table-qspmcb-back	
+qspmcp	gendxp	table-qspmcp-forward	
+queacb	gendxb	quechua-basic-back	Quechua - basic
+queacp	enudxp	quechua-basic-forward	Quechua - basic
+quebec	enudxp	quechua-basic-quebec-forward	Quechua - basic
+romacb	gendxb	romanian-basic-back	Romanian - basic
+romacp	fradxp	romanian-basic-forward	Romanian - basic
+runacb	gendxb	rundi-kurundi-basic-back	Rundi (Kurundi) - basic
+runacp	enudxp	rundi-kurundi-basic-forward	Rundi (Kurundi) - basic
+russub	gendxb	russian-basic-back	Russian - basic
+russup	gendxp	russian-basic-forward	Russian - basic
+sanacp	gendxp	sanskrit-basic-with-nemeth-forward	Sanskrit - basic with Nemeth
+satacp	gendxp	santali-basic-with-nemeth-forward	Santali - basic with Nemeth
+sckacp	gendxp	sadri-basic-with-nemeth-forward	Sadri - basic with Nemeth
+sinacb	gendxb	sinhala-basic-with-nemeth-back	Sinhala - basic with Nemeth
+sinacp	gendxp	sinhala-basic-with-nemeth-forward	Sinhala - basic with Nemeth
+skaacb	gendxb	slovak-basic-back	Slovak - basic
+skaacp	gendxp	slovak-basic-forward	Slovak - basic
+slvacb	gendxb	slovenian-basic-back	Slovenian - basic
+slvacp	slvdxp	slovenian-basic-forward	Slovenian - basic
+snaacb	gendxb	shona-basic-back	Shona - basic
+snaacp	enudxp	shona-basic-forward	Shona - basic
+sndacp	gendxp	sindhi-basic-with-nemeth-forward	Sindhi - basic with Nemeth
+somacb	gendxb	somali-basic-back	Somali - basic
+somacp	amedxp	somali-basic-forward	Somali - basic
+sotucb	gendxb	sotho-southern-and-northern-pedi-basic-back	Sotho (Southern and Northern (Pedi)) - basic
+sotucp	enudxp	sotho-southern-and-northern-pedi-basic-forward	Sotho (Southern and Northern (Pedi)) - basic
+span	spadxp	espanol-sin-contracciones-forward	Espanol sin Contracciones
+spancb	gendxb	espanol-sin-contracciones-back	Espanol sin Contracciones
+spanr	spadxp	espanol-reducida-forward	Espanol Reducida
+sparcb	gendxb	espanol-reducida-back	Espanol Reducida
+sqiacb	gendxb	albanian-basic-back	Albanian - basic
+sqiacp	gendxp	albanian-basic-forward	Albanian - basic
+sraacb	gendxb	bosnian-basic-back	Bosnian - basic
+sraacp	gendxp	serbian-basic-forward	Serbian - basic
+srpmcb	gendxb	montenegrin-basic-back	Montenegrin - basic
+srpmcp	gendxp	montenegrin-basic-forward	Montenegrin - basic
+sswucb	gendxb	swati-basic-back	Swati - basic
+sswucp	enudxp	swati-basic-forward	Swati - basic
+sunacb	gendxb	sundanese-basic-back	Sundanese - basic
+sunacp	enudxp	sundanese-basic-forward	Sundanese - basic
+svenub	gendxb	swedish-uncontracted-basic-no-capitals-back	Swedish Uncontracted - basic no capitals
+svenup	gendxp	swedish-uncontracted-basic-no-capitals-forward	Swedish Uncontracted - basic no capitals
+swahcb	gendxb	swahili-general-basic-back	Swahili General - basic
+swahil	amedxp	swahili-general-basic-forward	Swahili General - basic
+swakcb	gendxb	swahili-kenya-2022-basic-back	Swahili Kenya 2022 - basic
+swakcp	amedxp	swahili-kenya-2022-basic-forward	Swahili Kenya 2022 - basic
+sylacp	gendxp	sylheti-basic-with-nemeth-forward	Sylheti - basic with Nemeth
+tamacb	gendxb	tamil-basic-with-nemeth-back	Tamil - basic with Nemeth
+tamacp	gendxp	tamil-basic-with-nemeth-forward	Tamil - basic with Nemeth
+telacb	gendxb	telugu-basic-with-nemeth-back	Telugu - basic with Nemeth
+telacp	gendxp	telugu-basic-with-nemeth-forward	Telugu - basic with Nemeth
+tgkacp	gendxp	tajik-basic-forward	Tajik - basic
+tglacp	amedxp	tagalog-basic-forward	Tagalog - basic
+thaicb	gendxb	thai-basic-with-nemeth-back	Thai - basic with Nemeth
+thaicp	gendxp	thai-basic-with-nemeth-forward	Thai - basic with Nemeth
+tiracb	engdxb	tigrinya-basic-back	Tigrinya - basic
+tiracp	enbdxp	tigrinya-basic-forward	Tigrinya - basic
+tlaacb	gendxb	tagalog-basic-back	Tagalog - basic
+tlaacp	amedxp	filipino-basic-forward	Filipino - basic
+toiacb	gendxb	tonga-chitonga-or-zambezi-basic-back	Tonga (Chitonga or Zambezi) - basic
+toiacp	enudxp	tonga-chitonga-or-zambezi-basic-forward	Tonga (Chitonga or Zambezi) - basic
+traacb	gendxb	turkish-basic-back	Turkish - basic
+traacp	amedxp	turkish-basic-forward	Turkish - basic
+tralp01	amedxp	turkish-basic-tralp01-forward	Turkish - basic
+tralp02	amedxp	turkish-basic-tralp02-forward	Turkish - basic
+tralp03	amedxp	turkish-basic-tralp03-forward	Turkish - basic
+tralp04	amedxp	turkish-basic-tralp04-forward	Turkish - basic
+tsnucp	enudxp	tswana-basic-forward	Tswana - basic
+tsoucb	gendxb	tsonga-basic-back	Tsonga - basic
+tsoucp	amedxp	tsonga-basic-forward	Tsonga - basic
+ttaacb	gendxb	tatar-basic-back	Tatar - basic
+ttaacp	gendxp	tatar-basic-forward	Tatar - basic
+tukacb	gendxb	turkmen-basic-back	Turkmen - basic
+tukacp	gendxp	turkmen-basic-forward	Turkmen - basic
+txxtxa	gendxp	table-txxtxa-forward	
+udmacb	gendxb	udmurt-basic-back	Udmurt - basic
+udmacp	gendxp	udmurt-basic-forward	Udmurt - basic
+ukracb	gendxb	belarusian-basic-back	Belarusian - basic
+ukracp	gendxp	ukrainian-basic-forward	Ukrainian - basic
+umbacb	gendxb	umbundu-basic-back	Umbundu - basic
+umbacp	enudxp	umbundu-basic-forward	Umbundu - basic
+urdacb	gendxb	urdu-indian-basic-with-nemeth-back	Urdu (Indian) - basic with Nemeth
+urdacp	gendxp	urdu-indian-basic-with-nemeth-forward	Urdu (Indian) - basic with Nemeth
+urdpcb	gendxb	urdu-pakistani-basic-back	Urdu (Pakistani) - basic
+urdpcp	gendxp	urdu-pakistani-basic-forward	Urdu (Pakistani) - basic
+uzaacb	gendxb	uzbek-basic-back	Uzbek - basic
+uzaacp	gendxp	uzbek-basic-forward	Uzbek - basic
+venucb	gendxb	venda-basic-back	Venda - basic
+venucp	enudxp	venda-basic-forward	Venda - basic
+vietcb	gendxb	vietnamese-basic-back	Vietnamese - basic
+vietcp	enudxp	vietnamese-basic-forward	Vietnamese - basic
+xhoucp	enudxp	xhosa-basic-forward	Xhosa - basic
+yorucb	gendxb	yoruba-basic-back	Yoruba - basic
+yorucp	spadxp	yoruba-basic-forward	Yoruba - basic
+zhmpcb	gendxb	chinese-mandarin-basic-back	Chinese Mandarin - basic
+zhmpcp	gendxp	chinese-mandarin-basic-forward	Chinese Mandarin - basic
+zhtwcb	gendxb	chinese-for-taiwan-basic-back	Chinese for Taiwan - basic
+zhtwcp	gendxp	chinese-for-taiwan-basic-forward	Chinese for Taiwan - basic
+zhyjcb	gendxb	chinese-yue-cantonese-basic-back	Chinese Yue (Cantonese) - basic
+zhyjcp	gendxp	chinese-yue-cantonese-basic-forward	Chinese Yue (Cantonese) - basic
+zulucp	enudxp	zulu-basic-forward	Zulu - basic

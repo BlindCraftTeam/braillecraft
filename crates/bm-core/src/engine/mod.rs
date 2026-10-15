@@ -1,5 +1,6 @@
-//! The BrailleMaker translation engine. It translates with rule tables (.btb) and scan tables (.sct), read from a
-//! folder at run time; no table is part of this source.
+//! The BrailleMaker translation engine. It translates with BrailleMaker's own table sources (tables/*.bmt, compiled
+//! by `compile`, found by code through `TableSet`), or with binary rule tables (.btb) and scan tables (.sct) read
+//! from a folder at run time.
 //!
 //! The text goes through three stages:
 //! - the scanner (`scanner.rs`), set up by the scan table: it reads the text (runs of spaces, line ends,
@@ -29,6 +30,7 @@ mod rules;
 mod scan_table;
 mod scanner;
 mod table;
+mod tableset;
 mod writer;
 
 use std::path::{Path, PathBuf};
@@ -37,6 +39,7 @@ use std::rc::Rc;
 pub use callbacks::{Languages, StyleTable};
 pub use scan_table::ScanTable;
 pub use table::RuleTable;
+pub use tableset::{TableEntry, TableSet};
 pub use writer::Chitab;
 
 use chars::{encode_cp437, EOF};
@@ -333,6 +336,28 @@ mod tests {
         }
         let back = shipped("en-ueb-g2-back.bmt");
         assert_eq!(back.translate(",! cat sat4").unwrap(), "The cat sat.");
+    }
+
+    fn shipped_set() -> TableSet {
+        TableSet::open(format!("{}/../../tables", env!("CARGO_MANIFEST_DIR"))).unwrap()
+    }
+
+    #[test]
+    fn shipped_tables_are_found_by_the_codes_a_document_names() {
+        let set = shipped_set();
+        assert_eq!(set.entry("ENUNCP").map(|e| e.table.as_str()), Some("en-ueb-g2-forward"));
+        assert_eq!(set.translator("enuncp").unwrap().translate("The cat sat.").unwrap(), ",! cat sat4");
+        assert_eq!(set.translator("enuncb").unwrap().translate(",! cat sat4").unwrap(), "The cat sat.");
+        assert!(set.translator("nosuch").is_err());
+    }
+
+    #[test]
+    fn every_shipped_table_compiles() {
+        let set = shipped_set();
+        assert_eq!(set.entries().len(), 656);
+        for e in set.entries() {
+            set.translator(&e.rules).unwrap_or_else(|err| panic!("{}: {err}", e.table));
+        }
     }
 
     /// A rule that takes no characters and leaves its own condition true matches here at the gamma again and again;

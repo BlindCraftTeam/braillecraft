@@ -1,6 +1,6 @@
 //! BrailleMaker, the desktop program: a native main window holding the document windows, the menu bar, the status
-//! line and native dialogs (wxWidgets through wxDragon). Translation runs through liblouis (bm-louis) until the
-//! BrailleMaker translation engine is complete.
+//! line and native dialogs (wxWidgets through wxDragon). Translation runs through the BrailleMaker engine with the
+//! tables shipped beside the program (translation.rs).
 
 mod app;
 mod codes;
@@ -12,6 +12,7 @@ mod encodings;
 mod menu;
 mod menu_table;
 mod speech;
+mod translation;
 
 use std::path::{Path, PathBuf};
 
@@ -91,13 +92,13 @@ fn main() {
     let early = if cfg!(target_os = "linux") { Some(load_fonts()) } else { None };
     let _ = wxdragon::main(move |_| {
         let fonts = early.unwrap_or_else(load_fonts);
-        match resource_dir("liblouis/tables", "../bm-louis/vendor/liblouis/tables", "en-ueb-g2.ctb") {
+        match resource_dir("tables", "../../tables", "index.tsv") {
             Some(dir) => {
-                if let Err(e) = bm_louis::set_table_folder(&dir) {
+                if let Err(e) = translation::load(&dir) {
                     eprintln!("BrailleMaker: {e}");
                 }
             }
-            None => eprintln!("BrailleMaker: liblouis tables not found; translation will fail"),
+            None => eprintln!("BrailleMaker: translation tables not found; translation will fail"),
         }
         if let Err(e) = dlg::load_resources() {
             eprintln!("BrailleMaker: {e}");

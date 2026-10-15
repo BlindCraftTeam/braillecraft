@@ -57,17 +57,16 @@ jobs:
       - name: Tests
         run: cargo test --workspace
 
-      # The native desktop program (wxWidgets): a folder that runs as it is, with its braille fonts, the liblouis
-      # tables and the liblouis licence beside it.
+      # The native desktop program (wxWidgets): a folder that runs as it is, with its braille fonts and its
+      # translation tables beside it.
       - name: Native program
         shell: bash
         run: |
           cargo build --release -p bm-desktop
-          mkdir -p dist/BrailleMaker/liblouis
+          mkdir -p dist/BrailleMaker
           cp target/release/braillemaker-desktop${{ runner.os == 'Windows' && '.exe' || '' }} dist/BrailleMaker/
           cp -r ui/fonts dist/BrailleMaker/fonts
-          cp -r crates/bm-louis/vendor/liblouis/tables dist/BrailleMaker/liblouis/tables
-          cp crates/bm-louis/vendor/liblouis/COPYING.LESSER crates/bm-louis/vendor/CHANGES-BrailleMaker.txt dist/BrailleMaker/liblouis/
+          cp -r tables dist/BrailleMaker/tables
 
       - uses: actions/upload-artifact@v7
         with:

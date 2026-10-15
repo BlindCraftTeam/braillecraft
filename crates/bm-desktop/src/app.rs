@@ -75,8 +75,10 @@ pub struct Doc {
     pub saved: bool,
     pub dirty: bool,
     pub path: Option<PathBuf>,
-    /// liblouis table used for File, Translate and the translated line (Document, Learning Tables changes it).
-    pub table: String,
+    /// The document's tables by code: print-to-braille rules and scan table, braille-to-print rules and scan table.
+    pub tables: [String; 4],
+    /// Codes in force from the start of the document (Document, Learning Tables sets the grade code here).
+    pub initial_codes: String,
     pub cells: u32,
     pub lines: u32,
     pub view: View,
@@ -419,7 +421,8 @@ impl App {
             return;
         }
         let line = line_at(value, pos);
-        let key = format!("{}|{:?}|{}|{}|{line}", self.docs[i].key, self.docs[i].kind, self.docs[i].table, self.settings.encoding);
+        let d = &self.docs[i];
+        let key = format!("{}|{:?}|{}|{}|{}|{line}", d.key, d.kind, d.tables.join("+"), d.initial_codes, self.settings.encoding);
         if key == self.docs[i].last_line_key {
             return;
         }
@@ -431,19 +434,19 @@ impl App {
     }
 
     /// One line of document `i` translated: a print line into braille (in the display encoding), a braille line
-    /// into print.
+    /// into print, with the document's initial codes in force. The engine passes those codes through at the start
+    /// of what it writes; the translated line leaves them off.
     pub fn translate_line(&self, i: usize, line: &str) -> String {
         let enc = self.encoding();
         let d = &self.docs[i];
-        match d.kind {
-            DocKind::Print => match bm_louis::translate(&d.table, &crate::codes::strip(line)) {
-                Ok(cells) => enc.cells_to_text(&cells),
-                Err(e) => e,
-            },
-            DocKind::Braille => match bm_louis::back_translate(&d.table, &enc.text_to_cells(line)) {
-                Ok(text) => text,
-                Err(e) => e,
-            },
+        let text = format!("{}{line}", d.initial_codes);
+        let r = match d.kind {
+            DocKind::Print => crate::translation::forward(&d.tables[0], &text, enc),
+            DocKind::Braille => crate::translation::back(&d.tables[2], &text, enc),
+        };
+        match r {
+            Ok(s) => s.strip_prefix(d.initial_codes.as_str()).map(str::to_string).unwrap_or(s),
+            Err(e) => e,
         }
     }
 

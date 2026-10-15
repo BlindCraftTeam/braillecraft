@@ -13,6 +13,7 @@ use crate::codes::{self, Dynamic, Insert};
 use crate::dlg::Dlg;
 use crate::documents;
 use crate::encodings;
+use crate::translation;
 
 // Messages for parts of the program that later build steps bring. They say what is missing and where it comes.
 const PLANNED_SAVE: &str = "Saving needs the BrailleMaker document format, which is built in step 7 of the plan. Until then, copy the text out with Select All and Copy.";
@@ -23,7 +24,7 @@ const PLANNED_HELP: &str = "The BrailleMaker help is written with the features i
 const PLANNED_TEMPLATES: &str = "Templates are built with the BrailleMaker document format in step 7 of the plan.";
 const PLANNED_PICTURES: &str = "Pictures are built after the core features of version 1.";
 const PLANNED_FORMATTER: &str = "This needs the page formatter, built in step 8 of the plan.";
-const PLANNED_TABLES: &str = "The translation table list by region comes with the BrailleMaker translation engine; for now Document, Learning Tables chooses between uncontracted and contracted English (UEB).";
+const PLANNED_TABLES: &str = "The translation table list by region is not part of this version yet; documents translate with the tables they name (new documents: English, Unified English Braille), and Document, Learning Tables sets the grade.";
 
 const FORMS: &[&str] = &["11 x 11.5 inches", "11 x 8.5 inches (Letter)", "A4 (297 x 210 mm)", "11.5 x 11 inches (tractor)"];
 const STYLE_SHOW: &[&str] = &["Recommended and In-Use Styles", "All Styles", "Styles In-Use", "Only Recommended Styles"];
@@ -221,8 +222,8 @@ pub fn run(id: i32, checked: bool) {
             });
         }
         2701..=2706 => message(PLANNED_TABLES),
-        2801 => set_table("en-ueb-g1.ctb"),
-        2802 => set_table("en-ueb-g2.ctb"),
+        2801 => set_grade("[g1l]"),
+        2802 => set_grade("[g2u]"),
         2901..=2905 => set_hyphen(id),
         2606 => message(PLANNED_SAVE),
         2608 => add_style(),
@@ -302,7 +303,7 @@ pub fn run(id: i32, checked: bool) {
         }
 
         3202 | 3204 | 3205 => message(PLANNED_HELP),
-        3206 => message("BrailleMaker 0.1: the main window, menus, dialogs, editing, find and replace, six-key entry, the code vocabulary, braille fonts for 18 encodings, and translation with liblouis. The BrailleMaker translation engine, the file format, printing and embossing follow in the plan."),
+        3206 => message("BrailleMaker 0.1: the main window, menus, dialogs, editing, find and replace, six-key entry, the code vocabulary, braille fonts for 18 encodings, and translation with the BrailleMaker engine and its tables. The file format, printing and embossing follow in the plan."),
         3210 => message("Updates are published on the BrailleMaker GitHub page."),
         3211 => about(),
         _ => {}
@@ -355,30 +356,6 @@ fn pick_file(message_text: &str) -> Option<std::path::PathBuf> {
     }
 }
 
-/// Rewrites braille characters from one encoding to another, leaving [codes] as they are.
-fn convert_braille(text: &str, from: &encodings::Encoding, to: &encodings::Encoding) -> String {
-    let mut out = String::with_capacity(text.len());
-    let mut rest = text;
-    while !rest.is_empty() {
-        let (plain, tail) = match rest.find('[') {
-            Some(i) => rest.split_at(i),
-            None => (rest, ""),
-        };
-        out.push_str(&to.cells_to_text(&from.text_to_cells(plain)));
-        match tail.find(']') {
-            Some(j) if !tail.is_empty() => {
-                out.push_str(&tail[..=j]);
-                rest = &tail[j + 1..];
-            }
-            _ => {
-                out.push_str(&to.cells_to_text(&from.text_to_cells(tail)));
-                rest = "";
-            }
-        }
-    }
-    out
-}
-
 /// A .dxp (print) or .dxb (braille) document.
 fn open_dx_document(path: &Path) {
     let bytes = match std::fs::read(path) {
@@ -393,7 +370,7 @@ fn open_dx_document(path: &Path) {
     // Braille is stored in North American ASCII braille; it is shown in the encoding chosen in Internationalization.
     let text = if braille {
         let to = app::with(|a| a.encoding());
-        convert_braille(&doc.text, encodings::find(encodings::DEFAULT), to)
+        translation::convert_braille(&doc.text, encodings::find(encodings::DEFAULT), to)
     } else {
         doc.text
     };
@@ -406,6 +383,10 @@ fn open_dx_document(path: &Path) {
             d.path = Some(path.to_path_buf());
             d.view.translated = doc.translated_line;
             d.view.six_key = braille && doc.six_key;
+            // The document's own tables, as the file names them.
+            if doc.tables.iter().all(|t| !t.is_empty()) {
+                d.tables = doc.tables.clone();
+            }
         }
         a.apply_view();
     });
@@ -534,8 +515,10 @@ fn wrap_braille(line: &str, width: usize) -> Vec<String> {
 /// braille document (forward translation, lines wrapped to the cells per line); a braille document becomes a print
 /// document (back-translation). Page layout by codes and styles comes with the formatter.
 fn translate_document() {
-    let Some((text, kind, table, name, untitled, cells)) = app::with(|a| {
-        a.doc().map(|d| (d.text.get_value(), d.kind, d.table.clone(), d.name.clone(), d.untitled, d.cells))
+    let Some((text, kind, tables, initial, name, untitled, cells)) = app::with(|a| {
+        a.doc().map(|d| {
+            (d.text.get_value(), d.kind, d.tables.clone(), d.initial_codes.clone(), d.name.clone(), d.untitled, d.cells)
+        })
     }) else {
         return;
     };
@@ -548,11 +531,15 @@ fn translate_document() {
     let width = if to_braille { 40 } else { cells as usize };
     let mut out: Vec<String> = Vec::new();
     for line in text.split('\n') {
+        // The document's initial codes are in force on every line; the new document carries them too, so their
+        // echo at the start of each translated line is left off.
+        let with_codes = format!("{initial}{line}");
         let r = if to_braille {
-            bm_louis::translate(&table, &codes::strip(line)).map(|cells| enc.cells_to_text(&cells).trim_end().to_string())
+            translation::forward(&tables[0], &with_codes, enc).map(|s| s.trim_end().to_string())
         } else {
-            bm_louis::back_translate(&table, &enc.text_to_cells(line))
-        };
+            translation::back(&tables[2], &with_codes, enc)
+        }
+        .map(|s| s.strip_prefix(initial.as_str()).map(str::to_string).unwrap_or(s));
         match r {
             Ok(s) if to_braille => out.extend(wrap_braille(&s, width)),
             Ok(s) => out.push(s),
@@ -573,7 +560,8 @@ fn translate_document() {
     let key = documents::new_document(if to_braille { DocKind::Braille } else { DocKind::Print }, new_name, &out.join("\n"));
     app::with(|a| {
         if let Some(i) = a.index_of(key) {
-            a.docs[i].table = table.clone();
+            a.docs[i].tables = tables.clone();
+            a.docs[i].initial_codes = initial.clone();
             a.docs[i].dirty = true;
             if to_braille {
                 a.docs[i].cells = 40;
@@ -1033,11 +1021,22 @@ fn printer_setup(global: bool) {
     d.destroy();
 }
 
-fn set_table(table: &str) {
+/// The grade codes Document, Learning Tables takes out of the initial codes before it puts its own in.
+const GRADE_CODES: [&str; 10] = ["[g1]", "[g1l]", "[g1u]", "[g1.5]", "[g1.5l]", "[g1.5u]", "[g2]", "[g2l]", "[g2u]", "[vrn~inf]"];
+
+/// Document, Learning Tables: the tables stay; the grade code in the document's initial codes changes to `code`
+/// ([g1l] uncontracted, [g2u] fully contracted). Tables without such grades leave the code without effect.
+fn set_grade(code: &str) {
     app::with(|a| {
         if let Some(d) = a.doc_mut() {
-            d.table = table.to_string();
+            let mut initial = d.initial_codes.clone();
+            for g in GRADE_CODES {
+                initial = initial.replace(g, "");
+            }
+            initial.push_str(code);
+            d.initial_codes = initial;
             d.last_line_key.clear();
+            d.dirty = true;
         }
         a.update_status();
     });
@@ -1367,7 +1366,7 @@ fn shortcut_preferences() {
 fn about() {
     let d = open_dialog(1016, None);
     d.set_text(8, &format!("Version {}", env!("CARGO_PKG_VERSION")));
-    d.set_text(10, &format!("Braille translation: {}", bm_louis::version()));
+    d.set_text(10, &format!("Braille translation: the BrailleMaker engine, {}", crate::translation::table_count()));
     d.show();
     d.destroy();
 }
