@@ -335,6 +335,18 @@ mod tests {
         assert_eq!(back.translate(",! cat sat4").unwrap(), "The cat sat.");
     }
 
+    /// A rule that takes no characters and leaves its own condition true matches here at the gamma again and again;
+    /// the reference program never finishes this text. BrailleMaker stops the repeat (rules.rs, run) and gives the
+    /// gamma its default output, as the Python reference port with the same stop does.
+    #[test]
+    fn a_rule_that_repeats_without_taking_characters_is_stopped() {
+        let semitic = shipped("semitic-language-transcription-basic-forward.bmt");
+        assert_eq!(
+            semitic.translate("╜ Γ").unwrap(),
+            "\u{1c}lng~am\u{1f}***dbd??* \u{1c}lng~\u{1f}\u{1c}lng~\u{1f}*"
+        );
+    }
+
     #[test]
     fn missing_tables_and_characters_are_reported() {
         let dir = std::env::temp_dir().join("bm-engine-no-tables");

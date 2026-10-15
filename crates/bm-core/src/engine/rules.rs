@@ -56,6 +56,28 @@ pub(crate) struct Engine<'a> {
     m_rid: i64,
 }
 
+/// The engine's state at a match, for the stop in `run` (see there).
+#[derive(PartialEq)]
+struct Snapshot {
+    ring: [i64; 64],
+    pos: usize,
+    ip: usize,
+    exp: i64,
+    exp_str: Vec<u8>,
+    exp_i: usize,
+    saved_ring: [i64; 64],
+    saved_pos: usize,
+    name: [u8; 32],
+    name_len: i64,
+    pending: i64,
+    mark: i64,
+    la_fix: i64,
+    la_fix_last: i64,
+    state: Vec<i128>,
+    stack: [u128; 128],
+    rid: i64,
+}
+
 fn ring_index(pos: usize, d: i64) -> usize {
     ((pos as i64 + d) & 63) as usize
 }
@@ -755,6 +777,29 @@ impl<'a> Engine<'a> {
         }
     }
 
+    /// Everything the next step of the run loop depends on, taken just after a rule matched.
+    fn snapshot(&self) -> Snapshot {
+        Snapshot {
+            ring: self.ring,
+            pos: self.pos,
+            ip: self.ip,
+            exp: self.exp,
+            exp_str: self.exp_str.clone(),
+            exp_i: self.exp_i,
+            saved_ring: self.saved_ring,
+            saved_pos: self.saved_pos,
+            name: self.name,
+            name_len: self.name_len,
+            pending: self.pending,
+            mark: self.mark,
+            la_fix: self.la_fix,
+            la_fix_last: self.la_fix_last,
+            state: self.state.clone(),
+            stack: self.stack,
+            rid: self.m_rid,
+        }
+    }
+
     /// The run loop. Returns 0 at the end of the input, or 0x15 when a rule asks for a table switch (the name
     /// collected by action 0x14 is in `name` / `name_len`). `fill_ring` reads the first 64 characters first.
     pub fn run(&mut self) -> i64 {
@@ -762,6 +807,7 @@ impl<'a> Engine<'a> {
             self.ring[i] = self.getc();
         }
         self.pos = 0;
+        let mut last_zero: Option<Snapshot> = None;
         loop {
             let mut c = self.cur(0);
             if self.raw17 == 0 {
@@ -800,7 +846,22 @@ impl<'a> Engine<'a> {
                 rs = item(&self.t.classes, k - 1).map_or(-1, |a| a.first_rule);
             }
             let trans;
-            if rs >= 1 && self.try_rules(rs) {
+            let mut matched = rs >= 1 && self.try_rules(rs);
+            // BrailleMaker's own stop, not in the reference program (whose run loop has no guard): a rule that takes
+            // no characters, matched with everything the next step depends on exactly as at the previous such match,
+            // would match again forever. That character goes the way of one no rule matches instead.
+            if matched && self.m_consume == 0 {
+                let now = self.snapshot();
+                if last_zero.as_ref() == Some(&now) {
+                    matched = false;
+                    last_zero = None;
+                } else {
+                    last_zero = Some(now);
+                }
+            } else {
+                last_zero = None;
+            }
+            if matched {
                 self.consume(self.m_consume);
                 let outb = std::mem::take(&mut self.m_out);
                 let mut j = 0;
