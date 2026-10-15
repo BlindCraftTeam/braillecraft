@@ -1,0 +1,2019 @@
+# The rules of hraacb.btb and gendxb.sct, recreated as BrailleMaker table source.
+table "Croatian - basic, braille to print"
+default-char 42
+raw 0
+writer 2
+output 4
+tail-extra 0 0 0
+unknown 0
+
+state s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 s11 s12 s13 s14 s15 s16
+state s17 s18 s19 s20 s21 s22 s23 s24 s25 s26 s27 s28 s29 s30 s31 s32
+state s33 s34 s35 s36 s37 s38 s39 s40 s41 s42 s43 s44 s45 s46 s47 s48
+state s49 s50 s51 s52 s53 s54 s55 s56 s57 s58 s59 s60 s61 s62 s63 s64
+
+class c00 "\x01\x02\x1b\x1c\x1d\x1e\x1f -\xec"
+class c01 "\x01\x02\x1b\x1c\x1d\x1e\x1f ,-1567\xec"
+class c02 "\x1b\x1c\x1d\x1e\x1f `"
+class c03 "!\x22$%&'()*+,./0123456789:;<=>?@[\x5c]^_abcdefghijklmnopqrstuvwxyz"
+class c04 ".abcdefghij"
+class c05 "_abcdefghijklmnopqrstuvwxyz"
+class c06 "aeiou"
+class c07 "bcdfghjklmnpqrstvwxyz"
+class c08 "\xec"
+class c09 "\xec"
+class c10 ""
+class c11 ""
+class c12 ""
+class c13 ""
+class c14 ""
+class c15 ""
+class c16 ""
+class c17 ""
+class c18 ""
+class c19 ""
+class c20 ""
+class c21 ""
+class c22 ""
+class c23 ""
+class c24 ""
+class c25 ""
+class c26 ""
+class c27 ""
+class c28 ""
+class c29 ""
+class c30 ""
+class c31 ""
+class c32 ""
+class c33 ""
+class c34 ""
+class c35 ""
+class c36 ""
+class c37 ""
+class c38 ""
+class c39 ""
+class c40 ""
+class c41 ""
+class c42 ""
+class c43 ""
+class c44 ""
+class c45 ""
+class c46 ""
+class c47 ""
+class c48 ""
+class c49 ""
+class c50 ""
+class c51 ""
+class c52 ""
+class c53 ""
+class c54 ""
+class c55 ""
+class c56 ""
+class c57 ""
+class c58 ""
+class c59 ""
+class c60 ""
+class c61 ""
+class c62 ""
+class c63 ""
+
+set x0 = c00 | c09 c01
+set x1 = c04 @x0 | "'" @x0 | c04 @x1 | "'" @x1 | "1" @x1
+set x2 = @x0 | c07 | "3" | "\x22" c07 | "^" c07 | "_" c07 | "]" | "i" @x0
+set x3 = c03 "4"
+set x4 = c00 | c02 | c01 @x4
+set x5 = "<" | "r" | ">" | "s" | "n" | ":" | "u" | "v" | "y" | "+" | "m" | "p" | "%" | "[" | "w" | "o" | "g" | "&" | "*" | "&" | "\x5c" | "x" | "(" | "t" | "?" | "z" | "!"
+set x6 = "@" | "c" | "," | "\x22" | "e" | "^" | "h" | "d" | "j" | "." | ";" | "f" | "i"
+set x7 = "^" | "_" | "!" | "0"
+set x8 = "n" "j" "a" c01 | "n" "j" "e" c01 | "n" "j" "e" "m" c01 | "n" "j" "i" "m" c01 | "n" "j" "u" c01
+set x9 = c01 | c06 c01 | c06 c07 c01 | c06 c07 c06 c01 | "2" c01 | c07
+set x10 = c03 c03 c03 c03 c03
+set x11 = c00 | c02 | "a" c00 | "a" c02
+set x12 = "2"
+
+result 1 when !s3 !s4 s21 !s22 !s23 !s24 then clear s1 set s2 clear s7
+result 2 when !s4 then set s1 set s2 clear s7
+result 3
+result 4 when s2 !s3 !s4 s21 !s22 !s23 !s24 then clear s1 set s2 clear s7
+result 5
+result 6 when !s2 !s3 !s4 s21 !s22 !s23 !s24 then clear s1 set s2 clear s7
+result 7 when !s2 !s3 !s4 s21 !s22 !s23 !s24 then clear s1 clear s2 clear s7
+result 8 when !s1 !s2 !s4
+result 9 when s1 !s4 then clear s1 clear s7
+result 10 when s2 !s4
+result 11 when s2 !s4 then clear s5 clear s7
+result 12 when !s4 s21 !s22 !s23 !s24 then clear s1 set s2 clear s7
+result 13
+result 14 when !s4 then clear s1 clear s2 clear s7
+result 15 then clear s1 clear s2 clear s5 clear s7
+result 16 when !s4 then clear s1 clear s2 set s5 clear s7
+result 17 when !s4 then clear s1 clear s2 clear s5 clear s7
+result 18 when s3 !s4 then clear s1 set s2 clear s7
+result 19
+result 20 then set s4 set s6 clear s7
+result 21 when s4 s6 then set s4 clear s6 clear s7
+result 22 then clear s4 clear s7
+result 23 then set s4 clear s7
+result 24 when s4 then set s7
+result 25 when s4 s7
+result 26
+result 27 when s1 !s4 then set s1 set s2 clear s7
+result 28
+result 29 when !s8 then set s3 clear s7
+result 30 when !s8 then clear s3 clear s7
+result 31 then set s4 clear s6 clear s7
+result 32 when s4 then clear s7
+result 33 then set s4 set s5 clear s7
+result 34 when s4 then clear s5 clear s7
+result 35 when s4 s5 then clear s1 set s2 clear s7
+result 36 when !s4 then clear s1 clear s7
+result 37 when !s4 then clear s1 set s5 clear s7
+result 38 when !s4 then clear s1 clear s5 clear s7
+result 39
+result 40
+result 41 when !s4 then clear s1 set s2 clear s7
+result 42 when !s4 then clear s1 set s2 set s5 clear s7
+result 43 when !s4
+result 44 then clear s26 clear s27 clear s28
+result 45 then clear s26 clear s27 set s28
+result 46 then set s26 set s27 set s28
+result 47 when !s4 s26 s27 s28 then clear s1 set s2 clear s7
+result 48 when !s4 !s21 !s22 s23 !s24 then clear s1 set s2 clear s7
+result 49 then clear s1 clear s2 clear s5 clear s7 set s8 set s9
+result 50 then clear s1 clear s2 clear s5 clear s7 set s8 clear s9
+result 51 when s8 s9 then set s3 clear s5 clear s7 set s8 set s9 clear s21 clear s22 set s23 clear s24
+result 52 then set s3 clear s5 clear s7 set s8 clear s9 clear s21 clear s22 clear s23 set s24
+result 53 then clear s3 clear s5 clear s7 set s21 clear s22 clear s23 clear s24
+result 54 when s3 !s4 then set s3 clear s5 clear s7 set s8 set s9 clear s21 clear s22 set s23 clear s24
+result 55 when s3 !s4 then set s3 clear s5 clear s7 set s8 clear s9 clear s21 clear s22 clear s23 set s24
+result 56 then clear s5 clear s7 clear s8 clear s9 set s21 clear s22 clear s23 clear s24
+result 57 then set s21 clear s22 clear s23 clear s24
+result 58 then clear s21 clear s22 clear s23 set s24
+result 59 then clear s21 clear s22 set s23 clear s24
+result 60 then clear s21 clear s22 set s23 set s24
+result 61 then clear s21 set s22 clear s23 clear s24
+result 62 then clear s21 set s22 clear s23 set s24
+result 63 then clear s21 set s22 set s23 clear s24
+result 64 when !s3 !s4 s21 s22 s23 !s24 then clear s1 set s2 clear s7
+result 65 when !s4 !s21 s22 s23 !s24 then clear s1 set s2 clear s7
+result 66 when !s3 !s4 s21 !s22 !s23 !s24 !s26 !s27 s28 then clear s1 set s2 clear s7
+result 67 when !s2 !s3 !s4 s21 !s22 !s23 !s24 !s26 !s27 s28 then clear s1 set s2 clear s7
+result 68 then clear s21 clear s22 clear s23 clear s24
+result 69
+result 70 when !s3 !s4 !s21 !s22 !s23 !s24 then clear s1 set s2 clear s7 set s17 clear s18
+result 71 when !s3 !s4 !s21 !s22 !s23 !s24 then clear s1 set s2 clear s7 clear s17 set s18
+result 72 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 then clear s1 set s2 clear s7 set s17 clear s18
+result 73 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 then clear s1 set s2 clear s7 clear s17 set s18
+result 74 when s2 !s3 !s4 !s21 !s22 !s23 !s24 then clear s1 set s2 clear s7 set s17 clear s18
+result 75 when s2 !s3 !s4 !s21 !s22 !s23 !s24 then clear s1 set s2 clear s7 clear s17 set s18
+result 76 when s2 !s3 !s4 s17 !s18 !s21 !s22 !s23 !s24 then clear s1 set s2 clear s7 set s17 clear s18
+result 77 when s2 !s3 !s4 s17 !s18 !s21 !s22 !s23 !s24 then clear s1 set s2 clear s7 clear s17 set s18
+result 78 when s2 !s3 !s4 !s17 s18 !s21 !s22 !s23 !s24 then clear s1 set s2 clear s7 set s17 clear s18
+result 79 when s2 !s3 !s4 !s17 s18 !s21 !s22 !s23 !s24 then clear s1 set s2 clear s7 clear s17 set s18
+result 80 when s2 !s3 !s4 !s21 !s22 !s23 !s24 then clear s1 set s2 clear s7
+result 81
+result 82
+result 83 when !s3 !s4 !s21 !s22 !s23 !s24 then clear s1 set s2 clear s7
+result 84 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 then clear s1 set s2 clear s7
+result 85 when !s4 !s21 !s22 !s23 !s24 then set s1 set s2 clear s7
+result 86 when !s2 !s4 !s21 !s22 !s23 !s24 then set s1 set s2 clear s7
+result 87 when !s4 !s21 !s22 !s23 !s24 then clear s1 clear s7
+result 88 when s1 !s4 !s21 !s22 !s23 !s24
+result 89
+result 90 when !s4 !s21 !s22 !s23 !s24 then clear s1 set s2 clear s7
+result 91 when !s2 !s4 !s21 !s22 !s23 !s24 then set s11 clear s12
+result 92 when !s2 !s4 !s21 !s22 !s23 !s24 then clear s11 set s12
+result 93 when !s2 !s4 s11 then clear s11 set s12
+result 94 when s12 then clear s11 set s12
+result 95 when s12 then clear s2 clear s11 clear s12
+
+char "\x01" default "$" rules 1 then clear s1 clear s2 clear s7
+char "\x02" default "$" rules 2 then clear s1 clear s2 clear s7
+char "\x1b" default "$" rules 3 then clear s1 clear s2 clear s7
+char "\x1c" default "$" rules 6 then clear s1 clear s2 clear s7
+char "\x1d" default "$" rules 33 then clear s1 clear s2 clear s7
+char "\x1e" default "$" rules 34 then clear s1 clear s2 clear s7
+char "\x1f" default "$" rules 35 then clear s1 clear s2 clear s7
+char " " default " " rules 36 then clear s1 clear s2 clear s7
+char "!" default "!" rules 40
+char "\x22" default "\x22" rules 76
+char "#" default "#" rules 129
+char "$" default "$" rules 142
+char "%" default "%" rules 155
+char "&" default "&" rules 182
+char "'" default "'" rules 199
+char "(" default "(" rules 219
+char ")" default ")" rules 228
+char "*" default "*" rules 244
+char "+" default "+" rules 284
+char "," default "," rules 294
+char "-" default "-" rules 341
+char "." default "." rules 352
+char "/" default "/" rules 362
+char "0" default "0" rules 364
+char "1" default "1" rules 370
+char "2" default "2" rules 379
+char "3" default "3" rules 395
+char "4" default "4" rules 420
+char "5" default "5" rules 441
+char "6" default "6" rules 446
+char "7" default "7" rules 473
+char "8" default "8" rules 486
+char "9" default "9" rules 492
+char ":" default ":" rules 497
+char ";" default ";" rules 525
+char "<" default "<" rules 526
+char "=" default "=" rules 542
+char ">" default ">" rules 548
+char "?" default "?" rules 563
+char "@" default "@" rules 584
+char "[" default "[" rules 1686
+char "\x5c" default "\x5c" rules 1700
+char "]" default "]" rules 1713
+char "^" default "^" rules 1720
+char "_" default "_" rules 1725
+char "`" default "@" rules 622
+char "a" default "a" rules 623 then clear s1 set s2 clear s7
+char "b" default "b" rules 647 then clear s1 set s2 clear s7
+char "c" default "c" rules 693 then clear s1 set s2 clear s7
+char "d" default "d" rules 726 then clear s1 set s2 clear s7
+char "e" default "e" rules 789 then clear s1 set s2 clear s7
+char "f" default "f" rules 808 then clear s1 set s2 clear s7
+char "g" default "g" rules 844 then clear s1 set s2 clear s7
+char "h" default "h" rules 904 then clear s1 set s2 clear s7
+char "i" default "i" rules 948 then clear s1 set s2 clear s7
+char "j" default "j" rules 996 then clear s1 set s2 clear s7
+char "k" default "k" rules 1027 then clear s1 set s2 clear s7
+char "l" default "l" rules 1091 then clear s1 set s2 clear s7
+char "m" default "m" rules 1136 then clear s1 set s2 clear s7
+char "n" default "n" rules 1178 then clear s1 set s2 clear s7
+char "o" default "o" rules 1233 then clear s1 set s2 clear s7
+char "p" default "p" rules 1287 then clear s1 set s2 clear s7
+char "q" default "q" rules 1365 then clear s1 set s2 clear s7
+char "r" default "r" rules 1385 then clear s1 set s2 clear s7
+char "s" default "s" rules 1401 then clear s1 set s2 clear s7
+char "t" default "t" rules 1478 then clear s1 set s2 clear s7
+char "u" default "u" rules 1534 then clear s1 set s2 clear s7
+char "v" default "v" rules 1548 then clear s1 set s2 clear s7
+char "w" default "w" rules 1610 then clear s1 set s2 clear s7
+char "x" default "x" rules 1622 then clear s1 set s2 clear s7
+char "y" default "y" rules 1634 then clear s1 set s2 clear s7
+char "z" default "z" rules 1646 then clear s1 set s2 clear s7
+char "\xec" default "-" rules 0
+
+node 1 "" none result 3 consume 1 -> "" end
+node 2 "" none result 3 consume 1 -> "" end
+node 3 "/" none result 3 consume 1 -> "\x1c" {copy} next 4
+node 4 "-" none result 3 consume 1 -> "\x1c" {copy} next 5
+node 5 "" none result 15 consume 1 -> "\x1c" {copy} end
+node 6 "ab" class c02 result 30 consume 1 -> "\x1c" {word} {copy} next 8
+node 7 "b" class c02 result 53 consume 1 -> "\x1c" {word} {copy} level 1
+node 8 "g1" class c02 result 29 consume 1 -> "\x1c" {word} {copy} next 13
+node 9 "1" class c02 result 51 consume 1 -> "\x1c" {word} {copy} next 11
+node 10 "" class c02 result 52 consume 1 -> "\x1c" {word} {copy} level 2
+node 11 "2" class c02 result 30 consume 1 -> "\x1c" {word} {copy} level 3
+node 12 "" class c02 result 53 consume 1 -> "\x1c" {word} {copy} level 1
+node 13 "lnb" none result 3 consume 1 -> {style 2} {cmd c} {style 3} "\x1c" {word} {copy} {switch} next 17
+node 14 "ng~hr" none result 57 consume 1 -> "\x1c" {word} {copy} level 3
+node 15 "g~en" none result 63 consume 1 -> "\x1c" {word} {copy} level 4
+node 16 "" none result 57 consume 1 -> "\x1c" {word} {copy} level 1
+node 17 "cbi" class c02 result 31 consume 1 -> "\x1c" {word} {copy} next 22
+node 18 "bn" class c02 result 31 consume 1 -> "\x1c" {word} {copy} next 19
+node 19 "ap-invert" class c02 result 15 consume 1 -> "\x1c" {word} {copy} next 21
+node 20 "p-normal" class c02 result 15 consume 1 -> "\x1c" {word} {copy} level 2
+node 21 "z" class c02 result 31 consume 1 -> "\x1c" {word} {copy} level 1
+node 22 "txi" class c02 result 22 consume 1 -> "\x1c" {word} {copy} next 25
+node 23 "xn" class c02 result 22 consume 1 -> "\x1c" {word} {copy} level 3
+node 24 "" class c02 result 22 consume 1 -> "\x1c" {word} {copy} level 1
+node 25 "vrn~quo" class c02 result 46 consume 1 -> "\x1c" {word} {copy} next 28
+node 26 "rn~rlg" class c02 result 45 consume 1 -> "\x1c" {word} {copy} level 3
+node 27 "n" class c02 result 44 consume 1 -> "\x1c" {word} {copy} level 1
+node 28 "es" none result 95 consume 0 -> "\x0f\x1cfte~i\x1f" next 32
+node 29 "s" none result 15 consume 1 -> "\x1c" {word} {copy} {style 0} next 30
+node 30 "e" none result 95 consume 0 -> "\x1cfte~i\x1f" level 3
+node 31 "" none result 15 consume 1 -> {cmd a} "\x1c" {word} "\x1f" {cmd b} {style 1} level 1
+node 32 "" none result 15 consume 1 -> "\x1c" {word} {copy} end
+node 33 "" none result 3 consume 1 -> "\x1d" end
+node 34 "" none result 15 consume 1 -> "\x1e" end
+node 35 "" none result 3 consume 1 -> {cmd c} end
+node 36 "_" none result 94 consume 2 -> "\x0f " next 37
+node 37 "" none result 95 consume 1 -> "\x1cfte~i\x1f\x0f " next 38
+node 38 "" none result 15 consume 1 -> "\x0f " next 39
+node 39 "" none result 35 consume 1 -> " " end
+node 40 "#" none result 70 consume 2 -> "\xb2\xaeav" next 41
+node 41 "%" short-set @x4 result 72 consume 2 -> "\xb2\xae\xb27" next 42
+node 42 "*" short-set @x4 result 72 consume 2 -> "\xb2\xae\xb2=" next 43
+node 43 ",e" short-set @x4 result 73 consume 3 -> "\xb2\xaee" next 44
+node 44 "3o\x22r" none result 70 consume 5 -> "\xb2\xaeivotvor" next 46
+node 45 "oder" none result 72 consume 6 -> "\xb2\xaeivoder" level 1
+node 46 ":" short-set @x4 result 72 consume 2 -> "mo\xb2\xaee\xb2\x91" next 48
+node 47 "" short-set @x4 result 72 consume 2 -> "\xb2\xae\xb2\x91" level 1
+node 48 "?" short-set @x4 result 72 consume 2 -> "\xb2\xae\xb2A" next 49
+node 49 "ac" short-set @x4 result 72 consume 3 -> "\xb2\xaeac" next 53
+node 50 "k" short-set @x4 result 72 consume 3 -> "\xb2\xaeak" next 51
+node 51 "r" short-set @x4 result 73 consume 3 -> "\xb2\xaear" next 52
+node 52 "" short-set @x8 result 73 consume 2 -> "\xb2\xaea" level 1
+node 53 "c" short-set @x4 result 72 consume 2 -> "\xb2\xaec" next 54
+node 54 "d" short-set @x4 result 73 consume 2 -> "mo\xb2\xaeda" next 55
+node 55 "en" short-set @x4 result 72 consume 3 -> "\xb2\xaeen" next 58
+node 56 "" short-set @x4 result 73 consume 2 -> "mo\xb2\xaee" next 57
+node 57 "" short-set @x8 result 73 consume 2 -> "\xb2\xaee" level 1
+node 58 "g" short-set @x4 result 72 consume 2 -> "\xb2\xaeg" next 59
+node 59 "h" short-set @x4 result 72 consume 2 -> "\xb2\xaeh" next 60
+node 60 "i%" short-set @x4 result 72 consume 3 -> "\xb2\xaei\xb27" next 62
+node 61 "w\x5c" none result 72 consume 4 -> "\xb2\xaeitelj" level 1
+node 62 "j" short-set @x4 result 72 consume 2 -> "\xb2\xaej" next 63
+node 63 "k" short-set @x4 result 72 consume 2 -> "\xb2\xaek" next 64
+node 64 "mar" short-set @x4 result 72 consume 4 -> "\xb2\xaemar" next 66
+node 65 "" short-set @x4 result 73 consume 2 -> "mo\xb2\xaeemo" level 1
+node 66 "n" short-set @x4 result 72 consume 2 -> "\xb2\xaen" next 67
+node 67 "r" short-set @x4 result 73 consume 2 -> "\xb2\xaer" next 68
+node 68 "t" short-set @x4 result 73 consume 2 -> "mo\xb2\xaeete" next 69
+node 69 "u*ovx" none result 72 consume 6 -> "\xb2\xaeu\xb2=ovod" next 70
+node 70 "vak" short-set @x4 result 72 consume 4 -> "\xb2\xaevak" next 71
+node 71 "\x5c" short-set @x4 result 72 consume 2 -> "\xb2\xaelj" next 72
+node 72 "" short-set @x4 result 73 consume 1 -> "si" next 73
+node 73 "" class c04 result 72 consume 1 -> "\xb2\xae" next 74
+node 74 "" none result 70 consume 1 -> "\xb2\xae" next 75
+node 75 "" none result 40 consume 1 -> "\xb2\xae" end
+node 76 "!" none result 70 consume 2 -> "slu\xb2\xae" next 77
+node 77 "#" none result 70 consume 2 -> "volj" next 78
+node 78 "$" none result 70 consume 2 -> "manj" next 79
+node 79 "%t" none result 70 consume 3 -> "op\xb27enit" next 81
+node 80 "" none result 70 consume 2 -> "op\xb27" level 1
+node 81 "&" none result 70 consume 2 -> "istin" next 82
+node 82 "(" none result 70 consume 2 -> "jedin" next 83
+node 83 ")" none result 70 consume 2 -> "stal" next 84
+node 84 "*" none result 70 consume 2 -> "klju\xb2=" next 85
+node 85 "+" none result 74 consume 2 -> "enjem" next 86
+node 86 "/" none result 70 consume 2 -> "pis" next 87
+node 87 "0" none result 70 consume 2 -> "dru\xb2\x91tv" next 88
+node 88 "1" none result 36 consume 2 -> "/" next 89
+node 89 "7" class c03 result 74 consume 2 -> "enjsk" next 90
+node 90 "8" none result 70 consume 2 -> "grad" next 91
+node 91 ":" none result 70 consume 2 -> "slu\xb2\x91" next 92
+node 92 "<" none result 74 consume 2 -> "enjim" next 93
+node 93 "=" none result 70 consume 2 -> "gled" next 94
+node 94 ">" none result 70 consume 2 -> "razum" next 95
+node 95 "?>:" short-set @x4 result 73 consume 4 -> "budza\xb2\x91to" next 97
+node 96 "" none result 70 consume 2 -> "bud" level 1
+node 97 "a" short-set @x4 result 75 consume 2 -> "enja" next 98
+node 98 "b" none result 70 consume 2 -> "bolj" next 99
+node 99 "c" none result 70 consume 2 -> "cilj" next 100
+node 100 "d" none result 70 consume 2 -> "dalj" next 101
+node 101 "e" short-set @x4 result 75 consume 2 -> "enje" next 102
+node 102 "f" none result 70 consume 2 -> "form" next 103
+node 103 "g" none result 70 consume 2 -> "drug" next 104
+node 104 "h" none result 70 consume 2 -> "hvat" next 105
+node 105 "it" none result 70 consume 3 -> "interesant" next 107
+node 106 "" none result 71 consume 2 -> "inter" level 1
+node 107 "j" none result 70 consume 2 -> "kraj" next 108
+node 108 "k:" none result 70 consume 3 -> "skora\xb2\x91nj" next 110
+node 109 "" none result 70 consume 2 -> "skor" level 1
+node 110 "l" none result 70 consume 2 -> "luk" next 111
+node 111 "m" none result 70 consume 2 -> "mo\xb27" next 112
+node 112 "n" none result 70 consume 2 -> "vremen" next 113
+node 113 "o" none result 70 consume 2 -> "obzir" next 114
+node 114 "povo?" none result 72 consume 6 -> "putovo\xb2A" next 116
+node 115 "" none result 70 consume 2 -> "put" level 1
+node 116 "q" none result 70 consume 2 -> "mnog" next 117
+node 117 "r" none result 70 consume 2 -> "tvor" next 118
+node 118 "s" none result 70 consume 2 -> "sigur" next 119
+node 119 "t" none result 70 consume 2 -> "tolik" next 120
+node 120 "u" short-set @x4 result 75 consume 2 -> "enju" next 121
+node 121 "v" none result 70 consume 2 -> "vid" next 122
+node 122 "w" none result 70 consume 2 -> "govor" next 123
+node 123 "x" none result 70 consume 2 -> "vlad" next 124
+node 124 "y" none result 70 consume 2 -> "\xb2=in" next 125
+node 125 "z" none result 70 consume 2 -> "zbilj" next 126
+node 126 "[" none result 71 consume 2 -> "tko" next 127
+node 127 "\x5c" none result 70 consume 2 -> "ljud" next 128
+node 128 "]" none result 70 consume 2 -> "treb" end
+node 129 "j00" none result 18 consume 4 -> "\xec`" next 132
+node 130 "0" none result 36 consume 3 -> "%" level 3
+node 131 "" none result 18 consume 3 -> "%" level 1
+node 132 "" class c04 result 2 consume 1 -> "" next 133
+node 133 ",1" short-set @x4 result 72 consume 3 -> "ga," next 138
+node 134 "3" short-set @x4 result 72 consume 3 -> "ga:" next 135
+node 135 "5" short-set @x4 result 72 consume 3 -> "ga?" next 136
+node 136 "6" short-set @x4 result 72 consume 3 -> "ga!" next 137
+node 137 "7" short-set @x4 result 72 consume 3 -> "ga\x22" level 1
+node 138 "" none result 76 consume 1 -> "av" next 139
+node 139 "" short-set @x4 result 73 consume 1 -> "ga" next 140
+node 140 "" none result 79 consume 1 -> "ga" next 141
+node 141 "" none result 83 consume 1 -> "#" end
+node 142 "#" none result 70 consume 2 -> "njav" next 143
+node 143 "$" none result 70 consume 2 -> "sadanj" next 144
+node 144 ":" none result 70 consume 2 -> "sada\xb2\x91nj" next 145
+node 145 "ak" short-set @x4 result 72 consume 3 -> "njak" next 147
+node 146 "r" short-set @x4 result 73 consume 3 -> "njar" level 1
+node 147 "en" short-set @x4 result 72 consume 3 -> "njen" next 148
+node 148 "gw" none result 70 consume 3 -> "njegov" next 149
+node 149 "hw" none result 70 consume 3 -> "njihov" next 150
+node 150 "z" none result 70 consume 2 -> "njezin" next 151
+node 151 "" short-set @x4 result 77 consume 1 -> "io" next 152
+node 152 "" short-set @x11 result 72 consume 1 -> "sad" next 153
+node 153 "" none result 70 consume 1 -> "nj" next 154
+node 154 "" none result 40 consume 1 -> "nj" end
+node 155 "#" none result 70 consume 2 -> "\xb27av" next 156
+node 156 "%" short-set @x4 result 72 consume 2 -> "\xb27\xb27" next 157
+node 157 "*" short-set @x4 result 72 consume 2 -> "\xb27\xb2=" next 158
+node 158 ":" short-set @x4 result 74 consume 2 -> "\xb27e\xb2\x91" next 161
+node 159 "" short-set @x4 result 72 consume 2 -> "\xb27e\xb2\x91" next 160
+node 160 "" short-set @x4 result 72 consume 2 -> "\xb27\xb2\x91" level 1
+node 161 "?" short-set @x4 result 72 consume 2 -> "\xb27\xb2A" next 162
+node 162 "\x5c" short-set @x4 result 72 consume 2 -> "\xb27lj" next 163
+node 163 "a%" short-set @x4 result 72 consume 3 -> "\xb27a\xb27" next 167
+node 164 "k" short-set @x4 result 72 consume 3 -> "\xb27ak" next 165
+node 165 "r" short-set @x4 result 73 consume 3 -> "\xb27ar" next 166
+node 166 "" short-set @x8 result 73 consume 2 -> "\xb27a" level 1
+node 167 "c" short-set @x4 result 72 consume 2 -> "\xb27c" next 168
+node 168 "e" short-set @x8 result 73 consume 2 -> "\xb27e" next 169
+node 169 "g" short-set @x4 result 72 consume 2 -> "\xb27g" next 170
+node 170 "h" short-set @x4 result 72 consume 2 -> "\xb27h" next 171
+node 171 "j" short-set @x4 result 72 consume 2 -> "\xb27j" next 172
+node 172 "k" short-set @x4 result 72 consume 2 -> "\xb27k" next 173
+node 173 "m" short-set @x4 result 71 consume 2 -> "\xb27emo" next 174
+node 174 "n" short-set @x4 result 72 consume 2 -> "\xb27n" next 175
+node 175 "r" short-set @x4 result 73 consume 2 -> "\xb27r" next 176
+node 176 "t" short-set @x4 result 71 consume 2 -> "\xb27ete" next 177
+node 177 "" short-set @x4 result 76 consume 1 -> "i\xb27" next 178
+node 178 "" short-set @x4 result 72 consume 1 -> "uz" next 179
+node 179 "" class c04 result 72 consume 1 -> "\xb27" next 180
+node 180 "" none result 70 consume 1 -> "\xb27" next 181
+node 181 "" none result 40 consume 1 -> "\xb27" end
+node 182 ":" short-set @x4 result 73 consume 2 -> "ni\xb2\x91ta" next 183
+node 183 ",:" short-set @x4 result 72 consume 3 -> "ni\xb2\x91" next 189
+node 184 "a" short-set @x4 result 75 consume 3 -> "nia" next 185
+node 185 "ca" short-set @x4 result 73 consume 4 -> "nica" next 186
+node 186 "e" short-set @x4 result 75 consume 3 -> "nie" next 187
+node 187 "i" short-set @x4 result 75 consume 3 -> "nii" next 188
+node 188 "u" short-set @x4 result 75 consume 3 -> "niu" level 1
+node 189 "6:" short-set @x4 result 73 consume 3 -> "nipo\xb2\x91to" next 190
+node 190 ">:" short-set @x4 result 73 consume 3 -> "niza\xb2\x91to" next 191
+node 191 "c" short-set @x11 result 72 consume 2 -> "nikad" next 192
+node 192 "g(" short-set @x4 result 73 consume 3 -> "nigdje" next 194
+node 193 "d" short-set @x4 result 73 consume 3 -> "nigde" level 1
+node 194 "km" short-set @x4 result 73 consume 3 -> "nikamo" next 195
+node 195 "m_" short-set @x4 result 73 consume 3 -> "nimalo" next 196
+node 196 "otkm" short-set @x4 result 73 consume 5 -> "niotkamo" next 197
+node 197 "" none result 71 consume 1 -> "ni" next 198
+node 198 "" none result 36 consume 1 -> "&" end
+node 199 "\x22m" none result 72 consume 3 -> "samo\xb27" next 200
+node 200 "," none result 36 consume 2 -> ". " next 201
+node 201 ">" none result 36 consume 2 -> ".)" next 202
+node 202 "7" short-set @x4 result 74 consume 2 -> ".\x22" next 203
+node 203 "la" short-set @x4 result 73 consume 3 -> "sala" next 205
+node 204 "a" short-set @x4 result 79 consume 3 -> "sala" level 1
+node 205 "m0" short-set @x4 result 72 consume 3 -> "samoj" next 211
+node 206 "[e" short-set @x4 result 73 consume 4 -> "samome" next 209
+node 207 "u" short-set @x4 result 73 consume 4 -> "samomu" next 208
+node 208 "" short-set @x4 result 72 consume 3 -> "samom" level 2
+node 209 "g" short-set @x4 result 72 consume 3 -> "samog" next 210
+node 210 "o" none result 73 consume 3 -> "samo" level 1
+node 211 "v(tod#" none result 72 consume 7 -> "savjetodav" next 213
+node 212 "etod#" none result 72 consume 7 -> "savetodav" level 1
+node 213 "" class c03 result 76 consume 1 -> "ij" next 214
+node 214 "" class c03 result 79 consume 1 -> "sa" next 215
+node 215 "" none result 73 consume 1 -> "sa" next 216
+node 216 "" class c04 result 27 consume 1 -> "," next 217
+node 217 "" none result 27 consume 1 -> "." next 218
+node 218 "" none result 36 consume 1 -> "." end
+node 219 ",a" short-set @x4 result 75 consume 3 -> "jea" next 223
+node 220 "e" short-set @x4 result 75 consume 3 -> "jee" next 221
+node 221 "i" short-set @x4 result 75 consume 3 -> "jei" next 222
+node 222 "u" short-set @x4 result 75 consume 3 -> "jeu" level 1
+node 223 "biv(t" none result 72 consume 6 -> "jebivjet" next 225
+node 224 "ivet" none result 72 consume 6 -> "jebivet" level 1
+node 225 "" none result 71 consume 1 -> "je" next 226
+node 226 "" none result 18 consume 1 -> "[" next 227
+node 227 "" none result 36 consume 1 -> "[" end
+node 228 "#" none result 70 consume 2 -> "stav" next 229
+node 229 "4od#" none result 72 consume 5 -> "stanodav" next 230
+node 230 "8w:k" none result 72 consume 5 -> "strate\xb2\x91k" next 231
+node 231 "ac" short-set @x4 result 72 consume 3 -> "stac" next 235
+node 232 "k" short-set @x4 result 72 consume 3 -> "stak" next 233
+node 233 "r" short-set @x4 result 73 consume 3 -> "star" next 234
+node 234 "\x5c" none result 72 consume 3 -> "stalj" level 1
+node 235 "e:" short-set @x4 result 72 consume 3 -> "ste\xb2\x91" next 237
+node 236 "n" short-set @x4 result 72 consume 3 -> "sten" level 1
+node 237 "p" none result 70 consume 2 -> "stup" next 238
+node 238 "rmog;v" none result 70 consume 7 -> "strmoglav" next 240
+node 239 "voder" none result 72 consume 7 -> "strvoder" level 1
+node 240 "" short-set @x4 result 73 consume 1 -> "ste" next 241
+node 241 "" none result 70 consume 1 -> "st" next 242
+node 242 "" none result 18 consume 1 -> "]" next 243
+node 243 "" none result 36 consume 1 -> "]" end
+node 244 "#" none result 70 consume 2 -> "\xb2=av" next 245
+node 245 "$*" none result 70 consume 3 -> "\xb2=injeni\xb2=" next 247
+node 246 "c" none result 70 consume 3 -> "\xb2=injenic" level 1
+node 247 "%" none result 70 consume 2 -> "\xb2=e\xb2\x91\xb27" next 249
+node 248 "" short-set @x4 result 72 consume 2 -> "\xb2=\xb27" level 1
+node 249 ")" none result 70 consume 2 -> "\xb2=est" next 250
+node 250 "*" short-set @x4 result 72 consume 2 -> "\xb2=\xb2=" next 251
+node 251 ":" short-set @x4 result 72 consume 2 -> "\xb2=\xb2\x91" next 252
+node 252 ";n" short-set @x4 result 72 consume 3 -> "\xb2=lan" next 253
+node 253 "?" short-set @x4 result 72 consume 2 -> "\xb2=\xb2A" next 254
+node 254 "@t" none result 74 consume 3 -> "\xb2=itelj" next 255
+node 255 "a" short-set @x8 result 73 consume 2 -> "\xb2=a" next 257
+node 256 "r" short-set @x4 result 73 consume 3 -> "\xb2=ar" level 1
+node 257 "c" short-set @x4 result 72 consume 2 -> "\xb2=c" next 258
+node 258 "e" short-set @x8 result 73 consume 2 -> "\xb2=e" next 259
+node 259 "g" short-set @x4 result 72 consume 2 -> "\xb2=g" next 260
+node 260 "h" short-set @x4 result 72 consume 2 -> "\xb2=h" next 261
+node 261 "i%" short-set @x4 result 72 consume 3 -> "\xb2=i\xb27" next 265
+node 262 ")i" none result 73 consume 4 -> "\xb2=istin" next 263
+node 263 "<" short-set @x4 result 74 consume 3 -> "\xb2=iti" next 264
+node 264 "w" short-set @x4 result 75 consume 3 -> "\xb2=ite" level 1
+node 265 "j" short-set @x4 result 72 consume 2 -> "\xb2=j" next 266
+node 266 "k" short-set @x4 result 72 consume 2 -> "\xb2=ak" next 268
+node 267 "" short-set @x4 result 72 consume 2 -> "\xb2=k" level 1
+node 268 "mar" short-set @x4 result 73 consume 4 -> "\xb2=mar" next 269
+node 269 "n" short-set @x4 result 72 consume 2 -> "\xb2=n" next 270
+node 270 "r" short-set @x4 result 73 consume 2 -> "\xb2=r" next 271
+node 271 "t#" none result 70 consume 3 -> "\xb2=itav" next 273
+node 272 "" none result 70 consume 2 -> "\xb2=it" level 1
+node 273 "vak" short-set @x4 result 72 consume 4 -> "\xb2=vak" next 274
+node 274 "w(*" none result 70 consume 4 -> "\xb2=ovje\xb2=" next 278
+node 275 "(" none result 71 consume 3 -> "\xb2=ovjek" next 276
+node 276 "e*" none result 70 consume 4 -> "\xb2=ove\xb2=" level 3
+node 277 "" none result 71 consume 3 -> "\xb2=ovek" level 1
+node 278 "\x5c" short-set @x4 result 72 consume 2 -> "\xb2=lj" next 279
+node 279 "" short-set @x4 result 73 consume 1 -> "ta" next 280
+node 280 "" short-set @x4 result 76 consume 1 -> "a\xb2=" next 281
+node 281 "" class c04 result 72 consume 1 -> "\xb2=" next 282
+node 282 "" none result 70 consume 1 -> "\xb2=" next 283
+node 283 "" none result 40 consume 1 -> "\xb2=" end
+node 284 ",a" short-set @x4 result 79 consume 3 -> "sua" next 288
+node 285 "e" short-set @x4 result 79 consume 3 -> "sue" next 286
+node 286 "i" short-set @x4 result 79 consume 3 -> "sui" next 287
+node 287 "u" short-set @x4 result 79 consume 3 -> "suu" level 1
+node 288 "pe/o" none result 71 consume 5 -> "superio" next 290
+node 289 "er" none result 73 consume 4 -> "super" level 1
+node 290 "zovx" none result 72 consume 5 -> "suzovod" next 291
+node 291 "" none result 76 consume 1 -> "em" next 292
+node 292 "" none result 73 consume 1 -> "su" next 293
+node 293 "" none result 79 consume 1 -> "su" end
+node 294 "" none result 18 consume 1 -> "\x0f" next 295
+node 295 "!" short-set @x4 result 72 consume 2 -> "\xb2\xae" next 296
+node 296 "$" short-set @x4 result 72 consume 2 -> "nj" next 297
+node 297 "%" short-set @x4 result 72 consume 2 -> "\xb27" next 299
+node 298 "" short-set @x4 result 76 consume 2 -> "\xb27" level 1
+node 299 "*" short-set @x4 result 72 consume 2 -> "\xb2=" next 301
+node 300 "" short-set @x4 result 76 consume 2 -> "\xb2=" level 1
+node 301 "-" class c02 result 13 consume 2 -> "-" next 303
+node 302 "" class c03 result 13 consume 2 -> "-" level 1
+node 303 ":" short-set @x4 result 72 consume 2 -> "\xb2\x91" next 305
+node 304 "" short-set @x4 result 76 consume 2 -> "\xb2\x91" level 1
+node 305 "<" none result 12 consume 2 -> "(" next 306
+node 306 ">" none result 12 consume 2 -> ")" next 307
+node 307 "?" short-set @x4 result 72 consume 2 -> "\xb2A" next 309
+node 308 "" short-set @x4 result 76 consume 2 -> "\xb2A" level 1
+node 309 "2" none result 38 consume 2 -> ";" next 310
+node 310 "4" none result 38 consume 2 -> "'" next 311
+node 311 "9" none result 38 consume 2 -> "*" next 312
+node 312 "b" short-set @x4 result 72 consume 2 -> "b" next 313
+node 313 "c" short-set @x4 result 72 consume 2 -> "c" next 315
+node 314 "" short-set @x4 result 76 consume 2 -> "c" level 1
+node 315 "d" short-set @x4 result 72 consume 2 -> "d" next 316
+node 316 "e" short-set @x4 result 73 consume 2 -> "e" next 317
+node 317 "f" short-set @x4 result 72 consume 2 -> "f" next 318
+node 318 "g" short-set @x4 result 72 consume 2 -> "g" next 320
+node 319 "" short-set @x4 result 76 consume 2 -> "g" level 1
+node 320 "h" short-set @x4 result 72 consume 2 -> "h" next 322
+node 321 "" short-set @x4 result 76 consume 2 -> "h" level 1
+node 322 "j" short-set @x4 result 72 consume 2 -> "j" next 323
+node 323 "k" short-set @x4 result 76 consume 2 -> "k" next 324
+node 324 "l" short-set @x4 result 72 consume 2 -> "l" next 325
+node 325 "m" short-set @x4 result 72 consume 2 -> "m" next 326
+node 326 "n" short-set @x4 result 72 consume 2 -> "n" next 328
+node 327 "" short-set @x4 result 76 consume 2 -> "n" level 1
+node 328 "p" short-set @x4 result 72 consume 2 -> "p" next 329
+node 329 "q" none result 70 consume 2 -> "q" next 330
+node 330 "r" short-set @x4 result 72 consume 2 -> "r" next 332
+node 331 "" short-set @x4 result 76 consume 2 -> "r" level 1
+node 332 "t" short-set @x4 result 72 consume 2 -> "t" next 333
+node 333 "v" short-set @x4 result 72 consume 2 -> "v" next 334
+node 334 "w" none result 70 consume 2 -> "w" next 335
+node 335 "x" none result 70 consume 2 -> "x" next 336
+node 336 "y" none result 70 consume 2 -> "y" next 337
+node 337 "z" short-set @x4 result 72 consume 2 -> "z" next 338
+node 338 "\x5c" short-set @x4 result 76 consume 2 -> "lj" next 339
+node 339 "]ak" short-set @x4 result 72 consume 4 -> "d\xb2\xaeak" level 2
+node 340 "" none result 70 consume 2 -> "d\xb2\xae" end
+node 341 "\x22j" short-set @x4 result 72 consume 3 -> "onkraj" next 342
+node 342 "[" short-set @x4 result 72 consume 2 -> "onom" next 343
+node 343 "." none result 36 consume 2 -> "-\x02" next 344
+node 344 "'+" short-set @x4 result 72 consume 3 -> "onijem" next 346
+node 345 "eh" short-set @x4 result 72 consume 4 -> "onijeh" level 1
+node 346 "0" none result 70 consume 2 -> "onoj" next 347
+node 347 "4" none result 73 consume 2 -> "onani" next 348
+node 348 "" short-set @x9 result 72 consume 1 -> "on" next 349
+node 349 "" class c03 result 35 consume 1 -> "-" next 350
+node 350 "" class c04 result 27 consume 1 -> "-" next 351
+node 351 "" none result 36 consume 1 -> "-" end
+node 352 "(" none result 18 consume 2 -> "{" next 353
+node 353 ")" none result 18 consume 2 -> "}" next 354
+node 354 "" class c04 result 27 consume 1 -> "." next 355
+node 355 "" none result 27 consume 1 -> ".\x12" next 356
+node 356 "." none result 87 consume 2 -> "\x0e" next 358
+node 357 "" none result 37 consume 2 -> "\x0e" level 1
+node 358 "9" none result 36 consume 2 -> "}" next 359
+node 359 "" none result 76 consume 1 -> "am" next 360
+node 360 "" none result 78 consume 1 -> "\xb2=k" next 361
+node 361 "" none result 36 consume 1 -> "\x02" end
+node 362 "" short-set @x4 result 73 consume 1 -> "pri" next 363
+node 363 "" none result 71 consume 1 -> "ri" end
+node 364 "ov:e" short-set @x4 result 73 consume 5 -> "\xb2\x91tovi\xb2\x91e" next 365
+node 365 "" none result 76 consume 1 -> "oj" next 366
+node 366 "" short-set @x4 result 73 consume 1 -> "to" next 367
+node 367 "" none result 78 consume 1 -> "\xb2\x91t" next 368
+node 368 "" none result 72 consume 1 -> "\xb2\x91t" next 369
+node 369 "" none result 36 consume 1 -> ")" end
+node 370 "-" none result 26 consume 2 -> ",-" next 371
+node 371 "be" short-set @x4 result 73 consume 3 -> "robe" next 372
+node 372 "la" short-set @x4 result 73 consume 3 -> "rola" next 374
+node 373 "a" short-set @x4 result 75 consume 3 -> "rola" level 1
+node 374 "sob" none result 74 consume 4 -> "rosob" next 376
+node 375 "" none result 72 consume 2 -> "ros" level 1
+node 376 "" class c03 result 71 consume 1 -> "ro" next 377
+node 377 "" none result 27 consume 1 -> "," next 378
+node 378 "" none result 36 consume 1 -> "," end
+node 379 ",a" short-set @x4 result 79 consume 3 -> "bea" next 383
+node 380 "e" short-set @x4 result 79 consume 3 -> "bee" next 381
+node 381 "i" short-set @x4 result 79 consume 3 -> "bei" next 382
+node 382 "u" short-set @x4 result 79 consume 3 -> "beu" level 1
+node 383 "7o/" none result 73 consume 4 -> "beskori" next 384
+node 384 "be" short-set @x4 result 73 consume 3 -> "bebe" next 385
+node 385 "la" short-set @x4 result 77 consume 3 -> "ajla" next 388
+node 386 "a" short-set @x4 result 73 consume 3 -> "bela" level 3
+node 387 "" short-set @x4 result 79 consume 3 -> "bela" level 1
+node 388 "n" short-set @x4 result 72 consume 2 -> "ben" next 389
+node 389 "somu*" none result 72 consume 6 -> "besomu\xb2=" next 390
+node 390 "" none result 76 consume 1 -> "aj" next 391
+node 391 "" short-set @x4 result 72 consume 1 -> "bez" next 392
+node 392 "" none result 73 consume 1 -> "be" next 393
+node 393 "" none result 79 consume 1 -> "be" next 394
+node 394 "" none result 37 consume 1 -> ";" end
+node 395 ":" short-set @x4 result 73 consume 2 -> "sva\xb2\x91ta" next 396
+node 396 "a*" short-set @x4 result 72 consume 3 -> "sva\xb2=" next 400
+node 397 "c" short-set @x4 result 72 consume 3 -> "svac" next 398
+node 398 "km" short-set @x4 result 73 consume 4 -> "svakamo" next 399
+node 399 "r" short-set @x4 result 73 consume 3 -> "svar" level 1
+node 400 "d" none result 70 consume 2 -> "svud" next 401
+node 401 "e:" short-set @x4 result 72 consume 3 -> "sve\xb2\x91" next 407
+node 402 "\x22m" none result 72 consume 4 -> "svemo\xb27" next 403
+node 403 "g%" none result 72 consume 4 -> "svemogu\xb27" next 404
+node 404 "mi" none result 73 consume 4 -> "svemir" next 406
+node 405 "rk" none result 72 consume 5 -> "svemrk" level 2
+node 406 "n" short-set @x4 result 72 consume 3 -> "sven" level 1
+node 407 "kk#" short-set @x4 result 72 consume 4 -> "svakakav" next 413
+node 408 "kw" none result 70 consume 4 -> "svakakov" next 411
+node 409 "" short-set @x4 result 73 consume 3 -> "svakako" next 410
+node 410 "" class c03 result 70 consume 3 -> "svakakv" level 2
+node 411 "ovr" none result 72 consume 5 -> "svakovrs" next 412
+node 412 "" none result 70 consume 2 -> "svak" level 1
+node 413 "ug(" short-set @x4 result 73 consume 4 -> "svugdje" next 415
+node 414 "gd" short-set @x4 result 73 consume 4 -> "svugde" level 1
+node 415 "" class c03 result 76 consume 1 -> "iv" next 416
+node 416 "" class c03 result 78 consume 1 -> "sv" next 417
+node 417 "" none result 72 consume 1 -> "sv" next 418
+node 418 "" class c04 result 27 consume 1 -> ":" next 419
+node 419 "" none result 36 consume 1 -> ":" end
+node 420 "" none result 18 consume 1 -> "'" next 421
+node 421 "$" short-set @x11 result 72 consume 2 -> "dosad" next 422
+node 422 ",$a" short-set @x4 result 73 consume 4 -> "donja" next 428
+node 423 "a" short-set @x4 result 79 consume 3 -> "doa" next 424
+node 424 "ca" short-set @x4 result 73 consume 4 -> "doca" next 425
+node 425 "e" short-set @x4 result 79 consume 3 -> "doe" next 426
+node 426 "i" short-set @x4 result 79 consume 3 -> "doi" next 427
+node 427 "u" short-set @x4 result 79 consume 3 -> "dou" level 1
+node 428 "c" short-set @x11 result 72 consume 2 -> "dokad" next 429
+node 429 "f" short-set @x11 result 72 consume 2 -> "dotad" next 430
+node 430 "j" short-set @x4 result 72 consume 2 -> "doj" next 431
+node 431 "km" short-set @x4 result 73 consume 3 -> "dokamo" next 432
+node 432 "m" short-set @x4 result 72 consume 2 -> "dom" next 433
+node 433 "pm" none result 70 consume 3 -> "doprem" next 434
+node 434 "td" short-set @x11 result 72 consume 3 -> "dotud" next 436
+node 435 "m" short-set @x4 result 73 consume 3 -> "dotamo" level 1
+node 436 "zimet" none result 72 consume 6 -> "dozimet" next 437
+node 437 "" none result 76 consume 1 -> "an" next 438
+node 438 "" none result 73 consume 1 -> "do" next 439
+node 439 "" none result 79 consume 1 -> "do" next 440
+node 440 "" none result 37 consume 1 -> "'" end
+node 441 "e?" short-set @x4 result 73 consume 3 -> "izme\xb2Au" next 442
+node 442 "omorf" none result 72 consume 6 -> "izomorf" next 443
+node 443 "" none result 72 consume 1 -> "iz" next 444
+node 444 "" class c03 result 74 consume 1 -> "iz" next 445
+node 445 "" none result 36 consume 1 -> "?" end
+node 446 "\x22l" none result 72 consume 3 -> "polukn" next 447
+node 447 "," none result 36 consume 2 -> "! " next 452
+node 448 "a" short-set @x4 result 74 consume 3 -> "poa" next 449
+node 449 "e" short-set @x4 result 74 consume 3 -> "poe" next 450
+node 450 "i" short-set @x4 result 74 consume 3 -> "poi" next 451
+node 451 "u" short-set @x4 result 74 consume 3 -> "pou" level 1
+node 452 ":" short-set @x4 result 73 consume 2 -> "po\xb2\x91to" next 453
+node 453 "7" short-set @x4 result 74 consume 2 -> "!\x22" next 454
+node 454 "@i)e" short-set @x4 result 73 consume 5 -> "polu\xb2=iste" next 457
+node 455 "l" none result 73 consume 3 -> "polu\xb2=i" level 3
+node 456 "" none result 73 consume 3 -> "polu\xb2=u" level 1
+node 457 "cc" short-set @x11 result 72 consume 3 -> "pokatkad" next 458
+node 458 "d!buk" none result 72 consume 6 -> "pod\xb2\xaebuk" next 460
+node 459 "x" none result 72 consume 3 -> "podod" level 1
+node 460 "g(g(" short-set @x4 result 73 consume 5 -> "pogdjegdje" next 462
+node 461 "dgd" short-set @x4 result 73 consume 5 -> "pogdegde" level 1
+node 462 "lu*5" none result 72 consume 5 -> "polu\xb2=izm" next 465
+node 463 "u*i)" short-set @x9 result 72 consume 6 -> "polu\xb2=ist" level 3
+node 464 "" none result 73 consume 3 -> "polu" level 1
+node 465 "m_" short-set @x4 result 73 consume 3 -> "pomalo" next 466
+node 466 "q:" short-set @x4 result 73 consume 3 -> "pone\xb2\x91to" next 470
+node 467 "c" short-set @x11 result 72 consume 3 -> "ponekad" next 468
+node 468 "g(" short-set @x4 result 73 consume 4 -> "ponegdje" level 3
+node 469 "d" short-set @x4 result 73 consume 4 -> "ponegde" level 1
+node 470 "" short-set @x4 result 73 consume 1 -> "po" next 471
+node 471 "" class c03 result 71 consume 1 -> "po" next 472
+node 472 "" none result 36 consume 1 -> "!" end
+node 473 "-" class c03 result 12 consume 2 -> "\x22-" next 474
+node 474 "'" none result 36 consume 2 -> "\x22." next 475
+node 475 "1" none result 36 consume 2 -> "\x22," next 476
+node 476 "5" none result 36 consume 2 -> "\x22?" next 477
+node 477 "6" none result 36 consume 2 -> "\x22!" next 478
+node 478 "" class c03 result 74 consume 1 -> "sk" next 479
+node 479 "" short-set @x4 result 73 consume 1 -> "smo" next 480
+node 480 "" none result 36 consume 1 -> "\x22" next 481
+node 481 "" none result 36 consume 1 -> "` " next 482
+node 482 "" none result 40 consume 1 -> "`-" next 483
+node 483 "" none result 10 consume 1 -> "`" next 484
+node 484 "" class c05 result 36 consume 1 -> "`" next 485
+node 485 "" none result 36 consume 1 -> "`" end
+node 486 "7or" none result 73 consume 3 -> "raskor" next 487
+node 487 "n,*" none result 72 consume 4 -> "ran\xb2=" next 488
+node 488 "zgw(t" none result 70 consume 6 -> "razgovjet" next 489
+node 489 "" short-set @x4 result 73 consume 1 -> "tu" next 490
+node 490 "" none result 71 consume 1 -> "ra" next 491
+node 491 "" none result 36 consume 1 -> "(" end
+node 492 "cem(" none result 72 consume 5 -> "licemjer" next 494
+node 493 "eme" none result 72 consume 5 -> "licemer" level 1
+node 494 "n,*" short-set @x4 result 72 consume 4 -> "lin\xb2=" next 495
+node 495 "" none result 71 consume 1 -> "li" next 496
+node 496 "" none result 37 consume 1 -> "*" end
+node 497 "#" none result 70 consume 2 -> "\xb2\x91av" next 498
+node 498 "%" short-set @x4 result 72 consume 2 -> "\xb2\x91\xb27" next 499
+node 499 "*" short-set @x4 result 72 consume 2 -> "\xb2\x91\xb2=" next 500
+node 500 ":" short-set @x4 result 72 consume 2 -> "\xb2\x91\xb2\x91" next 501
+node 501 "=m" short-set @x4 result 72 consume 2 -> "\xb2\x91lem" next 502
+node 502 "?" short-set @x4 result 72 consume 2 -> "\xb2\x91\xb2A" next 503
+node 503 "ac" short-set @x4 result 72 consume 3 -> "\xb2\x91ac" next 507
+node 504 "k" short-set @x4 result 72 consume 3 -> "\xb2\x91ak" next 505
+node 505 "r" short-set @x4 result 73 consume 3 -> "\xb2\x91ar" next 506
+node 506 "" short-set @x8 result 73 consume 2 -> "\xb2\x91a" level 1
+node 507 "c" short-set @x4 result 72 consume 2 -> "\xb2\x91c" next 508
+node 508 "e:" short-set @x4 result 72 consume 3 -> "\xb2\x91e\xb2\x91" next 511
+node 509 "n" short-set @x4 result 72 consume 3 -> "\xb2\x91en" next 510
+node 510 "" short-set @x8 result 73 consume 2 -> "\xb2\x91e" level 1
+node 511 "g" short-set @x4 result 72 consume 2 -> "\xb2\x91g" next 512
+node 512 "h" short-set @x4 result 72 consume 2 -> "\xb2\x91h" next 513
+node 513 "i%" short-set @x4 result 72 consume 3 -> "\xb2\x91i\xb27" next 514
+node 514 "j" short-set @x4 result 72 consume 2 -> "\xb2\x91j" next 515
+node 515 "k" short-set @x4 result 72 consume 2 -> "\xb2\x91k" next 516
+node 516 "n" short-set @x4 result 72 consume 2 -> "\xb2\x91n" next 517
+node 517 "r" short-set @x4 result 73 consume 2 -> "\xb2\x91r" next 518
+node 518 "vi%" short-set @x4 result 72 consume 4 -> "\xb2\x91vi\xb27" next 519
+node 519 "\x5c" short-set @x4 result 72 consume 2 -> "\xb2\x91lj" next 520
+node 520 "" short-set @x4 result 73 consume 1 -> "\xb2\x91to" next 521
+node 521 "" short-set @x4 result 76 consume 1 -> "e\xb2\x91" next 522
+node 522 "" class c04 result 72 consume 1 -> "\xb2\x91" next 523
+node 523 "" none result 70 consume 1 -> "\xb2\x91" next 524
+node 524 "" none result 40 consume 1 -> "\xb2\x91" end
+node 525 "" none result 75 consume 1 -> "la" end
+node 526 "^c>" none result 18 consume 4 -> "\xf5)" next 529
+node 527 "r>" none result 18 consume 4 -> "\xf5." next 528
+node 528 "tm>" none result 18 consume 5 -> "\xeeR" level 1
+node 529 ",a" short-set @x4 result 79 consume 3 -> "tia" next 533
+node 530 "e" short-set @x4 result 79 consume 3 -> "tie" next 531
+node 531 "i" short-set @x4 result 79 consume 3 -> "tii" next 532
+node 532 "u" short-set @x4 result 79 consume 3 -> "tiu" level 1
+node 533 "@" none result 76 consume 2 -> "anj" next 534
+node 534 "" none result 76 consume 1 -> "im" next 535
+node 535 "" short-set @x4 result 72 consume 1 -> "im" next 536
+node 536 "" none result 79 consume 1 -> "ti" next 537
+node 537 "" none result 83 consume 1 -> "(" next 538
+node 538 "" none result 1 consume 1 -> "lj" next 539
+node 539 "" none result 18 consume 1 -> "(" next 540
+node 540 "" class c03 result 36 consume 1 -> "(" next 541
+node 541 "" none result 40 consume 1 -> "<" end
+node 542 ",a" short-set @x4 result 75 consume 3 -> "lea" next 546
+node 543 "e" short-set @x4 result 75 consume 3 -> "lee" next 544
+node 544 "i" short-set @x4 result 75 consume 3 -> "lei" next 545
+node 545 "u" short-set @x4 result 75 consume 3 -> "leu" level 1
+node 546 "" short-set @x4 result 73 consume 1 -> "se" next 547
+node 547 "" none result 71 consume 1 -> "le" end
+node 548 "$" short-set @x11 result 72 consume 2 -> "zasad" next 549
+node 549 "'" short-set @x4 result 36 consume 2 -> ")." next 550
+node 550 "1" short-set @x4 result 36 consume 2 -> ")," next 551
+node 551 ":" short-set @x4 result 73 consume 2 -> "za\xb2\x91to" next 552
+node 552 "h%" none result 70 consume 3 -> "zahvaljuju\xb27" next 553
+node 553 "jmod#" none result 72 consume 6 -> "zajmodav" next 554
+node 554 "kpod#" none result 72 consume 6 -> "zakupodav" next 555
+node 555 "m_" short-set @x4 result 73 consume 3 -> "zamalo" next 556
+node 556 "pm" none result 70 consume 3 -> "zaprem" next 557
+node 557 "t" short-set @x4 result 73 consume 2 -> "zato" next 558
+node 558 "" short-set @x4 result 73 consume 1 -> "za" next 559
+node 559 "" class c03 result 71 consume 1 -> "za" next 560
+node 560 "" none result 18 consume 1 -> ")" next 561
+node 561 "" none result 36 consume 1 -> ")" next 562
+node 562 "" none result 40 consume 1 -> ">" end
+node 563 "#" none result 70 consume 2 -> "\xb2Aav" next 564
+node 564 "%" short-set @x4 result 72 consume 2 -> "\xb2A\xb27" next 565
+node 565 "*" short-set @x4 result 72 consume 2 -> "\xb2A\xb2=" next 566
+node 566 ":" short-set @x4 result 72 consume 2 -> "\xb2A\xb2\x91" next 567
+node 567 "?" short-set @x4 result 72 consume 2 -> "\xb2A\xb2A" next 568
+node 568 "ak" short-set @x4 result 72 consume 3 -> "\xb2Aak" next 570
+node 569 "" short-set @x8 result 73 consume 2 -> "\xb2Aa" level 1
+node 570 "c" short-set @x4 result 72 consume 2 -> "\xb2Ac" next 571
+node 571 "e" short-set @x8 result 73 consume 2 -> "\xb2Ae" next 572
+node 572 "g" short-set @x4 result 72 consume 2 -> "\xb2Ag" next 573
+node 573 "h" short-set @x4 result 72 consume 2 -> "\xb2Ah" next 574
+node 574 "j" short-set @x4 result 72 consume 2 -> "\xb2Aj" next 575
+node 575 "k" short-set @x4 result 72 consume 2 -> "\xb2Ak" next 576
+node 576 "n" short-set @x4 result 72 consume 2 -> "\xb2An" next 577
+node 577 "r" short-set @x4 result 73 consume 2 -> "\xb2Ar" next 578
+node 578 "\x5c" short-set @x4 result 72 consume 2 -> "\xb2Alj" next 579
+node 579 "" short-set @x4 result 77 consume 1 -> "eo" next 580
+node 580 "" short-set @x4 result 72 consume 1 -> "pred" next 581
+node 581 "" class c04 result 72 consume 1 -> "\xb2A" next 582
+node 582 "" none result 70 consume 1 -> "\xb2A" next 583
+node 583 "" none result 40 consume 1 -> "\xb2A" end
+node 584 "&" class c03 result 74 consume 2 -> "istinj" next 585
+node 585 "(" none result 74 consume 2 -> "jedinj" next 586
+node 586 ")" none result 74 consume 2 -> "stalj" next 587
+node 587 "+" none result 74 consume 2 -> "anjem" next 588
+node 588 "/" none result 74 consume 2 -> "pi\xb2\x91" next 589
+node 589 "0" none result 74 consume 2 -> "\xb2\x91tin" next 590
+node 590 "6" none result 36 consume 2 -> "+" next 591
+node 591 "7" none result 36 consume 2 -> "=" next 593
+node 592 "" class c03 result 74 consume 2 -> "anjsk" level 1
+node 593 "8" none result 74 consume 2 -> "gra\xb2A" next 594
+node 594 ":" none result 74 consume 2 -> "du\xb2\x91" next 595
+node 595 "<" none result 74 consume 2 -> "anjim" next 596
+node 596 "?" class c03 result 74 consume 2 -> "bu\xb2A" next 597
+node 597 "e" none result 18 consume 2 -> "\xed\x5c" next 599
+node 598 "" short-set @x4 result 75 consume 2 -> "anje" level 1
+node 599 "g" class c03 result 74 consume 2 -> "dru\xb2\xae" next 600
+node 600 "h" none result 74 consume 2 -> "hva\xb27" next 601
+node 601 "l" none result 18 consume 2 -> "\xf5#" next 603
+node 602 "" class c03 result 74 consume 2 -> "lu\xb2=" level 1
+node 603 "n" none result 74 consume 2 -> "vremenj" next 604
+node 604 "p" none result 74 consume 2 -> "pu\xb27" next 605
+node 605 "q" class c03 result 74 consume 2 -> "mno\xb2\xae" next 606
+node 606 "r" none result 74 consume 2 -> "tvar" next 607
+node 607 "s" none result 18 consume 2 -> "$" next 608
+node 608 "t" none result 74 consume 2 -> "itelj" next 609
+node 609 "u" short-set @x4 result 75 consume 2 -> "anju" next 610
+node 610 "v" none result 74 consume 2 -> "vi\xb2A" next 611
+node 611 "w" class c03 result 74 consume 2 -> "govar" next 612
+node 612 "x" none result 74 consume 2 -> "vla\xb2A" next 613
+node 613 "y" none result 18 consume 2 -> "\x9d" next 615
+node 614 "" class c03 result 74 consume 2 -> "\xb2=inj" level 1
+node 615 "\x5c" none result 74 consume 2 -> "atelj" next 616
+node 616 "]" none result 74 consume 2 -> "trep" next 617
+node 617 "" none result 76 consume 1 -> "anj" next 618
+node 618 ">" none result 18 consume 2 -> "@" next 619
+node 619 "_" none result 18 consume 2 -> "_" next 620
+node 620 "#" none result 18 consume 2 -> "#" next 621
+node 621 "" none result 36 consume 1 -> "@" end
+node 622 "" none result 36 consume 1 -> "@" end
+node 623 "" class c04 result 27 consume 1 -> "1" next 624
+node 624 "" none result 27 consume 1 -> "1\x12" next 625
+node 625 "#" none result 71 consume 2 -> "aga" next 626
+node 626 "$" none result 74 consume 2 -> "anj" next 627
+node 627 ",a" short-set @x4 result 75 consume 3 -> "aa" next 632
+node 628 "e" short-set @x4 result 75 consume 3 -> "ae" next 629
+node 629 "i" short-set @x4 result 75 consume 3 -> "ai" next 630
+node 630 "m" short-set @x4 result 72 consume 3 -> "am" next 631
+node 631 "u" short-set @x4 result 75 consume 3 -> "au" level 1
+node 632 "al" none result 70 consume 3 -> "aktual" next 634
+node 633 "t" none result 70 consume 3 -> "automat" level 1
+node 634 "el" none result 70 consume 3 -> "aktuel" next 635
+node 635 "m-tm" short-set @x4 result 73 consume 5 -> "amo-tamo" next 639
+node 636 "b'ent" none result 72 consume 7 -> "ambijent" next 638
+node 637 "i" none result 73 consume 4 -> "ambi" level 2
+node 638 "" short-set @x4 result 73 consume 2 -> "amo" level 1
+node 639 "nt<a" short-set @x4 result 73 consume 5 -> "antima" next 642
+node 640 "t<on" none result 72 consume 6 -> "antimon" level 3
+node 641 "i" none result 73 consume 4 -> "anti" level 1
+node 642 "rw:k" none result 72 consume 5 -> "arte\xb2\x91k" next 643
+node 643 "ut[" short-set @x4 result 72 consume 4 -> "autom" next 645
+node 644 "to" none result 73 consume 4 -> "auto" level 1
+node 645 "" short-set @x4 result 79 consume 1 -> "\xb27a" next 646
+node 646 "" none result 71 consume 1 -> "a" end
+node 647 "" class c04 result 27 consume 1 -> "2" next 648
+node 648 "" none result 27 consume 1 -> "2\x12" next 649
+node 649 "#" none result 70 consume 2 -> "bav" next 650
+node 650 "%" none result 70 consume 2 -> "budu\xb27" next 652
+node 651 "" short-set @x4 result 72 consume 2 -> "b\xb27" level 1
+node 652 "(somu*" none result 72 consume 7 -> "bjesomu\xb2=" next 653
+node 653 ")" short-set @x4 result 73 consume 2 -> "biste" next 654
+node 654 "*" short-set @x4 result 72 consume 2 -> "b\xb2=" next 655
+node 655 "+" short-set @x4 result 74 consume 2 -> "bem" next 656
+node 656 "1j" none result 70 consume 3 -> "broj" next 657
+node 657 ":" short-set @x4 result 72 consume 2 -> "ba\xb2\x91" next 660
+node 658 "" short-set @x4 result 74 consume 2 -> "be\xb2\x91" next 659
+node 659 "" short-set @x4 result 72 consume 2 -> "b\xb2\x91" level 1
+node 660 "?" short-set @x4 result 72 consume 2 -> "b\xb2A" next 661
+node 661 "a*" short-set @x4 result 72 consume 3 -> "ba\xb2=" next 665
+node 662 "k" short-set @x4 result 72 consume 3 -> "bak" next 663
+node 663 "" short-set @x4 result 73 consume 2 -> "bar" next 664
+node 664 "" short-set @x8 result 73 consume 2 -> "ba" level 1
+node 665 "c" short-set @x4 result 72 consume 2 -> "bc" next 666
+node 666 "g" short-set @x4 result 72 consume 2 -> "bog" next 667
+node 667 "h" short-set @x4 result 72 consume 2 -> "bih" next 668
+node 668 "i)i" none result 73 consume 4 -> "bistin" next 673
+node 669 "\x5co(d" none result 72 consume 6 -> "biljojed" next 670
+node 670 "meta" none result 73 consume 6 -> "bimetal" next 671
+node 671 "odiym" none result 72 consume 7 -> "biodinam" next 672
+node 672 "va=n" none result 72 consume 6 -> "bivalen" level 1
+node 673 "j" short-set @x4 result 72 consume 2 -> "bj" next 674
+node 674 "k" short-set @x4 result 72 consume 2 -> "bk" next 675
+node 675 "m" short-set @x4 result 72 consume 2 -> "barem" next 676
+node 676 "n" short-set @x4 result 74 consume 2 -> "ben" next 678
+node 677 "" short-set @x4 result 72 consume 2 -> "bn" level 1
+node 678 "ogomo\x5c" none result 72 consume 7 -> "bogomolj" next 679
+node 679 "rz[e" short-set @x4 result 71 consume 5 -> "brzome" next 686
+node 680 "z[u" short-set @x4 result 71 consume 5 -> "brzomu" next 685
+node 681 "[" short-set @x4 result 70 consume 4 -> "brzom" next 682
+node 682 "0" short-set @x4 result 70 consume 4 -> "brzoj" next 683
+node 683 "g" short-set @x4 result 70 consume 4 -> "brzog" next 684
+node 684 "o" none result 72 consume 4 -> "brzo" level 2
+node 685 "" short-set @x4 result 73 consume 2 -> "br" level 1
+node 686 "s" short-set @x4 result 73 consume 2 -> "bismo" next 687
+node 687 "u,]" none result 72 consume 4 -> "bud\xb2\xae" next 688
+node 688 "\x5cak" short-set @x4 result 72 consume 4 -> "bljak" next 690
+node 689 "" short-set @x4 result 72 consume 2 -> "blj" level 1
+node 690 "" short-set @x4 result 73 consume 1 -> "bi" next 691
+node 691 "" class c04 result 72 consume 1 -> "b" next 692
+node 692 "" none result 70 consume 1 -> "b" end
+node 693 "" class c04 result 27 consume 1 -> "3" next 694
+node 694 "" none result 27 consume 1 -> "3\x12" next 695
+node 695 "#" none result 70 consume 2 -> "cav" next 696
+node 696 "%" short-set @x4 result 72 consume 2 -> "c\xb27" next 697
+node 697 "*" short-set @x4 result 72 consume 2 -> "c\xb2=" next 698
+node 698 ",ca" short-set @x4 result 73 consume 4 -> "cca" next 700
+node 699 "c" short-set @x4 result 72 consume 3 -> "cc" level 1
+node 700 "9" short-set @x4 result 73 consume 2 -> "kadli" next 702
+node 701 "-f9" short-set @x4 result 73 consume 5 -> "kadli-tadli" level 1
+node 702 ":" short-set @x4 result 72 consume 2 -> "c\xb2\x91" next 704
+node 703 "" short-set @x4 result 73 consume 2 -> "kad\xb2\x91to" level 1
+node 704 "?" short-set @x4 result 72 consume 2 -> "c\xb2A" next 705
+node 705 "ak" short-set @x4 result 72 consume 3 -> "cak" next 708
+node 706 "r" short-set @x4 result 73 consume 3 -> "car" next 707
+node 707 "" short-set @x8 result 73 consume 2 -> "ca" level 1
+node 708 "c" short-set @x11 result 72 consume 2 -> "katkad" next 709
+node 709 "e" short-set @x8 result 73 consume 2 -> "ce" next 710
+node 710 "g" short-set @x4 result 72 consume 2 -> "cg" next 712
+node 711 "x" short-set @x4 result 72 consume 3 -> "kadgod" level 1
+node 712 "h" short-set @x4 result 72 consume 2 -> "ch" next 713
+node 713 "i)i" none result 73 consume 4 -> "cistin" next 717
+node 714 ",ca" short-set @x4 result 73 consume 5 -> "cica" next 716
+node 715 "c" short-set @x4 result 72 consume 4 -> "cic" level 2
+node 716 "c" short-set @x4 result 72 consume 3 -> "kadikad" level 1
+node 717 "j" short-set @x4 result 72 consume 2 -> "cj" next 718
+node 718 "k" short-set @x4 result 72 consume 2 -> "ck" next 719
+node 719 "n" short-set @x4 result 72 consume 2 -> "cn" next 720
+node 720 "r" short-set @x4 result 73 consume 2 -> "cr" next 721
+node 721 "\x5c" short-set @x4 result 72 consume 2 -> "clj" next 722
+node 722 "" short-set @x4 result 76 consume 1 -> "ac" next 723
+node 723 "" short-set @x11 result 72 consume 1 -> "kad" next 724
+node 724 "" class c04 result 72 consume 1 -> "c" next 725
+node 725 "" none result 70 consume 1 -> "c" end
+node 726 "" class c04 result 27 consume 1 -> "4" next 727
+node 727 "" none result 27 consume 1 -> "4\x12" next 728
+node 728 "#" none result 70 consume 2 -> "dav" next 729
+node 729 "%" short-set @x4 result 72 consume 2 -> "d\xb27" next 730
+node 730 "*" short-set @x4 result 72 consume 2 -> "d\xb2=" next 731
+node 731 "+4t" none result 72 consume 4 -> "demant" next 744
+node 732 "ago" none result 73 consume 5 -> "demago" next 733
+node 733 "b" none result 72 consume 3 -> "demb" next 734
+node 734 "etr" short-set @x4 result 73 consume 5 -> "demetar" next 736
+node 735 "t" none result 72 consume 4 -> "demetr" level 2
+node 736 "i!o" none result 73 consume 5 -> "demi\xb2\xaeon" next 738
+node 737 "ur" none result 73 consume 5 -> "demiurg" level 2
+node 738 "o&z" none result 72 consume 5 -> "demoniz" next 743
+node 739 "g" none result 72 consume 4 -> "demogr" next 740
+node 740 "k" none result 72 consume 4 -> "demokr" next 741
+node 741 "n7" none result 72 consume 5 -> "demonsk" next 742
+node 742 "" short-set @x9 result 72 consume 3 -> "demon" level 2
+node 743 "'ur" none result 73 consume 5 -> "demijurg" level 1
+node 744 "0" short-set @x4 result 74 consume 2 -> "doj" next 745
+node 745 ":" none result 70 consume 2 -> "dana\xb2\x91nj" next 747
+node 746 "" short-set @x4 result 72 consume 2 -> "d\xb2\x91" level 1
+node 747 ";n" short-set @x4 result 72 consume 3 -> "dlan" next 748
+node 748 "?" short-set @x4 result 72 consume 2 -> "d\xb2A" next 749
+node 749 "a*" short-set @x4 result 72 consume 3 -> "da\xb2=" next 752
+node 750 "r" short-set @x4 result 73 consume 3 -> "dar" next 751
+node 751 "" short-set @x8 result 73 consume 2 -> "da" level 1
+node 752 "bk" none result 70 consume 3 -> "dubok" next 753
+node 753 "c" short-set @x4 result 72 consume 2 -> "dc" next 754
+node 754 "e:" short-set @x4 result 72 consume 3 -> "de\xb2\x91" next 758
+node 755 "m" none result 72 consume 3 -> "dem" next 756
+node 756 "n" short-set @x4 result 72 consume 3 -> "den" next 757
+node 757 "" short-set @x8 result 73 consume 2 -> "de" level 1
+node 758 "g" short-set @x4 result 72 consume 2 -> "dg" next 760
+node 759 "" short-set @x4 result 74 consume 2 -> "dog" level 1
+node 760 "h" short-set @x4 result 72 consume 2 -> "dh" next 761
+node 761 "i%" short-set @x4 result 72 consume 3 -> "di\xb27" next 762
+node 762 "j" short-set @x4 result 72 consume 2 -> "dj" next 763
+node 763 "k*" none result 70 consume 3 -> "druk\xb2=" next 767
+node 764 "=" short-set @x4 result 73 consume 3 -> "dakle" next 765
+node 765 "k" short-set @x4 result 73 consume 3 -> "dakako" next 766
+node 766 "" short-set @x4 result 72 consume 2 -> "dk" level 1
+node 767 "n" short-set @x4 result 72 consume 2 -> "dn" next 768
+node 768 "p*" short-set @x4 result 73 consume 3 -> "dapa\xb2=e" next 769
+node 769 "ra" short-set @x4 result 73 consume 3 -> "dra" next 771
+node 770 "" short-set @x4 result 73 consume 2 -> "dr" level 1
+node 771 "s" short-set @x4 result 72 consume 2 -> "danas" next 772
+node 772 "t" none result 70 consume 2 -> "deset" next 773
+node 773 "ugoval" none result 72 consume 7 -> "dugovaln" next 774
+node 774 "vo4m" none result 72 consume 5 -> "dvodom" next 782
+node 775 "od<" none result 72 consume 5 -> "dvodim" level 3
+node 776 "j2" none result 72 consume 5 -> "dvojaj" next 777
+node 777 "met" none result 72 consume 6 -> "dvomet" next 778
+node 778 "v;" none result 73 consume 5 -> "dvovla" next 781
+node 779 "a=n" none result 72 consume 7 -> "dvovalen" level 5
+node 780 "\x5c" none result 72 consume 6 -> "dvovalj" level 3
+node 781 "\x5c" none result 72 consume 4 -> "dvolj" level 1
+node 782 "w" short-set @x4 result 74 consume 2 -> "dov" next 783
+node 783 "[" short-set @x4 result 74 consume 2 -> "dom" next 784
+node 784 "\x5c" short-set @x4 result 72 consume 2 -> "dlj" next 785
+node 785 "^m" short-set @x4 result 72 consume 3 -> "dnom" next 786
+node 786 "" short-set @x4 result 73 consume 1 -> "da" next 787
+node 787 "" class c04 result 72 consume 1 -> "d" next 788
+node 788 "" none result 70 consume 1 -> "d" end
+node 789 "" class c04 result 27 consume 1 -> "5" next 790
+node 790 "" none result 27 consume 1 -> "5\x12" next 791
+node 791 "#" none result 71 consume 2 -> "ega" next 792
+node 792 ",a" short-set @x4 result 75 consume 3 -> "ea" next 796
+node 793 "e" short-set @x4 result 75 consume 3 -> "ee" next 794
+node 794 "i" short-set @x4 result 75 consume 3 -> "ei" next 795
+node 795 "u" short-set @x4 result 75 consume 3 -> "eu" level 1
+node 796 "?<" short-set @x4 result 72 consume 3 -> "me\xb2Autim" next 798
+node 797 "" none result 73 consume 2 -> "me\xb2Au" level 1
+node 798 "al" none result 70 consume 3 -> "eventual" next 799
+node 799 "kskawd" none result 72 consume 7 -> "ekskated" next 802
+node 800 "vi" none result 73 consume 4 -> "ekvi" next 801
+node 801 "" short-set @x4 result 72 consume 2 -> "tek" level 1
+node 802 "o" short-set @x4 result 73 consume 2 -> "evo" next 803
+node 803 "t" short-set @x4 result 73 consume 2 -> "eto" next 804
+node 804 "" short-set @x4 result 79 consume 1 -> "\xb27e" next 805
+node 805 "" short-set @x4 result 73 consume 1 -> "\xb27e" next 806
+node 806 "" class c04 result 73 consume 1 -> "e" next 807
+node 807 "" none result 71 consume 1 -> "e" end
+node 808 "" class c04 result 27 consume 1 -> "6" next 809
+node 809 "" none result 27 consume 1 -> "6\x12" next 810
+node 810 "#" none result 70 consume 2 -> "fav" next 811
+node 811 "$" none result 70 consume 2 -> "tadanj" next 812
+node 812 "%" short-set @x4 result 72 consume 2 -> "f\xb27" next 813
+node 813 "*" short-set @x4 result 72 consume 2 -> "f\xb2=" next 814
+node 814 "1jdomarks" none result 72 consume 10 -> "frojdomarks" next 815
+node 815 ":" short-set @x4 result 72 consume 2 -> "f\xb2\x91" next 817
+node 816 "" none result 70 consume 2 -> "tada\xb2\x91nj" level 1
+node 817 ";m" short-set @x4 result 72 consume 3 -> "flam" next 818
+node 818 "=:" short-set @x4 result 72 consume 3 -> "fle\xb2\x91" next 819
+node 819 "?" short-set @x4 result 72 consume 2 -> "f\xb2A" next 820
+node 820 "a*" short-set @x4 result 72 consume 3 -> "fa|=" next 826
+node 821 "c" short-set @x4 result 72 consume 3 -> "fac" next 822
+node 822 "k" short-set @x4 result 72 consume 3 -> "fak" next 823
+node 823 "r" short-set @x4 result 73 consume 3 -> "far" next 824
+node 824 "\x5ceni+s" none result 72 consume 8 -> "faljenisus" next 825
+node 825 "" short-set @x8 result 73 consume 2 -> "fa" level 1
+node 826 "c" short-set @x4 result 72 consume 2 -> "fc" next 827
+node 827 "e:" short-set @x4 result 72 consume 3 -> "fe\xb2\x91" next 830
+node 828 "n" short-set @x4 result 72 consume 3 -> "fen" next 829
+node 829 "" short-set @x8 result 73 consume 2 -> "fe" level 1
+node 830 "f" none result 70 consume 2 -> "filozof" next 831
+node 831 "g" short-set @x4 result 72 consume 2 -> "fg" next 832
+node 832 "h" short-set @x4 result 72 consume 2 -> "fh" next 833
+node 833 "i%" short-set @x4 result 72 consume 3 -> "fi\xb27" next 835
+node 834 ":" short-set @x4 result 72 consume 3 -> "fi\xb2\x91" level 1
+node 835 "j" short-set @x4 result 72 consume 2 -> "fj" next 836
+node 836 "k" short-set @x4 result 72 consume 2 -> "fk" next 837
+node 837 "n" short-set @x4 result 72 consume 2 -> "fn" next 838
+node 838 "obi*" none result 70 consume 5 -> "fobi\xb2=" next 839
+node 839 "r" short-set @x4 result 73 consume 2 -> "fr" next 840
+node 840 "\x5c" short-set @x4 result 72 consume 2 -> "flj" next 841
+node 841 "" short-set @x11 result 72 consume 1 -> "tad" next 842
+node 842 "" class c04 result 72 consume 1 -> "f" next 843
+node 843 "" none result 70 consume 1 -> "f" end
+node 844 "" class c04 result 27 consume 1 -> "7" next 845
+node 845 "" none result 27 consume 1 -> "7\x12" next 846
+node 846 "#" none result 70 consume 2 -> "gav" next 847
+node 847 "%" short-set @x4 result 72 consume 2 -> "g\xb27" next 849
+node 848 "" none result 70 consume 2 -> "mogu\xb27" level 1
+node 849 "(:" short-set @x4 result 73 consume 3 -> "gdje\xb2\x91to" next 853
+node 850 "c" short-set @x4 result 72 consume 3 -> "gdjekad" next 851
+node 851 "gx" short-set @x4 result 72 consume 4 -> "gdjegod" next 852
+node 852 "" short-set @x4 result 73 consume 2 -> "gdje" level 1
+node 853 "*" short-set @x4 result 74 consume 2 -> "ga\xb2=" next 855
+node 854 "" short-set @x4 result 72 consume 2 -> "g\xb2=" level 1
+node 855 ",u" short-set @x4 result 73 consume 3 -> "gu" next 856
+node 856 "." short-set @x4 result 74 consume 2 -> "gam" next 857
+node 857 "/zodu:" none result 72 consume 7 -> "grizodu\xb2\x91" next 858
+node 858 "1mog;s" none result 70 consume 7 -> "gromoglas" next 860
+node 859 "zomo" none result 70 consume 6 -> "grozomor" level 1
+node 860 "2" short-set @x4 result 74 consume 2 -> "gaj" next 861
+node 861 "4" short-set @x4 result 74 consume 2 -> "gan" next 862
+node 862 "9" short-set @x4 result 73 consume 2 -> "negoli" next 863
+node 863 ":" none result 70 consume 2 -> "godi\xb2\x91nj" next 865
+node 864 "" short-set @x4 result 72 consume 2 -> "g\xb2\x91" level 1
+node 865 ";sovi" none result 73 consume 6 -> "glasovir" next 866
+node 866 "=n" short-set @x4 result 72 consume 3 -> "glen" next 867
+node 867 "?" short-set @x4 result 72 consume 2 -> "g\xb2A" next 868
+node 868 "@\x5c" none result 74 consume 3 -> "gatelj" next 869
+node 869 "a*" short-set @x4 result 72 consume 3 -> "ga\xb2=" next 875
+node 870 "c" short-set @x4 result 72 consume 3 -> "gac" next 871
+node 871 "k" short-set @x4 result 72 consume 3 -> "gak" next 872
+node 872 "r" short-set @x4 result 73 consume 3 -> "gar" next 873
+node 873 "zivx" none result 70 consume 6 -> "gazivod" next 874
+node 874 "" short-set @x8 result 73 consume 2 -> "ga" level 1
+node 875 "c" short-set @x4 result 74 consume 2 -> "gac" next 877
+node 876 "" short-set @x4 result 72 consume 2 -> "gc" level 1
+node 877 "d:" short-set @x4 result 73 consume 3 -> "gde\xb2\x91to" next 881
+node 878 "c" short-set @x4 result 72 consume 3 -> "gdekad" next 879
+node 879 "gx" short-set @x4 result 72 consume 4 -> "gdegod" next 880
+node 880 "" short-set @x4 result 73 consume 2 -> "gde" level 1
+node 881 "e:" short-set @x4 result 72 consume 3 -> "ge\xb2\x91" next 884
+node 882 "n" short-set @x4 result 72 consume 3 -> "gen" next 883
+node 883 "" short-set @x8 result 73 consume 2 -> "ge" level 1
+node 884 "g" short-set @x4 result 72 consume 2 -> "gg" next 885
+node 885 "h" short-set @x4 result 72 consume 2 -> "gh" next 886
+node 886 "j" short-set @x4 result 72 consume 2 -> "gj" next 887
+node 887 "k" short-set @x4 result 74 consume 2 -> "gak" next 889
+node 888 "" short-set @x4 result 72 consume 2 -> "gk" level 1
+node 889 "n" short-set @x4 result 72 consume 2 -> "gn" next 890
+node 890 "p" none result 70 consume 2 -> "grup" next 891
+node 891 "r" short-set @x4 result 75 consume 2 -> "gar" next 893
+node 892 "" short-set @x4 result 73 consume 2 -> "gr" level 1
+node 893 "s" none result 70 consume 2 -> "gosp" next 894
+node 894 "tw" none result 70 consume 3 -> "gotov" next 895
+node 895 "u" short-set @x4 result 73 consume 2 -> "mogu" next 896
+node 896 "\x5c" short-set @x4 result 72 consume 2 -> "glj" next 897
+node 897 "^j" short-set @x4 result 72 consume 3 -> "gnoj" next 899
+node 898 "" short-set @x4 result 72 consume 2 -> "gnom" level 1
+node 899 "_g" short-set @x4 result 72 consume 3 -> "glog" next 900
+node 900 "" short-set @x4 result 73 consume 1 -> "nego" next 901
+node 901 "" short-set @x4 result 76 consume 1 -> "og" next 902
+node 902 "" class c04 result 72 consume 1 -> "g" next 903
+node 903 "" none result 70 consume 1 -> "g" end
+node 904 "" class c04 result 27 consume 1 -> "8" next 905
+node 905 "" none result 27 consume 1 -> "8\x12" next 906
+node 906 "#" none result 70 consume 2 -> "hav" next 907
+node 907 "%" short-set @x4 result 72 consume 2 -> "h\xb27" next 908
+node 908 "*" short-set @x4 result 72 consume 2 -> "h\xb2=" next 909
+node 909 ",e" short-set @x4 result 73 consume 3 -> "he" next 913
+node 910 "h" short-set @x4 result 74 consume 3 -> "hh" next 911
+node 911 "m" short-set @x4 result 72 consume 3 -> "hm" next 912
+node 912 "u" short-set @x4 result 73 consume 3 -> "hu" level 1
+node 913 "7" none result 70 consume 2 -> "hrvatsk" next 914
+node 914 ":" short-set @x4 result 72 consume 2 -> "ho\xb27e\xb2\x91" next 916
+node 915 "" short-set @x4 result 72 consume 2 -> "h\xb2\x91" level 1
+node 916 "?" short-set @x4 result 72 consume 2 -> "h\xb2A" next 917
+node 917 "a*" short-set @x4 result 72 consume 3 -> "ha\xb2=" next 922
+node 918 "c" short-set @x4 result 72 consume 3 -> "hac" next 919
+node 919 "k" short-set @x4 result 72 consume 3 -> "hak" next 920
+node 920 "r" short-set @x4 result 73 consume 3 -> "har" next 921
+node 921 "" short-set @x8 result 73 consume 2 -> "ha" level 1
+node 922 "c" short-set @x4 result 72 consume 2 -> "hc" next 923
+node 923 "d" none result 70 consume 2 -> "hiljad" next 924
+node 924 "e:" short-set @x4 result 72 consume 3 -> "he\xb2\x91" next 930
+node 925 "9od1m" none result 70 consume 7 -> "heliodrom" next 926
+node 926 "ksamet" none result 72 consume 8 -> "heksamet" next 927
+node 927 "n" short-set @x4 result 72 consume 3 -> "hen" next 928
+node 928 "" short-set @x4 result 73 consume 2 -> "ho\xb27e" next 929
+node 929 "" short-set @x8 result 73 consume 2 -> "he" level 1
+node 930 "g" short-set @x4 result 72 consume 2 -> "hg" next 931
+node 931 "h" short-set @x4 result 72 consume 2 -> "hh" next 932
+node 932 "i)i" none result 73 consume 4 -> "histin" next 934
+node 933 "per" none result 72 consume 5 -> "hiper" level 1
+node 934 "j" short-set @x4 result 72 consume 2 -> "hj" next 935
+node 935 "k" short-set @x4 result 72 consume 2 -> "hk" next 936
+node 936 "m" short-set @x4 result 73 consume 2 -> "ho\xb27emo" next 937
+node 937 "n" short-set @x4 result 72 consume 2 -> "hn" next 938
+node 938 "o,]" none result 70 consume 4 -> "hod\xb2\xae" next 939
+node 939 "r" short-set @x4 result 73 consume 2 -> "hr" next 940
+node 940 "t" short-set @x4 result 73 consume 2 -> "ho\xb27ete" next 941
+node 941 "u" short-set @x4 result 73 consume 2 -> "ho\xb27u" next 942
+node 942 "var" short-set @x4 result 73 consume 4 -> "hvar" next 943
+node 943 "\x5c" short-set @x4 result 72 consume 2 -> "hlj" next 944
+node 944 "" short-set @x4 result 72 consume 1 -> "ih" next 945
+node 945 "" short-set @x4 result 76 consume 1 -> "ih" next 946
+node 946 "" class c04 result 72 consume 1 -> "h" next 947
+node 947 "" none result 70 consume 1 -> "h" end
+node 948 "" class c04 result 27 consume 1 -> "9" next 949
+node 949 "" none result 27 consume 1 -> "9\x12" next 950
+node 950 "#" none result 71 consume 2 -> "iga" next 951
+node 951 ")[e" short-set @x4 result 72 consume 4 -> "istome" next 959
+node 952 "[u" short-set @x4 result 72 consume 4 -> "istomu" next 954
+node 953 "" short-set @x4 result 72 consume 3 -> "istom" level 2
+node 954 "0" short-set @x4 result 72 consume 3 -> "istoj" next 955
+node 955 "g" short-set @x4 result 72 consume 3 -> "istog" next 956
+node 956 "ov" none result 72 consume 4 -> "istov" next 958
+node 957 "" none result 73 consume 3 -> "isto" level 2
+node 958 "wa" short-set @x4 result 71 consume 4 -> "istovar" level 1
+node 959 ",%a" short-set @x4 result 72 consume 4 -> "i\xb27a" next 966
+node 960 ":" short-set @x4 result 72 consume 3 -> "i\xb2\x91" next 961
+node 961 "a" short-set @x4 result 75 consume 3 -> "ia" next 963
+node 962 "" short-set @x4 result 73 consume 3 -> "ia" level 2
+node 963 "ca" short-set @x4 result 72 consume 4 -> "ica" next 964
+node 964 "e" short-set @x4 result 75 consume 3 -> "ie" next 965
+node 965 "u" short-set @x4 result 75 consume 3 -> "iu" level 1
+node 966 "7o" class c03 result 71 consume 3 -> "iskor" next 967
+node 967 ":" short-set @x4 result 73 consume 2 -> "i\xb2\x91ta" next 968
+node 968 "al" none result 70 consume 3 -> "individual" next 970
+node 969 "" short-set @x4 result 73 consume 2 -> "ima" level 1
+node 970 "ca" short-set @x4 result 75 consume 3 -> "ica" next 973
+node 971 "a" short-set @x4 result 70 consume 3 -> "ikada" next 972
+node 972 "" short-set @x4 result 70 consume 2 -> "ikad" level 1
+node 973 "g(" short-set @x4 result 73 consume 3 -> "igdje" next 975
+node 974 "d" short-set @x4 result 73 consume 3 -> "igde" level 1
+node 975 "km" short-set @x4 result 73 consume 3 -> "ikamo" next 976
+node 976 "m_" short-set @x4 result 73 consume 3 -> "imalo" next 977
+node 977 "n(k" none result 72 consume 4 -> "injek" next 986
+node 978 "di\x22vuum" none result 70 consume 9 -> "individuum" next 979
+node 979 "jek" none result 3 consume 5 -> "injek" level 3
+node 980 "ic" none result 3 consume 5 -> "injic" next 982
+node 981 "c" none result 72 consume 5 -> "injic" level 3
+node 982 "unk" none result 3 consume 6 -> "injunk" level 4
+node 983 "nk" none result 72 consume 6 -> "injunk" next 984
+node 984 "" none result 3 consume 4 -> "injur" next 985
+node 985 "" none result 73 consume 4 -> "injur" level 1
+node 986 "s\x22*" none result 72 consume 4 -> "isklju\xb2=" next 993
+node 987 "\x22]" none result 72 consume 4 -> "istreb" next 988
+node 988 "k!" none result 72 consume 4 -> "iska\xb2\xae" next 990
+node 989 "z" none result 72 consume 4 -> "iskaz" level 2
+node 990 "p]m'e:" none result 70 consume 8 -> "ispremije\xb2\x91" level 3
+node 991 "]me:" none result 70 consume 7 -> "ispreme\xb2\x91" level 4
+node 992 "met" none result 70 consume 7 -> "ispremet" level 1
+node 993 "" short-set @x4 result 79 consume 1 -> "\xb27i" next 994
+node 994 "" class c04 result 73 consume 1 -> "i" next 995
+node 995 "" none result 71 consume 1 -> "i" end
+node 996 "" class c04 result 27 consume 1 -> "0" next 997
+node 997 "" none result 27 consume 1 -> "0\x12" next 998
+node 998 "#" none result 70 consume 2 -> "jav" next 999
+node 999 "%" short-set @x4 result 72 consume 2 -> "j\xb27" next 1000
+node 1000 "*8" none result 71 consume 3 -> "ju\xb2=era" next 1004
+node 1001 "e" short-set @x4 result 71 consume 3 -> "ju\xb2=e" next 1002
+node 1002 "r" short-set @x4 result 71 consume 3 -> "ju\xb2=er" next 1003
+node 1003 "" short-set @x4 result 72 consume 2 -> "j\xb2=" level 1
+node 1004 "+" short-set @x4 result 74 consume 2 -> "jem" next 1005
+node 1005 ",h" short-set @x4 result 74 consume 3 -> "jh" next 1006
+node 1006 "2ovx" none result 72 consume 5 -> "jajovod" next 1007
+node 1007 ":" short-set @x4 result 74 consume 2 -> "je\xb2\x91" next 1009
+node 1008 "" short-set @x4 result 72 consume 2 -> "j\xb2\x91" level 1
+node 1009 "?" short-set @x4 result 72 consume 2 -> "j\xb2A" next 1010
+node 1010 "a*" short-set @x4 result 72 consume 3 -> "ja\xb2=" next 1015
+node 1011 "c" short-set @x4 result 72 consume 3 -> "jac" next 1012
+node 1012 "k" short-set @x4 result 72 consume 3 -> "jak" next 1013
+node 1013 "r" short-set @x4 result 73 consume 3 -> "jar" next 1014
+node 1014 "" short-set @x8 result 73 consume 2 -> "ja" level 1
+node 1015 "c" short-set @x4 result 72 consume 2 -> "jc" next 1016
+node 1016 "g" short-set @x4 result 72 consume 2 -> "jg" next 1017
+node 1017 "h" short-set @x4 result 72 consume 2 -> "jh" next 1018
+node 1018 "j" short-set @x4 result 72 consume 2 -> "jj" next 1019
+node 1019 "k" short-set @x4 result 72 consume 2 -> "jk" next 1020
+node 1020 "n" short-set @x4 result 74 consume 2 -> "jen" next 1022
+node 1021 "" short-set @x4 result 72 consume 2 -> "jn" level 1
+node 1022 "r" short-set @x4 result 73 consume 2 -> "jr" next 1023
+node 1023 "\x5c" short-set @x4 result 72 consume 2 -> "jlj" next 1024
+node 1024 "" short-set @x4 result 72 consume 1 -> "jo\xb2\x91" next 1025
+node 1025 "" short-set @x4 result 75 consume 1 -> "uju" next 1026
+node 1026 "" none result 70 consume 1 -> "j" end
+node 1027 "!" none result 70 consume 2 -> "ka\xb2\xae" next 1028
+node 1028 "#" none result 70 consume 2 -> "kav" next 1029
+node 1029 "$igove" none result 73 consume 7 -> "knjigove" next 1031
+node 1030 "igov" none result 72 consume 6 -> "knjigovo" level 1
+node 1031 "%" short-set @x4 result 72 consume 2 -> "k\xb27" next 1032
+node 1032 "*" short-set @x4 result 72 consume 2 -> "k\xb2=" next 1033
+node 1033 "/vov" none result 72 consume 5 -> "krivov" next 1034
+node 1034 "0" short-set @x4 result 74 consume 2 -> "koj" next 1035
+node 1035 "9n,*" short-set @x4 result 72 consume 5 -> "klin\xb2=" next 1036
+node 1036 ":" short-set @x4 result 72 consume 2 -> "ki\xb2\x91" next 1038
+node 1037 "" short-set @x4 result 72 consume 2 -> "k\xb2\x91" level 1
+node 1038 ";n" short-set @x4 result 72 consume 3 -> "klan" next 1039
+node 1039 "=n" short-set @x4 result 72 consume 3 -> "klen" next 1040
+node 1040 "?" short-set @x4 result 72 consume 2 -> "k\xb2A" next 1041
+node 1041 "a*" short-set @x4 result 72 consume 3 -> "ka\xb2=" next 1046
+node 1042 "c" short-set @x4 result 72 consume 3 -> "kac" next 1043
+node 1043 "k" short-set @x4 result 72 consume 3 -> "kak" next 1044
+node 1044 "r" short-set @x4 result 73 consume 3 -> "kar" next 1045
+node 1045 "" short-set @x8 result 73 consume 2 -> "ka" level 1
+node 1046 "c" short-set @x4 result 72 consume 2 -> "kc" next 1047
+node 1047 "da" none result 75 consume 3 -> "kuda" next 1051
+node 1048 "ikm" short-set @x4 result 73 consume 5 -> "kudikamo" next 1049
+node 1049 "" short-set @x11 result 72 consume 2 -> "kud" next 1050
+node 1050 "" none result 74 consume 2 -> "kud" level 1
+node 1051 "e:" short-set @x4 result 72 consume 3 -> "ke\xb2\x91" next 1054
+node 1052 "n" short-set @x4 result 72 consume 3 -> "ken" next 1053
+node 1053 "" short-set @x8 result 73 consume 2 -> "ke" level 1
+node 1054 "g" short-set @x4 result 72 consume 2 -> "kg" next 1056
+node 1055 "" short-set @x4 result 74 consume 2 -> "kog" level 1
+node 1056 "h" short-set @x4 result 72 consume 2 -> "kh" next 1057
+node 1057 "i%" short-set @x4 result 72 consume 3 -> "ki\xb27" next 1059
+node 1058 "os,k" short-set @x4 result 72 consume 6 -> "kiosk" level 1
+node 1059 "j" short-set @x4 result 72 consume 2 -> "kj" next 1060
+node 1060 "k#" none result 70 consume 3 -> "kakav" next 1067
+node 1061 ")" none result 70 consume 3 -> "karakterist" next 1062
+node 1062 "t" none result 71 consume 3 -> "karakter" next 1063
+node 1063 "w" none result 70 consume 3 -> "kakov" next 1064
+node 1064 "" short-set @x4 result 73 consume 2 -> "kako" next 1065
+node 1065 "" none result 75 consume 2 -> "kako" next 1066
+node 1066 "" none result 70 consume 2 -> "kakv" level 1
+node 1067 "lr" none result 70 consume 3 -> "kultur" next 1068
+node 1068 "m9" short-set @x4 result 73 consume 3 -> "kamoli" next 1070
+node 1069 "" short-set @x4 result 73 consume 2 -> "kamo" level 1
+node 1070 "n" short-set @x4 result 72 consume 2 -> "kn" next 1071
+node 1071 "onjek" none result 3 consume 6 -> "konjek" next 1076
+node 1072 "njici" none result 3 consume 7 -> "konjicir" level 3
+node 1073 "junk" none result 3 consume 7 -> "konjunk" level 4
+node 1074 "u" none result 3 consume 5 -> "konjug" level 5
+node 1075 "" none result 3 consume 5 -> "konjur" level 1
+node 1076 "ptl" none result 70 consume 4 -> "kapital" next 1078
+node 1077 "" none result 70 consume 2 -> "kup" level 1
+node 1078 "rugova" none result 73 consume 7 -> "krugoval" next 1080
+node 1079 "" short-set @x4 result 73 consume 2 -> "kr" level 1
+node 1080 "va*" short-set @x4 result 72 consume 4 -> "kva\xb2=" next 1083
+node 1081 "ak" short-set @x4 result 72 consume 4 -> "kvak" level 3
+node 1082 "r" short-set @x4 result 73 consume 4 -> "kvar" level 1
+node 1083 "w" short-set @x4 result 74 consume 2 -> "kov" next 1084
+node 1084 "z" none result 70 consume 2 -> "kaz" next 1085
+node 1085 "[" short-set @x4 result 74 consume 2 -> "kom" next 1086
+node 1086 "\x5c" short-set @x4 result 75 consume 2 -> "kao" next 1088
+node 1087 "" short-set @x4 result 72 consume 2 -> "klj" level 1
+node 1088 "" short-set @x4 result 76 consume 1 -> "ak" next 1089
+node 1089 "" class c04 result 72 consume 1 -> "k" next 1090
+node 1090 "" none result 70 consume 1 -> "k" end
+node 1091 "#" none result 70 consume 2 -> "lav" next 1092
+node 1092 "%" short-set @x4 result 74 consume 2 -> "li\xb27" next 1094
+node 1093 "" short-set @x4 result 72 consume 2 -> "l\xb27" level 1
+node 1094 "*" short-set @x4 result 74 consume 2 -> "la\xb2=" next 1096
+node 1095 "" short-set @x4 result 72 consume 2 -> "l\xb2=" level 1
+node 1096 "+" short-set @x4 result 74 consume 2 -> "lem" next 1097
+node 1097 ",a" short-set @x4 result 73 consume 3 -> "la" next 1099
+node 1098 "o" short-set @x4 result 73 consume 3 -> "lo" level 1
+node 1099 "." short-set @x4 result 74 consume 2 -> "lam" next 1100
+node 1100 "0" short-set @x4 result 74 consume 2 -> "loj" next 1101
+node 1101 "2" short-set @x4 result 74 consume 2 -> "laj" next 1102
+node 1102 "4" short-set @x4 result 74 consume 2 -> "lan" next 1103
+node 1103 ":" short-set @x4 result 74 consume 2 -> "le\xb2\x91" next 1105
+node 1104 "" short-set @x4 result 72 consume 2 -> "l\xb2\x91" level 1
+node 1105 "<" short-set @x4 result 74 consume 2 -> "lim" next 1106
+node 1106 "?" short-set @x4 result 72 consume 2 -> "l\xb2A" next 1107
+node 1107 "@t" none result 74 consume 3 -> "litelj" next 1109
+node 1108 "\x5c" none result 74 consume 3 -> "latelj" level 1
+node 1109 "a*" short-set @x4 result 72 consume 3 -> "la\xb2=" next 1115
+node 1110 "c" short-set @x4 result 72 consume 3 -> "lac" next 1111
+node 1111 "k" short-set @x4 result 72 consume 3 -> "lak" next 1112
+node 1112 "r" short-set @x4 result 73 consume 3 -> "lar" next 1113
+node 1113 "" short-set @x4 result 73 consume 2 -> "bila" next 1114
+node 1114 "" short-set @x8 result 73 consume 2 -> "la" level 1
+node 1115 "c" short-set @x4 result 74 consume 2 -> "lac" next 1117
+node 1116 "" short-set @x4 result 72 consume 2 -> "lc" level 1
+node 1117 "e" short-set @x4 result 73 consume 2 -> "bile" next 1118
+node 1118 "g" short-set @x4 result 72 consume 2 -> "lg" next 1120
+node 1119 "" short-set @x4 result 74 consume 2 -> "log" level 1
+node 1120 "h" short-set @x4 result 72 consume 2 -> "lh" next 1122
+node 1121 "" short-set @x4 result 74 consume 2 -> "lih" level 1
+node 1122 "i" short-set @x4 result 73 consume 2 -> "bili" next 1123
+node 1123 "k" short-set @x4 result 74 consume 2 -> "lak" next 1124
+node 1124 "n" short-set @x4 result 74 consume 2 -> "len" next 1126
+node 1125 "" short-set @x4 result 72 consume 2 -> "ln" level 1
+node 1126 "o" short-set @x4 result 73 consume 2 -> "bilo" next 1127
+node 1127 "r" short-set @x4 result 75 consume 2 -> "lar" next 1129
+node 1128 "" short-set @x4 result 73 consume 2 -> "lr" level 1
+node 1129 "we" none result 73 consume 3 -> "love\xb27" next 1131
+node 1130 "" short-set @x4 result 74 consume 2 -> "lov" level 1
+node 1131 "[" short-set @x4 result 74 consume 2 -> "lom" next 1132
+node 1132 "\x5c" short-set @x4 result 72 consume 2 -> "llj" next 1133
+node 1133 "" short-set @x4 result 73 consume 1 -> "ali" next 1134
+node 1134 "" class c04 result 72 consume 1 -> "l" next 1135
+node 1135 "" none result 70 consume 1 -> "l" end
+node 1136 "#" none result 70 consume 2 -> "mav" next 1137
+node 1137 "%" short-set @x4 result 72 consume 2 -> "m\xb27" next 1138
+node 1138 "*" short-set @x4 result 72 consume 2 -> "m\xb2=" next 1139
+node 1139 "4omet" none result 72 consume 6 -> "manomet" next 1140
+node 1140 ":" none result 70 consume 2 -> "mi\xb2\x91lj" next 1142
+node 1141 "" short-set @x4 result 72 consume 2 -> "m\xb2\x91" level 1
+node 1142 ";k" short-set @x4 result 72 consume 3 -> "mlak" next 1143
+node 1143 "?" short-set @x4 result 72 consume 2 -> "m\xb2A" next 1144
+node 1144 "a*" short-set @x4 result 72 consume 3 -> "ma\xb2=" next 1150
+node 1145 "c" short-set @x4 result 72 consume 3 -> "mac" next 1146
+node 1146 "k" short-set @x4 result 72 consume 3 -> "mak" next 1147
+node 1147 "lte:k" none result 72 consume 7 -> "malte\xb2\x91k" next 1148
+node 1148 "r" short-set @x4 result 73 consume 3 -> "mar" next 1149
+node 1149 "" short-set @x8 result 73 consume 2 -> "ma" level 1
+node 1150 "c" short-set @x4 result 72 consume 2 -> "mc" next 1151
+node 1151 "d" short-set @x4 result 73 consume 2 -> "mada" next 1152
+node 1152 "e:" short-set @x4 result 72 consume 3 -> "me\xb2\x91" next 1157
+node 1153 "n" short-set @x4 result 72 consume 3 -> "men" next 1154
+node 1154 "so(d" none result 72 consume 6 -> "mesojed" next 1155
+node 1155 "tamorf" none result 70 consume 8 -> "metamorf" next 1156
+node 1156 "" short-set @x8 result 73 consume 2 -> "me" level 1
+node 1157 "g" short-set @x4 result 72 consume 2 -> "mg" next 1159
+node 1158 "" none result 70 consume 2 -> "mog" level 1
+node 1159 "h" short-set @x4 result 72 consume 2 -> "mh" next 1160
+node 1160 "i%" short-set @x4 result 72 consume 3 -> "mi\xb27" next 1163
+node 1161 ")i" none result 73 consume 4 -> "mistin" next 1162
+node 1162 ":omo" none result 72 consume 6 -> "mi\xb2\x91omor" level 1
+node 1163 "j" short-set @x4 result 72 consume 2 -> "mj" next 1164
+node 1164 "k" short-set @x4 result 72 consume 2 -> "mk" next 1165
+node 1165 "n" short-set @x4 result 72 consume 2 -> "mn" next 1166
+node 1166 "o#" short-set @x4 result 71 consume 3 -> "moga" next 1168
+node 1167 "gu" none result 72 consume 4 -> "mogul" level 1
+node 1168 "r" short-set @x4 result 73 consume 2 -> "mr" next 1169
+node 1169 "u$ovo" none result 73 consume 6 -> "munjovoz" next 1172
+node 1170 "homo" none result 72 consume 6 -> "muhomor" next 1171
+node 1171 "lti" none result 72 consume 5 -> "multi" level 1
+node 1172 "\x5c" short-set @x4 result 72 consume 2 -> "mlj" next 1173
+node 1173 "^m" short-set @x4 result 72 consume 3 -> "mnom" next 1174
+node 1174 "_" short-set @x4 result 73 consume 2 -> "malo" next 1175
+node 1175 "" short-set @x4 result 73 consume 1 -> "mi" next 1176
+node 1176 "" class c04 result 72 consume 1 -> "m" next 1177
+node 1177 "" none result 70 consume 1 -> "m" end
+node 1178 "#" none result 74 consume 2 -> "nav" next 1179
+node 1179 "$" none result 70 consume 2 -> "nutarnj" next 1180
+node 1180 "%" short-set @x4 result 74 consume 2 -> "ni\xb27" next 1182
+node 1181 "" short-set @x4 result 72 consume 2 -> "n\xb27" level 1
+node 1182 "*" short-set @x4 result 73 consume 2 -> "ina\xb2=e" next 1185
+node 1183 "" short-set @x4 result 74 consume 2 -> "na\xb2=" next 1184
+node 1184 "" short-set @x4 result 72 consume 2 -> "n\xb2=" level 1
+node 1185 "+" short-set @x4 result 74 consume 2 -> "nem" next 1186
+node 1186 ",*" short-set @x4 result 74 consume 3 -> "n\xb2=" next 1192
+node 1187 "c" short-set @x4 result 74 consume 3 -> "nc" next 1188
+node 1188 "da" short-set @x4 result 73 consume 4 -> "nda" next 1189
+node 1189 "g" short-set @x4 result 74 consume 3 -> "ng" next 1190
+node 1190 "h" short-set @x4 result 74 consume 3 -> "nh" next 1191
+node 1191 "k" short-set @x4 result 74 consume 3 -> "nk" level 1
+node 1192 "." short-set @x4 result 74 consume 2 -> "nam" next 1193
+node 1193 "0" short-set @x4 result 74 consume 2 -> "noj" next 1194
+node 1194 "2" short-set @x4 result 74 consume 2 -> "naj" next 1195
+node 1195 "4" short-set @x4 result 74 consume 2 -> "nan" next 1196
+node 1196 ":" short-set @x4 result 74 consume 2 -> "ne\xb2\x91" next 1198
+node 1197 "" short-set @x4 result 72 consume 2 -> "n\xb2\x91" level 1
+node 1198 "<" short-set @x4 result 74 consume 2 -> "nim" next 1199
+node 1199 "?" short-set @x4 result 72 consume 2 -> "n\xb2A" next 1200
+node 1200 "@t" none result 74 consume 3 -> "nitelj" next 1202
+node 1201 "\x5c" none result 74 consume 3 -> "natelj" level 1
+node 1202 "ad!buk" none result 3 consume 7 -> "nad\xb2\xaebuk" next 1204
+node 1203 "d!iv" none result 3 consume 6 -> "nad\xb2\xaeiv" level 1
+node 1204 "c" short-set @x4 result 74 consume 2 -> "nac" next 1206
+node 1205 "" short-set @x4 result 72 consume 2 -> "nc" level 1
+node 1206 "da" short-set @x4 result 73 consume 3 -> "onuda" next 1208
+node 1207 "" short-set @x4 result 72 consume 2 -> "onud" level 1
+node 1208 "g" short-set @x4 result 72 consume 2 -> "ng" next 1210
+node 1209 "" short-set @x4 result 74 consume 2 -> "nog" level 1
+node 1210 "h" short-set @x4 result 72 consume 2 -> "nh" next 1212
+node 1211 "" short-set @x4 result 74 consume 2 -> "nih" level 1
+node 1212 "k#" short-set @x4 result 72 consume 3 -> "onakav" next 1218
+node 1213 "o" none result 71 consume 3 -> "nko" next 1214
+node 1214 "w" none result 70 consume 3 -> "onakov" next 1215
+node 1215 "" short-set @x4 result 74 consume 2 -> "nak" next 1216
+node 1216 "" short-set @x4 result 73 consume 2 -> "onako" next 1217
+node 1217 "" none result 70 consume 2 -> "onakv" level 1
+node 1218 "m" short-set @x4 result 73 consume 2 -> "naime" next 1220
+node 1219 "l" none result 70 consume 3 -> "normal" level 1
+node 1220 "n" short-set @x4 result 74 consume 2 -> "nen" next 1222
+node 1221 "" short-set @x4 result 72 consume 2 -> "nn" level 1
+node 1222 "ogomet" none result 72 consume 7 -> "nogomet" next 1223
+node 1223 "r" short-set @x4 result 75 consume 2 -> "nar" next 1225
+node 1224 "" short-set @x4 result 73 consume 2 -> "nr" level 1
+node 1225 "wov" none result 72 consume 4 -> "novov" next 1227
+node 1226 "" short-set @x4 result 74 consume 2 -> "nov" level 1
+node 1227 "[" short-set @x4 result 74 consume 2 -> "nom" next 1228
+node 1228 "\x5c" short-set @x4 result 72 consume 2 -> "nlj" next 1229
+node 1229 "" short-set @x4 result 76 consume 1 -> "en" next 1230
+node 1230 "" short-set @x4 result 73 consume 1 -> "me" next 1231
+node 1231 "" class c04 result 72 consume 1 -> "n" next 1232
+node 1232 "" none result 70 consume 1 -> "n" end
+node 1233 "\x22#" class c03 result 74 consume 3 -> "ovolj" next 1237
+node 1234 "g" none result 74 consume 3 -> "odrug" next 1235
+node 1235 "x" none result 70 consume 3 -> "ovlad" next 1236
+node 1236 "n" none result 70 consume 3 -> "ovremen" level 1
+node 1237 "#" none result 71 consume 2 -> "oga" next 1238
+node 1238 "$" none result 72 consume 2 -> "onj" next 1239
+node 1239 ",a" short-set @x4 result 75 consume 3 -> "oa" next 1245
+node 1240 "e" short-set @x4 result 75 consume 3 -> "oe" next 1241
+node 1241 "i" short-set @x4 result 75 consume 3 -> "oi" next 1242
+node 1242 "oy" none result 71 consume 4 -> "oona" next 1243
+node 1243 "p" short-set @x4 result 72 consume 3 -> "op" next 1244
+node 1244 "u" short-set @x4 result 75 consume 3 -> "ou" level 1
+node 1245 "4b" none result 70 consume 3 -> "odob" next 1246
+node 1246 "@:" none result 70 consume 3 -> "odu\xb2\x91" next 1249
+node 1247 "n" none result 70 consume 3 -> "ovremenj" next 1248
+node 1248 "x" none result 70 consume 3 -> "ovla\xb2A" level 1
+node 1249 "a:" none result 72 consume 3 -> "onda\xb2\x91nj" next 1251
+node 1250 "" short-set @x4 result 73 consume 2 -> "onda" level 1
+node 1251 "b*" none result 70 consume 3 -> "obi\xb2=" next 1253
+node 1252 "am" none result 72 consume 4 -> "obamr" level 1
+node 1253 "d(" class c03 result 74 consume 3 -> "odjel" next 1260
+node 1254 "evedt" none result 74 consume 7 -> "odevedeset" next 1256
+node 1255 "ve" none result 74 consume 5 -> "odevet" level 2
+node 1256 "iy" class c03 result 75 consume 4 -> "odinar" next 1257
+node 1257 "qv" class c03 result 74 consume 4 -> "odnev" next 1258
+node 1258 "v4ae)" none result 74 consume 7 -> "odvanaest" level 3
+node 1259 "dt" none result 74 consume 5 -> "odvadeset" level 1
+node 1260 "f" short-set @x11 result 72 consume 2 -> "otad" next 1261
+node 1261 "g:" class c03 result 74 consume 3 -> "ogodi\xb2\x91nj" next 1264
+node 1262 ";s" class c03 result 74 consume 4 -> "oglas" level 3
+node 1263 "v" class c03 result 74 consume 4 -> "oglav" level 1
+node 1264 "m(se*" class c03 result 74 consume 6 -> "omjese\xb2=" next 1267
+node 1265 "ese*" class c03 result 74 consume 6 -> "omese\xb2=" next 1266
+node 1266 "inut" class c03 result 74 consume 6 -> "ominut" level 1
+node 1267 "o" none result 70 consume 2 -> "osob" next 1268
+node 1268 "pm" none result 70 consume 3 -> "oprem" next 1270
+node 1269 "" short-set @x4 result 72 consume 2 -> "opet" level 1
+node 1270 "rtodoks" none result 70 consume 8 -> "ortodoks" next 1271
+node 1271 "tac" short-set @x4 result 72 consume 4 -> "otac" next 1277
+node 1272 "c" short-set @x11 result 72 consume 3 -> "otkad" next 1273
+node 1273 "d" short-set @x11 result 72 consume 3 -> "otud" next 1274
+node 1274 "km" short-set @x4 result 73 consume 4 -> "otkamo" next 1275
+node 1275 "m" short-set @x4 result 73 consume 3 -> "otamo" next 1276
+node 1276 "pm" none result 70 consume 4 -> "otprem" level 1
+node 1277 "v(%" class c03 result 74 consume 4 -> "ovje\xb27" next 1286
+node 1278 "(*" class c03 result 74 consume 4 -> "ovje\xb2=" next 1281
+node 1279 "" class c03 result 75 consume 3 -> "ovjek" next 1280
+node 1280 "" class c03 result 75 consume 3 -> "ovjet" level 2
+node 1281 ";s" class c03 result 74 consume 4 -> "ovlas" next 1282
+node 1282 "e%" class c03 result 74 consume 4 -> "ove\xb27" level 3
+node 1283 "*" class c03 result 74 consume 4 -> "ove\xb2=" next 1284
+node 1284 "k" class c03 result 74 consume 4 -> "ovek" next 1285
+node 1285 "" class c03 result 74 consume 3 -> "ovet" level 1
+node 1286 "" none result 71 consume 1 -> "o" end
+node 1287 "!" none result 70 consume 2 -> "pru\xb2\xae" next 1288
+node 1288 "#" none result 70 consume 2 -> "pav" next 1289
+node 1289 "%" short-set @x4 result 72 consume 2 -> "p\xb27" next 1290
+node 1290 "*" short-set @x4 result 72 consume 2 -> "p\xb2=" next 1291
+node 1291 ".tive" none result 73 consume 6 -> "pamtivek" next 1293
+node 1292 "tiv'e" none result 73 consume 7 -> "pamtivijek" level 1
+node 1293 "/mog" none result 72 consume 5 -> "primog" next 1296
+node 1294 "n,c" short-set @x4 result 72 consume 5 -> "princ" next 1295
+node 1295 "pm" none result 70 consume 4 -> "priprem" level 1
+node 1296 "0" short-set @x4 result 74 consume 2 -> "poj" next 1297
+node 1297 "1)odu:" none result 72 consume 7 -> "prostodu\xb2\x91" next 1298
+node 1298 "3ov" none result 72 consume 4 -> "pivov" next 1299
+node 1299 ":" short-set @x4 result 72 consume 2 -> "p\xb2\x91" next 1300
+node 1300 ";*" short-set @x4 result 72 consume 3 -> "pla\xb2=" next 1304
+node 1301 "m" short-set @x4 result 72 consume 3 -> "plam" next 1302
+node 1302 "n" short-set @x4 result 72 consume 3 -> "plan" next 1303
+node 1303 "v" short-set @x4 result 72 consume 3 -> "plav" level 1
+node 1304 "?" short-set @x4 result 72 consume 2 -> "p\xb2A" next 1305
+node 1305 "=n" short-set @x4 result 72 consume 3 -> "plen" next 1306
+node 1306 "a*" short-set @x4 result 72 consume 3 -> "pa\xb2=" next 1310
+node 1307 "c" short-set @x4 result 72 consume 3 -> "pac" next 1308
+node 1308 "r" short-set @x4 result 73 consume 3 -> "par" next 1309
+node 1309 "" short-set @x8 result 73 consume 2 -> "pa" level 1
+node 1310 "c" short-set @x4 result 72 consume 2 -> "pc" next 1311
+node 1311 "e:" short-set @x4 result 72 consume 3 -> "pe\xb2\x91" next 1314
+node 1312 "n" short-set @x4 result 72 consume 3 -> "pen" next 1313
+node 1313 "" short-set @x8 result 73 consume 2 -> "pe" level 1
+node 1314 "g" short-set @x4 result 72 consume 2 -> "pg" next 1316
+node 1315 "" short-set @x4 result 74 consume 2 -> "pog" level 1
+node 1316 "h" short-set @x4 result 72 consume 2 -> "ph" next 1317
+node 1317 "i%" short-set @x4 result 72 consume 3 -> "pi\xb27" next 1321
+node 1318 ")i" short-set @x4 result 73 consume 4 -> "pistin" next 1320
+node 1319 "" none result 70 consume 3 -> "pist" level 2
+node 1320 "0" none result 70 consume 3 -> "pi\xb2\x91t" level 1
+node 1321 "j" short-set @x4 result 72 consume 2 -> "pj" next 1322
+node 1322 "k" short-set @x4 result 72 consume 2 -> "pak" next 1324
+node 1323 "" short-set @x4 result 72 consume 2 -> "pk" level 1
+node 1324 "ma" short-set @x4 result 73 consume 3 -> "prema" next 1326
+node 1325 "d" short-set @x4 result 73 consume 3 -> "premda" level 1
+node 1326 "n" short-set @x4 result 72 consume 2 -> "pn" next 1327
+node 1327 "r)ome" none result 72 consume 6 -> "prstomet" next 1332
+node 1328 "ed!elu" none result 3 consume 8 -> "pred\xb2\xaeelu" next 1330
+node 1329 "d!ivot" none result 3 consume 9 -> "pred\xb2\xaeivot" level 2
+node 1330 "vov" none result 72 consume 5 -> "prvov" next 1331
+node 1331 "" short-set @x4 result 73 consume 2 -> "pr" level 1
+node 1332 "sak" short-set @x4 result 72 consume 4 -> "psak" next 1338
+node 1333 "ar" short-set @x4 result 73 consume 4 -> "psar" next 1334
+node 1334 "en" short-set @x4 result 72 consume 4 -> "psen" next 1335
+node 1335 "i%" short-set @x4 result 72 consume 4 -> "psi\xb27" level 3
+node 1336 "h[" short-set @x4 result 72 consume 5 -> "psihom" level 4
+node 1337 "o" none result 73 consume 5 -> "psiho" level 1
+node 1338 "tak" short-set @x4 result 72 consume 4 -> "ptak" next 1344
+node 1339 "ar" short-set @x4 result 73 consume 4 -> "ptar" next 1340
+node 1340 "e:" short-set @x4 result 72 consume 4 -> "pte\xb2\x91" next 1342
+node 1341 "n" short-set @x4 result 72 consume 4 -> "pten" level 2
+node 1342 "i%" short-set @x4 result 72 consume 4 -> "pti\xb27" next 1343
+node 1343 "v" none result 70 consume 3 -> "protiv" level 1
+node 1344 "u:kome" none result 73 consume 7 -> "pu\xb2\x91komet" next 1345
+node 1345 "vo\x22m" none result 70 consume 5 -> "pravomo\xb27" next 1351
+node 1346 "o4b" none result 70 consume 5 -> "pravodob" next 1350
+node 1347 "v(" none result 70 consume 5 -> "pravovjer" level 4
+node 1348 "a\x5c" none result 70 consume 6 -> "pravovalj" next 1349
+node 1349 "e" none result 70 consume 5 -> "pravover" level 2
+node 1350 "" none result 70 consume 2 -> "prav" level 1
+node 1351 "w" short-set @x4 result 74 consume 2 -> "pov" next 1352
+node 1352 "[" short-set @x4 result 74 consume 2 -> "pom" next 1353
+node 1353 "\x5c" short-set @x4 result 72 consume 2 -> "plj" next 1354
+node 1354 "]4,]" none result 72 consume 5 -> "predod\xb2\xae" next 1360
+node 1355 "d!elu" none result 72 consume 7 -> "pred\xb2\xaeelu" next 1359
+node 1356 "skz" none result 72 consume 6 -> "predskaz" next 1357
+node 1357 "vt" none result 72 consume 5 -> "pred\xb2\xaeivot" next 1358
+node 1358 "x" none result 72 consume 4 -> "predod" level 2
+node 1359 "m_" short-set @x4 result 73 consume 4 -> "premalo" level 1
+node 1360 "^" short-set @x4 result 73 consume 2 -> "puno" next 1362
+node 1361 "" short-set @x4 result 75 consume 2 -> "puno" level 1
+node 1362 "" short-set @x4 result 73 consume 1 -> "pa" next 1363
+node 1363 "" class c04 result 72 consume 1 -> "p" next 1364
+node 1364 "" none result 70 consume 1 -> "p" end
+node 1365 "#" none result 71 consume 2 -> "nega" next 1366
+node 1366 ":" short-set @x4 result 73 consume 2 -> "ne\xb2\x91to" next 1367
+node 1367 ",a" short-set @x4 result 75 consume 3 -> "nea" next 1372
+node 1368 "ca" short-set @x4 result 73 consume 4 -> "neca" next 1369
+node 1369 "e" short-set @x4 result 75 consume 3 -> "nee" next 1370
+node 1370 "i" short-set @x4 result 75 consume 3 -> "nei" next 1371
+node 1371 "u" short-set @x4 result 75 consume 3 -> "neu" level 1
+node 1372 "bode" none result 72 consume 5 -> "neboder" next 1373
+node 1373 "c$" none result 70 consume 3 -> "nekadanj" next 1376
+node 1374 ":" none result 70 consume 3 -> "nekada\xb2\x91nj" next 1375
+node 1375 "" short-set @x11 result 72 consume 2 -> "nekad" level 1
+node 1376 "g(" short-set @x4 result 73 consume 3 -> "negdje" next 1378
+node 1377 "d" short-set @x4 result 73 consume 3 -> "negde" level 1
+node 1378 "iskz" none result 72 consume 5 -> "neiskaz" next 1379
+node 1379 "km9" short-set @x4 result 73 consume 4 -> "nekmoli" next 1381
+node 1380 "m" short-set @x4 result 73 consume 3 -> "nekamo" level 1
+node 1381 "m_" short-set @x4 result 73 consume 3 -> "nemalo" next 1382
+node 1382 "" none result 71 consume 1 -> "ne" next 1383
+node 1383 "" class c04 result 72 consume 1 -> "q" next 1384
+node 1384 "" none result 70 consume 1 -> "q" end
+node 1385 "#" none result 70 consume 2 -> "rav" next 1386
+node 1386 "%a" short-set @x4 result 75 consume 3 -> "r\xb27a" next 1390
+node 1387 "e" short-set @x4 result 75 consume 3 -> "r\xb27e" next 1388
+node 1388 "i" short-set @x4 result 75 consume 3 -> "r\xb27i" next 1389
+node 1389 "u" short-set @x4 result 75 consume 3 -> "r\xb27u" level 1
+node 1390 "@t" none result 74 consume 3 -> "ritelj" next 1392
+node 1391 "\x5c" none result 74 consume 3 -> "ratelj" level 1
+node 1392 "o,a" short-set @x4 result 75 consume 4 -> "roa" next 1396
+node 1393 ",e" short-set @x4 result 75 consume 4 -> "roe" level 3
+node 1394 "i" short-set @x4 result 75 consume 4 -> "roi" next 1395
+node 1395 "u" short-set @x4 result 75 consume 4 -> "rou" level 1
+node 1396 "u" short-set @x4 result 71 consume 2 -> "ru" next 1397
+node 1397 "" short-set @x4 result 77 consume 1 -> "ar" next 1398
+node 1398 "" short-set @x4 result 73 consume 1 -> "jer" next 1399
+node 1399 "" class c04 result 72 consume 1 -> "r" next 1400
+node 1400 "" none result 71 consume 1 -> "r" end
+node 1401 "#" none result 70 consume 2 -> "sav" next 1403
+node 1402 "" short-set @x4 result 74 consume 2 -> "sav" level 1
+node 1403 "\x22j" none result 70 consume 3 -> "skraj" next 1407
+node 1404 "r" none result 70 consume 3 -> "stvor" next 1405
+node 1405 "v" none result 72 consume 3 -> "svid" next 1406
+node 1406 "x" none result 70 consume 3 -> "svlad" level 1
+node 1407 "%" none result 70 consume 2 -> "slijede\xb27" next 1409
+node 1408 "" short-set @x4 result 72 consume 2 -> "s\xb27" level 1
+node 1409 "&h" short-set @x4 result 72 consume 3 -> "snih" next 1410
+node 1410 "*" short-set @x4 result 74 consume 2 -> "sa\xb2=" next 1412
+node 1411 "" short-set @x4 result 72 consume 2 -> "s\xb2=" level 1
+node 1412 ",k" short-set @x4 result 74 consume 3 -> "sk" next 1413
+node 1413 "." short-set @x4 result 74 consume 2 -> "sam" next 1414
+node 1414 "2" short-set @x4 result 74 consume 2 -> "saj" next 1415
+node 1415 "4" short-set @x4 result 74 consume 2 -> "san" next 1416
+node 1416 "6j" short-set @x4 result 72 consume 3 -> "spoj" next 1417
+node 1417 "7" none result 70 consume 2 -> "srpsk" next 1418
+node 1418 ":" short-set @x4 result 72 consume 2 -> "s\xb2\x91" next 1419
+node 1419 ";bo\x22v" none result 70 consume 6 -> "slabovid" next 1422
+node 1420 "k" short-set @x4 result 72 consume 3 -> "slak" next 1421
+node 1421 "n" short-set @x4 result 72 consume 3 -> "slan" level 1
+node 1422 "=m" short-set @x4 result 72 consume 3 -> "slem" next 1423
+node 1423 "?" short-set @x4 result 72 consume 2 -> "s\xb2A" next 1424
+node 1424 "@r" none result 70 consume 3 -> "stvar" next 1428
+node 1425 "v" none result 72 consume 3 -> "svi\xb2A" next 1426
+node 1426 "x" none result 70 consume 3 -> "svla\xb2A" next 1427
+node 1427 "\x5c" none result 74 consume 3 -> "satelj" level 1
+node 1428 "b" none result 70 consume 2 -> "seb" next 1429
+node 1429 "cl" none result 70 consume 3 -> "socijal" next 1432
+node 1430 "" short-set @x4 result 74 consume 2 -> "sac" next 1431
+node 1431 "" short-set @x4 result 72 consume 2 -> "sc" level 1
+node 1432 "d$ov" none result 72 consume 5 -> "srednjov" next 1435
+node 1433 ":" none result 70 consume 3 -> "sredi\xb2\x91nj" next 1434
+node 1434 "" none result 70 consume 2 -> "sred" level 1
+node 1435 "e:" short-set @x4 result 72 consume 3 -> "se\xb2\x91" next 1439
+node 1436 "nzo" none result 73 consume 5 -> "senzo" next 1438
+node 1437 "" short-set @x4 result 72 consume 3 -> "sen" level 2
+node 1438 "" short-set @x8 result 73 consume 2 -> "se" level 1
+node 1439 "g" short-set @x4 result 72 consume 2 -> "sg" next 1440
+node 1440 "h" short-set @x4 result 72 consume 2 -> "sh" next 1441
+node 1441 "i%" short-set @x4 result 72 consume 3 -> "si\xb27" next 1442
+node 1442 "j" short-set @x4 result 72 consume 2 -> "sj" next 1444
+node 1443 "" short-set @x4 result 75 consume 2 -> "suju" level 1
+node 1444 "kp" none result 70 consume 3 -> "skup" next 1447
+node 1445 "" short-set @x4 result 74 consume 2 -> "sak" next 1446
+node 1446 "" short-set @x4 result 72 consume 2 -> "sk" level 1
+node 1447 "l%" none result 70 consume 3 -> "slede\xb27" next 1448
+node 1448 "mak" short-set @x4 result 72 consume 4 -> "smak" next 1451
+node 1449 "e:" short-set @x4 result 72 consume 4 -> "sme\xb2\x91" next 1450
+node 1450 "" short-set @x4 result 73 consume 2 -> "samo" level 1
+node 1451 "n" short-set @x4 result 72 consume 2 -> "sn" next 1452
+node 1452 "op" none result 70 consume 3 -> "sop\xb27" next 1453
+node 1453 "p;v" short-set @x4 result 72 consume 4 -> "splav" next 1460
+node 1454 "a*" short-set @x4 result 72 consume 4 -> "spa\xb2=" next 1457
+node 1455 "k" short-set @x4 result 72 consume 4 -> "spak" next 1456
+node 1456 "r" short-set @x4 result 73 consume 4 -> "spar" level 2
+node 1457 "e:" short-set @x4 result 72 consume 4 -> "spe\xb2\x91" next 1459
+node 1458 "n" short-set @x4 result 72 consume 4 -> "spen" level 2
+node 1459 "m" none result 70 consume 3 -> "sprem" level 1
+node 1460 "qn" short-set @x4 result 72 consume 3 -> "snen" next 1461
+node 1461 "r" short-set @x4 result 74 consume 2 -> "sar" next 1463
+node 1462 "" short-set @x4 result 73 consume 2 -> "sr" level 1
+node 1463 "ti%" short-set @x4 result 72 consume 4 -> "sti\xb27" next 1466
+node 1464 "" short-set @x4 result 3 consume 2 -> "st" next 1465
+node 1465 "" short-set @x4 result 72 consume 2 -> "st" level 1
+node 1466 "vska" short-set @x4 result 73 consume 5 -> "svisoka" next 1468
+node 1467 "" short-set @x4 result 72 consume 2 -> "sv" level 1
+node 1468 "w(" none result 73 consume 3 -> "sovjet" next 1470
+node 1469 "e" none result 72 consume 3 -> "sovet" level 1
+node 1470 "\x5c%" none result 70 consume 3 -> "sljede\xb27" next 1472
+node 1471 "" short-set @x4 result 72 consume 2 -> "slj" level 1
+node 1472 "^m" short-set @x4 result 72 consume 3 -> "snom" next 1473
+node 1473 "_g" short-set @x4 result 72 consume 3 -> "slog" next 1476
+node 1474 "j" short-set @x4 result 72 consume 3 -> "sloj" next 1475
+node 1475 "m" short-set @x4 result 72 consume 3 -> "slom" level 1
+node 1476 "" class c04 result 72 consume 1 -> "s" next 1477
+node 1477 "" none result 70 consume 1 -> "s" end
+node 1478 "#" none result 70 consume 2 -> "tav" next 1479
+node 1479 "%" short-set @x4 result 74 consume 2 -> "ti\xb27" next 1481
+node 1480 "" short-set @x4 result 72 consume 2 -> "t\xb27" level 1
+node 1481 "*" short-set @x4 result 72 consume 2 -> "t\xb2=" next 1482
+node 1482 "+" short-set @x4 result 78 consume 2 -> "tem" next 1483
+node 1483 ":" none result 70 consume 2 -> "te\xb2\x91k" next 1485
+node 1484 "" short-set @x4 result 72 consume 2 -> "t\xb2\x91" level 1
+node 1485 ";k" short-set @x4 result 72 consume 3 -> "tlak" next 1486
+node 1486 "<" short-set @x4 result 74 consume 2 -> "tim" next 1487
+node 1487 "?e" none result 71 consume 3 -> "tako\xb2Ae" next 1490
+node 1488 "r" none result 71 consume 3 -> "tako\xb2Aer" next 1489
+node 1489 "" short-set @x4 result 72 consume 2 -> "t\xb2A" level 1
+node 1490 "@t" none result 74 consume 3 -> "titelj" next 1491
+node 1491 "ac" short-set @x4 result 72 consume 3 -> "tac" next 1495
+node 1492 "k" short-set @x4 result 72 consume 3 -> "tak" next 1493
+node 1493 "r" short-set @x4 result 73 consume 3 -> "tar" next 1494
+node 1494 "" short-set @x8 result 73 consume 2 -> "ta" level 1
+node 1495 "b!" none result 70 consume 3 -> "tobo\xb2\xae" next 1497
+node 1496 "" none result 70 consume 2 -> "teb" level 1
+node 1497 "c" short-set @x4 result 72 consume 2 -> "tc" next 1499
+node 1498 "" none result 70 consume 2 -> "trenuc" level 1
+node 1499 "d" short-set @x11 result 72 consume 2 -> "tud" next 1500
+node 1500 "e" short-set @x8 result 73 consume 2 -> "te" next 1504
+node 1501 ":" short-set @x4 result 72 consume 3 -> "te\xb2\x91" next 1502
+node 1502 "n" short-set @x4 result 72 consume 3 -> "ten" next 1503
+node 1503 "rmomet" none result 72 consume 8 -> "termomet" level 1
+node 1504 "g" short-set @x4 result 72 consume 2 -> "tog" next 1505
+node 1505 "h" short-set @x4 result 72 consume 2 -> "th" next 1507
+node 1506 "" short-set @x4 result 74 consume 2 -> "tih" level 1
+node 1507 "i%" short-set @x4 result 72 consume 3 -> "ti\xb27" next 1508
+node 1508 "j" short-set @x4 result 72 consume 2 -> "tj" next 1509
+node 1509 "k#" short-set @x4 result 72 consume 3 -> "takav" next 1518
+node 1510 "[" short-set @x4 result 74 consume 3 -> "tkom" next 1511
+node 1511 "0" short-set @x4 result 74 consume 3 -> "tkoj" next 1512
+node 1512 "g" short-set @x4 result 74 consume 3 -> "tkog" next 1513
+node 1513 "w" none result 70 consume 3 -> "takov" next 1515
+node 1514 "" short-set @x4 result 74 consume 3 -> "tkov" level 2
+node 1515 "" short-set @x4 result 73 consume 2 -> "tako" next 1516
+node 1516 "" class c03 result 72 consume 2 -> "takv" next 1517
+node 1517 "" short-set @x4 result 72 consume 2 -> "tk" level 1
+node 1518 "m:" none result 70 consume 3 -> "tamo\xb2\x91nj" next 1520
+node 1519 "" short-set @x4 result 73 consume 2 -> "tamo" level 1
+node 1520 "n" short-set @x4 result 74 consume 2 -> "ten" next 1522
+node 1521 "" short-set @x4 result 72 consume 2 -> "tn" level 1
+node 1522 "op\xb27" none result 70 consume 3 -> "top" next 1524
+node 1523 "p" none result 70 consume 3 -> "top" level 1
+node 1524 "r" short-set @x4 result 73 consume 2 -> "tr" next 1525
+node 1525 "t" none result 70 consume 2 -> "trenut" next 1526
+node 1526 "var" short-set @x4 result 72 consume 4 -> "tvar" next 1528
+node 1527 "en" short-set @x4 result 72 consume 4 -> "tven" level 1
+node 1528 "we" none result 73 consume 3 -> "tove\xb27" next 1529
+node 1529 "\x5c" short-set @x4 result 72 consume 2 -> "tlj" next 1530
+node 1530 "_m" short-set @x4 result 72 consume 3 -> "tlom" next 1531
+node 1531 "" short-set @x4 result 72 consume 1 -> "ti" next 1532
+node 1532 "" class c04 result 72 consume 1 -> "t" next 1533
+node 1533 "" none result 70 consume 1 -> "t" end
+node 1534 "#" none result 71 consume 2 -> "uga" next 1535
+node 1535 ",a" short-set @x4 result 75 consume 3 -> "ua" next 1539
+node 1536 "e" short-set @x4 result 75 consume 3 -> "ue" next 1537
+node 1537 "i" short-set @x4 result 75 consume 3 -> "ui" next 1538
+node 1538 "u" short-set @x4 result 75 consume 3 -> "uu" level 1
+node 1539 "n:" none result 70 consume 3 -> "unutra\xb2\x91nj" next 1540
+node 1540 "s\x22]" none result 72 consume 4 -> "ustreb" next 1543
+node 1541 "@]" none result 70 consume 4 -> "ustrep" next 1542
+node 1542 "p;hovit" none result 72 consume 9 -> "usplahovit" level 1
+node 1543 "vk" none result 70 consume 3 -> "uvijek" next 1545
+node 1544 "" short-set @x4 result 72 consume 2 -> "uvek" level 1
+node 1545 "z<@" none result 70 consume 4 -> "uzimanj" next 1546
+node 1546 "" short-set @x4 result 79 consume 1 -> "\xb27u" next 1547
+node 1547 "" none result 71 consume 1 -> "u" end
+node 1548 "!" none result 70 consume 2 -> "va\xb2\xae" next 1549
+node 1549 "#" none result 70 consume 2 -> "vav" next 1550
+node 1550 "%" none result 70 consume 2 -> "ve\xb27" next 1552
+node 1551 "" short-set @x4 result 72 consume 2 -> "v\xb27" level 1
+node 1552 "*e" none result 71 consume 3 -> "ve\xb2=e" next 1555
+node 1553 "" none result 71 consume 2 -> "ve\xb2=er" next 1554
+node 1554 "" short-set @x4 result 72 consume 2 -> "v\xb2=" level 1
+node 1555 "07ovo?" none result 72 consume 6 -> "vojskovo\xb2A" next 1556
+node 1556 "8gomet" none result 72 consume 7 -> "vragomet" next 1557
+node 1557 ":+u" short-set @x4 result 71 consume 4 -> "vi\xb2\x91emu" next 1563
+node 1558 "+" short-set @x4 result 70 consume 3 -> "vi\xb2\x91em" next 1559
+node 1559 "e" none result 72 consume 3 -> "vi\xb2\x91e" next 1560
+node 1560 "" none result 72 consume 2 -> "vi\xb2\x91" next 1561
+node 1561 "" class c03 result 74 consume 2 -> "vi\xb2\x91" next 1562
+node 1562 "" short-set @x4 result 72 consume 2 -> "v\xb2\x91" level 1
+node 1563 ";)od" none result 72 consume 5 -> "vlastod" next 1565
+node 1564 "k" short-set @x4 result 72 consume 3 -> "vlak" level 1
+node 1565 "?" short-set @x4 result 72 consume 2 -> "v\xb2A" next 1566
+node 1566 "a*" short-set @x4 result 72 consume 3 -> "va\xb2=" next 1572
+node 1567 "c" short-set @x4 result 72 consume 3 -> "vac" next 1568
+node 1568 "k" short-set @x4 result 72 consume 3 -> "vak" next 1569
+node 1569 "njezi*" none result 70 consume 8 -> "vanjezi\xb2=" next 1570
+node 1570 "r" short-set @x4 result 73 consume 3 -> "var" next 1571
+node 1571 "" short-set @x8 result 73 consume 2 -> "va" level 1
+node 1572 "c" short-set @x4 result 72 consume 2 -> "vc" next 1573
+node 1573 "da" short-set @x4 result 73 consume 3 -> "ovuda" next 1575
+node 1574 "" short-set @x4 result 72 consume 2 -> "ovud" level 1
+node 1575 "e:" short-set @x4 result 72 consume 3 -> "ve\xb2\x91" next 1582
+node 1576 "a" short-set @x4 result 71 consume 3 -> "ve\xb27a" next 1577
+node 1577 "e" short-set @x4 result 71 consume 3 -> "ve\xb27e" next 1578
+node 1578 "i" short-set @x4 result 71 consume 3 -> "ve\xb27i" next 1579
+node 1579 "n" short-set @x4 result 72 consume 3 -> "ven" next 1580
+node 1580 "u" short-set @x4 result 71 consume 3 -> "ve\xb27u" next 1581
+node 1581 "" short-set @x8 result 73 consume 2 -> "ve" level 1
+node 1582 "g" short-set @x4 result 72 consume 2 -> "vg" next 1583
+node 1583 "h" short-set @x4 result 72 consume 2 -> "vh" next 1584
+node 1584 "i%" short-set @x4 result 72 consume 3 -> "vi\xb27" next 1587
+node 1585 "0" none result 70 consume 3 -> "vi\xb2\x91t" next 1586
+node 1586 "w:k" none result 72 consume 5 -> "vite\xb2\x91k" level 1
+node 1587 "j" short-set @x4 result 72 consume 2 -> "vj" next 1588
+node 1588 "k#" short-set @x4 result 72 consume 3 -> "ovakav" next 1593
+node 1589 "w" none result 70 consume 3 -> "ovakov" next 1590
+node 1590 "" short-set @x4 result 73 consume 2 -> "ovako" next 1591
+node 1591 "" none result 70 consume 2 -> "ovakv" next 1592
+node 1592 "" short-set @x4 result 72 consume 2 -> "vk" level 1
+node 1593 "m" none result 71 consume 2 -> "veoma" next 1594
+node 1594 "n" short-set @x4 result 72 consume 2 -> "vn" next 1595
+node 1595 "osob" none result 74 consume 5 -> "vosob" next 1597
+node 1596 "zovo?" none result 72 consume 7 -> "vozovo\xb2A" level 1
+node 1597 "r" short-set @x4 result 73 consume 2 -> "vr" next 1598
+node 1598 "sak" short-set @x4 result 72 consume 4 -> "vsak" next 1601
+node 1599 "k" none result 70 consume 3 -> "visok" next 1600
+node 1600 "" short-set @x4 result 72 consume 2 -> "vas" level 1
+node 1601 "t" none result 70 consume 2 -> "\xb2\xaeivot" next 1602
+node 1602 "xode" none result 72 consume 5 -> "vododer" next 1605
+node 1603 "om(" none result 72 consume 5 -> "vodomjer" level 3
+node 1604 "me" none result 72 consume 5 -> "vodomer" level 1
+node 1605 "\x5c" short-set @x4 result 72 consume 2 -> "vlj" next 1606
+node 1606 "_" short-set @x4 result 73 consume 2 -> "vrlo" next 1607
+node 1607 "" short-set @x4 result 73 consume 1 -> "vi" next 1608
+node 1608 "" class c04 result 72 consume 1 -> "v" next 1609
+node 1609 "" none result 70 consume 1 -> "v" end
+node 1610 "#" none result 71 consume 2 -> "tega" next 1611
+node 1611 ",a" short-set @x4 result 79 consume 3 -> "tea" next 1615
+node 1612 "e" short-set @x4 result 79 consume 3 -> "tee" next 1613
+node 1613 "i" short-set @x4 result 79 consume 3 -> "tei" next 1614
+node 1614 "u" short-set @x4 result 79 consume 3 -> "teu" level 1
+node 1615 "ov" none result 72 consume 3 -> "ovov" next 1616
+node 1616 "" short-set @x4 result 73 consume 1 -> "te" next 1617
+node 1617 "" none result 76 consume 1 -> "ov" next 1618
+node 1618 "" none result 72 consume 1 -> "ov" next 1619
+node 1619 "" none result 79 consume 1 -> "te" next 1620
+node 1620 "" class c04 result 72 consume 1 -> "w" next 1621
+node 1621 "" none result 70 consume 1 -> "w" end
+node 1622 "#" none result 70 consume 2 -> "odav" next 1623
+node 1623 "$" short-set @x11 result 72 consume 2 -> "odsad" next 1624
+node 1624 "io" short-set @x4 result 73 consume 3 -> "odio" next 1625
+node 1625 "m" short-set @x4 result 72 consume 2 -> "odmah" next 1626
+node 1626 "nda" short-set @x4 result 73 consume 4 -> "odonuda" next 1628
+node 1627 "d" short-set @x4 result 72 consume 3 -> "odonud" level 1
+node 1628 "oa" short-set @x4 result 73 consume 3 -> "odonda" next 1629
+node 1629 "ugov;" none result 72 consume 6 -> "odugovla" next 1630
+node 1630 "v%" short-set @x4 result 72 consume 3 -> "odve\xb27" next 1631
+node 1631 "" none result 70 consume 1 -> "od" next 1632
+node 1632 "" class c04 result 72 consume 1 -> "x" next 1633
+node 1633 "" none result 70 consume 1 -> "x" end
+node 1634 "#" none result 71 consume 2 -> "naga" next 1635
+node 1635 "d!3" none result 70 consume 4 -> "nad\xb2\xaeiv" next 1637
+node 1636 "!buk" none result 70 consume 6 -> "nad\xb2\xaebuk" level 1
+node 1637 "ftovx" none result 72 consume 6 -> "naftovod" next 1638
+node 1638 "gva!" none result 72 consume 5 -> "nagva\xb2\xae" next 1639
+node 1639 "jmod#" none result 72 consume 6 -> "najmodav" next 1642
+node 1640 "e" short-set @x10 result 72 consume 3 -> "naje" next 1641
+node 1641 "" none result 70 consume 2 -> "naj" level 1
+node 1642 "_god#" none result 72 consume 6 -> "nalogodav" next 1643
+node 1643 "" none result 71 consume 1 -> "na" next 1644
+node 1644 "" class c04 result 72 consume 1 -> "y" next 1645
+node 1645 "" none result 70 consume 1 -> "y" end
+node 1646 "#" none result 74 consume 2 -> "zav" next 1647
+node 1647 "%" short-set @x4 result 72 consume 2 -> "z\xb27" next 1648
+node 1648 "*" short-set @x4 result 74 consume 2 -> "za\xb2=" next 1650
+node 1649 "" short-set @x4 result 72 consume 2 -> "z\xb2=" level 1
+node 1650 "+\x5co\x22v" none result 72 consume 6 -> "zemljovid" next 1651
+node 1651 "." short-set @x4 result 74 consume 2 -> "zam" next 1652
+node 1652 "2" short-set @x4 result 74 consume 2 -> "zaj" next 1653
+node 1653 "4" short-set @x4 result 74 consume 2 -> "zan" next 1654
+node 1654 "9h" short-set @x4 result 72 consume 3 -> "zlih" next 1656
+node 1655 "m" short-set @x4 result 72 consume 3 -> "zlim" level 1
+node 1656 ":" short-set @x4 result 72 consume 2 -> "z\xb2\x91" next 1657
+node 1657 "?" short-set @x4 result 72 consume 2 -> "z\xb2A" next 1658
+node 1658 "@\x5c" none result 74 consume 3 -> "zatelj" next 1659
+node 1659 "b" short-set @x4 result 72 consume 2 -> "zbog" next 1660
+node 1660 "c" short-set @x4 result 74 consume 2 -> "zac" next 1662
+node 1661 "" short-set @x4 result 72 consume 2 -> "zc" level 1
+node 1662 "d8voma/" none result 73 consume 8 -> "zdravomarij" next 1663
+node 1663 "en" short-set @x4 result 72 consume 3 -> "zen" next 1665
+node 1664 "" short-set @x8 result 73 consume 2 -> "ze" level 1
+node 1665 "g" short-set @x4 result 72 consume 2 -> "zg" next 1666
+node 1666 "h" short-set @x4 result 72 consume 2 -> "zh" next 1667
+node 1667 "j" short-set @x4 result 72 consume 2 -> "zj" next 1668
+node 1668 "k" short-set @x4 result 74 consume 2 -> "zak" next 1670
+node 1669 "" short-set @x4 result 72 consume 2 -> "zk" level 1
+node 1670 "n" short-set @x4 result 72 consume 2 -> "zn" next 1671
+node 1671 "r" short-set @x4 result 74 consume 2 -> "zar" next 1673
+node 1672 "" short-set @x4 result 73 consume 2 -> "zr" level 1
+node 1673 "w" none result 70 consume 2 -> "zov" next 1674
+node 1674 "yj" short-set @x4 result 72 consume 3 -> "znaj" next 1678
+node 1675 "k" short-set @x4 result 72 consume 3 -> "znak" next 1676
+node 1676 "m" short-set @x4 result 72 consume 3 -> "znam" next 1677
+node 1677 "n" short-set @x4 result 72 consume 3 -> "znan" level 1
+node 1678 "\x5c" short-set @x4 result 72 consume 2 -> "zlj" next 1679
+node 1679 "^j" short-set @x4 result 72 consume 3 -> "znoj" next 1680
+node 1680 "_g" short-set @x4 result 72 consume 3 -> "zlog" next 1683
+node 1681 "j" short-set @x4 result 72 consume 3 -> "zloj" next 1682
+node 1682 "m" short-set @x4 result 72 consume 3 -> "zlom" level 1
+node 1683 "" short-set @x4 result 73 consume 1 -> "mu" next 1684
+node 1684 "" class c04 result 72 consume 1 -> "z" next 1685
+node 1685 "" none result 70 consume 1 -> "z" end
+node 1686 ",a" short-set @x4 result 79 consume 3 -> "koa" next 1690
+node 1687 "e" short-set @x4 result 79 consume 3 -> "koe" next 1688
+node 1688 "i" short-set @x4 result 79 consume 3 -> "koi" next 1689
+node 1689 "u" short-set @x4 result 79 consume 3 -> "kou" level 1
+node 1690 "n(k" none result 72 consume 4 -> "konjek" next 1695
+node 1691 "jici" none result 72 consume 6 -> "konjicir" level 3
+node 1692 "unk" none result 72 consume 6 -> "konjunk" level 4
+node 1693 "" none result 73 consume 4 -> "konjug" next 1694
+node 1694 "" none result 73 consume 4 -> "konjur" level 1
+node 1695 "zmod1m" none result 70 consume 7 -> "kozmodrom" next 1697
+node 1696 "mogo" none result 70 consume 6 -> "kozmogon" level 1
+node 1697 "" none result 73 consume 1 -> "ko" next 1698
+node 1698 "" none result 79 consume 1 -> "ko" next 1699
+node 1699 "" none result 76 consume 1 -> "om" end
+node 1700 "" none result 18 consume 1 -> "/" next 1701
+node 1701 "#" none result 70 consume 2 -> "ljav" next 1702
+node 1702 "'" short-set @x0 result 76 consume 1 -> "ao" next 1703
+node 1703 "a" short-set @x4 result 73 consume 2 -> "valja" next 1704
+node 1704 "d" none result 71 consume 2 -> "valjda" next 1705
+node 1705 "l" none result 70 consume 2 -> "valjal" next 1706
+node 1706 "ubomo" none result 72 consume 6 -> "ljubomor" next 1707
+node 1707 "" short-set @x4 result 77 consume 1 -> "ao" next 1708
+node 1708 "" short-set @x4 result 73 consume 1 -> "kao" next 1709
+node 1709 "" none result 70 consume 1 -> "lj" next 1710
+node 1710 "" none result 40 consume 1 -> "lj" next 1711
+node 1711 "" none result 36 consume 1 -> "\x5c" next 1712
+node 1712 "" none result 40 consume 1 -> "|" end
+node 1713 ",a" short-set @x4 result 75 consume 3 -> "rea" next 1717
+node 1714 "e" short-set @x4 result 75 consume 3 -> "ree" next 1715
+node 1715 "i" short-set @x4 result 75 consume 3 -> "rei" next 1716
+node 1716 "u" short-set @x4 result 75 consume 3 -> "reu" level 1
+node 1717 "" short-set @x4 result 73 consume 1 -> "pre" next 1718
+node 1718 "" none result 71 consume 1 -> "re" next 1719
+node 1719 "" none result 40 consume 1 -> "d\xb2\xae" end
+node 1720 "sob" none result 74 consume 4 -> "nosob" next 1721
+node 1721 "0" none result 18 consume 2 -> "\xf8" next 1722
+node 1722 "" none result 75 consume 1 -> "no" next 1723
+node 1723 "" none result 87 consume 1 -> "\x0e" next 1724
+node 1724 "" none result 37 consume 1 -> "\x0e" end
+node 1725 "_" none result 91 consume 2 -> " \x1cfts~i\x1f" next 1726
+node 1726 "" none result 75 consume 1 -> "lo" next 1727
+node 1727 "" none result 93 consume 1 -> "" next 1728
+node 1728 "" none result 92 consume 1 -> "\x1cfts~i\x1f" end
+
+scan input-mode 0
+scan trailing-blanks 1
+scan flag 28
+scan full-stop 46
+scan newline 1
+scan form-feed "\x15"
+scan paragraph "p"
+scan new-paragraphs 0
+scan rejoin-hyphens 0
+scan spaces 0
+scan tab-width 1
+scan ninmod 0
+scan fold-codes 1
+scan fold-words 1
+scan capital-cessation 0
+scan map-braces 0
+scan spare 0
+scan passage-ends 0
+scan nxsls 0
+scan format-word 28
+scan format-word2 27
+scan capital-sign 0
+scan capital-end 0
+scan address-switching 0
+scan mode-words "running" "spacing" "marking" "as-is" "compress" "sentence" "auto-tab" "par" "no-par" "par-skp" "par-ind"
+scan passage-words 0
+scan doubled-adjectives 0

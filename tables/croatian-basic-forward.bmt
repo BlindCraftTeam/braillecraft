@@ -1,0 +1,2207 @@
+# The rules of hraacp.btb and gendxp.sct, recreated as BrailleMaker table source.
+table "Croatian - basic, print to braille"
+default-char 42
+raw 0
+writer 0
+output 4
+tail-extra 0 0 0
+unknown 0
+
+state s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 s11 s12 s13 s14 s15 s16
+state s17 s18 s19 s20 s21 s22 s23 s24 s25 s26 s27 s28 s29 s30 s31 s32
+state s33 s34 s35 s36 s37 s38 s39 s40 s41 s42 s43 s44 s45 s46 s47 s48
+state s49 s50 s51 s52 s53 s54 s55 s56 s57 s58 s59 s60 s61 s62 s63 s64
+
+class c00 "\x01\x03\x04\x1b\x1c\x1d\x1e\x1f !\x22#$%&'()*+,-./0123456789:;<=>?@[\x5c]^_`{|}~\x9b\x9d\xae\xaf\xec\xed\xee\xf5\xf6\xf7\xf8\xf9"
+class c01 "\x01\x02\x03\x04\x5c_abcdefghijklmnopqrstuvwxyz\x81\x82\x83\x84\x85\x86\x87\x88\x89\x8a\x8b\x8c\x8d\x91\x93\x94\x95\x96\x97\x98\x9f\xa0\xa1\xa2\xa3\xa4\xb2\xdf"
+class c02 "\x1b\x1c\x1d\x1e\x1f `"
+class c03 " !%),:;?]}"
+class c04 "0123456789"
+class c05 "abcdefghijklmnopqrstuvwxyz\x81\x82\x83\x84\x85\x86\x87\x88\x89\x8a\x8b\x8c\x8d\x91\x93\x94\x95\x96\x97\x98\x9f\xa0\xa1\xa2\xa3\xa4\xb2\xdf"
+class c06 "aeioru"
+class c07 "bcdfghjklmnpqstvwxyz\x81\x82\x83\x84\x85\x86\x87\x88\x89\x8a\x8b\x8c\x8d\x91\x93\x94\x95\x96\x97\x98\x9f\xa0\xa1\xa2\xa3\xa4\xb2\xdf"
+class c08 "\xe2"
+class c09 ""
+class c10 ""
+class c11 ""
+class c12 ""
+class c13 ""
+class c14 ""
+class c15 ""
+class c16 ""
+class c17 ""
+class c18 ""
+class c19 ""
+class c20 ""
+class c21 ""
+class c22 ""
+class c23 ""
+class c24 ""
+class c25 ""
+class c26 ""
+class c27 ""
+class c28 ""
+class c29 ""
+class c30 ""
+class c31 ""
+class c32 ""
+class c33 ""
+class c34 ""
+class c35 ""
+class c36 ""
+class c37 ""
+class c38 ""
+class c39 ""
+class c40 ""
+class c41 ""
+class c42 ""
+class c43 ""
+class c44 ""
+class c45 ""
+class c46 ""
+class c47 ""
+class c48 ""
+class c49 ""
+class c50 ""
+class c51 ""
+class c52 ""
+class c53 ""
+class c54 ""
+class c55 ""
+class c56 ""
+class c57 ""
+class c58 ""
+class c59 ""
+class c60 ""
+class c61 ""
+class c62 ""
+class c63 ""
+
+set x0 = "n" "j" "a" c00 | "n" "j" "e" c00 | "n" "j" "e" "m" c00 | "n" "j" "i" "m" c00 | "n" "j" "u" c00
+set x1 = c00 | c06 c00 | c06 c07 c00 | c06 c07 c06 c00 | c07
+set x2 = c05 c05 c05 c05 c05
+set x3 = c00 | "a" c00
+
+result 1 when !s3 !s4 !s16 then clear s1 set s2 set s7 clear s8
+result 2 when !s1 !s4 then set s1 clear s2 clear s7 clear s8
+result 3 when !s2 s3 !s4 !s16 then clear s1 set s2 set s7 clear s8
+result 4 when s2 !s3 !s4 !s16 then clear s1 set s2 set s7 clear s8
+result 5
+result 6 when !s2 !s3 !s4 !s16 then clear s1 set s2 set s7 clear s8
+result 7 when s2 !s3 !s4 s7 !s8 !s16 then clear s1 set s2 set s7 clear s8
+result 8 when s2 !s3 !s4 !s7 s8 !s16 then clear s1 set s2 set s7 clear s8
+result 9 when s3 !s4 then clear s1 set s2 set s7 clear s8
+result 10 when !s1 !s2 !s4
+result 11 when !s3 !s4 !s16 then clear s1 clear s2 clear s7 clear s8 clear s16
+result 12 when s2 !s3 !s4 !s16 then clear s1 clear s2 clear s7 clear s8 clear s16
+result 13 when !s2 !s3 !s4 !s16 then clear s1 clear s2 clear s7 clear s8 clear s16
+result 14 then clear s1 clear s2 clear s7 clear s8 clear s16
+result 15
+result 16 when s3 !s4 !s16 then clear s1 clear s2 clear s7 clear s8 clear s16
+result 17 when s1 !s4 then clear s1 clear s2 clear s7 clear s8 clear s16
+result 18
+result 19
+result 20
+result 21
+result 22
+result 23
+result 24
+result 25
+result 26 when s1 !s4 then set s1 clear s2 clear s7 clear s8
+result 27 when s1 !s4 then clear s2 clear s7 clear s8
+result 28
+result 29 then set s3
+result 30 then clear s3
+result 31
+result 32 then clear s4
+result 33
+result 34
+result 35
+result 36 when !s4 then clear s1 clear s2 clear s7 clear s8
+result 37 when s3 !s4 then clear s1 clear s2 set s3 clear s7 clear s8
+result 38 when !s3 !s4 then clear s1 clear s2 clear s3 clear s7 clear s8
+result 39
+result 40 when !s4 then clear s1 set s2 set s7 clear s8
+result 41 when !s4 then clear s1 set s2 clear s7 set s8
+result 42
+result 43
+result 44
+result 45
+result 46
+result 47
+result 48
+result 49
+result 50
+result 51 when !s3 !s4 !s16 then clear s1 set s2 clear s7 set s8
+result 52
+result 53
+result 54 when s2 !s3 !s4 !s16 then clear s1 set s2 clear s7 set s8
+result 55
+result 56 when !s2 !s3 !s4 !s16 then clear s1 set s2 clear s7 set s8
+result 57 when s2 !s3 !s4 s7 !s8 !s16 then clear s1 set s2 clear s7 set s8
+result 58 when s2 !s3 !s4 !s7 s8 !s16 then clear s1 set s2 clear s7 set s8
+result 59
+result 60
+result 61
+result 62
+result 63
+result 64
+result 65
+result 66
+result 67
+result 68 when !s4 then set s16
+result 69
+result 70
+result 71
+result 72
+result 73
+result 74
+result 75 then set s4
+
+char "\x01" default "." rules 1 then clear s1 clear s2 clear s7 clear s8
+char "\x02" default "^" rules 24
+char "\x03" default "_" rules 26 then clear s1 clear s2 clear s7 clear s8
+char "\x04" default "_" rules 45 then clear s1 clear s2 clear s7 clear s8
+char "\x1b" default "4" rules 64 then clear s1 clear s2 clear s7 clear s8 clear s16
+char "\x1c" default "4" rules 67 then clear s1 clear s2 clear s7 clear s8 clear s16
+char "\x1d" default "4" rules 95 then clear s1 clear s2 clear s7 clear s8 clear s16
+char "\x1e" default "4" rules 96 then clear s1 clear s2 clear s7 clear s8 clear s16
+char "\x1f" default "4" rules 97 then clear s1 clear s2 clear s7 clear s8 clear s16
+char " " default " " rules 98 then clear s1 clear s2 clear s7 clear s8 clear s16
+char "!" default "!" rules 101 then clear s1 clear s2 clear s7 clear s8
+char "\x22" default "\x22" rules 102 then clear s1 clear s2 clear s7 clear s8
+char "#" default "#" rules 104
+char "$" default "$" rules 105 then clear s1 clear s2 clear s7 clear s8
+char "%" default "%" rules 106 then clear s1 set s2 set s7 clear s8
+char "&" default "&" rules 107 then clear s1 clear s2 clear s7 clear s8
+char "'" default "'" rules 108 then clear s2 clear s7 clear s8
+char "(" default "(" rules 110 then clear s1 clear s2 clear s7 clear s8
+char ")" default ")" rules 113 then clear s1 clear s2 clear s7 clear s8
+char "*" default "*" rules 116 then clear s1 clear s2 clear s7 clear s8
+char "+" default "+" rules 118 then clear s1 clear s2 clear s7 clear s8
+char "," default "," rules 119 then clear s2 clear s7 clear s8
+char "-" default "-" rules 122 then clear s2 clear s7 clear s8
+char "." default "." rules 127 then clear s1 clear s2 clear s7 clear s8
+char "/" default "/" rules 130 then clear s2 clear s7 clear s8
+char "0" default "0" rules 132 then set s1 clear s2 clear s7 clear s8
+char "1" default "1" rules 134 then set s1 clear s2 clear s7 clear s8
+char "2" default "2" rules 136 then set s1 clear s2 clear s7 clear s8
+char "3" default "3" rules 138 then set s1 clear s2 clear s7 clear s8
+char "4" default "4" rules 140 then set s1 clear s2 clear s7 clear s8
+char "5" default "5" rules 142 then set s1 clear s2 clear s7 clear s8
+char "6" default "6" rules 144 then set s1 clear s2 clear s7 clear s8
+char "7" default "7" rules 146 then set s1 clear s2 clear s7 clear s8
+char "8" default "8" rules 148 then set s1 clear s2 clear s7 clear s8
+char "9" default "9" rules 150 then set s1 clear s2 clear s7 clear s8
+char ":" default ":" rules 152 then clear s2 clear s7 clear s8
+char ";" default ";" rules 154 then clear s1 clear s2 clear s7 clear s8
+char "<" default "<" rules 156 then clear s1 clear s2 clear s7 clear s8
+char "=" default "=" rules 158 then clear s1 clear s2 clear s7 clear s8
+char ">" default ">" rules 159 then clear s1 clear s2 clear s7 clear s8
+char "?" default "?" rules 160 then clear s1 clear s2 clear s7 clear s8
+char "@" default "@" rules 161 then clear s1 clear s2 clear s7 clear s8
+char "[" default "[" rules 162 then clear s1 clear s2 clear s7 clear s8
+char "\x5c" default "\x5c" rules 163 then clear s1 clear s2 clear s7 clear s8
+char "]" default "]" rules 164 then clear s1 clear s2 clear s7 clear s8
+char "^" default "^" rules 165 then clear s1 clear s2 clear s7 clear s8
+char "_" default "_" rules 166 then clear s1 clear s2 clear s7 clear s8
+char "`" default "@" rules 167 then clear s1 clear s2 clear s7 clear s8
+char "a" default "a" rules 173 then clear s1 set s2 clear s7 set s8
+char "b" default "b" rules 212 then clear s1 set s2 set s7 clear s8
+char "c" default "c" rules 277 then clear s1 set s2 set s7 clear s8
+char "d" default "d" rules 305 then clear s1 set s2 set s7 clear s8
+char "e" default "e" rules 394 then clear s1 set s2 clear s7 set s8
+char "f" default "f" rules 417 then clear s1 set s2 set s7 clear s8
+char "g" default "g" rules 450 then clear s1 set s2 set s7 clear s8
+char "h" default "h" rules 518 then clear s1 set s2 set s7 clear s8
+char "i" default "i" rules 562 then clear s1 set s2 clear s7 set s8
+char "j" default "j" rules 623 then clear s1 set s2 set s7 clear s8
+char "k" default "k" rules 663 then clear s1 set s2 set s7 clear s8
+char "l" default "l" rules 748 then clear s1 set s2 set s7 clear s8
+char "m" default "m" rules 808 then clear s1 set s2 set s7 clear s8
+char "n" default "n" rules 865 then clear s1 set s2 set s7 clear s8
+char "o" default "o" rules 968 then clear s1 set s2 clear s7 set s8
+char "p" default "p" rules 1057 then clear s1 set s2 set s7 clear s8
+char "q" default "q" rules 1167 then clear s1 set s2 set s7 clear s8
+char "r" default "r" rules 1170 then clear s1 set s2 clear s7 set s8
+char "s" default "s" rules 1201 then clear s1 set s2 set s7 clear s8
+char "t" default "t" rules 1350 then clear s1 set s2 set s7 clear s8
+char "u" default "u" rules 1429 then clear s1 set s2 clear s7 set s8
+char "v" default "v" rules 1443 then clear s1 set s2 set s7 clear s8
+char "w" default "w" rules 1509 then clear s1 set s2 set s7 clear s8
+char "x" default "x" rules 1512 then clear s1 set s2 set s7 clear s8
+char "y" default "y" rules 1515 then clear s1 set s2 set s7 clear s8
+char "z" default "z" rules 1518 then clear s1 set s2 set s7 clear s8
+char "{" default "[" rules 1570 then clear s1 clear s2 clear s7 clear s8
+char "|" default "\x5c" rules 1571 then clear s1 clear s2 clear s7 clear s8 clear s16
+char "}" default "]" rules 1572 then clear s1 clear s2 clear s7 clear s8
+char "~" default "^" rules 1573 then clear s1 set s2 set s7 clear s8
+char "\x81" default "u" rules 1574 then clear s1 set s2 set s7 clear s8
+char "\x82" default "e" rules 1575 then clear s1 set s2 set s7 clear s8
+char "\x83" default "a" rules 1576 then clear s1 set s2 set s7 clear s8
+char "\x84" default "a" rules 1577 then clear s1 set s2 set s7 clear s8
+char "\x85" default "a" rules 1578 then clear s1 set s2 set s7 clear s8
+char "\x86" default "a" rules 1579 then clear s1 set s2 set s7 clear s8
+char "\x87" default "c" rules 1580 then clear s1 set s2 set s7 clear s8
+char "\x88" default "e" rules 1581 then clear s1 set s2 set s7 clear s8
+char "\x89" default "e" rules 1582 then clear s1 set s2 set s7 clear s8
+char "\x8a" default "e" rules 1583 then clear s1 set s2 set s7 clear s8
+char "\x8b" default "i" rules 1584 then clear s1 set s2 set s7 clear s8
+char "\x8c" default "i" rules 1585 then clear s1 set s2 set s7 clear s8
+char "\x8d" default "i" rules 1586 then clear s1 set s2 set s7 clear s8
+char "\x91" default "&" rules 1587 then clear s1 set s2 set s7 clear s8
+char "\x93" default "o" rules 1588 then clear s1 set s2 set s7 clear s8
+char "\x94" default "o" rules 1589 then clear s1 set s2 set s7 clear s8
+char "\x95" default "o" rules 1590 then clear s1 set s2 set s7 clear s8
+char "\x96" default "u" rules 1591 then clear s1 set s2 set s7 clear s8
+char "\x97" default "u" rules 1592 then clear s1 set s2 set s7 clear s8
+char "\x98" default "y" rules 1593 then clear s1 set s2 set s7 clear s8
+char "\x9b" default ":" rules 1594 then clear s1 clear s2 clear s7 clear s8
+char "\x9d" default "y" rules 1595 then clear s1 clear s2 clear s7 clear s8
+char "\x9f" default "f" rules 1596 then clear s1 set s2 set s7 clear s8
+char "\xa0" default "a" rules 1597 then clear s1 set s2 set s7 clear s8
+char "\xa1" default "i" rules 1598 then clear s1 set s2 set s7 clear s8
+char "\xa2" default "o" rules 1599 then clear s1 set s2 set s7 clear s8
+char "\xa3" default "u" rules 1600 then clear s1 set s2 set s7 clear s8
+char "\xa4" default "n" rules 1601 then clear s1 set s2 set s7 clear s8
+char "\xae" default "\x22" rules 1602 then clear s1 clear s2 clear s7 clear s8
+char "\xaf" default "\x22" rules 1603 then clear s1 clear s2 clear s7 clear s8
+char "\xb2" default "*" rules 1608 then clear s1 set s2 set s7 clear s8
+char "\xdf" default "s" rules 1818 then clear s1 set s2 set s7 clear s8
+char "\xe2" default "g" rules 1819 then clear s1 set s2 set s7 clear s8
+char "\xec" default "." rules 1847 then clear s1 clear s2 clear s7 clear s8
+char "\xed" default "$" rules 1870 then clear s1 clear s2 clear s7 clear s8
+char "\xee" default "$" rules 1871 then clear s1 clear s2 clear s7 clear s8
+char "\xf5" default "&" rules 1872 then clear s1 clear s2 clear s7 clear s8
+char "\xf6" default "/" rules 1604 then clear s1 clear s2 clear s7 clear s8
+char "\xf7" default "*" rules 1605 then clear s1 clear s2 clear s7 clear s8
+char "\xf8" default "." rules 1606 then clear s1 clear s2 clear s7 clear s8
+char "\xf9" default "#" rules 1607 then clear s1 clear s2 clear s7 clear s8
+
+node 1 "\x01avnoj" none result 6 consume 7 -> "^avnoj" next 21
+node 2 "bbc" none result 6 consume 5 -> "^bbc" next 3
+node 3 "ckskh" none result 6 consume 7 -> "^ckskh" next 5
+node 4 "kskj" none result 6 consume 7 -> "^ckskj" level 2
+node 5 "dos" none result 6 consume 5 -> "^dos" next 6
+node 6 "hvidra" none result 6 consume 8 -> "^hvidra" next 7
+node 7 "minors" none result 6 consume 8 -> "^minors" next 8
+node 8 "nato" none result 6 consume 6 -> "^nato" next 10
+node 9 "dh" none result 6 consume 5 -> "^ndh" level 2
+node 10 "ram" none result 6 consume 5 -> "^ram" next 13
+node 11 "h" class c00 result 6 consume 4 -> "^rh" next 12
+node 12 "om" none result 6 consume 5 -> "^rom" level 2
+node 13 "sad" none result 6 consume 5 -> "^sad" next 16
+node 14 "koj" none result 6 consume 6 -> "^skoj" next 15
+node 15 "ubnor" none result 6 consume 8 -> "^subnor" level 2
+node 16 "vi" class c00 result 6 consume 4 -> "^vi" next 17
+node 17 "zavnoh" none result 6 consume 8 -> "^zavnoh" next 18
+node 18 "\xe2" none result 40 consume 3 -> "_" next 19
+node 19 "" classes c05 c04 result 36 consume 2 -> "." next 20
+node 20 "" none result 36 consume 2 -> "^" level 1
+node 21 "\xe2" none result 40 consume 2 -> "_" next 22
+node 22 "" none result 36 consume 1 -> "." next 23
+node 23 "" none result 5 consume 1 -> "" end
+node 24 "" none result 36 consume 1 -> "," next 25
+node 25 "" none result 5 consume 1 -> "" end
+node 26 "\x03\x04" none result 5 consume 2 -> "" next 35
+node 27 "\x22(" none result 36 consume 4 -> "7<__" next 30
+node 28 "[" none result 36 consume 4 -> "7(__" next 29
+node 29 "" none result 36 consume 3 -> "7__" level 2
+node 30 "(\x22" none result 36 consume 4 -> "<7__" next 32
+node 31 "" none result 36 consume 3 -> "<__" level 2
+node 32 "[\x22" none result 36 consume 4 -> "(7__" next 34
+node 33 "" none result 36 consume 3 -> "(__" level 2
+node 34 "" none result 36 consume 2 -> "__" level 1
+node 35 "\x04" none result 5 consume 1 -> "" next 36
+node 36 "\x22(" none result 36 consume 3 -> "7<_" next 39
+node 37 "[" none result 36 consume 3 -> "7(_" next 38
+node 38 "" none result 36 consume 2 -> "7_" level 1
+node 39 "(\x22" none result 36 consume 3 -> "<7_" next 41
+node 40 "" none result 36 consume 2 -> "<_" level 1
+node 41 "[\x22" none result 36 consume 3 -> "(7_" next 43
+node 42 "" none result 36 consume 2 -> "(_" level 1
+node 43 "" none result 36 consume 1 -> "_" next 44
+node 44 "" none result 5 consume 1 -> "" end
+node 45 "\x04\x03" none result 5 consume 2 -> "" next 54
+node 46 "\x22(" none result 36 consume 4 -> "7<__" next 49
+node 47 "[" none result 36 consume 4 -> "7(__" next 48
+node 48 "" none result 36 consume 3 -> "7__" level 2
+node 49 "(\x22" none result 36 consume 4 -> "<7__" next 51
+node 50 "" none result 36 consume 3 -> "<__" level 2
+node 51 "[\x22" none result 36 consume 4 -> "(7__" next 53
+node 52 "" none result 36 consume 3 -> "(__" level 2
+node 53 "" none result 36 consume 2 -> "__" level 1
+node 54 "\x03" none result 5 consume 1 -> "" next 55
+node 55 "\x22(" none result 36 consume 3 -> "7<_" next 58
+node 56 "[" none result 36 consume 3 -> "7(_" next 57
+node 57 "" none result 36 consume 2 -> "7_" level 1
+node 58 "(\x22" none result 36 consume 3 -> "<7_" next 60
+node 59 "" none result 36 consume 2 -> "<_" level 1
+node 60 "[\x22" none result 36 consume 3 -> "(7_" next 62
+node 61 "" none result 36 consume 2 -> "(_" level 1
+node 62 "" none result 36 consume 1 -> "_" next 63
+node 63 "" none result 5 consume 1 -> "" end
+node 64 "/" none result 5 consume 1 -> "\x1c" {copy} next 65
+node 65 "-" none result 5 consume 1 -> "\x1c" {copy} next 66
+node 66 "" none result 14 consume 1 -> "\x1c" {copy} end
+node 67 "ab" class c02 result 30 consume 1 -> "\x1c" {word} {copy} next 68
+node 68 "bqtbi~bcd" class c02 result 5 consume 10 -> "---" {drop-space} next 72
+node 69 "qtbi~lng" class c02 result 5 consume 10 -> "hr" {drop-space} level 3
+node 70 "tbi~lnn" class c02 result 5 consume 10 -> "scr" {drop-space} level 4
+node 71 "bi~qly" class c02 result 5 consume 10 -> "v" {drop-space} level 1
+node 72 "cz" class c02 result 75 consume 1 -> "\x1c" {word} {copy} next 73
+node 73 "ee" none result 14 consume 1 -> {cmd a} "\x1c" {word} "\x1f" {cmd b} {style 1} next 75
+node 74 "s" none result 14 consume 1 -> "\x1c" {word} {copy} {style 0} level 1
+node 75 "fl\x1f" class c04 result 36 consume 4 -> "\x221" next 85
+node 76 "te~b" classes c02 c01 result 5 consume 6 -> {drop-space} {style 2} ",'" {style 3} level 3
+node 77 "e~b" class c02 result 5 consume 6 -> {drop-space} next 82
+node 78 "~i" classes c02 c01 result 5 consume 6 -> {drop-space} {style 2} ",'" {style 3} level 5
+node 79 "i" class c02 result 5 consume 6 -> {drop-space} next 80
+node 80 "u" classes c02 c01 result 5 consume 6 -> {drop-space} {style 2} ",'" {style 3} level 6
+node 81 "" class c02 result 5 consume 6 -> {drop-space} level 3
+node 82 "s~b" class c02 result 5 consume 6 -> {drop-space} level 4
+node 83 "~i" class c02 result 5 consume 6 -> {drop-space} level 5
+node 84 "u" class c02 result 5 consume 6 -> {drop-space} level 1
+node 85 "g1" class c02 result 29 consume 1 -> "\x1c" {word} {copy} next 87
+node 86 "2" class c02 result 30 consume 1 -> "\x1c" {word} {copy} level 1
+node 87 "ii" class c02 result 68 consume 3 -> {drop-space} {style 2} "," {style 3} next 90
+node 88 "n" class c02 result 29 consume 1 -> "\x1c" {word} {copy} next 89
+node 89 "" class c02 result 68 consume 2 -> {drop-space} level 1
+node 90 "lnb" none result 5 consume 1 -> {style 2} {cmd c} {style 3} "\x1c" {word} {copy} {switch} next 92
+node 91 "ng" none result 5 consume 1 -> "\x1c" {word} {copy} level 1
+node 92 "ps\x1f" none result 36 consume 4 -> "/" next 93
+node 93 "tx" class c02 result 32 consume 1 -> "\x1c" {word} {copy} next 94
+node 94 "" none result 14 consume 1 -> "\x1c" {word} {copy} end
+node 95 "" none result 5 consume 1 -> "\x1d" end
+node 96 "" none result 14 consume 1 -> "\x1e" end
+node 97 "" none result 5 consume 1 -> {cmd c} end
+node 98 "-" class c02 result 11 consume 2 -> ",-" next 99
+node 99 "\xecC" class c02 result 11 consume 3 -> ",-" next 100
+node 100 "" none result 14 consume 1 -> " " end
+node 101 "" none result 36 consume 1 -> "6" end
+node 102 "-" class c05 result 12 consume 2 -> "7-" next 103
+node 103 "" none result 36 consume 1 -> "7" end
+node 104 "" none result 40 consume 1 -> "@#" end
+node 105 "" none result 36 consume 1 -> "@s" end
+node 106 "" none result 36 consume 1 -> "#j0" end
+node 107 "" none result 36 consume 1 -> "&" end
+node 108 "" none result 37 consume 1 -> "4" next 109
+node 109 "" none result 38 consume 1 -> ",4" end
+node 110 "" none result 9 consume 1 -> "<" next 111
+node 111 "" none result 36 consume 1 -> "8" next 112
+node 112 "" none result 12 consume 1 -> ",<" end
+node 113 "" none result 9 consume 1 -> ">" next 114
+node 114 "" none result 36 consume 1 -> "0" next 115
+node 115 "" none result 12 consume 1 -> ",>" end
+node 116 "" none result 37 consume 1 -> "9" next 117
+node 117 "" none result 38 consume 1 -> ",9" end
+node 118 "" none result 36 consume 1 -> "@6" end
+node 119 "" class c04 result 2 consume 0 -> "#" next 120
+node 120 "" class c04 result 26 consume 1 -> "'" next 121
+node 121 "" none result 36 consume 1 -> "1" end
+node 122 "\x02" none result 11 consume 2 -> "-" next 123
+node 123 "" none result 26 consume 1 -> "-" next 124
+node 124 "" none result 36 consume 1 -> "-" next 125
+node 125 "" class c02 result 13 consume 1 -> ",-" next 126
+node 126 "" class c05 result 13 consume 1 -> ",-" end
+node 127 "" class c04 result 2 consume 0 -> "#" next 128
+node 128 "" class c04 result 26 consume 1 -> "." next 129
+node 129 "" none result 36 consume 1 -> "'" end
+node 130 "" none result 1 consume 1 -> "\x221" next 131
+node 131 "" none result 36 consume 1 -> "\x5c" end
+node 132 "" none result 2 consume 0 -> "#" next 133
+node 133 "" none result 26 consume 1 -> "j" end
+node 134 "" none result 2 consume 0 -> "#" next 135
+node 135 "" none result 26 consume 1 -> "a" end
+node 136 "" none result 2 consume 0 -> "#" next 137
+node 137 "" none result 26 consume 1 -> "b" end
+node 138 "" none result 2 consume 0 -> "#" next 139
+node 139 "" none result 26 consume 1 -> "c" end
+node 140 "" none result 2 consume 0 -> "#" next 141
+node 141 "" none result 26 consume 1 -> "d" end
+node 142 "" none result 2 consume 0 -> "#" next 143
+node 143 "" none result 26 consume 1 -> "e" end
+node 144 "" none result 2 consume 0 -> "#" next 145
+node 145 "" none result 26 consume 1 -> "f" end
+node 146 "" none result 2 consume 0 -> "#" next 147
+node 147 "" none result 26 consume 1 -> "g" end
+node 148 "" none result 2 consume 0 -> "#" next 149
+node 149 "" none result 26 consume 1 -> "h" end
+node 150 "" none result 2 consume 0 -> "#" next 151
+node 151 "" none result 26 consume 1 -> "i" end
+node 152 "" none result 26 consume 1 -> "3" next 153
+node 153 "" none result 36 consume 1 -> "3" end
+node 154 "" none result 37 consume 1 -> "2" next 155
+node 155 "" none result 38 consume 1 -> ",2" end
+node 156 "" none result 2 consume 1 -> "(" next 157
+node 157 "" none result 40 consume 1 -> "<" end
+node 158 "" none result 36 consume 1 -> "@7" end
+node 159 "" none result 40 consume 1 -> ">" end
+node 160 "" none result 36 consume 1 -> "5" end
+node 161 "" none result 36 consume 1 -> "@>" end
+node 162 "" none result 36 consume 1 -> "(" end
+node 163 "" none result 36 consume 1 -> "\x5c" end
+node 164 "" none result 36 consume 1 -> ")" end
+node 165 "" none result 36 consume 1 -> "^" end
+node 166 "" none result 36 consume 1 -> "@_" end
+node 167 " " none result 36 consume 1 -> "7" next 168
+node 168 "" none result 10 consume 1 -> "7" next 169
+node 169 "" class c01 result 36 consume 1 -> "7" next 170
+node 170 "-" none result 40 consume 1 -> "7" next 171
+node 171 "" class c03 result 36 consume 1 -> "7" next 172
+node 172 "" none result 36 consume 1 -> "7" end
+node 173 "" none result 17 consume 0 -> "," next 174
+node 174 "a" class c00 result 54 consume 2 -> "a,a" next 175
+node 175 "c" class c00 result 7 consume 2 -> "c" next 176
+node 176 "e" class c00 result 54 consume 2 -> "a,e" next 177
+node 177 "i" class c00 result 54 consume 2 -> "a,i" next 178
+node 178 "jla" class c00 result 57 consume 4 -> "2la" next 180
+node 179 "" none result 7 consume 2 -> "2" level 1
+node 180 "ktual" none result 1 consume 6 -> "aal" next 183
+node 181 "tuel" none result 1 consume 6 -> "ael" next 182
+node 182 "" class c00 result 7 consume 2 -> "k" level 1
+node 183 "li" class c00 result 56 consume 3 -> "l" next 184
+node 184 "mbijent" none result 6 consume 8 -> "amb'ent" next 190
+node 185 "bi" none result 56 consume 4 -> "ambi" next 186
+node 186 "o-tamo" class c00 result 56 consume 8 -> "am-tm" next 188
+node 187 "" class c00 result 56 consume 3 -> "am" level 2
+node 188 "" none result 7 consume 2 -> "." next 189
+node 189 "" class c00 result 6 consume 2 -> "a,m" level 1
+node 190 "nja" class c00 result 54 consume 4 -> "@a" next 201
+node 191 "jem" none result 4 consume 5 -> "@+" next 197
+node 192 "e" class c00 result 54 consume 4 -> "@e" next 193
+node 193 "im" none result 4 consume 5 -> "@<" next 194
+node 194 "sk" class c05 result 4 consume 5 -> "@7" next 195
+node 195 "u" class c00 result 54 consume 4 -> "@u" next 196
+node 196 "" none result 4 consume 3 -> "a$" level 2
+node 197 "tima" class c00 result 56 consume 6 -> "ant<a" next 200
+node 198 "imon" none result 6 consume 7 -> "ant<on" level 4
+node 199 "" none result 56 consume 4 -> "anti" level 2
+node 200 "" none result 7 consume 2 -> "4" level 1
+node 201 "o" class c00 result 57 consume 2 -> "\x5c" next 202
+node 202 "rte\xb2\x91k" none result 6 consume 7 -> "arw:k" next 204
+node 203 "" class c00 result 57 consume 2 -> "r" level 1
+node 204 "telj" none result 4 consume 5 -> "@\x5c" next 205
+node 205 "utomat" none result 1 consume 7 -> "aat" next 209
+node 206 "tom" class c00 result 6 consume 5 -> "aut[" next 208
+node 207 "o" none result 56 consume 4 -> "auto" level 2
+node 208 "" class c00 result 54 consume 2 -> "a,u" level 1
+node 209 "v" none result 7 consume 2 -> "#" next 210
+node 210 "\xb2=" class c00 result 7 consume 3 -> "*" next 211
+node 211 "" none result 41 consume 1 -> "a" end
+node 212 "" none result 17 consume 0 -> "," next 213
+node 213 "ak" class c00 result 6 consume 3 -> "bak" next 219
+node 214 "rem" class c00 result 6 consume 5 -> "bm" next 216
+node 215 "" class c00 result 56 consume 3 -> "ba" level 2
+node 216 "\xb2=" class c00 result 6 consume 4 -> "ba*" next 218
+node 217 "\x91" class c00 result 6 consume 4 -> "b:" level 2
+node 218 "" short-set @x0 result 56 consume 2 -> "ba" level 1
+node 219 "c" class c00 result 6 consume 2 -> "bc" next 220
+node 220 "ea" class c00 result 58 consume 3 -> "2,a" next 236
+node 221 "be" class c00 result 56 consume 4 -> "2be" next 222
+node 222 "e" class c00 result 58 consume 3 -> "2,e" next 223
+node 223 "i" class c00 result 58 consume 3 -> "2,i" next 224
+node 224 "la" class c00 result 56 consume 4 -> "2la" next 226
+node 225 "a" class c00 result 58 consume 4 -> "2la" level 2
+node 226 "m" class c00 result 4 consume 3 -> "b+" next 227
+node 227 "n" class c00 result 6 consume 3 -> "2n" next 229
+node 228 "" class c00 result 4 consume 3 -> "bn" level 2
+node 229 "skori" none result 56 consume 7 -> "27o/" next 231
+node 230 "omu\xb2=" none result 6 consume 8 -> "2somu*" level 2
+node 231 "u" class c00 result 58 consume 3 -> "2,u" next 232
+node 232 "z" class c00 result 6 consume 3 -> "2" next 233
+node 233 "\xb2\x91" class c00 result 4 consume 4 -> "b:" next 234
+node 234 "" none result 56 consume 2 -> "2" next 235
+node 235 "" none result 58 consume 2 -> "2" level 1
+node 236 "g" class c00 result 6 consume 2 -> "bg" next 237
+node 237 "h" class c00 result 6 consume 2 -> "bh" next 238
+node 238 "ila" class c00 result 56 consume 4 -> "la" next 250
+node 239 "le" class c00 result 56 consume 4 -> "le" next 243
+node 240 "i" class c00 result 56 consume 4 -> "li" next 241
+node 241 "jojed" none result 6 consume 8 -> "bi\x5co(d" next 242
+node 242 "o" class c00 result 56 consume 4 -> "lo" level 2
+node 243 "metal" none result 56 consume 6 -> "bimeta" next 244
+node 244 "odinam" none result 6 consume 8 -> "biodiym" next 245
+node 245 "smo" class c00 result 56 consume 5 -> "bs" next 248
+node 246 "te" class c00 result 56 consume 5 -> "b)" level 4
+node 247 "in" none result 56 consume 5 -> "bi)i" level 2
+node 248 "valen" none result 6 consume 7 -> "biva=n" next 249
+node 249 "" class c00 result 56 consume 2 -> "b" level 1
+node 250 "jesomu\xb2=" none result 6 consume 9 -> "b(somu*" next 252
+node 251 "" class c00 result 6 consume 2 -> "bj" level 1
+node 252 "k" class c00 result 6 consume 2 -> "bk" next 253
+node 253 "ljak" class c00 result 6 consume 5 -> "b\x5cak" next 255
+node 254 "j" class c00 result 6 consume 3 -> "b\x5c" level 1
+node 255 "n" class c00 result 6 consume 2 -> "bn" next 256
+node 256 "ogomolj" none result 6 consume 8 -> "bogomo\x5c" next 258
+node 257 "lj" none result 1 consume 4 -> "\x22b" level 1
+node 258 "rzog" class c00 result 1 consume 5 -> "brzg" next 265
+node 259 "zoj" class c00 result 1 consume 5 -> "brz0" next 264
+node 260 "ome" class c00 result 51 consume 6 -> "brz[e" level 4
+node 261 "mu" class c00 result 51 consume 6 -> "brz[u" next 263
+node 262 "" class c00 result 1 consume 5 -> "brz[" level 4
+node 263 "" none result 6 consume 4 -> "brzo" level 2
+node 264 "" class c00 result 56 consume 2 -> "br" level 1
+node 265 "udu\xb27" none result 1 consume 6 -> "b%" next 270
+node 266 "dza\xb2\x91to" class c00 result 56 consume 9 -> "\x22?>:" next 269
+node 267 "\xb2\xae" none result 6 consume 5 -> "bu,]" next 268
+node 268 "" none result 1 consume 3 -> "\x22?" level 2
+node 269 "\xb2A" class c05 result 4 consume 4 -> "@?" level 1
+node 270 "\xb27" class c00 result 6 consume 3 -> "b%" next 274
+node 271 "=" class c00 result 6 consume 3 -> "b*" next 272
+node 272 "A" class c00 result 6 consume 3 -> "b?" next 273
+node 273 "\x91" class c00 result 6 consume 3 -> "b:" level 1
+node 274 "" class c04 result 6 consume 1 -> "b" next 275
+node 275 "" class c00 result 6 consume 1 -> ",b" next 276
+node 276 "" none result 40 consume 1 -> "b" end
+node 277 "" none result 17 consume 0 -> "," next 278
+node 278 "ak" class c00 result 6 consume 3 -> "cak" next 281
+node 279 "r" class c00 result 56 consume 3 -> "car" next 280
+node 280 "" short-set @x0 result 56 consume 2 -> "ca" level 1
+node 281 "ca" class c00 result 56 consume 3 -> "c,ca" next 283
+node 282 "" class c00 result 6 consume 2 -> "c,c" level 1
+node 283 "e" short-set @x0 result 56 consume 2 -> "ce" next 284
+node 284 "g" class c00 result 6 consume 2 -> "cg" next 285
+node 285 "h" class c00 result 6 consume 2 -> "ch" next 286
+node 286 "ica" class c00 result 56 consume 4 -> "ci,ca" next 290
+node 287 "c" class c00 result 6 consume 3 -> "ci,c" next 288
+node 288 "lj" none result 1 consume 4 -> "\x22c" next 289
+node 289 "stin" none result 56 consume 5 -> "ci)i" level 1
+node 290 "j" class c00 result 6 consume 2 -> "cj" next 291
+node 291 "k" class c00 result 6 consume 2 -> "ck" next 292
+node 292 "lj" class c00 result 6 consume 3 -> "c\x5c" next 293
+node 293 "n" class c00 result 6 consume 2 -> "cn" next 294
+node 294 "r" class c00 result 56 consume 2 -> "cr" next 295
+node 295 "\xb27" class c00 result 6 consume 3 -> "c%" next 299
+node 296 "=" class c00 result 6 consume 3 -> "c*" next 297
+node 297 "A" class c00 result 6 consume 3 -> "c?" next 298
+node 298 "\x91" class c00 result 6 consume 3 -> "c:" level 1
+node 299 "\xe31" none result 40 consume 3 -> "%" next 301
+node 300 "<" none result 40 consume 3 -> "*" level 1
+node 301 "" class c04 result 6 consume 1 -> "c" next 302
+node 302 "" class c00 result 6 consume 1 -> ",c" next 303
+node 303 "" class c00 result 7 consume 1 -> ",c" next 304
+node 304 "" none result 40 consume 1 -> "c" end
+node 305 "" none result 17 consume 0 -> "," next 306
+node 306 "akako" class c00 result 56 consume 6 -> "dkk" next 316
+node 307 "kle" class c00 result 56 consume 5 -> "dk=" next 308
+node 308 "lj" none result 1 consume 4 -> "\x22d" next 309
+node 309 "nas" class c00 result 6 consume 5 -> "ds" next 311
+node 310 "a\xb2\x91nj" none result 1 consume 8 -> "d:" level 2
+node 311 "pa\xb2=e" class c00 result 56 consume 7 -> "dp*" next 312
+node 312 "r" class c00 result 56 consume 3 -> "dar" next 313
+node 313 "\xb2=" class c00 result 6 consume 4 -> "da*" next 314
+node 314 "" class c00 result 56 consume 2 -> "d" next 315
+node 315 "" short-set @x0 result 56 consume 2 -> "da" level 1
+node 316 "c" class c00 result 6 consume 2 -> "dc" next 317
+node 317 "emago" none result 56 consume 6 -> "d+ago" next 335
+node 318 "mant" none result 6 consume 6 -> "d+4t" next 331
+node 319 "b" none result 6 consume 4 -> "d+b" next 320
+node 320 "etar" class c00 result 56 consume 7 -> "d+etr" next 322
+node 321 "tr" none result 6 consume 5 -> "d+et" level 3
+node 322 "ijurg" none result 56 consume 7 -> "d+'ur" next 325
+node 323 "urg" none result 56 consume 6 -> "d+iur" next 324
+node 324 "\xb2\xaeon" none result 56 consume 7 -> "d+i!o" level 3
+node 325 "ogr" none result 6 consume 5 -> "d+og" next 330
+node 326 "kr" none result 6 consume 5 -> "d+ok" next 327
+node 327 "niz" none result 6 consume 7 -> "d+o&z" level 5
+node 328 "sk" none result 6 consume 7 -> "d+on7" next 329
+node 329 "" short-set @x1 result 6 consume 4 -> "d+o" level 3
+node 330 "" none result 6 consume 3 -> "dem" level 2
+node 331 "n" class c00 result 6 consume 3 -> "den" next 332
+node 332 "set" none result 1 consume 5 -> "dt" next 333
+node 333 "\xb2\x91" class c00 result 6 consume 4 -> "de:" next 334
+node 334 "" short-set @x0 result 56 consume 2 -> "de" level 1
+node 335 "g" class c00 result 6 consume 2 -> "dg" next 336
+node 336 "h" class c00 result 6 consume 2 -> "dh" next 337
+node 337 "i\xb27" class c00 result 6 consume 4 -> "di%" next 338
+node 338 "j" class c00 result 6 consume 2 -> "dj" next 339
+node 339 "k" class c00 result 6 consume 2 -> "dk" next 340
+node 340 "lan" class c00 result 6 consume 4 -> "d;n" next 342
+node 341 "j" class c00 result 6 consume 3 -> "d\x5c" level 1
+node 342 "nom" class c00 result 6 consume 4 -> "d^m" next 344
+node 343 "" class c00 result 6 consume 2 -> "dn" level 1
+node 344 "oa" class c00 result 58 consume 3 -> "4,a" next 366
+node 345 "ca" class c00 result 56 consume 4 -> "4,ca" next 346
+node 346 "e" class c00 result 58 consume 3 -> "4,e" next 347
+node 347 "g" class c00 result 4 consume 3 -> "dg" next 348
+node 348 "i" class c00 result 58 consume 3 -> "4,i" next 349
+node 349 "j" class c00 result 6 consume 3 -> "4j" next 351
+node 350 "" class c00 result 4 consume 3 -> "d0" level 2
+node 351 "kad" short-set @x3 result 6 consume 5 -> "4c" next 353
+node 352 "amo" class c00 result 56 consume 6 -> "4km" level 2
+node 353 "m" class c00 result 6 consume 3 -> "4m" next 355
+node 354 "" class c00 result 4 consume 3 -> "d[" level 2
+node 355 "nja" class c00 result 56 consume 5 -> "4,$a" next 356
+node 356 "prem" none result 1 consume 6 -> "4pm" next 357
+node 357 "sad" short-set @x3 result 6 consume 5 -> "4$" next 358
+node 358 "tad" short-set @x3 result 6 consume 5 -> "4f" next 361
+node 359 "amo" class c00 result 56 consume 6 -> "4tm" next 360
+node 360 "ud" short-set @x3 result 6 consume 5 -> "4td" level 2
+node 361 "u" class c00 result 58 consume 3 -> "4,u" next 362
+node 362 "v" class c00 result 4 consume 3 -> "dw" next 363
+node 363 "zimet" none result 6 consume 7 -> "4zimet" next 364
+node 364 "" none result 56 consume 2 -> "4" next 365
+node 365 "" none result 58 consume 2 -> "4" level 1
+node 366 "ra" class c00 result 56 consume 3 -> "dra" next 372
+node 367 "ug" none result 1 consume 4 -> "\x22g" next 371
+node 368 "k\xb2=" none result 1 consume 6 -> "dk*" next 369
+node 369 "\xb2\x91tv" none result 1 consume 7 -> "\x220" level 4
+node 370 "\xae" class c05 result 4 consume 5 -> "@g" level 2
+node 371 "" class c00 result 56 consume 2 -> "dr" level 1
+node 372 "ubok" none result 1 consume 5 -> "dbk" next 375
+node 373 "govaln" none result 6 consume 7 -> "dugoval" next 374
+node 374 "\xb2\x91" none result 4 consume 4 -> "@:" level 1
+node 375 "vodim" none result 6 consume 6 -> "dvod<" next 383
+node 376 "odom" none result 6 consume 6 -> "dvo4m" level 3
+node 377 "jaj" none result 6 consume 6 -> "dvoj2" next 378
+node 378 "lj" none result 6 consume 5 -> "dvo\x5c" next 379
+node 379 "met" none result 6 consume 6 -> "dvomet" next 380
+node 380 "valen" none result 6 consume 8 -> "dvova=n" level 4
+node 381 "alj" none result 6 consume 7 -> "dvova\x5c" next 382
+node 382 "la" none result 56 consume 6 -> "dvov;" level 1
+node 383 "\xb27" class c00 result 6 consume 3 -> "d%" next 391
+node 384 "=" class c00 result 6 consume 3 -> "d*" next 385
+node 385 "A" class c00 result 6 consume 3 -> "d?" next 386
+node 386 "\x91" class c00 result 6 consume 2 -> "d:" next 387
+node 387 "\xaeak" class c00 result 6 consume 5 -> ",]ak" level 3
+node 388 "" none result 9 consume 3 -> "d!" next 389
+node 389 "" none result 1 consume 3 -> ",]" next 390
+node 390 "" none result 40 consume 3 -> "]" level 1
+node 391 "" class c04 result 6 consume 1 -> "d" next 392
+node 392 "" class c00 result 6 consume 1 -> ",d" next 393
+node 393 "" none result 40 consume 1 -> "d" end
+node 394 "" none result 17 consume 0 -> "," next 395
+node 395 "a" class c00 result 54 consume 2 -> "e,a" next 396
+node 396 "e" class c00 result 54 consume 2 -> "e,e" next 397
+node 397 "i" class c00 result 54 consume 2 -> "e,i" next 398
+node 398 "kskated" none result 6 consume 8 -> "ekskawd" next 400
+node 399 "vi" none result 56 consume 4 -> "ekvi" level 1
+node 400 "m" none result 7 consume 2 -> "+" next 401
+node 401 "nja" class c00 result 54 consume 4 -> "\x22a" next 408
+node 402 "jem" none result 4 consume 5 -> "\x22+" next 407
+node 403 "e" class c00 result 54 consume 4 -> "\x22e" next 404
+node 404 "im" none result 4 consume 5 -> "\x22<" next 405
+node 405 "sk" class c05 result 4 consume 5 -> "\x227" next 406
+node 406 "u" class c00 result 54 consume 4 -> "\x22u" level 2
+node 407 "" class c00 result 7 consume 2 -> "n" level 1
+node 408 "o" class c00 result 57 consume 2 -> "?" next 409
+node 409 "to" class c00 result 56 consume 3 -> "et" next 410
+node 410 "u" class c00 result 54 consume 2 -> "e,u" next 411
+node 411 "ventual" none result 1 consume 8 -> "eal" next 413
+node 412 "o" class c00 result 56 consume 3 -> "eo" level 1
+node 413 "\xb2\x91" class c00 result 7 consume 3 -> ":" next 414
+node 414 "" class c04 result 56 consume 1 -> "e" next 415
+node 415 "" class c00 result 56 consume 1 -> ",e" next 416
+node 416 "" none result 41 consume 1 -> "e" end
+node 417 "" none result 17 consume 0 -> "," next 418
+node 418 "ac" class c00 result 6 consume 3 -> "fac" next 424
+node 419 "k" class c00 result 6 consume 3 -> "fak" next 420
+node 420 "ljenisus" none result 6 consume 10 -> "fa\x5ceni+s" next 421
+node 421 "r" class c00 result 56 consume 3 -> "far" next 422
+node 422 "|=" class c00 result 6 consume 4 -> "fa*" next 423
+node 423 "" short-set @x0 result 56 consume 2 -> "fa" level 1
+node 424 "c" class c00 result 6 consume 2 -> "fc" next 425
+node 425 "en" class c00 result 6 consume 3 -> "fen" next 428
+node 426 "\xb2\x91" class c00 result 6 consume 4 -> "fe:" next 427
+node 427 "" short-set @x0 result 56 consume 2 -> "fe" level 1
+node 428 "g" class c00 result 6 consume 2 -> "fg" next 429
+node 429 "h" class c00 result 6 consume 2 -> "fh" next 430
+node 430 "ilozof" none result 1 consume 7 -> "ff" next 433
+node 431 "\xb27" class c00 result 6 consume 4 -> "fi%" level 3
+node 432 "\x91" class c00 result 6 consume 4 -> "fi:" level 1
+node 433 "j" class c00 result 6 consume 2 -> "fj" next 434
+node 434 "k" class c00 result 6 consume 2 -> "fk" next 435
+node 435 "lam" class c00 result 6 consume 4 -> "f;m" next 438
+node 436 "e\xb2\x91" class c00 result 6 consume 5 -> "f=:" next 437
+node 437 "j" class c00 result 6 consume 3 -> "f\x5c" level 1
+node 438 "n" class c00 result 6 consume 2 -> "fn" next 439
+node 439 "obi\xb2=" none result 1 consume 6 -> "fobi*" next 441
+node 440 "rm" none result 1 consume 4 -> "\x22f" level 1
+node 441 "rojdomarks" none result 6 consume 11 -> "f1jdomarks" next 443
+node 442 "" class c00 result 56 consume 2 -> "fr" level 1
+node 443 "\xb27" class c00 result 6 consume 3 -> "f%" next 447
+node 444 "=" class c00 result 6 consume 3 -> "f*" next 445
+node 445 "A" class c00 result 6 consume 3 -> "f?" next 446
+node 446 "\x91" class c00 result 6 consume 3 -> "f:" level 1
+node 447 "" class c04 result 6 consume 1 -> "f" next 448
+node 448 "" class c00 result 6 consume 1 -> ",f" next 449
+node 449 "" none result 40 consume 1 -> "f" end
+node 450 "" none result 17 consume 0 -> "," next 451
+node 451 "a!" class c00 result 6 consume 3 -> "#,6" next 473
+node 452 "\x22" class c00 result 6 consume 3 -> "#,7" next 453
+node 453 "," class c00 result 6 consume 3 -> "#,1" next 454
+node 454 ":" class c00 result 6 consume 3 -> "#,3" next 455
+node 455 "?" class c00 result 6 consume 3 -> "#,5" next 456
+node 456 "c" class c00 result 6 consume 3 -> "gac" next 458
+node 457 "" class c00 result 4 consume 3 -> "gc" level 2
+node 458 "j" class c00 result 4 consume 3 -> "g2" next 459
+node 459 "k" class c00 result 6 consume 3 -> "gak" next 461
+node 460 "" class c00 result 4 consume 3 -> "gk" level 2
+node 461 "m" class c00 result 4 consume 3 -> "g." next 462
+node 462 "n" class c00 result 4 consume 3 -> "g4" next 463
+node 463 "r" class c00 result 54 consume 3 -> "gr" next 465
+node 464 "" class c00 result 56 consume 3 -> "gar" level 2
+node 465 "telj" none result 4 consume 6 -> "g@\x5c" next 466
+node 466 "v" class c00 result 4 consume 3 -> "g#" next 467
+node 467 "zivod" none result 1 consume 7 -> "gazivx" next 468
+node 468 "\xb2=" class c00 result 6 consume 4 -> "ga*" next 470
+node 469 "=" class c00 result 4 consume 4 -> "g*" level 2
+node 470 "" class c00 result 56 consume 2 -> "#" next 471
+node 471 "" none result 58 consume 2 -> "#" next 472
+node 472 "" short-set @x0 result 56 consume 2 -> "ga" level 1
+node 473 "c" class c00 result 6 consume 2 -> "gc" next 474
+node 474 "degod" class c00 result 6 consume 6 -> "gdgx" next 482
+node 475 "ekad" class c00 result 6 consume 6 -> "gdc" next 478
+node 476 "\xb2\x91to" class c00 result 56 consume 7 -> "gd:" next 477
+node 477 "" class c00 result 56 consume 3 -> "gd" level 2
+node 478 "jegod" class c00 result 6 consume 7 -> "g(gx" level 3
+node 479 "ekad" class c00 result 6 consume 7 -> "g(c" level 4
+node 480 "\xb2\x91to" class c00 result 56 consume 8 -> "g(:" next 481
+node 481 "" class c00 result 56 consume 4 -> "g(" level 1
+node 482 "en" class c00 result 6 consume 3 -> "gen" next 485
+node 483 "\xb2\x91" class c00 result 6 consume 4 -> "ge:" next 484
+node 484 "" short-set @x0 result 56 consume 2 -> "ge" level 1
+node 485 "g" class c00 result 6 consume 2 -> "gg" next 486
+node 486 "h" class c00 result 6 consume 2 -> "gh" next 487
+node 487 "j" class c00 result 6 consume 2 -> "gj" next 488
+node 488 "k" class c00 result 6 consume 2 -> "gk" next 489
+node 489 "lasovir" none result 56 consume 7 -> "g;sovi" next 494
+node 490 "ed" none result 1 consume 4 -> "\x22=" next 492
+node 491 "n" class c00 result 6 consume 4 -> "g=n" level 2
+node 492 "j" class c00 result 6 consume 3 -> "g\x5c" next 493
+node 493 "og" class c00 result 6 consume 4 -> "g_g" level 1
+node 494 "noj" class c00 result 6 consume 4 -> "g^j" next 497
+node 495 "om" class c00 result 6 consume 4 -> "g^" next 496
+node 496 "" class c00 result 6 consume 2 -> "gn" level 1
+node 497 "odi\xb2\x91nj" none result 1 consume 8 -> "g:" next 502
+node 498 "sp" none result 1 consume 4 -> "gs" next 499
+node 499 "tov" none result 1 consume 5 -> "gtw" next 500
+node 500 "var" class c05 result 4 consume 5 -> "@w" level 3
+node 501 "or" none result 1 consume 5 -> "\x22w" level 1
+node 502 "rad" none result 1 consume 4 -> "\x228" next 509
+node 503 "a\xb2A" none result 4 consume 5 -> "@8" next 504
+node 504 "izodu\xb2\x91" none result 6 consume 9 -> "g/zodu:" next 505
+node 505 "omoglas" none result 1 consume 9 -> "g1mog;s" next 507
+node 506 "zomor" none result 1 consume 7 -> "g1zomo" level 2
+node 507 "up" none result 1 consume 4 -> "gp" next 508
+node 508 "" class c00 result 56 consume 2 -> "gr" level 1
+node 509 "u" class c00 result 56 consume 2 -> "g,u" next 510
+node 510 "\xb27" class c00 result 6 consume 3 -> "g%" next 514
+node 511 "=" class c00 result 6 consume 3 -> "g*" next 512
+node 512 "A" class c00 result 6 consume 3 -> "g?" next 513
+node 513 "\x91" class c00 result 6 consume 3 -> "g:" level 1
+node 514 "" class c04 result 6 consume 1 -> "g" next 515
+node 515 "" class c00 result 6 consume 1 -> ",g" next 516
+node 516 "" class c00 result 7 consume 1 -> ",g" next 517
+node 517 "" none result 40 consume 1 -> "g" end
+node 518 "" none result 17 consume 0 -> "," next 519
+node 519 "ac" class c00 result 6 consume 3 -> "hac" next 524
+node 520 "k" class c00 result 6 consume 3 -> "hak" next 521
+node 521 "r" class c00 result 56 consume 3 -> "har" next 522
+node 522 "\xb2=" class c00 result 6 consume 4 -> "ha*" next 523
+node 523 "" short-set @x0 result 56 consume 2 -> "ha" level 1
+node 524 "c" class c00 result 6 consume 2 -> "hc" next 525
+node 525 "eksamet" none result 6 consume 8 -> "heksamet" next 531
+node 526 "liodrom" none result 1 consume 9 -> "he9od1m" next 527
+node 527 "n" class c00 result 6 consume 3 -> "hen" next 528
+node 528 "\xb2\x91" class c00 result 6 consume 4 -> "he:" next 529
+node 529 "" short-set @x0 result 56 consume 2 -> "he" next 530
+node 530 "" class c00 result 56 consume 2 -> "h,e" level 1
+node 531 "g" class c00 result 6 consume 2 -> "hg" next 532
+node 532 "h" class c00 result 6 consume 2 -> "hh" next 534
+node 533 "" class c00 result 4 consume 2 -> "h,h" level 1
+node 534 "iljad" none result 1 consume 6 -> "hd" next 537
+node 535 "per" none result 6 consume 5 -> "hiper" next 536
+node 536 "stin" none result 56 consume 5 -> "hi)i" level 1
+node 537 "j" class c00 result 6 consume 2 -> "hj" next 538
+node 538 "k" class c00 result 6 consume 2 -> "hk" next 539
+node 539 "lj" class c00 result 6 consume 3 -> "h\x5c" next 540
+node 540 "n" class c00 result 6 consume 2 -> "hn" next 541
+node 541 "od\xb2\xae" none result 1 consume 5 -> "ho,]" next 547
+node 542 "\xb27emo" class c00 result 56 consume 7 -> "hm" level 3
+node 543 "7ete" class c00 result 56 consume 7 -> "ht" level 4
+node 544 "e\xb2\x91" class c00 result 6 consume 7 -> "h:" next 546
+node 545 "" class c00 result 56 consume 5 -> "he" level 4
+node 546 "u" class c00 result 56 consume 5 -> "hu" level 1
+node 547 "m" class c00 result 6 consume 2 -> "h,m" next 548
+node 548 "rvatsk" none result 1 consume 7 -> "h7" next 550
+node 549 "" class c00 result 56 consume 2 -> "hr" level 1
+node 550 "u" class c00 result 56 consume 2 -> "h,u" next 551
+node 551 "var" class c00 result 56 consume 4 -> "hvar" next 554
+node 552 "at" none result 1 consume 4 -> "\x22h" level 3
+node 553 "\xb27" none result 4 consume 5 -> "@h" level 1
+node 554 "\xb27" class c00 result 6 consume 3 -> "h%" next 558
+node 555 "=" class c00 result 6 consume 3 -> "h*" next 556
+node 556 "A" class c00 result 6 consume 3 -> "h?" next 557
+node 557 "\x91" class c00 result 6 consume 3 -> "h:" level 1
+node 558 "" class c04 result 6 consume 1 -> "h" next 559
+node 559 "" class c00 result 6 consume 1 -> ",h" next 560
+node 560 "" class c00 result 7 consume 1 -> ",h" next 561
+node 561 "" none result 40 consume 1 -> "h" end
+node 562 "" none result 17 consume 0 -> "," next 563
+node 563 "a" class c00 result 54 consume 2 -> "i,a" next 565
+node 564 "" class c00 result 56 consume 2 -> "i,a" level 1
+node 565 "ca" class c00 result 6 consume 3 -> "i,ca" next 566
+node 566 "e" class c00 result 54 consume 2 -> "i,e" next 567
+node 567 "gde" class c00 result 56 consume 4 -> "igd" next 569
+node 568 "dje" class c00 result 56 consume 5 -> "ig(" level 1
+node 569 "h" class c00 result 6 consume 2 -> "h" next 571
+node 570 "" class c00 result 7 consume 2 -> "h" level 1
+node 571 "j" class c05 result 7 consume 2 -> "'" next 572
+node 572 "kada" class c00 result 1 consume 5 -> "ica" next 575
+node 573 "ad" class c00 result 1 consume 4 -> "ic" level 3
+node 574 "mo" class c00 result 56 consume 5 -> "ikm" level 1
+node 575 "malo" class c00 result 56 consume 5 -> "im_" next 579
+node 576 "a" class c00 result 56 consume 3 -> "ia" next 577
+node 577 "" none result 7 consume 2 -> "<" next 578
+node 578 "" class c00 result 6 consume 2 -> "<" level 1
+node 579 "na\xb2=e" class c00 result 56 consume 6 -> "n*" next 592
+node 580 "dividual" none result 1 consume 10 -> "ial" next 582
+node 581 "ividuum" none result 1 consume 10 -> "indi\x22vuum" level 2
+node 582 "jek" none result 3 consume 5 -> "injek" next 590
+node 583 "ek" none result 6 consume 5 -> "in(k" next 584
+node 584 "ic" none result 3 consume 5 -> "injic" next 586
+node 585 "c" none result 6 consume 5 -> "injic" level 3
+node 586 "unk" none result 3 consume 6 -> "injunk" level 4
+node 587 "nk" none result 6 consume 6 -> "injunk" next 588
+node 588 "r" none result 3 consume 4 -> "inju" level 5
+node 589 "" none result 56 consume 4 -> "inju" level 2
+node 590 "teresant" none result 1 consume 10 -> "\x22it" level 3
+node 591 "er" none result 51 consume 5 -> "\x22i" level 1
+node 592 "o" class c00 result 57 consume 2 -> "$" next 593
+node 593 "skaz" none result 6 consume 5 -> "iskz" next 611
+node 594 "ka\xb2\xae" none result 6 consume 6 -> "isk!" next 597
+node 595 "lju\xb2=" none result 6 consume 8 -> "is\x22*" next 596
+node 596 "or" class c05 result 51 consume 4 -> "i7o" level 2
+node 597 "premet" none result 1 consume 8 -> "isp]met" next 600
+node 598 "reme\xb2\x91" none result 1 consume 9 -> "isp]me:" level 4
+node 599 "emije\xb2\x91" none result 1 consume 11 -> "isp]m'e:" level 2
+node 600 "tinj" class c05 result 4 consume 6 -> "@&" level 3
+node 601 "in" none result 1 consume 5 -> "\x22&" next 602
+node 602 "og" class c00 result 6 consume 5 -> "i)g" next 610
+node 603 "j" class c00 result 6 consume 5 -> "i)0" next 604
+node 604 "me" class c00 result 6 consume 6 -> "i)[e" next 607
+node 605 "u" class c00 result 6 consume 6 -> "i)[u" next 606
+node 606 "" class c00 result 6 consume 5 -> "i)[" level 4
+node 607 "var" class c00 result 51 consume 7 -> "i)wa" next 609
+node 608 "" none result 6 consume 5 -> "i)ov" level 4
+node 609 "" none result 56 consume 4 -> "i)o" level 3
+node 610 "reb" none result 6 consume 6 -> "is\x22]" level 1
+node 611 "telj" none result 4 consume 5 -> "@t" next 612
+node 612 "u" class c00 result 54 consume 2 -> "i,u" next 613
+node 613 "v" class c05 result 7 consume 2 -> "3" next 614
+node 614 "zme\xb2Au" class c00 result 56 consume 7 -> "5e?" next 618
+node 615 "omorf" none result 6 consume 7 -> "5omorf" next 616
+node 616 "" none result 6 consume 2 -> "5" next 617
+node 617 "" class c05 result 4 consume 2 -> "5" level 1
+node 618 "\xb27a" class c00 result 6 consume 4 -> "i,%a" next 622
+node 619 "7" class c00 result 7 consume 3 -> "%" next 620
+node 620 "\x91ta" class c00 result 56 consume 5 -> "i:" level 3
+node 621 "" class c00 result 6 consume 3 -> "i,:" level 1
+node 622 "" none result 41 consume 1 -> "i" end
+node 623 "" none result 17 consume 0 -> "," next 624
+node 624 "ac" class c00 result 6 consume 3 -> "jac" next 630
+node 625 "jovod" none result 6 consume 7 -> "j2ovx" next 626
+node 626 "k" class c00 result 6 consume 3 -> "jak" next 627
+node 627 "r" class c00 result 56 consume 3 -> "jar" next 628
+node 628 "\xb2=" class c00 result 6 consume 4 -> "ja*" next 629
+node 629 "" short-set @x0 result 56 consume 2 -> "ja" level 1
+node 630 "c" class c00 result 6 consume 2 -> "jc" next 631
+node 631 "ea" class c00 result 54 consume 3 -> "(,a" next 644
+node 632 "bivet" none result 6 consume 7 -> "(bivet" next 634
+node 633 "ivjet" none result 6 consume 8 -> "(biv(t" level 2
+node 634 "dinj" none result 4 consume 6 -> "@(" next 636
+node 635 "in" none result 1 consume 5 -> "\x22(" level 2
+node 636 "e" class c00 result 54 consume 3 -> "(,e" next 637
+node 637 "i" class c00 result 54 consume 3 -> "(,i" next 638
+node 638 "m" class c00 result 4 consume 3 -> "j+" next 639
+node 639 "n" class c00 result 4 consume 3 -> "jn" next 640
+node 640 "r" class c00 result 56 consume 3 -> "r" next 641
+node 641 "u" class c00 result 54 consume 3 -> "(,u" next 642
+node 642 "\xb2\x91" class c00 result 4 consume 4 -> "j:" next 643
+node 643 "" none result 51 consume 2 -> "(" level 1
+node 644 "g" class c00 result 6 consume 2 -> "jg" next 645
+node 645 "h" class c00 result 6 consume 2 -> "jh" next 647
+node 646 "" class c00 result 4 consume 2 -> "j,h" level 1
+node 647 "j" class c00 result 6 consume 2 -> "jj" next 648
+node 648 "k" class c00 result 6 consume 2 -> "jk" next 649
+node 649 "lj" class c00 result 6 consume 3 -> "j\x5c" next 650
+node 650 "n" class c00 result 6 consume 2 -> "jn" next 651
+node 651 "o\xb2\x91" class c00 result 6 consume 4 -> "j" next 652
+node 652 "r" class c00 result 56 consume 2 -> "jr" next 653
+node 653 "u\xb2=era" none result 51 consume 7 -> "j*8" next 656
+node 654 "\xb2=er" class c00 result 51 consume 6 -> "j*r" level 3
+node 655 "=e" class c00 result 51 consume 5 -> "j*e" level 1
+node 656 "\xb27" class c00 result 6 consume 3 -> "j%" next 660
+node 657 "=" class c00 result 6 consume 3 -> "j*" next 658
+node 658 "A" class c00 result 6 consume 3 -> "j?" next 659
+node 659 "\x91" class c00 result 6 consume 3 -> "j:" level 1
+node 660 "" class c04 result 6 consume 1 -> "j" next 661
+node 661 "" class c00 result 6 consume 1 -> ",j" next 662
+node 662 "" none result 40 consume 1 -> "j" end
+node 663 "ac" class c00 result 6 consume 3 -> "kac" next 688
+node 664 "dgod" class c00 result 6 consume 6 -> "cgx" next 670
+node 665 "ikad" class c00 result 6 consume 7 -> "cic" next 666
+node 666 "li-tadli" class c00 result 56 consume 11 -> "c9-f9" next 668
+node 667 "i" class c00 result 56 consume 5 -> "c9" level 3
+node 668 "\xb2\x91to" class c00 result 56 consume 7 -> "c:" next 669
+node 669 "" short-set @x3 result 6 consume 3 -> "c" level 2
+node 670 "kav" none result 1 consume 5 -> "kk#" next 676
+node 671 "ov" none result 1 consume 5 -> "kkw" next 674
+node 672 "" class c00 result 56 consume 4 -> "kk" next 673
+node 673 "" none result 54 consume 4 -> "kk" level 3
+node 674 "v" none result 1 consume 4 -> "kk" next 675
+node 675 "" class c00 result 6 consume 3 -> "kak" level 2
+node 676 "moli" class c00 result 56 consume 6 -> "km9" next 678
+node 677 "o" class c00 result 56 consume 4 -> "km" level 2
+node 678 "pital" none result 1 consume 7 -> "kptl" next 679
+node 679 "o" class c00 result 56 consume 3 -> "\x5c" next 680
+node 680 "rakterist" none result 1 consume 11 -> "kk)" next 683
+node 681 "akter" none result 51 consume 7 -> "kkt" next 682
+node 682 "" class c00 result 56 consume 3 -> "kar" level 2
+node 683 "tkad" short-set @x3 result 6 consume 6 -> "cc" next 684
+node 684 "z" none result 1 consume 3 -> "kz" next 685
+node 685 "\xb2=" class c00 result 6 consume 4 -> "ka*" next 687
+node 686 "\xae" none result 1 consume 4 -> "k!" level 2
+node 687 "" short-set @x0 result 56 consume 2 -> "ka" level 1
+node 688 "c" class c00 result 6 consume 2 -> "kc" next 689
+node 689 "en" class c00 result 6 consume 3 -> "ken" next 692
+node 690 "\xb2\x91" class c00 result 6 consume 4 -> "ke:" next 691
+node 691 "" short-set @x0 result 56 consume 2 -> "ke" level 1
+node 692 "g" class c00 result 6 consume 2 -> "kg" next 693
+node 693 "h" class c00 result 6 consume 2 -> "kh" next 694
+node 694 "iosk" class c00 result 6 consume 5 -> "kios,k" next 697
+node 695 "\xb27" class c00 result 6 consume 4 -> "ki%" level 3
+node 696 "\x91" class c00 result 6 consume 4 -> "k:" level 1
+node 697 "j" class c00 result 6 consume 2 -> "kj" next 698
+node 698 "lan" class c00 result 6 consume 4 -> "k;n" next 703
+node 699 "en" class c00 result 6 consume 4 -> "k=n" next 700
+node 700 "in\xb2=" class c00 result 6 consume 6 -> "k9n,*" next 701
+node 701 "ju\xb2=" none result 1 consume 6 -> "\x22*" level 3
+node 702 "" class c00 result 6 consume 3 -> "k\x5c" level 1
+node 703 "njigove" none result 56 consume 8 -> "k$igove" next 706
+node 704 "jigovo" none result 6 consume 7 -> "k$igov" next 705
+node 705 "" class c00 result 6 consume 2 -> "kn" level 1
+node 706 "oa" class c00 result 58 consume 3 -> "[,a" next 728
+node 707 "e" class c00 result 58 consume 3 -> "[,e" next 708
+node 708 "g" class c00 result 4 consume 3 -> "kg" next 709
+node 709 "i" class c00 result 58 consume 3 -> "[,i" next 710
+node 710 "j" class c00 result 4 consume 3 -> "k0" next 711
+node 711 "m" class c00 result 4 consume 3 -> "k[" next 712
+node 712 "njek" none result 3 consume 6 -> "konjek" next 722
+node 713 "jek" none result 6 consume 6 -> "[n(k" level 4
+node 714 "icir" none result 3 consume 7 -> "konjici" next 716
+node 715 "cir" none result 6 consume 7 -> "[njici" level 4
+node 716 "ug" none result 3 consume 5 -> "konju" level 5
+node 717 "g" none result 56 consume 5 -> "[nju" next 718
+node 718 "nk" none result 3 consume 7 -> "konjunk" next 720
+node 719 "k" none result 6 consume 7 -> "[njunk" level 5
+node 720 "r" none result 3 consume 5 -> "konju" level 6
+node 721 "" none result 56 consume 5 -> "[nju" level 2
+node 722 "u" class c00 result 58 consume 3 -> "[,u" next 723
+node 723 "v" class c00 result 4 consume 3 -> "kw" next 724
+node 724 "zmodrom" none result 1 consume 9 -> "[zmod1m" next 726
+node 725 "mogon" none result 1 consume 7 -> "[zmogo" level 2
+node 726 "" none result 56 consume 2 -> "[" next 727
+node 727 "" none result 58 consume 2 -> "[" level 1
+node 728 "raj" none result 1 consume 4 -> "\x22j" next 732
+node 729 "ivov" none result 6 consume 6 -> "k/vov" next 730
+node 730 "ugoval" none result 56 consume 7 -> "krugova" next 731
+node 731 "" class c00 result 56 consume 2 -> "kr" level 1
+node 732 "uda" none result 54 consume 4 -> "kda" next 738
+node 733 "dikamo" class c00 result 56 consume 8 -> "kdikm" next 736
+node 734 "" short-set @x3 result 6 consume 3 -> "kd" next 735
+node 735 "" none result 4 consume 3 -> "kd" level 2
+node 736 "ltur" none result 51 consume 5 -> "kl" next 737
+node 737 "p" none result 1 consume 3 -> "kp" level 1
+node 738 "vak" class c00 result 6 consume 4 -> "kvak" next 741
+node 739 "ar" class c00 result 56 consume 4 -> "kvar" level 3
+node 740 "\xb2=" class c00 result 6 consume 5 -> "kva*" level 1
+node 741 "\xb27" class c00 result 6 consume 3 -> "k%" next 745
+node 742 "=" class c00 result 6 consume 3 -> "k*" next 743
+node 743 "A" class c00 result 6 consume 3 -> "k?" next 744
+node 744 "\x91" class c00 result 6 consume 3 -> "k:" level 1
+node 745 "" class c04 result 6 consume 1 -> "k" next 746
+node 746 "" class c00 result 7 consume 1 -> ",k" next 747
+node 747 "" none result 40 consume 1 -> "k" end
+node 748 "ac" class c00 result 6 consume 3 -> "lac" next 764
+node 749 "c" class c00 result 4 consume 3 -> "lc" next 750
+node 750 "j" class c00 result 4 consume 3 -> "l2" next 751
+node 751 "k" class c00 result 4 consume 3 -> "lk" next 753
+node 752 "" class c00 result 6 consume 3 -> "lak" level 2
+node 753 "m" class c00 result 4 consume 3 -> "l." next 754
+node 754 "n" class c00 result 4 consume 3 -> "l4" next 755
+node 755 "r" class c00 result 54 consume 3 -> "lr" next 757
+node 756 "" class c00 result 56 consume 3 -> "lar" level 2
+node 757 "telj" none result 4 consume 6 -> "l@\x5c" next 758
+node 758 "v" class c00 result 4 consume 3 -> "l#" next 759
+node 759 "\xb2=" class c00 result 6 consume 4 -> "la*" next 761
+node 760 "=" class c00 result 4 consume 4 -> "l*" level 2
+node 761 "" none result 54 consume 2 -> ";" next 762
+node 762 "" short-set @x0 result 56 consume 2 -> "la" next 763
+node 763 "" class c00 result 56 consume 2 -> "l,a" level 1
+node 764 "c" class c00 result 6 consume 2 -> "lc" next 765
+node 765 "ea" class c00 result 54 consume 3 -> "=,a" next 773
+node 766 "e" class c00 result 54 consume 3 -> "=,e" next 767
+node 767 "i" class c00 result 54 consume 3 -> "=,i" next 768
+node 768 "m" class c00 result 4 consume 3 -> "l+" next 769
+node 769 "n" class c00 result 4 consume 3 -> "ln" next 770
+node 770 "u" class c00 result 54 consume 3 -> "=,u" next 771
+node 771 "\xb2\x91" class c00 result 4 consume 4 -> "l:" next 772
+node 772 "" none result 51 consume 2 -> "=" level 1
+node 773 "g" class c00 result 6 consume 2 -> "lg" next 774
+node 774 "h" class c00 result 6 consume 2 -> "lh" next 775
+node 775 "icemer" none result 6 consume 6 -> "9ceme" next 783
+node 776 "cemjer" none result 6 consume 7 -> "9cem(" next 777
+node 777 "h" class c00 result 4 consume 3 -> "lh" next 778
+node 778 "m" class c00 result 4 consume 3 -> "l<" next 779
+node 779 "n\xb2=" class c00 result 6 consume 5 -> "9n,*" next 780
+node 780 "telj" none result 4 consume 6 -> "l@t" next 781
+node 781 "\xb27" class c00 result 4 consume 4 -> "l%" next 782
+node 782 "" none result 51 consume 2 -> "9" level 1
+node 783 "jubomor" none result 6 consume 7 -> "\x5cubomo" next 789
+node 784 "ud" none result 1 consume 4 -> "\x22\x5c" next 785
+node 785 "" none result 9 consume 2 -> "lj" next 786
+node 786 "" class c00 result 7 consume 2 -> ",\x5c" next 787
+node 787 "" none result 1 consume 2 -> "\x5c" next 788
+node 788 "" none result 40 consume 2 -> "<" level 1
+node 789 "lj" class c00 result 6 consume 3 -> "l\x5c" next 790
+node 790 "n" class c00 result 6 consume 2 -> "ln" next 791
+node 791 "og" class c00 result 4 consume 3 -> "lg" next 798
+node 792 "j" class c00 result 4 consume 3 -> "l0" next 793
+node 793 "m" class c00 result 4 consume 3 -> "l[" next 794
+node 794 "ve\xb27" none result 56 consume 5 -> "lwe" next 796
+node 795 "" class c00 result 4 consume 3 -> "lw" level 2
+node 796 "" none result 54 consume 2 -> "_" next 797
+node 797 "" class c00 result 56 consume 2 -> "l,o" level 1
+node 798 "r" class c00 result 56 consume 2 -> "lr" next 799
+node 799 "uk" none result 1 consume 3 -> "\x22l" next 801
+node 800 "\xb2=" class c05 result 4 consume 4 -> "@l" level 1
+node 801 "\xb27" class c00 result 6 consume 3 -> "l%" next 805
+node 802 "=" class c00 result 6 consume 3 -> "l*" next 803
+node 803 "A" class c00 result 6 consume 3 -> "l?" next 804
+node 804 "\x91" class c00 result 6 consume 3 -> "l:" level 1
+node 805 "" class c04 result 6 consume 1 -> "l" next 806
+node 806 "" class c00 result 6 consume 1 -> ",l" next 807
+node 807 "" none result 40 consume 1 -> "l" end
+node 808 "ac" class c00 result 6 consume 3 -> "mac" next 818
+node 809 "da" class c00 result 56 consume 4 -> "md" next 810
+node 810 "k" class c00 result 6 consume 3 -> "mak" next 811
+node 811 "lo" class c00 result 56 consume 4 -> "m_" next 813
+node 812 "te\xb2\x91k" none result 6 consume 8 -> "malte:k" level 2
+node 813 "nj" none result 1 consume 4 -> "\x22$" next 815
+node 814 "omet" none result 6 consume 7 -> "m4omet" level 2
+node 815 "r" class c00 result 56 consume 3 -> "mar" next 816
+node 816 "\xb2=" class c00 result 6 consume 4 -> "ma*" next 817
+node 817 "" short-set @x0 result 56 consume 2 -> "ma" level 1
+node 818 "c" class c00 result 6 consume 2 -> "mc" next 819
+node 819 "en" class c00 result 6 consume 3 -> "men" next 827
+node 820 "sojed" none result 6 consume 7 -> "meso(d" next 821
+node 821 "tamorf" none result 1 consume 8 -> "metamorf" next 822
+node 822 "\xb2Autim" class c00 result 6 consume 8 -> "e?<" next 825
+node 823 "Au" none result 56 consume 5 -> "e?" next 824
+node 824 "\x91" class c00 result 6 consume 4 -> "me:" level 2
+node 825 "" class c00 result 56 consume 2 -> "n" next 826
+node 826 "" short-set @x0 result 56 consume 2 -> "me" level 1
+node 827 "g" class c00 result 6 consume 2 -> "mg" next 828
+node 828 "h" class c00 result 6 consume 2 -> "mh" next 829
+node 829 "istin" none result 56 consume 5 -> "mi)i" next 834
+node 830 "\xb27" class c00 result 6 consume 4 -> "mi%" next 833
+node 831 "\x91lj" none result 1 consume 6 -> "m:" level 4
+node 832 "omor" none result 6 consume 7 -> "mi:omo" level 2
+node 833 "" class c00 result 56 consume 2 -> "m" level 1
+node 834 "j" class c00 result 6 consume 2 -> "mj" next 835
+node 835 "k" class c00 result 6 consume 2 -> "mk" next 836
+node 836 "lak" class c00 result 6 consume 4 -> "m;k" next 838
+node 837 "j" class c00 result 6 consume 3 -> "m\x5c" level 1
+node 838 "nog" none result 1 consume 4 -> "\x22q" next 842
+node 839 "om" class c00 result 6 consume 4 -> "m^m" next 841
+node 840 "\xb2\xae" class c05 result 4 consume 5 -> "@q" level 2
+node 841 "" class c00 result 6 consume 2 -> "mn" level 1
+node 842 "oga" class c00 result 51 consume 4 -> "mo#" next 853
+node 843 "gul" none result 6 consume 4 -> "mogu" next 847
+node 844 "u\xb27" none result 1 consume 6 -> "g%" next 846
+node 845 "" class c00 result 56 consume 4 -> "gu" level 3
+node 846 "" none result 1 consume 3 -> "mg" level 2
+node 847 "\xb27" none result 1 consume 4 -> "\x22m" level 3
+node 848 "\xaeda" class c00 result 56 consume 6 -> "!d" level 4
+node 849 "emo" class c00 result 56 consume 7 -> "!m" level 5
+node 850 "te" class c00 result 56 consume 7 -> "!t" next 851
+node 851 "\xb2\x91" class c00 result 6 consume 7 -> "!:" next 852
+node 852 "" class c00 result 56 consume 5 -> "!e" level 1
+node 853 "r" class c00 result 56 consume 2 -> "mr" next 854
+node 854 "uhomor" none result 6 consume 6 -> "muhomo" next 858
+node 855 "lti" none result 6 consume 5 -> "multi" next 856
+node 856 "njovoz" none result 56 consume 7 -> "mu$ovo" next 857
+node 857 "" class c00 result 56 consume 2 -> "z" level 1
+node 858 "\xb27" class c00 result 6 consume 3 -> "m%" next 862
+node 859 "=" class c00 result 6 consume 3 -> "m*" next 860
+node 860 "A" class c00 result 6 consume 3 -> "m?" next 861
+node 861 "\x91" class c00 result 6 consume 3 -> "m:" level 1
+node 862 "" class c04 result 6 consume 1 -> "m" next 863
+node 863 "" class c00 result 6 consume 1 -> ",m" next 864
+node 864 "" none result 40 consume 1 -> "m" end
+node 865 "ac" class c00 result 4 consume 3 -> "nc" next 885
+node 866 "d\xb2\xaeiv" none result 3 consume 7 -> "nad!iv" next 870
+node 867 "\xb2\xaeiv" none result 1 consume 7 -> "yd!3" level 4
+node 868 "\xaebuk" none result 3 consume 8 -> "nad!buk" level 5
+node 869 "buk" none result 1 consume 8 -> "yd!buk" level 2
+node 870 "ftovod" none result 6 consume 8 -> "yftovx" next 871
+node 871 "gva\xb2\xae" none result 6 consume 7 -> "ygva!" next 872
+node 872 "ime" class c00 result 56 consume 5 -> "nm" next 873
+node 873 "je" short-set @x2 result 6 consume 3 -> "yj" next 876
+node 874 "modav" none result 6 consume 8 -> "yjmod#" next 875
+node 875 "" class c00 result 4 consume 3 -> "n2" level 2
+node 876 "k" class c00 result 4 consume 3 -> "nk" next 877
+node 877 "logodav" none result 6 consume 9 -> "y_god#" next 878
+node 878 "m" class c00 result 4 consume 3 -> "n." next 879
+node 879 "n" class c00 result 4 consume 3 -> "n4" next 880
+node 880 "r" class c00 result 54 consume 3 -> "nr" next 881
+node 881 "telj" none result 4 consume 6 -> "n@\x5c" next 882
+node 882 "v" class c00 result 4 consume 3 -> "n#" next 883
+node 883 "\xb2=" class c00 result 4 consume 4 -> "n*" next 884
+node 884 "" none result 51 consume 2 -> "y" level 1
+node 885 "c" class c00 result 6 consume 2 -> "nc" next 887
+node 886 "" class c00 result 4 consume 2 -> "n,c" level 1
+node 887 "da" class c00 result 56 consume 3 -> "n,da" next 888
+node 888 "ea" class c00 result 54 consume 3 -> "q,a" next 910
+node 889 "boder" none result 6 consume 5 -> "qbode" next 890
+node 890 "ca" class c00 result 56 consume 4 -> "q,ca" next 891
+node 891 "e" class c00 result 54 consume 3 -> "q,e" next 892
+node 892 "gde" class c00 result 56 consume 5 -> "qgd" next 896
+node 893 "dje" class c00 result 56 consume 6 -> "qg(" next 894
+node 894 "oli" class c00 result 56 consume 6 -> "g9" level 4
+node 895 "" class c00 result 56 consume 4 -> "g" level 2
+node 896 "iskaz" none result 6 consume 7 -> "qiskz" next 898
+node 897 "" class c00 result 54 consume 3 -> "q,i" level 2
+node 898 "kadanj" none result 1 consume 8 -> "qc$" next 903
+node 899 "ada\xb2\x91nj" none result 1 consume 10 -> "qc:" next 902
+node 900 "d" short-set @x3 result 6 consume 5 -> "qc" next 901
+node 901 "mo" class c00 result 56 consume 6 -> "qkm" level 3
+node 902 "moli" class c00 result 56 consume 7 -> "qkm9" level 2
+node 903 "malo" class c00 result 56 consume 6 -> "qm_" next 905
+node 904 "" class c00 result 4 consume 3 -> "n+" level 2
+node 905 "n" class c00 result 4 consume 3 -> "nn" next 906
+node 906 "u" class c00 result 54 consume 3 -> "q,u" next 907
+node 907 "\xb2\x91to" class c00 result 56 consume 6 -> "q:" next 909
+node 908 "\x91" class c00 result 4 consume 4 -> "n:" level 2
+node 909 "" none result 51 consume 2 -> "q" level 1
+node 910 "g" class c00 result 6 consume 2 -> "ng" next 912
+node 911 "" class c00 result 4 consume 2 -> "n,g" level 1
+node 912 "h" class c00 result 6 consume 2 -> "nh" next 914
+node 913 "" class c00 result 4 consume 2 -> "n,h" level 1
+node 914 "ia" class c00 result 54 consume 3 -> "&,a" next 934
+node 915 "ca" class c00 result 56 consume 4 -> "&,ca" next 916
+node 916 "e" class c00 result 54 consume 3 -> "&,e" next 917
+node 917 "gde" class c00 result 56 consume 5 -> "&gd" next 919
+node 918 "dje" class c00 result 56 consume 6 -> "&g(" level 2
+node 919 "h" class c00 result 4 consume 3 -> "nh" next 920
+node 920 "i" class c00 result 54 consume 3 -> "&,i" next 921
+node 921 "kad" short-set @x3 result 6 consume 5 -> "&c" next 923
+node 922 "amo" class c00 result 56 consume 6 -> "&km" level 2
+node 923 "malo" class c00 result 56 consume 6 -> "&m_" next 925
+node 924 "" class c00 result 4 consume 3 -> "n<" level 2
+node 925 "otkamo" class c00 result 56 consume 8 -> "&otkm" next 926
+node 926 "po\xb2\x91to" class c00 result 56 consume 8 -> "&6:" next 927
+node 927 "telj" none result 4 consume 6 -> "n@t" next 928
+node 928 "u" class c00 result 54 consume 3 -> "&,u" next 929
+node 929 "za\xb2\x91to" class c00 result 56 consume 8 -> "&>:" next 930
+node 930 "\xb27" class c00 result 4 consume 4 -> "n%" next 933
+node 931 "\x91ta" class c00 result 56 consume 6 -> "&:" level 4
+node 932 "" class c00 result 6 consume 4 -> "&,:" level 2
+node 933 "" none result 51 consume 2 -> "&" level 1
+node 934 "jak" class c00 result 6 consume 4 -> "$ak" next 944
+node 935 "ar" class c00 result 56 consume 4 -> "$ar" next 936
+node 936 "egov" none result 1 consume 6 -> "$gw" next 939
+node 937 "n" class c00 result 6 consume 4 -> "$en" next 938
+node 938 "zin" none result 1 consume 6 -> "$z" level 2
+node 939 "ihov" none result 1 consume 6 -> "$hw" next 940
+node 940 "" none result 9 consume 2 -> "nj" next 941
+node 941 "" class c00 result 6 consume 2 -> ",$" next 942
+node 942 "" none result 1 consume 2 -> "$" next 943
+node 943 "" none result 40 consume 2 -> "$" level 1
+node 944 "k" class c00 result 6 consume 2 -> "nk" next 946
+node 945 "" class c00 result 4 consume 2 -> "n,k" level 1
+node 946 "lj" class c00 result 6 consume 3 -> "n\x5c" next 947
+node 947 "n" class c00 result 6 consume 2 -> "nn" next 948
+node 948 "ogomet" none result 6 consume 7 -> "nogomet" next 957
+node 949 "g" class c00 result 4 consume 3 -> "ng" next 950
+node 950 "j" class c00 result 4 consume 3 -> "n0" next 951
+node 951 "m" class c00 result 4 consume 3 -> "n[" next 952
+node 952 "rmal" none result 1 consume 6 -> "nml" next 953
+node 953 "sob" none result 4 consume 5 -> "^sob" next 954
+node 954 "vov" none result 6 consume 5 -> "nwov" next 956
+node 955 "" class c00 result 4 consume 3 -> "nw" level 2
+node 956 "" none result 54 consume 2 -> "^" level 1
+node 957 "r" class c00 result 56 consume 2 -> "nr" next 958
+node 958 "utarnj" none result 1 consume 7 -> "n$" next 959
+node 959 "\xb27" class c00 result 6 consume 3 -> "n%" next 964
+node 960 "=" class c00 result 4 consume 3 -> "n,*" next 962
+node 961 "" class c00 result 6 consume 3 -> "n*" level 2
+node 962 "A" class c00 result 6 consume 3 -> "n?" next 963
+node 963 "\x91" class c00 result 6 consume 3 -> "n:" level 1
+node 964 "" class c04 result 6 consume 1 -> "n" next 965
+node 965 "" class c00 result 6 consume 1 -> ",n" next 966
+node 966 "" class c00 result 7 consume 1 -> ",n" next 967
+node 967 "" none result 40 consume 1 -> "n" end
+node 968 "a" class c00 result 54 consume 2 -> "o,a" next 969
+node 969 "bamr" none result 6 consume 4 -> "obam" next 972
+node 970 "i\xb2=" none result 1 consume 5 -> "ob*" next 971
+node 971 "zir" none result 1 consume 5 -> "\x22o" level 1
+node 972 "devedeset" none result 4 consume 10 -> "odevedt" next 991
+node 973 "evet" none result 4 consume 5 -> "odeve" next 974
+node 974 "inar" class c05 result 54 consume 5 -> "odiy" next 976
+node 975 "o" class c00 result 56 consume 4 -> "xio" level 2
+node 976 "jel" class c05 result 4 consume 4 -> "od(" next 977
+node 977 "mah" class c00 result 6 consume 5 -> "xm" next 978
+node 978 "nev" class c05 result 4 consume 5 -> "odqv" next 979
+node 979 "ob" none result 1 consume 4 -> "o4b" next 983
+node 980 "nda" class c00 result 56 consume 6 -> "xoa" level 4
+node 981 "uda" class c00 result 56 consume 7 -> "xnda" level 5
+node 982 "d" class c00 result 6 consume 6 -> "xnd" level 2
+node 983 "rug" none result 4 consume 5 -> "o\x22g" next 984
+node 984 "sad" short-set @x3 result 6 consume 5 -> "x$" next 985
+node 985 "ugovla" none result 6 consume 8 -> "xugov;" next 987
+node 986 "\xb2\x91" none result 1 consume 5 -> "o@:" level 2
+node 987 "vadeset" none result 4 consume 9 -> "odvdt" next 990
+node 988 "anaest" none result 4 consume 9 -> "odv4ae)" next 989
+node 989 "e\xb27" class c00 result 6 consume 6 -> "xv%" level 2
+node 990 "" none result 1 consume 2 -> "x" level 1
+node 991 "e" class c00 result 54 consume 2 -> "o,e" next 992
+node 992 "glas" class c05 result 4 consume 5 -> "og;s" next 996
+node 993 "lav" class c05 result 4 consume 5 -> "og;v" next 994
+node 994 "odi\xb2\x91nj" class c05 result 4 consume 9 -> "og:" next 995
+node 995 "" class c00 result 7 consume 2 -> "g" level 1
+node 996 "i" class c00 result 54 consume 2 -> "o,i" next 997
+node 997 "j" none result 7 consume 2 -> "0" next 998
+node 998 "mese\xb2=" class c05 result 4 consume 7 -> "omese*" next 1002
+node 999 "inut" class c05 result 4 consume 6 -> "ominut" next 1000
+node 1000 "jese\xb2=" class c05 result 4 consume 8 -> "om(se*" next 1001
+node 1001 "" none result 7 consume 2 -> "[" level 1
+node 1002 "nakav" class c00 result 6 consume 6 -> "nk#" next 1017
+node 1003 "akov" none result 1 consume 6 -> "nkw" next 1007
+node 1004 "ko" class c00 result 56 consume 5 -> "nk" next 1006
+node 1005 "v" none result 1 consume 5 -> "nk" level 3
+node 1006 "ni" none result 56 consume 4 -> "-4" level 2
+node 1007 "da\xb2\x91nj" none result 6 consume 8 -> "oa:" next 1009
+node 1008 "a" class c00 result 56 consume 4 -> "oa" level 2
+node 1009 "ijeh" class c00 result 6 consume 6 -> "-'eh" next 1011
+node 1010 "jem" class c00 result 6 consume 6 -> "-'+" level 2
+node 1011 "j" none result 6 consume 3 -> "o$" next 1012
+node 1012 "kraj" class c00 result 6 consume 6 -> "-\x22j" next 1013
+node 1013 "o" none result 6 consume 2 -> "-" next 1014
+node 1014 "uda" class c00 result 56 consume 5 -> "nda" next 1016
+node 1015 "d" class c00 result 6 consume 4 -> "nd" level 2
+node 1016 "" short-set @x1 result 6 consume 2 -> "-" level 1
+node 1017 "ona" none result 51 consume 4 -> "o,oy" next 1018
+node 1018 "pet" class c00 result 6 consume 4 -> "op" next 1023
+node 1019 "rem" none result 1 consume 5 -> "opm" next 1020
+node 1020 "\xb27enit" none result 1 consume 8 -> "\x22%t" next 1022
+node 1021 "7" none result 1 consume 4 -> "\x22%" level 2
+node 1022 "" class c00 result 6 consume 2 -> "o,p" level 1
+node 1023 "rtodoks" none result 1 consume 8 -> "ortodoks" next 1024
+node 1024 "sob" none result 1 consume 4 -> "oo" next 1025
+node 1025 "tac" class c00 result 6 consume 4 -> "otac" next 1032
+node 1026 "ad" short-set @x3 result 6 consume 4 -> "of" next 1028
+node 1027 "mo" class c00 result 56 consume 5 -> "otm" level 2
+node 1028 "kad" short-set @x3 result 6 consume 5 -> "otc" next 1030
+node 1029 "amo" class c00 result 56 consume 6 -> "otkm" level 2
+node 1030 "prem" none result 1 consume 6 -> "otpm" next 1031
+node 1031 "ud" short-set @x3 result 6 consume 4 -> "otd" level 1
+node 1032 "u" class c00 result 54 consume 2 -> "o,u" next 1033
+node 1033 "vakav" class c00 result 6 consume 6 -> "vk#" next 1056
+node 1034 "akov" none result 1 consume 6 -> "vkw" next 1037
+node 1035 "ko" class c00 result 56 consume 5 -> "vk" level 4
+node 1036 "v" none result 1 consume 5 -> "vk" level 2
+node 1037 "ek" class c05 result 4 consume 4 -> "ovek" next 1041
+node 1038 "t" class c05 result 4 consume 3 -> "ove" next 1039
+node 1039 "\xb27" class c05 result 4 consume 5 -> "ove%" level 4
+node 1040 "=" class c05 result 4 consume 5 -> "ove*" level 2
+node 1041 "jek" class c05 result 54 consume 4 -> "ov(" next 1045
+node 1042 "et" class c05 result 54 consume 4 -> "ov(" level 4
+node 1043 "\xb27" class c05 result 4 consume 6 -> "ov(%" level 5
+node 1044 "=" class c05 result 4 consume 6 -> "ov(*" level 2
+node 1045 "lad" none result 1 consume 5 -> "o\x22x" next 1048
+node 1046 "as" class c05 result 4 consume 5 -> "ov;s" level 4
+node 1047 "\xb2A" none result 1 consume 6 -> "o@x" level 2
+node 1048 "olj" class c05 result 4 consume 5 -> "o\x22#" next 1050
+node 1049 "v" none result 6 consume 4 -> "wov" level 2
+node 1050 "remenj" none result 1 consume 8 -> "o@n" next 1052
+node 1051 "emen" none result 1 consume 7 -> "o\x22n" level 2
+node 1052 "uda" class c00 result 56 consume 5 -> "vda" next 1054
+node 1053 "d" class c00 result 6 consume 4 -> "vd" level 2
+node 1054 "" none result 7 consume 2 -> "w" next 1055
+node 1055 "" none result 6 consume 2 -> "w" level 1
+node 1056 "" none result 41 consume 1 -> "o" end
+node 1057 "ac" class c00 result 6 consume 3 -> "pac" next 1065
+node 1058 "k" class c00 result 6 consume 3 -> "pk" next 1059
+node 1059 "mtivek" none result 56 consume 7 -> "p.tive" next 1061
+node 1060 "tivijek" none result 56 consume 9 -> "p.tiv'e" level 2
+node 1061 "r" class c00 result 56 consume 3 -> "par" next 1062
+node 1062 "\xb2=" class c00 result 6 consume 4 -> "pa*" next 1063
+node 1063 "" class c00 result 56 consume 2 -> "p" next 1064
+node 1064 "" short-set @x0 result 56 consume 2 -> "pa" level 1
+node 1065 "c" class c00 result 6 consume 2 -> "pc" next 1066
+node 1066 "en" class c00 result 6 consume 3 -> "pen" next 1069
+node 1067 "\xb2\x91" class c00 result 6 consume 4 -> "pe:" next 1068
+node 1068 "" short-set @x0 result 56 consume 2 -> "pe" level 1
+node 1069 "g" class c00 result 6 consume 2 -> "pg" next 1070
+node 1070 "h" class c00 result 6 consume 2 -> "ph" next 1071
+node 1071 "istin" class c00 result 56 consume 5 -> "pi)i" next 1078
+node 1072 "st" none result 1 consume 4 -> "pi)" next 1074
+node 1073 "" none result 1 consume 3 -> "\x22/" level 2
+node 1074 "vov" none result 6 consume 5 -> "p3ov" next 1075
+node 1075 "\xb27" class c00 result 6 consume 4 -> "pi%" level 3
+node 1076 "\x91t" none result 1 consume 5 -> "pi0" level 4
+node 1077 "" none result 4 consume 4 -> "@/" level 1
+node 1078 "j" class c00 result 6 consume 2 -> "pj" next 1079
+node 1079 "k" class c00 result 6 consume 2 -> "pk" next 1080
+node 1080 "lam" class c00 result 6 consume 4 -> "p;m" next 1086
+node 1081 "an" class c00 result 6 consume 4 -> "p;n" next 1084
+node 1082 "v" class c00 result 6 consume 4 -> "p;v" next 1083
+node 1083 "\xb2=" class c00 result 6 consume 5 -> "p;*" level 2
+node 1084 "en" class c00 result 6 consume 4 -> "p=n" next 1085
+node 1085 "j" class c00 result 6 consume 3 -> "p\x5c" level 1
+node 1086 "n" class c00 result 6 consume 2 -> "pn" next 1087
+node 1087 "oa" class c00 result 4 consume 3 -> "6,a" next 1115
+node 1088 "dod" none result 6 consume 5 -> "6dx" next 1090
+node 1089 "\xb2\xaebuk" none result 6 consume 8 -> "6d!buk" level 2
+node 1090 "e" class c00 result 4 consume 3 -> "6,e" next 1091
+node 1091 "gdegde" class c00 result 56 consume 8 -> "6gdgd" next 1094
+node 1092 "djegdje" class c00 result 56 consume 10 -> "6g(g(" next 1093
+node 1093 "" class c00 result 4 consume 3 -> "pg" level 2
+node 1094 "i" class c00 result 4 consume 3 -> "6,i" next 1095
+node 1095 "j" class c00 result 4 consume 3 -> "p0" next 1096
+node 1096 "katkad" short-set @x3 result 6 consume 8 -> "6cc" next 1097
+node 1097 "lukn" none result 6 consume 5 -> "6\x22l" next 1104
+node 1098 "u\xb2=iste" class c00 result 56 consume 10 -> "6@i)e" level 4
+node 1099 "\xb2=ist" short-set @x1 result 6 consume 9 -> "6lu*i)" next 1103
+node 1100 "=izm" none result 6 consume 8 -> "6lu*5" level 6
+node 1101 "i" none result 56 consume 6 -> "6@l" next 1102
+node 1102 "u" none result 56 consume 6 -> "6@l" level 4
+node 1103 "" none result 56 consume 4 -> "6lu" level 2
+node 1104 "malo" class c00 result 56 consume 6 -> "6m_" next 1106
+node 1105 "" class c00 result 4 consume 3 -> "p[" level 2
+node 1106 "negde" class c00 result 56 consume 7 -> "6qgd" next 1110
+node 1107 "egdje" class c00 result 56 consume 8 -> "6qg(" level 4
+node 1108 "kad" short-set @x3 result 6 consume 7 -> "6qc" next 1109
+node 1109 "\xb2\x91to" class c00 result 56 consume 8 -> "6q:" level 2
+node 1110 "u" class c00 result 4 consume 3 -> "6,u" next 1111
+node 1111 "v" class c00 result 4 consume 3 -> "pw" next 1112
+node 1112 "\xb2\x91to" class c00 result 56 consume 6 -> "6:" next 1113
+node 1113 "" class c00 result 56 consume 2 -> "6" next 1114
+node 1114 "" class c05 result 51 consume 2 -> "6" level 1
+node 1115 "ravodob" none result 1 consume 8 -> "pvo4b" next 1143
+node 1116 "avomo\xb27" none result 1 consume 9 -> "pvo\x22m" next 1121
+node 1117 "vovalj" none result 1 consume 9 -> "pvova\x5c" level 4
+node 1118 "over" none result 1 consume 7 -> "pvove" next 1120
+node 1119 "vjer" none result 1 consume 8 -> "pvov(" level 4
+node 1120 "" none result 1 consume 4 -> "pv" level 2
+node 1121 "edod\xb2\xae" none result 6 consume 8 -> "p]4,]" next 1133
+node 1122 "dod" none result 6 consume 6 -> "p]dx" next 1129
+node 1123 "skaz" none result 6 consume 8 -> "p]dskz" next 1124
+node 1124 "\xb2\xaeelu" none result 3 consume 9 -> "pred!elu" next 1128
+node 1125 "\xaeelu" none result 6 consume 9 -> "p]d!elu" level 6
+node 1126 "ivot" none result 3 consume 10 -> "pred!ivot" level 7
+node 1127 "vot" none result 6 consume 10 -> "p]dvt" level 4
+node 1128 "" class c00 result 6 consume 4 -> "?" level 3
+node 1129 "malo" class c00 result 56 consume 7 -> "p]m_" next 1132
+node 1130 "a" class c00 result 56 consume 5 -> "pma" next 1131
+node 1131 "da" class c00 result 56 consume 6 -> "pmd" level 3
+node 1132 "" class c00 result 56 consume 3 -> "]" level 2
+node 1133 "imog" none result 6 consume 6 -> "p/mog" next 1137
+node 1134 "nc" class c00 result 6 consume 5 -> "p/n,c" next 1135
+node 1135 "prem" none result 1 consume 7 -> "p/pm" next 1136
+node 1136 "" class c00 result 56 consume 3 -> "/" level 2
+node 1137 "ostodu\xb2\x91" none result 6 consume 10 -> "p1)odu:" next 1139
+node 1138 "tiv" none result 1 consume 6 -> "ptv" level 2
+node 1139 "stomet" none result 6 consume 7 -> "pr)ome" next 1140
+node 1140 "u\xb2\xae" none result 1 consume 5 -> "p!" next 1141
+node 1141 "vov" none result 6 consume 5 -> "prvov" next 1142
+node 1142 "" class c00 result 56 consume 2 -> "pr" level 1
+node 1143 "sak" class c00 result 6 consume 4 -> "psak" next 1149
+node 1144 "ar" class c00 result 56 consume 4 -> "psar" next 1145
+node 1145 "en" class c00 result 6 consume 4 -> "psen" next 1146
+node 1146 "ihom" class c00 result 6 consume 6 -> "psih[" level 3
+node 1147 "ho" none result 56 consume 5 -> "psiho" next 1148
+node 1148 "\xb27" class c00 result 6 consume 5 -> "psi%" level 1
+node 1149 "tak" class c00 result 6 consume 4 -> "ptak" next 1154
+node 1150 "ar" class c00 result 56 consume 4 -> "ptar" next 1151
+node 1151 "en" class c00 result 6 consume 4 -> "pten" next 1153
+node 1152 "\xb2\x91" class c00 result 6 consume 5 -> "pte:" level 2
+node 1153 "i\xb27" class c00 result 6 consume 5 -> "pti%" level 1
+node 1154 "uno" class c00 result 56 consume 4 -> "p^" next 1160
+node 1155 "no" class c00 result 54 consume 4 -> "p^" next 1156
+node 1156 "tovo\xb2A" none result 6 consume 8 -> "\x22povo?" next 1158
+node 1157 "" none result 1 consume 3 -> "\x22p" level 2
+node 1158 "\xb27" none result 4 consume 4 -> "@p" level 3
+node 1159 "\x91komet" none result 56 consume 8 -> "pu:kome" level 1
+node 1160 "\xb27" class c00 result 6 consume 3 -> "p%" next 1164
+node 1161 "=" class c00 result 6 consume 3 -> "p*" next 1162
+node 1162 "A" class c00 result 6 consume 3 -> "p?" next 1163
+node 1163 "\x91" class c00 result 6 consume 3 -> "p:" level 1
+node 1164 "" class c04 result 6 consume 1 -> "p" next 1165
+node 1165 "" class c00 result 6 consume 1 -> ",p" next 1166
+node 1166 "" none result 40 consume 1 -> "p" end
+node 1167 "" class c04 result 6 consume 1 -> "q" next 1168
+node 1168 "" none result 1 consume 1 -> ",q" next 1169
+node 1169 "" none result 40 consume 1 -> "q" end
+node 1170 "an\xb2=" none result 6 consume 5 -> "8n,*" next 1176
+node 1171 "skor" none result 56 consume 5 -> "87o" next 1172
+node 1172 "telj" none result 4 consume 6 -> "r@\x5c" next 1173
+node 1173 "zgovjet" none result 1 consume 9 -> "8zgw(t" next 1175
+node 1174 "um" none result 1 consume 5 -> "\x22>" level 2
+node 1175 "" none result 51 consume 2 -> "8" level 1
+node 1176 "ea" class c00 result 54 consume 3 -> "],a" next 1181
+node 1177 "e" class c00 result 54 consume 3 -> "],e" next 1178
+node 1178 "i" class c00 result 54 consume 3 -> "],i" next 1179
+node 1179 "u" class c00 result 54 consume 3 -> "],u" next 1180
+node 1180 "" none result 51 consume 2 -> "]" level 1
+node 1181 "itelj" none result 4 consume 6 -> "r@t" next 1183
+node 1182 "" none result 51 consume 2 -> "/" level 1
+node 1183 "oa" class c00 result 54 consume 3 -> "ro,a" next 1193
+node 1184 "be" class c00 result 56 consume 4 -> "1be" next 1185
+node 1185 "e" class c00 result 54 consume 3 -> "ro,e" next 1186
+node 1186 "i" class c00 result 54 consume 3 -> "ro,i" next 1187
+node 1187 "la" class c00 result 56 consume 4 -> "1la" next 1189
+node 1188 "a" class c00 result 54 consume 4 -> "1la" level 2
+node 1189 "sob" none result 4 consume 5 -> "1sob" next 1191
+node 1190 "" none result 6 consume 3 -> "1s" level 2
+node 1191 "u" class c00 result 54 consume 3 -> "ro,u" next 1192
+node 1192 "" class c05 result 51 consume 2 -> "1" level 1
+node 1193 "\xb27a" class c00 result 54 consume 4 -> "r%a" next 1197
+node 1194 "7e" class c00 result 54 consume 4 -> "r%e" level 3
+node 1195 "i" class c00 result 54 consume 4 -> "r%i" next 1196
+node 1196 "u" class c00 result 54 consume 4 -> "r%u" level 1
+node 1197 "" class c04 result 6 consume 1 -> "r" next 1198
+node 1198 "" class c00 result 6 consume 1 -> ",r" next 1199
+node 1199 "" class c00 result 7 consume 1 -> ",r" next 1200
+node 1200 "" none result 41 consume 1 -> "r" end
+node 1201 "ac" class c00 result 4 consume 3 -> "sc" next 1227
+node 1202 "danj" none result 1 consume 6 -> "$$" next 1205
+node 1203 "a\xb2\x91nj" none result 1 consume 8 -> "$:" next 1204
+node 1204 "" short-set @x3 result 6 consume 3 -> "$" level 2
+node 1205 "j" class c00 result 4 consume 3 -> "s2" next 1206
+node 1206 "k" class c00 result 4 consume 3 -> "sk" next 1207
+node 1207 "la" class c00 result 56 consume 4 -> "'la" next 1209
+node 1208 "a" class c00 result 58 consume 4 -> "'la" level 2
+node 1209 "mog" class c00 result 6 consume 5 -> "'mg" next 1218
+node 1210 "oj" class c00 result 6 consume 5 -> "'m0" next 1217
+node 1211 "me" class c00 result 56 consume 6 -> "'m[e" next 1214
+node 1212 "u" class c00 result 56 consume 6 -> "'m[u" next 1213
+node 1213 "" class c00 result 6 consume 5 -> "'m[" level 4
+node 1214 "\xb27" none result 6 consume 6 -> "'\x22m" next 1215
+node 1215 "" class c00 result 56 consume 4 -> "sm" next 1216
+node 1216 "" none result 56 consume 4 -> "'mo" level 3
+node 1217 "" class c00 result 4 consume 3 -> "s." level 2
+node 1218 "n" class c00 result 4 consume 3 -> "s4" next 1219
+node 1219 "r" class c00 result 4 consume 3 -> "sr" next 1220
+node 1220 "telj" none result 4 consume 6 -> "s@\x5c" next 1221
+node 1221 "vetodav" none result 6 consume 9 -> "'vetod#" next 1224
+node 1222 "jetodav" none result 6 consume 10 -> "'v(tod#" next 1223
+node 1223 "" class c00 result 4 consume 3 -> "s#" level 2
+node 1224 "\xb2=" class c00 result 4 consume 4 -> "s*" next 1225
+node 1225 "" none result 56 consume 2 -> "'" next 1226
+node 1226 "" class c05 result 58 consume 2 -> "'" level 1
+node 1227 "c" class c00 result 6 consume 2 -> "sc" next 1228
+node 1228 "eb" none result 1 consume 3 -> "sb" next 1234
+node 1229 "nzo" none result 56 consume 5 -> "senzo" next 1231
+node 1230 "" class c00 result 6 consume 3 -> "sen" level 2
+node 1231 "\xb2\x91" class c00 result 6 consume 4 -> "se:" next 1232
+node 1232 "" class c00 result 56 consume 2 -> "=" next 1233
+node 1233 "" short-set @x0 result 56 consume 2 -> "se" level 1
+node 1234 "g" class c00 result 6 consume 2 -> "sg" next 1235
+node 1235 "h" class c00 result 6 consume 2 -> "sh" next 1236
+node 1236 "igur" none result 1 consume 5 -> "\x22s" next 1239
+node 1237 "\xb27" class c00 result 6 consume 4 -> "si%" next 1238
+node 1238 "" class c00 result 56 consume 2 -> "!" level 1
+node 1239 "j" class c00 result 6 consume 2 -> "sj" next 1240
+node 1240 "kora\xb2\x91nj" none result 1 consume 9 -> "\x22k:" next 1247
+node 1241 "or" none result 1 consume 4 -> "\x22k" next 1242
+node 1242 "raj" none result 1 consume 5 -> "s\x22j" next 1243
+node 1243 "up" none result 1 consume 4 -> "skp" next 1244
+node 1244 "" class c00 result 4 consume 2 -> "s,k" next 1245
+node 1245 "" class c05 result 4 consume 2 -> "7" next 1246
+node 1246 "" class c00 result 6 consume 2 -> "sk" level 1
+node 1247 "labovid" none result 1 consume 8 -> "s;bo\x22v" next 1260
+node 1248 "ak" class c00 result 6 consume 4 -> "s;k" next 1250
+node 1249 "n" class c00 result 6 consume 4 -> "s;n" level 2
+node 1250 "ede\xb27" none result 1 consume 7 -> "sl%" next 1252
+node 1251 "m" class c00 result 6 consume 4 -> "s=m" level 2
+node 1252 "ijede\xb27" none result 1 consume 9 -> "s%" next 1253
+node 1253 "jede\xb27" none result 1 consume 8 -> "s\x5c%" next 1255
+node 1254 "" class c00 result 6 consume 3 -> "s\x5c" level 2
+node 1255 "og" class c00 result 6 consume 4 -> "s_g" next 1258
+node 1256 "j" class c00 result 6 consume 4 -> "s_j" next 1257
+node 1257 "m" class c00 result 6 consume 4 -> "s_m" level 2
+node 1258 "u\xb2\x91" none result 1 consume 5 -> "\x22:" level 3
+node 1259 "\xb2\xae" none result 1 consume 5 -> "\x22!" level 1
+node 1260 "mak" class c00 result 6 consume 4 -> "smak" next 1263
+node 1261 "e\xb2\x91" class c00 result 6 consume 5 -> "sme:" next 1262
+node 1262 "o" class c00 result 56 consume 3 -> "7" level 1
+node 1263 "nen" class c00 result 6 consume 4 -> "sqn" next 1267
+node 1264 "ih" class c00 result 6 consume 4 -> "s&h" next 1265
+node 1265 "om" class c00 result 6 consume 4 -> "s^m" next 1266
+node 1266 "" class c00 result 6 consume 2 -> "sn" level 1
+node 1267 "ocijal" none result 1 consume 7 -> "scl" next 1271
+node 1268 "p\xb27" none result 1 consume 3 -> "sop" next 1269
+node 1269 "vet" none result 6 consume 4 -> "swe" level 3
+node 1270 "jet" none result 56 consume 5 -> "sw(" level 1
+node 1271 "pak" class c00 result 6 consume 4 -> "spak" next 1279
+node 1272 "ar" class c00 result 56 consume 4 -> "spar" next 1274
+node 1273 "\xb2=" class c00 result 6 consume 5 -> "spa*" level 2
+node 1274 "en" class c00 result 6 consume 4 -> "spen" next 1276
+node 1275 "\xb2\x91" class c00 result 6 consume 5 -> "spe:" level 2
+node 1276 "lav" class c00 result 6 consume 4 -> "sp;v" next 1277
+node 1277 "oj" class c00 result 6 consume 4 -> "s6j" next 1278
+node 1278 "rem" none result 1 consume 5 -> "spm" level 1
+node 1279 "redi\xb2\x91nj" none result 1 consume 9 -> "sd:" next 1284
+node 1280 "ednjov" none result 6 consume 8 -> "sd$ov" next 1282
+node 1281 "d" none result 1 consume 4 -> "sd" level 2
+node 1282 "psk" none result 1 consume 5 -> "s7" next 1283
+node 1283 "" class c00 result 56 consume 2 -> "sr" level 1
+node 1284 "tac" class c00 result 6 consume 4 -> ")ac" next 1305
+node 1285 "ak" class c00 result 6 consume 4 -> ")ak" next 1291
+node 1286 "lj" none result 6 consume 5 -> ")a\x5c" next 1289
+node 1287 "j" none result 4 consume 5 -> "@)" next 1288
+node 1288 "" none result 1 consume 4 -> "\x22)" level 3
+node 1289 "nodav" none result 6 consume 8 -> ")4od#" next 1290
+node 1290 "r" class c00 result 56 consume 4 -> ")ar" level 2
+node 1291 "en" class c00 result 6 consume 4 -> ")en" next 1294
+node 1292 "\xb2\x91" class c00 result 6 consume 5 -> ")e:" next 1293
+node 1293 "" class c00 result 56 consume 3 -> ")" level 2
+node 1294 "i\xb27" class c00 result 6 consume 5 -> "sti%" next 1295
+node 1295 "rate\xb2\x91k" none result 6 consume 9 -> ")8w:k" next 1298
+node 1296 "moglav" none result 1 consume 9 -> ")rmog;v" next 1297
+node 1297 "voder" none result 6 consume 8 -> ")rvoder" level 2
+node 1298 "up" none result 1 consume 4 -> ")p" next 1299
+node 1299 "var" none result 1 consume 5 -> "s@r" next 1301
+node 1300 "or" none result 1 consume 5 -> "s\x22r" level 2
+node 1301 "" class c00 result 3 consume 2 -> "st" next 1302
+node 1302 "" class c00 result 6 consume 2 -> "st" next 1303
+node 1303 "" none result 1 consume 2 -> ")" next 1304
+node 1304 "" none result 40 consume 2 -> "st" level 1
+node 1305 "ua" class c00 result 58 consume 3 -> "+,a" next 1315
+node 1306 "e" class c00 result 58 consume 3 -> "+,e" next 1307
+node 1307 "i" class c00 result 58 consume 3 -> "+,i" next 1308
+node 1308 "ju" class c00 result 54 consume 4 -> "sj" next 1309
+node 1309 "perio" none result 51 consume 7 -> "+pe/o" next 1311
+node 1310 "er" none result 56 consume 5 -> "+per" level 2
+node 1311 "u" class c00 result 58 consume 3 -> "+,u" next 1312
+node 1312 "zovod" none result 6 consume 7 -> "+zovx" next 1313
+node 1313 "" none result 56 consume 2 -> "+" next 1314
+node 1314 "" none result 58 consume 2 -> "+" level 1
+node 1315 "vac" class c00 result 6 consume 4 -> "3ac" next 1343
+node 1316 "akakav" class c00 result 6 consume 8 -> "3kk#" next 1326
+node 1317 "kakov" none result 1 consume 8 -> "3kkw" next 1323
+node 1318 "ako" class c00 result 56 consume 7 -> "3kk" next 1321
+node 1319 "kv" class c05 result 1 consume 7 -> "3kk" next 1320
+node 1320 "mo" class c00 result 56 consume 7 -> "3akm" level 4
+node 1321 "ovrs" none result 6 consume 7 -> "3kovr" next 1322
+node 1322 "" none result 1 consume 4 -> "3k" level 3
+node 1323 "r" class c00 result 56 consume 4 -> "3ar" next 1324
+node 1324 "\xb2=" class c00 result 6 consume 5 -> "3a*" level 4
+node 1325 "\x91ta" class c00 result 56 consume 7 -> "3:" level 2
+node 1326 "emir" none result 56 consume 5 -> "3emi" next 1332
+node 1327 "mogu\xb27" none result 6 consume 9 -> "3eg%" next 1330
+node 1328 "o\xb27" none result 6 consume 7 -> "3e\x22m" next 1329
+node 1329 "rk" none result 6 consume 6 -> "3emrk" level 3
+node 1330 "n" class c00 result 6 consume 4 -> "3en" next 1331
+node 1331 "\xb2\x91" class c00 result 6 consume 5 -> "3e:" level 2
+node 1332 "id" none result 6 consume 4 -> "s\x22v" next 1335
+node 1333 "soka" class c00 result 56 consume 7 -> "svska" next 1334
+node 1334 "\xb2A" none result 6 consume 5 -> "s@v" level 2
+node 1335 "lad" none result 1 consume 5 -> "s\x22x" next 1337
+node 1336 "a\xb2A" none result 1 consume 6 -> "s@x" level 2
+node 1337 "ud" none result 1 consume 4 -> "3d" next 1340
+node 1338 "gde" class c00 result 56 consume 6 -> "3ugd" level 4
+node 1339 "dje" class c00 result 56 consume 7 -> "3ug(" level 2
+node 1340 "" class c00 result 6 consume 2 -> "sv" next 1341
+node 1341 "" class c05 result 8 consume 2 -> "3" next 1342
+node 1342 "" none result 6 consume 2 -> "3" level 1
+node 1343 "\xb27" class c00 result 6 consume 3 -> "s%" next 1347
+node 1344 "=" class c00 result 6 consume 3 -> "s*" next 1345
+node 1345 "A" class c00 result 6 consume 3 -> "s?" next 1346
+node 1346 "\x91" class c00 result 6 consume 3 -> "s:" level 1
+node 1347 "\xe3<" none result 40 consume 3 -> ":" next 1348
+node 1348 "" class c04 result 6 consume 1 -> "s" next 1349
+node 1349 "" none result 40 consume 1 -> "s" end
+node 1350 "ac" class c00 result 6 consume 3 -> "tac" next 1366
+node 1351 "danj" none result 1 consume 6 -> "f$" next 1354
+node 1352 "a\xb2\x91nj" none result 1 consume 8 -> "f:" next 1353
+node 1353 "" short-set @x3 result 6 consume 3 -> "f" level 2
+node 1354 "kav" class c00 result 6 consume 5 -> "tk#" next 1361
+node 1355 "ov" none result 1 consume 5 -> "tkw" next 1359
+node 1356 "\xb2Aer" none result 51 consume 8 -> "t?r" next 1358
+node 1357 "Ae" none result 51 consume 7 -> "t?e" level 4
+node 1358 "" class c00 result 56 consume 4 -> "tk" level 3
+node 1359 "v" class c05 result 6 consume 4 -> "tk" next 1360
+node 1360 "" class c00 result 6 consume 3 -> "tak" level 2
+node 1361 "mo\xb2\x91nj" none result 1 consume 8 -> "tm:" next 1363
+node 1362 "o" class c00 result 56 consume 4 -> "tm" level 2
+node 1363 "r" class c00 result 56 consume 3 -> "tar" next 1364
+node 1364 "" class c00 result 56 consume 2 -> "*" next 1365
+node 1365 "" short-set @x0 result 56 consume 2 -> "ta" level 1
+node 1366 "c" class c00 result 6 consume 2 -> "tc" next 1367
+node 1367 "ea" class c00 result 58 consume 3 -> "w,a" next 1382
+node 1368 "b" none result 1 consume 3 -> "tb" next 1369
+node 1369 "e" class c00 result 58 consume 3 -> "w,e" next 1370
+node 1370 "i" class c00 result 58 consume 3 -> "w,i" next 1371
+node 1371 "k" class c00 result 6 consume 3 -> "ek" next 1372
+node 1372 "m" class c00 result 8 consume 3 -> "t+" next 1373
+node 1373 "n" class c00 result 4 consume 3 -> "tn" next 1375
+node 1374 "" class c00 result 6 consume 3 -> "ten" level 2
+node 1375 "rmomet" none result 6 consume 8 -> "termomet" next 1376
+node 1376 "u" class c00 result 58 consume 3 -> "w,u" next 1377
+node 1377 "\xb2\x91k" none result 1 consume 5 -> "t:" next 1379
+node 1378 "\x91" class c00 result 6 consume 4 -> "te:" level 2
+node 1379 "" none result 58 consume 2 -> "w" next 1380
+node 1380 "" class c00 result 56 consume 2 -> "w" next 1381
+node 1381 "" short-set @x0 result 56 consume 2 -> "te" level 1
+node 1382 "g" class c00 result 6 consume 2 -> "tg" next 1383
+node 1383 "h" class c00 result 6 consume 2 -> "th" next 1384
+node 1384 "ia" class c00 result 58 consume 3 -> "<,a" next 1395
+node 1385 "e" class c00 result 58 consume 3 -> "<,e" next 1386
+node 1386 "i" class c00 result 58 consume 3 -> "<,i" next 1387
+node 1387 "u" class c00 result 58 consume 3 -> "<,u" next 1388
+node 1388 "h" class c00 result 4 consume 3 -> "th" next 1389
+node 1389 "m" class c00 result 4 consume 3 -> "t<" next 1390
+node 1390 "telj" none result 4 consume 6 -> "t@t" next 1391
+node 1391 "\xb27" class c00 result 6 consume 4 -> "ti%" next 1393
+node 1392 "7" class c00 result 4 consume 4 -> "t%" level 2
+node 1393 "" none result 58 consume 2 -> "<" next 1394
+node 1394 "" class c00 result 6 consume 2 -> "t" level 1
+node 1395 "j" class c00 result 6 consume 2 -> "tj" next 1396
+node 1396 "kog" class c00 result 4 consume 4 -> "tkg" next 1402
+node 1397 "oj" class c00 result 4 consume 4 -> "tk0" next 1401
+node 1398 "m" class c00 result 4 consume 4 -> "tk[" next 1399
+node 1399 "v" class c00 result 4 consume 4 -> "tkw" next 1400
+node 1400 "" none result 51 consume 3 -> "\x22[" level 2
+node 1401 "" class c00 result 6 consume 2 -> "tk" level 1
+node 1402 "lak" class c00 result 6 consume 4 -> "t;k" next 1405
+node 1403 "j" class c00 result 6 consume 3 -> "t\x5c" next 1404
+node 1404 "om" class c00 result 6 consume 4 -> "t_m" level 1
+node 1405 "n" class c00 result 6 consume 2 -> "tn" next 1406
+node 1406 "obo\xb2\xae" none result 1 consume 6 -> "tb!" next 1411
+node 1407 "lik" none result 1 consume 5 -> "\x22t" next 1408
+node 1408 "p\xb27" none result 1 consume 3 -> "top" next 1409
+node 1409 "ve\xb27" none result 56 consume 4 -> "twe" next 1410
+node 1410 "" class c00 result 56 consume 2 -> "0" level 1
+node 1411 "reb" none result 1 consume 4 -> "\x22]" next 1416
+node 1412 "enuc" none result 1 consume 6 -> "tc" next 1415
+node 1413 "nut" none result 1 consume 6 -> "tt" next 1414
+node 1414 "p" none result 4 consume 4 -> "@]" level 2
+node 1415 "" class c00 result 56 consume 2 -> "tr" level 1
+node 1416 "ud" short-set @x3 result 6 consume 3 -> "td" next 1418
+node 1417 "" class c00 result 56 consume 2 -> "8" level 1
+node 1418 "var" class c00 result 6 consume 4 -> "tvar" next 1422
+node 1419 "ar" none result 4 consume 4 -> "@r" next 1420
+node 1420 "en" class c00 result 6 consume 4 -> "tven" next 1421
+node 1421 "or" none result 1 consume 4 -> "\x22r" level 1
+node 1422 "\xb27" class c00 result 6 consume 3 -> "t%" next 1426
+node 1423 "=" class c00 result 6 consume 2 -> "t*" next 1424
+node 1424 "A" class c00 result 6 consume 3 -> "t?" next 1425
+node 1425 "\x91" class c00 result 6 consume 3 -> "t:" level 1
+node 1426 "" class c04 result 6 consume 1 -> "t" next 1427
+node 1427 "" class c00 result 6 consume 1 -> ",t" next 1428
+node 1428 "" none result 40 consume 1 -> "t" end
+node 1429 "a" class c00 result 54 consume 2 -> "u,a" next 1430
+node 1430 "e" class c00 result 54 consume 2 -> "u,e" next 1431
+node 1431 "i" class c00 result 54 consume 2 -> "u,i" next 1432
+node 1432 "ju" class c00 result 54 consume 3 -> "j" next 1433
+node 1433 "nutra\xb2\x91nj" none result 1 consume 10 -> "un:" next 1434
+node 1434 "splahovit" none result 6 consume 10 -> "usp;hovit" next 1437
+node 1435 "treb" none result 6 consume 6 -> "us\x22]" level 3
+node 1436 "rep" none result 1 consume 6 -> "us@]" level 1
+node 1437 "u" class c00 result 54 consume 2 -> "u,u" next 1438
+node 1438 "vek" none result 1 consume 4 -> "uv" next 1440
+node 1439 "ijek" none result 1 consume 6 -> "uvk" level 1
+node 1440 "zimanj" none result 1 consume 7 -> "uz<@" next 1442
+node 1441 "" class c00 result 6 consume 2 -> "%" level 1
+node 1442 "" none result 41 consume 1 -> "u" end
+node 1443 "ac" class c00 result 6 consume 3 -> "vac" next 1454
+node 1444 "k" class c00 result 6 consume 3 -> "vak" next 1445
+node 1445 "ljal" none result 1 consume 6 -> "\x5cl" next 1448
+node 1446 "ja" class c00 result 56 consume 5 -> "\x5ca" level 4
+node 1447 "da" none result 51 consume 6 -> "\x5cd" level 2
+node 1448 "njezi\xb2=" none result 1 consume 9 -> "vanjezi*" next 1449
+node 1449 "r" class c00 result 56 consume 3 -> "var" next 1450
+node 1450 "s" class c00 result 6 consume 3 -> "vs" next 1451
+node 1451 "\xb2=" class c00 result 6 consume 4 -> "va*" next 1453
+node 1452 "\xae" none result 1 consume 4 -> "v!" level 2
+node 1453 "" short-set @x0 result 56 consume 2 -> "va" level 1
+node 1454 "c" class c00 result 6 consume 2 -> "vc" next 1455
+node 1455 "en" class c00 result 6 consume 3 -> "ven" next 1466
+node 1456 "oma" none result 51 consume 5 -> "vm" next 1457
+node 1457 "\xb27a" class c00 result 51 consume 5 -> "vea" next 1465
+node 1458 "7e" class c00 result 51 consume 5 -> "vee" next 1462
+node 1459 "i" class c00 result 51 consume 5 -> "vei" next 1460
+node 1460 "u" class c00 result 51 consume 5 -> "veu" next 1461
+node 1461 "" none result 1 consume 4 -> "v%" level 3
+node 1462 "=er" none result 51 consume 5 -> "v*" next 1464
+node 1463 "e" none result 51 consume 5 -> "v*e" level 3
+node 1464 "\x91" class c00 result 6 consume 4 -> "ve:" level 2
+node 1465 "" short-set @x0 result 56 consume 2 -> "ve" level 1
+node 1466 "g" class c00 result 6 consume 2 -> "vg" next 1467
+node 1467 "h" class c00 result 6 consume 2 -> "vh" next 1468
+node 1468 "id" none result 1 consume 3 -> "\x22v" next 1481
+node 1469 "sok" none result 1 consume 5 -> "vsk" next 1470
+node 1470 "te\xb2\x91k" none result 6 consume 7 -> "viw:k" next 1471
+node 1471 "\xb27" class c00 result 6 consume 4 -> "vi%" next 1480
+node 1472 "A" none result 4 consume 4 -> "@v" next 1473
+node 1473 "\x91eg" short-set @x3 result 56 consume 5 -> "v:e" level 4
+node 1474 "emu" class c00 result 51 consume 7 -> "v:+u" next 1477
+node 1475 "m" class c00 result 1 consume 6 -> "v:+" next 1476
+node 1476 "" none result 6 consume 5 -> "v:e" level 4
+node 1477 "t" none result 1 consume 5 -> "vi0" next 1478
+node 1478 "" none result 6 consume 4 -> "v:" next 1479
+node 1479 "" class c05 result 4 consume 4 -> "v:" level 2
+node 1480 "" class c00 result 56 consume 2 -> "v" level 1
+node 1481 "j" class c00 result 6 consume 2 -> "vj" next 1482
+node 1482 "k" class c00 result 6 consume 2 -> "vk" next 1483
+node 1483 "lad" none result 1 consume 4 -> "\x22x" next 1488
+node 1484 "ak" class c00 result 6 consume 4 -> "v;k" next 1487
+node 1485 "stod" none result 6 consume 7 -> "v;)od" next 1486
+node 1486 "\xb2A" none result 4 consume 5 -> "@x" level 2
+node 1487 "j" class c00 result 6 consume 3 -> "v\x5c" level 1
+node 1488 "n" class c00 result 6 consume 2 -> "vn" next 1489
+node 1489 "ododer" none result 6 consume 6 -> "vxode" next 1496
+node 1490 "domer" none result 6 consume 6 -> "vxome" next 1492
+node 1491 "omjer" none result 6 consume 7 -> "vxom(" level 2
+node 1492 "jskovo\xb2A" none result 6 consume 10 -> "v07ovo?" next 1493
+node 1493 "lj" none result 1 consume 4 -> "\x22#" next 1494
+node 1494 "sob" none result 4 consume 5 -> "vosob" next 1495
+node 1495 "zovo\xb2A" none result 6 consume 8 -> "vozovo?" level 1
+node 1496 "ragomet" none result 6 consume 8 -> "v8gomet" next 1501
+node 1497 "emenj" none result 4 consume 7 -> "@n" next 1499
+node 1498 "men" none result 1 consume 6 -> "\x22n" level 2
+node 1499 "lo" class c00 result 56 consume 4 -> "v_" next 1500
+node 1500 "" class c00 result 56 consume 2 -> "vr" level 1
+node 1501 "sak" class c00 result 6 consume 3 -> "vsak" next 1502
+node 1502 "\xb27" class c00 result 6 consume 3 -> "v%" next 1506
+node 1503 "=" class c00 result 6 consume 3 -> "v*" next 1504
+node 1504 "A" class c00 result 6 consume 3 -> "v?" next 1505
+node 1505 "\x91" class c00 result 6 consume 3 -> "v:" level 1
+node 1506 "" class c04 result 6 consume 1 -> "v" next 1507
+node 1507 "" class c00 result 6 consume 1 -> ",v" next 1508
+node 1508 "" none result 40 consume 1 -> "v" end
+node 1509 "" class c04 result 6 consume 1 -> "w" next 1510
+node 1510 "" none result 1 consume 1 -> ",w" next 1511
+node 1511 "" none result 40 consume 1 -> "w" end
+node 1512 "" class c04 result 6 consume 1 -> "x" next 1513
+node 1513 "" none result 1 consume 1 -> ",x" next 1514
+node 1514 "" none result 40 consume 1 -> "x" end
+node 1515 "" class c04 result 6 consume 1 -> "y" next 1516
+node 1516 "" none result 1 consume 1 -> ",y" next 1517
+node 1517 "" none result 40 consume 1 -> "y" end
+node 1518 "ac" class c00 result 4 consume 3 -> "zc" next 1537
+node 1519 "hvaljuju\xb27" none result 1 consume 12 -> ">h%" next 1520
+node 1520 "jmodav" none result 6 consume 8 -> ">jmod#" next 1522
+node 1521 "" class c00 result 4 consume 3 -> "z2" level 2
+node 1522 "kupodav" none result 6 consume 9 -> ">kpod#" next 1524
+node 1523 "" class c00 result 4 consume 3 -> "zk" level 2
+node 1524 "malo" class c00 result 56 consume 6 -> ">m_" next 1526
+node 1525 "" class c00 result 4 consume 3 -> "z." level 2
+node 1526 "n" class c00 result 4 consume 3 -> "z4" next 1527
+node 1527 "prem" none result 1 consume 6 -> ">pm" next 1528
+node 1528 "r" class c00 result 4 consume 3 -> "zr" next 1529
+node 1529 "sad" short-set @x3 result 6 consume 5 -> ">$" next 1530
+node 1530 "telj" none result 4 consume 6 -> "z@\x5c" next 1532
+node 1531 "o" class c00 result 56 consume 4 -> ">t" level 2
+node 1532 "v" class c00 result 4 consume 3 -> "z#" next 1533
+node 1533 "\xb2=" class c00 result 4 consume 4 -> "z*" next 1535
+node 1534 "\x91to" class c00 result 56 consume 6 -> ">:" level 2
+node 1535 "" class c00 result 56 consume 2 -> ">" next 1536
+node 1536 "" class c05 result 51 consume 2 -> ">" level 1
+node 1537 "bilj" none result 1 consume 5 -> "\x22z" next 1539
+node 1538 "og" class c00 result 6 consume 4 -> "zb" level 1
+node 1539 "c" class c00 result 6 consume 2 -> "zc" next 1540
+node 1540 "dravomarij" none result 56 consume 10 -> "zd8voma/" next 1541
+node 1541 "emljovid" none result 6 consume 9 -> "z+\x5co\x22v" next 1544
+node 1542 "n" class c00 result 6 consume 3 -> "zen" next 1543
+node 1543 "" short-set @x0 result 56 consume 2 -> "ze" level 1
+node 1544 "g" class c00 result 6 consume 2 -> "zg" next 1545
+node 1545 "h" class c00 result 6 consume 2 -> "zh" next 1546
+node 1546 "j" class c00 result 6 consume 2 -> "zj" next 1547
+node 1547 "k" class c00 result 6 consume 2 -> "zk" next 1548
+node 1548 "lih" class c00 result 6 consume 4 -> "z9h" next 1554
+node 1549 "im" class c00 result 6 consume 4 -> "z9m" next 1550
+node 1550 "j" class c00 result 6 consume 3 -> "z\x5c" next 1551
+node 1551 "og" class c00 result 6 consume 4 -> "z_g" level 3
+node 1552 "j" class c00 result 6 consume 4 -> "z_j" next 1553
+node 1553 "m" class c00 result 6 consume 4 -> "z_m" level 1
+node 1554 "naj" class c00 result 6 consume 4 -> "zyj" next 1560
+node 1555 "ak" class c00 result 6 consume 4 -> "zyk" next 1558
+node 1556 "m" class c00 result 6 consume 4 -> "zym" next 1557
+node 1557 "n" class c00 result 6 consume 4 -> "zyn" level 2
+node 1558 "oj" class c00 result 6 consume 4 -> "z^j" next 1559
+node 1559 "" class c00 result 6 consume 2 -> "zn" level 1
+node 1560 "ov" none result 1 consume 3 -> "zw" next 1561
+node 1561 "r" class c00 result 56 consume 2 -> "zr" next 1562
+node 1562 "\xb27" class c00 result 6 consume 3 -> "z%" next 1566
+node 1563 "=" class c00 result 6 consume 3 -> "z*" next 1564
+node 1564 "A" class c00 result 6 consume 3 -> "z?" next 1565
+node 1565 "\x91" class c00 result 6 consume 3 -> "z:" level 1
+node 1566 "\xe3<" none result 40 consume 3 -> "!" next 1567
+node 1567 "" class c04 result 6 consume 1 -> "z" next 1568
+node 1568 "" class c00 result 6 consume 1 -> ",z" next 1569
+node 1569 "" none result 40 consume 1 -> "z" end
+node 1570 "" none result 36 consume 1 -> ".(" end
+node 1571 "" none result 40 consume 1 -> "\x5c" end
+node 1572 "" none result 36 consume 1 -> ".)" end
+node 1573 "" none result 36 consume 1 -> "^" end
+node 1574 "" none result 40 consume 1 -> "@u" end
+node 1575 "" none result 40 consume 1 -> "@e" end
+node 1576 "" none result 40 consume 1 -> "@a" end
+node 1577 "" none result 40 consume 1 -> "@a" end
+node 1578 "" none result 40 consume 1 -> "@a" end
+node 1579 "" none result 40 consume 1 -> "@a" end
+node 1580 "" none result 40 consume 1 -> "@c" end
+node 1581 "" none result 40 consume 1 -> "@e" end
+node 1582 "" none result 40 consume 1 -> "@e" end
+node 1583 "" none result 40 consume 1 -> "@e" end
+node 1584 "" none result 40 consume 1 -> "@i" end
+node 1585 "" none result 40 consume 1 -> "@i" end
+node 1586 "" none result 40 consume 1 -> "@i" end
+node 1587 "" none result 40 consume 1 -> "@a" end
+node 1588 "" none result 40 consume 1 -> "@o" end
+node 1589 "" none result 40 consume 1 -> "@o" end
+node 1590 "" none result 40 consume 1 -> "@o" end
+node 1591 "" none result 40 consume 1 -> "@u" end
+node 1592 "" none result 40 consume 1 -> "@u" end
+node 1593 "" none result 40 consume 1 -> "@y" end
+node 1594 "" none result 36 consume 1 -> "3" end
+node 1595 "" none result 36 consume 1 -> "@y" end
+node 1596 "" none result 40 consume 1 -> "@f" end
+node 1597 "" none result 40 consume 1 -> "@a" end
+node 1598 "" none result 40 consume 1 -> "@i" end
+node 1599 "" none result 40 consume 1 -> "@o" end
+node 1600 "" none result 40 consume 1 -> "@u" end
+node 1601 "" none result 40 consume 1 -> "@n" end
+node 1602 "" none result 36 consume 1 -> "8" end
+node 1603 "" none result 36 consume 1 -> "0" end
+node 1604 "" none result 36 consume 1 -> "@4" end
+node 1605 "" none result 36 consume 1 -> "@x" end
+node 1606 "" none result 36 consume 1 -> "^0" end
+node 1607 "" none result 36 consume 1 -> "'" end
+node 1608 "1" none result 40 consume 2 -> "@a" next 1609
+node 1609 "3" none result 40 consume 2 -> "@a" next 1610
+node 1610 "5" none result 40 consume 2 -> "@a" next 1611
+node 1611 "7ak" class c00 result 6 consume 4 -> "%ak" next 1641
+node 1612 "ar" class c00 result 56 consume 4 -> "%ar" next 1616
+node 1613 "\xb27" class c00 result 6 consume 5 -> "%a%" next 1614
+node 1614 "" class c00 result 58 consume 3 -> "a" next 1615
+node 1615 "" short-set @x0 result 56 consume 3 -> "%a" level 2
+node 1616 "c" class c00 result 6 consume 3 -> "%c" next 1617
+node 1617 "emo" class c00 result 51 consume 5 -> "%m" next 1624
+node 1618 "te" class c00 result 51 consume 5 -> "%t" next 1619
+node 1619 "\xb2\x91" class c00 result 4 consume 5 -> "%:" next 1621
+node 1620 "\x91" class c00 result 6 consume 5 -> "%:" level 3
+node 1621 "" class c00 result 58 consume 3 -> "e" next 1622
+node 1622 "" class c00 result 56 consume 3 -> "e" next 1623
+node 1623 "" short-set @x0 result 56 consume 3 -> "%e" level 2
+node 1624 "g" class c00 result 6 consume 3 -> "%g" next 1625
+node 1625 "h" class c00 result 6 consume 3 -> "%h" next 1626
+node 1626 "i" class c00 result 58 consume 3 -> "i" next 1627
+node 1627 "j" class c00 result 6 consume 3 -> "%j" next 1628
+node 1628 "k" class c00 result 6 consume 3 -> "%k" next 1629
+node 1629 "lj" class c00 result 6 consume 4 -> "%\x5c" next 1630
+node 1630 "n" class c00 result 6 consume 3 -> "%n" next 1631
+node 1631 "r" class c00 result 56 consume 3 -> "%r" next 1632
+node 1632 "u" class c00 result 58 consume 3 -> "u" next 1633
+node 1633 "\xb27" class c00 result 6 consume 4 -> "%%" next 1637
+node 1634 "=" class c00 result 6 consume 4 -> "%*" next 1635
+node 1635 "A" class c00 result 6 consume 4 -> "%?" next 1636
+node 1636 "\x91" class c00 result 6 consume 4 -> "%:" level 2
+node 1637 "" class c04 result 6 consume 2 -> "%" next 1638
+node 1638 "" class c00 result 6 consume 2 -> ",%" next 1639
+node 1639 "" class c00 result 7 consume 2 -> ",%" next 1640
+node 1640 "" none result 40 consume 2 -> "%" level 1
+node 1641 "9" none result 40 consume 2 -> "@c" next 1642
+node 1642 ";" none result 40 consume 2 -> "@c" next 1643
+node 1643 "=ak" class c00 result 6 consume 4 -> "*k" next 1683
+node 1644 "ar" class c00 result 56 consume 4 -> "*ar" next 1646
+node 1645 "" short-set @x0 result 56 consume 3 -> "*a" level 2
+node 1646 "c" class c00 result 6 consume 3 -> "*c" next 1647
+node 1647 "est" none result 1 consume 5 -> "*)" next 1650
+node 1648 "\xb2\x91\xb27" none result 1 consume 7 -> "*%" next 1649
+node 1649 "" short-set @x0 result 56 consume 3 -> "*e" level 2
+node 1650 "g" class c00 result 6 consume 3 -> "*g" next 1651
+node 1651 "h" class c00 result 6 consume 3 -> "*h" next 1652
+node 1652 "injenic" none result 1 consume 9 -> "*$c" next 1662
+node 1653 "njeni\xb2=" none result 1 consume 10 -> "*$*" next 1656
+node 1654 "j" class c05 result 4 consume 5 -> "@y" next 1655
+node 1655 "" none result 1 consume 4 -> "\x22y" level 3
+node 1656 "stin" none result 56 consume 6 -> "*i)i" next 1657
+node 1657 "telj" none result 4 consume 7 -> "*@t" next 1661
+node 1658 "e" class c00 result 54 consume 5 -> "*iw" next 1659
+node 1659 "i" class c00 result 4 consume 5 -> "*i<" next 1660
+node 1660 "" none result 1 consume 4 -> "*t" level 3
+node 1661 "\xb27" class c00 result 6 consume 5 -> "*i%" level 2
+node 1662 "j" class c00 result 6 consume 3 -> "*j" next 1663
+node 1663 "k" class c00 result 6 consume 3 -> "*k" next 1665
+node 1664 "" none result 8 consume 3 -> "." level 2
+node 1665 "lan" class c00 result 6 consume 5 -> "*;n" next 1667
+node 1666 "j" class c00 result 6 consume 4 -> "*\x5c" level 2
+node 1667 "mar" class c00 result 56 consume 5 -> "*mar" next 1668
+node 1668 "n" class c00 result 6 consume 3 -> "*n" next 1669
+node 1669 "ovek" none result 51 consume 5 -> "*we" next 1673
+node 1670 "ve\xb2=" none result 1 consume 7 -> "*we*" level 4
+node 1671 "jek" none result 51 consume 6 -> "*w(" level 5
+node 1672 "e\xb2=" none result 1 consume 8 -> "*w(*" level 2
+node 1673 "r" class c00 result 56 consume 3 -> "*r" next 1674
+node 1674 "vak" class c00 result 6 consume 5 -> "*vak" next 1675
+node 1675 "\xb27" class c00 result 6 consume 4 -> "*%" next 1679
+node 1676 "=" class c00 result 6 consume 4 -> "**" next 1677
+node 1677 "A" class c00 result 6 consume 4 -> "*?" next 1678
+node 1678 "\x91" class c00 result 6 consume 4 -> "*:" level 2
+node 1679 "" class c04 result 6 consume 2 -> "*" next 1680
+node 1680 "" class c00 result 6 consume 2 -> ",*" next 1681
+node 1681 "" class c00 result 7 consume 2 -> ",*" next 1682
+node 1682 "" none result 40 consume 2 -> "*" level 1
+node 1683 "?" none result 40 consume 2 -> "@d" next 1684
+node 1684 "Aak" class c00 result 6 consume 4 -> "?ak" next 1703
+node 1685 "a" short-set @x0 result 56 consume 3 -> "?a" next 1686
+node 1686 "c" class c00 result 6 consume 3 -> "?c" next 1687
+node 1687 "e" short-set @x0 result 56 consume 3 -> "?e" next 1688
+node 1688 "g" class c00 result 6 consume 3 -> "?g" next 1689
+node 1689 "h" class c00 result 6 consume 3 -> "?h" next 1690
+node 1690 "j" class c00 result 6 consume 3 -> "?j" next 1691
+node 1691 "k" class c00 result 6 consume 3 -> "?k" next 1692
+node 1692 "lj" class c00 result 6 consume 4 -> "?\x5c" next 1693
+node 1693 "n" class c00 result 6 consume 3 -> "?n" next 1694
+node 1694 "r" class c00 result 56 consume 3 -> "?r" next 1695
+node 1695 "\xb27" class c00 result 6 consume 4 -> "?%" next 1699
+node 1696 "=" class c00 result 6 consume 4 -> "?*" next 1697
+node 1697 "A" class c00 result 6 consume 4 -> "??" next 1698
+node 1698 "\x91" class c00 result 6 consume 4 -> "?:" level 2
+node 1699 "" class c04 result 6 consume 2 -> "?" next 1700
+node 1700 "" class c00 result 6 consume 2 -> ",?" next 1701
+node 1701 "" class c00 result 7 consume 2 -> ",?" next 1702
+node 1702 "" none result 40 consume 2 -> "?" level 1
+node 1703 "C" none result 40 consume 2 -> "@e" next 1704
+node 1704 "E" none result 40 consume 2 -> "@e" next 1705
+node 1705 "G" none result 40 consume 2 -> "@e" next 1706
+node 1706 "I" none result 40 consume 2 -> "@e" next 1707
+node 1707 "K" none result 40 consume 2 -> "@e" next 1708
+node 1708 "M" none result 40 consume 2 -> "@g" next 1709
+node 1709 "O" none result 40 consume 2 -> "@g" next 1710
+node 1710 "Q" none result 40 consume 2 -> "@g" next 1711
+node 1711 "S" none result 40 consume 2 -> "@g" next 1712
+node 1712 "U" none result 40 consume 2 -> "@h" next 1713
+node 1713 "W" none result 40 consume 2 -> "@h" next 1714
+node 1714 "Y" none result 40 consume 2 -> "@i" next 1715
+node 1715 "[" none result 40 consume 2 -> "@i" next 1716
+node 1716 "]" none result 40 consume 2 -> "@i" next 1717
+node 1717 "_" none result 40 consume 2 -> "@i" next 1718
+node 1718 "a" none result 40 consume 2 -> "@i" next 1719
+node 1719 "c" none result 40 consume 2 -> "@i" next 1720
+node 1720 "e" none result 40 consume 2 -> "@j" next 1721
+node 1721 "g" none result 40 consume 2 -> "@k" next 1722
+node 1722 "h" none result 40 consume 2 -> "@k" next 1723
+node 1723 "j" none result 40 consume 2 -> "@l" next 1724
+node 1724 "l" none result 40 consume 2 -> "@l" next 1725
+node 1725 "n" none result 40 consume 2 -> "@l" next 1726
+node 1726 "p" none result 40 consume 2 -> "@l" next 1727
+node 1727 "r" none result 40 consume 2 -> "@l" next 1728
+node 1728 "t" none result 40 consume 2 -> "@n" next 1729
+node 1729 "v" none result 40 consume 2 -> "@n" next 1730
+node 1730 "x" none result 40 consume 2 -> "@n" next 1731
+node 1731 "y" none result 40 consume 2 -> "@n" next 1732
+node 1732 "{" none result 40 consume 2 -> "@n" next 1733
+node 1733 "}" none result 40 consume 2 -> "@o" next 1734
+node 1734 "\x7f" none result 40 consume 2 -> "@o" next 1735
+node 1735 "\x81" none result 40 consume 2 -> "@o" next 1736
+node 1736 "\x83" none result 40 consume 2 -> "@o" next 1737
+node 1737 "\x85" none result 40 consume 2 -> "@r" next 1738
+node 1738 "\x87" none result 40 consume 2 -> "@r" next 1739
+node 1739 "\x89" none result 40 consume 2 -> "@r" next 1740
+node 1740 "\x8b" none result 40 consume 2 -> "@s" next 1741
+node 1741 "\x8d" none result 40 consume 2 -> "@s" next 1742
+node 1742 "\x8f" none result 40 consume 2 -> "@s" next 1743
+node 1743 "\x91ac" class c00 result 6 consume 4 -> ":ac" next 1774
+node 1744 "ak" class c00 result 6 consume 4 -> ":ak" next 1747
+node 1745 "r" class c00 result 56 consume 4 -> ":ar" next 1746
+node 1746 "" short-set @x0 result 56 consume 3 -> ":a" level 2
+node 1747 "c" class c00 result 6 consume 3 -> ":c" next 1748
+node 1748 "en" class c00 result 6 consume 4 -> ":en" next 1751
+node 1749 "\xb2\x91" class c00 result 6 consume 5 -> ":e:" next 1750
+node 1750 "" short-set @x0 result 56 consume 3 -> ":e" level 2
+node 1751 "g" class c00 result 6 consume 3 -> ":g" next 1752
+node 1752 "h" class c00 result 6 consume 3 -> ":h" next 1753
+node 1753 "i\xb27" class c00 result 6 consume 5 -> ":i%" next 1754
+node 1754 "j" class c00 result 6 consume 3 -> ":j" next 1755
+node 1755 "k" class c00 result 6 consume 3 -> ":k" next 1756
+node 1756 "lem" class c00 result 6 consume 5 -> ":=m" next 1758
+node 1757 "j" class c00 result 6 consume 4 -> ":\x5c" level 2
+node 1758 "n" class c00 result 6 consume 3 -> ":n" next 1759
+node 1759 "r" class c00 result 56 consume 3 -> ":r" next 1760
+node 1760 "tin" none result 4 consume 5 -> "@0" next 1765
+node 1761 "ovi\xb2\x91e" class c00 result 56 consume 9 -> "0ov:e" next 1763
+node 1762 "" class c00 result 56 consume 4 -> ":" level 3
+node 1763 "" none result 8 consume 3 -> "0" next 1764
+node 1764 "" none result 6 consume 3 -> "0" level 2
+node 1765 "vi\xb27" class c00 result 6 consume 6 -> ":vi%" next 1766
+node 1766 "\xb27" class c00 result 6 consume 4 -> ":%" next 1770
+node 1767 "=" class c00 result 6 consume 4 -> ":*" next 1768
+node 1768 "A" class c00 result 6 consume 4 -> ":?" next 1769
+node 1769 "\x91" class c00 result 6 consume 4 -> "::" level 2
+node 1770 "" class c04 result 6 consume 2 -> ":" next 1771
+node 1771 "" class c00 result 6 consume 2 -> ",:" next 1772
+node 1772 "" class c00 result 7 consume 2 -> ",:" next 1773
+node 1773 "" none result 40 consume 2 -> ":" level 1
+node 1774 "\x93" none result 40 consume 2 -> "@t" next 1775
+node 1775 "\x95" none result 40 consume 2 -> "@t" next 1776
+node 1776 "\x97" none result 40 consume 2 -> "@t" next 1777
+node 1777 "\x99" none result 40 consume 2 -> "@u" next 1778
+node 1778 "\x9b" none result 40 consume 2 -> "@u" next 1779
+node 1779 "\x9d" none result 40 consume 2 -> "@u" next 1780
+node 1780 "\x9f" none result 40 consume 2 -> "@u" next 1781
+node 1781 "\xa1" none result 40 consume 2 -> "@u" next 1782
+node 1782 "\xa3" none result 40 consume 2 -> "@u" next 1783
+node 1783 "\xa5" none result 40 consume 2 -> "@w" next 1784
+node 1784 "\xa7" none result 40 consume 2 -> "@y" next 1785
+node 1785 "\xaa" none result 40 consume 2 -> "@z" next 1786
+node 1786 "\xac" none result 40 consume 2 -> "@z" next 1787
+node 1787 "\xaeac" class c00 result 6 consume 4 -> "!ac" next 1817
+node 1788 "ak" class c00 result 6 consume 4 -> "!ak" next 1791
+node 1789 "r" class c00 result 56 consume 4 -> "!ar" next 1790
+node 1790 "" short-set @x0 result 56 consume 3 -> "!a" level 2
+node 1791 "c" class c00 result 6 consume 3 -> "!c" next 1792
+node 1792 "en" class c00 result 6 consume 4 -> "!en" next 1795
+node 1793 "" short-set @x0 result 56 consume 3 -> "!e" next 1794
+node 1794 "" class c00 result 56 consume 3 -> "!,e" level 2
+node 1795 "g" class c00 result 6 consume 3 -> "!g" next 1796
+node 1796 "h" class c00 result 6 consume 3 -> "!h" next 1797
+node 1797 "itelj" none result 6 consume 7 -> "!iw\x5c" next 1802
+node 1798 "voder" none result 6 consume 8 -> "!3oder" next 1801
+node 1799 "otvor" none result 1 consume 9 -> "!3o\x22r" level 5
+node 1800 "t" none result 1 consume 6 -> "vt" level 3
+node 1801 "\xb27" class c00 result 6 consume 5 -> "!i%" level 2
+node 1802 "j" class c00 result 6 consume 3 -> "!j" next 1803
+node 1803 "k" class c00 result 6 consume 3 -> "!k" next 1804
+node 1804 "lj" class c00 result 6 consume 4 -> "!\x5c" next 1805
+node 1805 "mar" class c00 result 6 consume 5 -> "!mar" next 1806
+node 1806 "n" class c00 result 6 consume 3 -> "!n" next 1807
+node 1807 "r" class c00 result 56 consume 3 -> "!r" next 1808
+node 1808 "u\xb2=ovod" none result 6 consume 9 -> "!u*ovx" next 1809
+node 1809 "vak" class c00 result 6 consume 5 -> "!vak" next 1810
+node 1810 "\xb27" class c00 result 6 consume 4 -> "!%" next 1814
+node 1811 "=" class c00 result 6 consume 4 -> "!*" next 1812
+node 1812 "A" class c00 result 6 consume 4 -> "!?" next 1813
+node 1813 "\x91" class c00 result 6 consume 4 -> "!:" level 2
+node 1814 "" class c04 result 6 consume 2 -> "!" next 1815
+node 1815 "" class c00 result 6 consume 2 -> ",!" next 1816
+node 1816 "" none result 40 consume 2 -> "!" level 1
+node 1817 "\xaf" none result 40 consume 2 -> "@a" end
+node 1818 "" none result 40 consume 1 -> "@s" end
+node 1819 "a" none result 40 consume 2 -> ";a" next 1820
+node 1820 "b" none result 40 consume 2 -> ";b" next 1821
+node 1821 "c" none result 40 consume 2 -> ";g" next 1822
+node 1822 "d" none result 40 consume 2 -> ";d" next 1823
+node 1823 "e" none result 40 consume 2 -> ";e" next 1824
+node 1824 "f" none result 40 consume 2 -> ";z" next 1825
+node 1825 "g" none result 40 consume 2 -> ";:" next 1826
+node 1826 "h" none result 40 consume 2 -> ";?" next 1827
+node 1827 "i" none result 40 consume 2 -> ";i" next 1828
+node 1828 "j" none result 40 consume 2 -> ";k" next 1829
+node 1829 "k" none result 40 consume 2 -> ";l" next 1830
+node 1830 "l" none result 40 consume 2 -> ";m" next 1831
+node 1831 "m" none result 40 consume 2 -> ";n" next 1832
+node 1832 "n" none result 40 consume 2 -> ";x" next 1833
+node 1833 "o" none result 40 consume 2 -> ";o" next 1834
+node 1834 "p" none result 40 consume 2 -> ";p" next 1835
+node 1835 "q" none result 40 consume 2 -> ";r" next 1836
+node 1836 "s" none result 40 consume 2 -> ";s" next 1837
+node 1837 "t" none result 40 consume 2 -> ";t" next 1838
+node 1838 "u" none result 40 consume 2 -> ";u" next 1839
+node 1839 "v" none result 40 consume 2 -> ";f" next 1840
+node 1840 "w" none result 40 consume 2 -> ";h" next 1841
+node 1841 "x" none result 40 consume 2 -> ";y" next 1842
+node 1842 "y" none result 40 consume 2 -> ";w" next 1843
+node 1843 "\x85" none result 36 consume 2 -> "_f" next 1844
+node 1844 "\x86" none result 36 consume 2 -> "_p" next 1845
+node 1845 "\x8f" none result 40 consume 2 -> ";v" level 2
+node 1846 "" none result 40 consume 2 -> ";q" end
+node 1847 "@" none result 36 consume 2 -> "-" next 1848
+node 1848 "A" none result 36 consume 2 -> "-" next 1849
+node 1849 "C" none result 37 consume 2 -> "-" next 1851
+node 1850 "" none result 38 consume 2 -> ",-" level 1
+node 1851 "D" none result 36 consume 2 -> "--" next 1852
+node 1852 "H" none result 36 consume 2 -> "7" next 1853
+node 1853 "I" none result 36 consume 2 -> "7" next 1854
+node 1854 "J" none result 36 consume 2 -> "7" next 1855
+node 1855 "K" none result 36 consume 2 -> "7" next 1856
+node 1856 "L" none result 36 consume 2 -> "7" next 1857
+node 1857 "M" none result 36 consume 2 -> "7" next 1858
+node 1858 "N" none result 36 consume 2 -> "7" next 1859
+node 1859 "O" none result 36 consume 2 -> "7" next 1860
+node 1860 "P" none result 36 consume 2 -> "[o" next 1861
+node 1861 "Q" none result 36 consume 2 -> "[[o" next 1862
+node 1862 "R" none result 36 consume 2 -> "--" next 1863
+node 1863 "S" none result 36 consume 2 -> "--" next 1864
+node 1864 "V" none result 36 consume 2 -> "'''" next 1865
+node 1865 "`" none result 36 consume 2 -> "#j00" next 1866
+node 1866 "a" none result 36 consume 2 -> "#j000" next 1867
+node 1867 "i" none result 36 consume 2 -> "8" next 1868
+node 1868 "j" none result 36 consume 2 -> "0" next 1869
+node 1869 "t" none result 36 consume 2 -> "\x221" end
+node 1870 "\x5c" none result 36 consume 2 -> "@e" end
+node 1871 "R" none result 36 consume 2 -> "<^tm>" end
+node 1872 "#" none result 36 consume 2 -> "@l" next 1873
+node 1873 "$" none result 36 consume 2 -> "<v>" next 1874
+node 1874 "&" none result 36 consume 2 -> ".3" next 1875
+node 1875 "'" none result 36 consume 2 -> "+" next 1876
+node 1876 "(" none result 36 consume 2 -> "@" next 1877
+node 1877 ")" none result 36 consume 2 -> "<^c>" next 1878
+node 1878 "*" none result 36 consume 2 -> "<==>" next 1879
+node 1879 "-" none result 36 consume 2 -> "-" next 1880
+node 1880 "." none result 36 consume 2 -> "<^r>" next 1881
+node 1881 "/" none result 36 consume 2 -> "@" next 1882
+node 1882 "1" none result 36 consume 2 -> "6-" next 1883
+node 1883 "2" none result 36 consume 2 -> "/2" next 1884
+node 1884 "3" none result 36 consume 2 -> "/3" next 1885
+node 1885 "4" none result 36 consume 2 -> "@" next 1886
+node 1886 "5" class c05 result 3 consume 2 -> ";m," next 1888
+node 1887 "" none result 36 consume 2 -> ";m" level 1
+node 1888 "6" none result 36 consume 2 -> "+" next 1889
+node 1889 "8" none result 36 consume 2 -> "@" next 1890
+node 1890 "9" none result 36 consume 2 -> "/1" next 1891
+node 1891 "<" none result 36 consume 2 -> "#a\x221#d" next 1892
+node 1892 "=" none result 36 consume 2 -> "#a\x221#b" next 1893
+node 1893 ">" none result 36 consume 2 -> "#c\x221#d" next 1894
+node 1894 "c" none result 40 consume 2 -> "@a" next 1895
+node 1895 "u" none result 40 consume 2 -> "@o" end
+
+scan input-mode 0
+scan trailing-blanks 1
+scan flag 28
+scan full-stop 46
+scan newline 1
+scan form-feed "\x15"
+scan paragraph "p"
+scan new-paragraphs 0
+scan rejoin-hyphens 0
+scan spaces 0
+scan tab-width 1
+scan ninmod 0
+scan fold-codes 1
+scan fold-words 1
+scan capital-cessation 1
+scan map-braces 0
+scan font "fts~i fte~i 4 3"
+scan font "fts~b fte~b 4 4"
+scan font "fts~u fte~u 4 3"
+scan font "fts~s fte~s 4 3"
+scan spare 0
+scan passage-ends 0
+scan nxsls 0
+scan format-word 28
+scan format-word2 27
+scan capital-sign 1
+scan capital-end 2
+scan address-switching 0
+scan mode-words "running" "spacing" "marking" "as-is" "compress" "sentence" "auto-tab" "par" "no-par" "par-skp" "par-ind"
+scan passage-words 0
+scan doubled-adjectives 0

@@ -22,13 +22,55 @@ use super::chars::{kind, flags, latin1, parse_hex, split_lines};
 /// The character table: lines of fields separated by "~": code; small-letter code; text form; its byte; second
 /// text form; its byte; Unicode; repeat count (all hex). A repeat count n fills n codes in a row, each number one
 /// higher. The first line is a header.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct Chitab {
     unicode: HashMap<i64, i64>,
     upper2: HashMap<i64, i64>,
 }
 
+/// BrailleMaker's own character table, built into the program.
+const CHARACTERS: &str = include_str!("../../../../tables/characters.txt");
+
 impl Chitab {
+    /// BrailleMaker's character table (tables/characters.txt): tab-separated lines of code, small-letter code,
+    /// Unicode, count (hex, "-" for none), then text forms the engine does not use; "#" starts a comment line.
+    pub fn parse_characters(text: &str) -> Chitab {
+        let mut t = Chitab::default();
+        let num = |f: Option<&&str>| match f {
+            Some(&"-") | None => None,
+            Some(s) => parse_hex(s),
+        };
+        for line in text.lines() {
+            if line.starts_with('#') || line.trim().is_empty() {
+                continue;
+            }
+            let f: Vec<&str> = line.split('\t').collect();
+            let Some(code) = num(f.first()) else { continue };
+            let (lower, uni) = (num(f.get(1)), num(f.get(2)));
+            let n = num(f.get(3)).unwrap_or(1);
+            t.add(code, lower, uni, n);
+        }
+        t
+    }
+
+    /// The character table built into the program.
+    pub fn builtin() -> Chitab {
+        Chitab::parse_characters(CHARACTERS)
+    }
+
+    fn add(&mut self, code: i64, lower: Option<i64>, uni: Option<i64>, n: i64) {
+        for i in 0..n {
+            if let Some(u) = uni {
+                self.unicode.insert(code + i, u + i);
+            }
+            if let Some(l) = lower {
+                if l + i >= 0x100 {
+                    self.upper2.insert(l + i, code + i);
+                }
+            }
+        }
+    }
+
     pub fn parse(text: &str) -> Chitab {
         let mut t = Chitab::default();
         for line in split_lines(text).into_iter().skip(1) {
@@ -44,16 +86,7 @@ impl Chitab {
                 Some(r) if r != 0 => r,
                 _ => 1,
             };
-            for i in 0..n {
-                if let Some(u) = uni {
-                    t.unicode.insert(code + i, u + i);
-                }
-                if let Some(l) = lower {
-                    if l + i >= 0x100 {
-                        t.upper2.insert(l + i, code + i);
-                    }
-                }
-            }
+            t.add(code, lower, uni, n);
         }
         t
     }

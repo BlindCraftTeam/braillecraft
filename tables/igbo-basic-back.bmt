@@ -1,0 +1,599 @@
+# The rules of ibaacb.btb and gendxb.sct, recreated as BrailleMaker table source.
+table "Igbo - basic, braille to print"
+default-char 42
+raw 0
+writer 2
+output 4
+tail-extra 0 0 0
+unknown 0
+
+state s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 s11 s12 s13 s14 s15 s16
+state s17 s18 s19 s20 s21 s22 s23 s24 s25 s26 s27 s28 s29 s30 s31 s32
+state s33 s34 s35 s36 s37 s38 s39 s40 s41 s42 s43 s44 s45 s46 s47 s48
+state s49 s50 s51 s52 s53 s54 s55 s56 s57 s58 s59 s60 s61 s62 s63 s64
+
+class c00 "\x01\x02\x1b\x1c\x1d\x1e\x1f -\xec"
+class c01 "\x01\x02\x1b\x1c\x1d\x1e\x1f '-01234678\xec"
+class c02 "\x1b\x1c\x1d\x1e\x1f `"
+class c03 "!$()59]aeiou"
+class c04 "!\x22$%&()*+,./0123456789:;<=>?[\x5c]^_abcdefghijklmnopqrstuvwxyz"
+class c05 "!&()="
+class c06 "\x22',-0123456789;\xec"
+class c07 "%&*+/0246:<=>?[\x5cbcdfghjklmnpqrstvwxyz"
+class c08 "-01234678\xec"
+class c09 ".abcdefghij"
+class c10 "47"
+class c11 "abcdefghijklmnopqrstuvwxyz"
+class c12 ""
+class c13 ""
+class c14 ""
+class c15 ""
+class c16 ""
+class c17 ""
+class c18 ""
+class c19 ""
+class c20 ""
+class c21 ""
+class c22 ""
+class c23 ""
+class c24 ""
+class c25 ""
+class c26 ""
+class c27 ""
+class c28 ""
+class c29 ""
+class c30 ""
+class c31 ""
+class c32 ""
+class c33 ""
+class c34 ""
+class c35 ""
+class c36 ""
+class c37 ""
+class c38 ""
+class c39 ""
+class c40 ""
+class c41 ""
+class c42 ""
+class c43 ""
+class c44 ""
+class c45 ""
+class c46 ""
+class c47 ""
+class c48 ""
+class c49 ""
+class c50 ""
+class c51 ""
+class c52 ""
+class c53 ""
+class c54 ""
+class c55 ""
+class c56 ""
+class c57 ""
+class c58 ""
+class c59 ""
+class c60 ""
+class c61 ""
+class c62 ""
+class c63 ""
+
+set x0 = c00 | c08 c01
+set x1 = c09 @x0 | "'" @x0 | c09 @x1 | "'" @x1 | "1" @x1
+set x2 = @x0 | c07 | "3" | "\x22" c07 | "^" c07 | "_" c07 | "]" | "i" @x0
+set x3 = c11 "4"
+set x4 = c02 | c01 @x4
+set x5 = "<" | "r" | ">" | "s" | "n" | ":" | "u" | "v" | "y" | "+" | "m" | "p" | "%" | "[" | "w" | "o" | "g" | "&" | "*" | "&" | "\x5c" | "x" | "(" | "t" | "?" | "z" | "!"
+set x6 = "@" | "c" | "," | "\x22" | "e" | "^" | "h" | "d" | "j" | "." | ";" | "f" | "i"
+set x7 = "^" | "_" | "!" | "0"
+set x8 = "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" | "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "w" | "x" | "y" | "z" | "*" | "%" | ":" | "<" | "?" | "+" | "[" | "!" | "&"
+
+result 1 when !s3 !s4 s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s25
+result 2 when !s4 then set s1 set s2 clear s7
+result 3
+result 4 when s2 !s3 !s4 s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s25
+result 5
+result 6 when !s2 !s3 !s4 s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s25
+result 7 when !s2 !s3 !s4 s21 !s22 !s23 !s24 !s25 then clear s1 clear s2 clear s7
+result 8 when !s1 !s2 !s4
+result 9 when s1 !s4 then clear s1 clear s7
+result 10 when s2 !s4
+result 11 when s2 !s4 then clear s5 clear s7
+result 12 when !s4 s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s25
+result 13 when !s4 s5 then clear s1 set s2 clear s7 clear s25
+result 14 when !s4 then clear s1 clear s2 clear s7
+result 15 then clear s1 clear s2 clear s5 clear s7 clear s25 clear s26 clear s27 clear s28
+result 16 when !s4 then clear s1 clear s2 set s5 clear s7
+result 17 when !s4 then clear s1 clear s2 clear s5 clear s7 clear s25 clear s26 clear s27 clear s28
+result 18
+result 19 then clear s1 clear s2 clear s7
+result 20 then set s4 set s6 clear s7
+result 21 when s4 s6 then set s4 clear s6 clear s7
+result 22 then clear s4 clear s7
+result 23 then set s4 clear s7
+result 24 when s4 then set s7
+result 25 when s4 s7
+result 26
+result 27 when s1 !s4 then set s1 set s2 clear s7
+result 28
+result 29 when !s8 then set s3 clear s7
+result 30 when !s8 then clear s3 clear s7
+result 31 then set s4 clear s6 clear s7
+result 32 when s4 then clear s7
+result 33 then set s4 set s5 clear s7
+result 34 when s4 then clear s5 clear s7
+result 35 when s4 s5 then clear s1 set s2 clear s7 clear s25
+result 36 when !s4 then clear s1 clear s7
+result 37 when !s4 then clear s1 set s5 clear s7
+result 38 when !s4 then clear s1 clear s5 clear s7 set s25 clear s26 clear s27 clear s28
+result 39 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s25
+result 40 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 then set s25
+result 41 when !s4 then clear s1 set s2 clear s7 clear s25
+result 42 when !s4 then clear s1 set s2 set s5 clear s7
+result 43 when !s4
+result 44 then clear s26 clear s27 clear s28
+result 45 then clear s26 clear s27 set s28
+result 46 then set s26 set s27 set s28
+result 47 when !s4 s26 s27 s28 then clear s1 set s2 clear s7 clear s25
+result 48 when !s4 !s21 !s22 s23 !s24 then clear s1 set s2 clear s7 clear s25
+result 49 then clear s1 clear s2 clear s5 clear s7 set s8 set s9
+result 50 then clear s1 clear s2 clear s5 clear s7 set s8 clear s9
+result 51 when s8 s9 then set s3 clear s5 clear s7 set s8 set s9 clear s21 clear s22 set s23 clear s24
+result 52 then set s3 clear s5 clear s7 set s8 clear s9 clear s21 clear s22 clear s23 set s24
+result 53 then clear s3 clear s5 clear s7 set s21 clear s22 clear s23 clear s24
+result 54 when s3 then set s3 clear s5 clear s7 set s8 set s9 clear s21 clear s22 set s23 clear s24
+result 55 when s3 then set s3 clear s5 clear s7 set s8 clear s9 clear s21 clear s22 clear s23 set s24
+result 56 then clear s5 clear s7 clear s8 clear s9 set s21 clear s22 clear s23 clear s24
+result 57 then set s21 clear s22 clear s23 clear s24
+result 58 then clear s21 clear s22 clear s23 set s24
+result 59 then clear s21 clear s22 set s23 clear s24
+result 60 then clear s21 clear s22 set s23 set s24
+result 61 then clear s21 set s22 clear s23 clear s24
+result 62 then clear s21 set s22 clear s23 set s24
+result 63 then clear s21 set s22 set s23 clear s24
+result 64 when !s3 !s4 s21 s22 s23 !s24 then clear s1 set s2 clear s7 clear s25
+result 65 when !s4 !s21 s22 s23 !s24 then clear s1 set s2 clear s7 clear s25
+result 66 when !s3 !s4 s21 !s22 !s23 !s24 !s25 !s26 !s27 s28 then clear s1 set s2 clear s7 clear s25
+result 67 when !s2 !s3 !s4 s21 !s22 !s23 !s24 !s25 !s26 !s27 s28 then clear s1 set s2 clear s7 clear s25
+result 68 then clear s21 clear s22 clear s23 clear s24
+result 69 when s25 then clear s1 set s2 clear s7 clear s25
+result 70 when !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 set s17 clear s18
+result 71 when !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s17 set s18
+result 72 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 set s17 clear s18
+result 73 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s17 set s18
+result 74 when s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 set s17 clear s18
+result 75 when s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s17 set s18
+result 76 when s2 !s3 !s4 s17 !s18 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 set s17 clear s18
+result 77 when s2 !s3 !s4 s17 !s18 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s17 set s18
+result 78 when s2 !s3 !s4 !s17 s18 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 set s17 clear s18
+result 79 when s2 !s3 !s4 !s17 s18 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s17 set s18
+result 80 when s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s25
+result 81 when s3 then clear s1 set s2 clear s7 clear s25
+result 82 when !s2 s3 !s4 then clear s1 set s2 clear s7 clear s25
+result 83 when !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s25
+result 84 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s25
+result 85 when !s4 !s21 !s22 !s23 !s24 !s25 then set s1 set s2 clear s7
+result 86 when !s2 !s4 !s21 !s22 !s23 !s24 !s25 then set s1 set s2 clear s7
+result 87 when !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 clear s7
+result 88 when s1 !s4 !s21 !s22 !s23 !s24 !s25
+result 89
+result 90 when !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s25
+result 91 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 set s20
+result 92 when !s4 s5 then clear s1 set s2 clear s7 clear s20
+result 93 when !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 set s30 clear s31 clear s32 clear s33
+result 94 when !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s30 set s31 clear s32 clear s33
+result 95 when !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s30 clear s31 set s32 clear s33
+result 96 when !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s30 clear s31 clear s32 set s33
+result 97 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 set s30 clear s31 clear s32 clear s33
+result 98 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s30 set s31 clear s32 clear s33
+result 99 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s30 clear s31 set s32 clear s33
+result 100 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s25
+result 101 when !s3 !s4 !s21 !s22 !s23 !s24 !s25 s30 then clear s1 set s2 clear s7 clear s25
+result 102 when !s3 !s4 !s21 !s22 !s23 !s24 !s25 s31 then clear s1 set s2 clear s7 clear s25
+result 103 when !s3 !s4 !s21 !s22 !s23 !s24 !s25 s32 then clear s1 set s2 clear s7 clear s25
+result 104 when !s3 !s4 !s21 !s22 !s23 !s24 !s25 s33 then clear s1 set s2 clear s7 clear s25
+result 105 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 s30 then clear s1 set s2 clear s7 clear s25
+result 106 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 s31 then clear s1 set s2 clear s7 clear s25
+result 107 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 s32 then clear s1 set s2 clear s7 clear s25
+result 108 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 s33 then clear s1 set s2 clear s7 clear s25
+result 109 when s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 s30 then clear s1 set s2 clear s7 clear s25
+result 110 when s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 s31 then clear s1 set s2 clear s7 clear s25
+result 111 when s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 s32 then clear s1 set s2 clear s7 clear s25
+result 112 when s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 s33 then clear s1 set s2 clear s7 clear s25
+result 113 when !s2 !s4 !s21 !s22 !s23 !s24 !s25 then set s17 clear s18
+result 114 when !s2 !s4 !s21 !s22 !s23 !s24 !s25 then clear s17 set s18
+result 115 when !s2 !s4 s17 then clear s17 set s18
+result 116 when s18 then clear s17 set s18
+result 117 when s18 then clear s17 clear s18
+result 118 when !s2 !s4 !s21 !s22 !s23 !s24 !s25 then set s25
+
+char "\x01" default "$" rules 1 then clear s1 clear s2 clear s7
+char "\x02" default "$" rules 2 then clear s1 clear s2 clear s7
+char "\x1b" default "$" rules 3 then clear s1 clear s2 clear s7
+char "\x1c" default "$" rules 6 then clear s1 clear s2 clear s7
+char "\x1d" default "$" rules 70 then clear s1 clear s2 clear s7
+char "\x1e" default "$" rules 71 then clear s1 clear s2 clear s7
+char "\x1f" default "$" rules 72 then clear s1 clear s2 clear s7
+char " " default " " rules 73 then clear s1 clear s2 clear s7
+char "!" default "!" rules 74
+char "\x22" default "\x22" rules 75
+char "#" default "#" rules 79
+char "$" default "$" rules 80
+char "%" default "%" rules 82
+char "&" default "&" rules 84
+char "'" default "'" rules 86
+char "(" default "(" rules 92
+char ")" default ")" rules 93
+char "*" default "*" rules 94
+char "+" default "+" rules 96
+char "," default "," rules 100
+char "-" default "-" rules 105
+char "." default "." rules 106
+char "/" default "/" rules 112
+char "0" default "0" rules 113
+char "1" default "1" rules 116
+char "2" default "2" rules 118
+char "3" default "3" rules 120
+char "4" default "4" rules 122
+char "5" default "5" rules 124
+char "6" default "6" rules 126
+char "7" default "7" rules 127
+char "8" default "8" rules 135
+char "9" default "9" rules 137
+char ":" default ":" rules 138
+char ";" default ";" rules 140
+char "<" default "<" rules 143
+char "=" default "=" rules 145
+char ">" default ">" rules 146
+char "?" default "?" rules 150
+char "@" default "@" rules 152
+char "[" default "[" rules 254
+char "\x5c" default "\x5c" rules 258
+char "]" default "]" rules 260
+char "^" default "^" rules 264
+char "_" default "_" rules 274
+char "`" default "@" rules 168
+char "a" default "a" rules 169 then clear s1 set s2 clear s7 clear s25
+char "b" default "b" rules 173 then clear s1 set s2 clear s7 clear s25
+char "c" default "c" rules 177 then clear s1 set s2 clear s7 clear s25
+char "d" default "d" rules 181 then clear s1 set s2 clear s7 clear s25
+char "e" default "e" rules 185 then clear s1 set s2 clear s7 clear s25
+char "f" default "f" rules 189 then clear s1 set s2 clear s7 clear s25
+char "g" default "g" rules 193 then clear s1 set s2 clear s7 clear s25
+char "h" default "h" rules 197 then clear s1 set s2 clear s7 clear s25
+char "i" default "i" rules 201 then clear s1 set s2 clear s7 clear s25
+char "j" default "j" rules 205 then clear s1 set s2 clear s7 clear s25
+char "k" default "k" rules 209 then clear s1 set s2 clear s7 clear s25
+char "l" default "l" rules 211 then clear s1 set s2 clear s7 clear s25
+char "m" default "m" rules 214 then clear s1 set s2 clear s7 clear s25
+char "n" default "n" rules 217 then clear s1 set s2 clear s7 clear s25
+char "o" default "o" rules 220 then clear s1 set s2 clear s7 clear s25
+char "p" default "p" rules 222 then clear s1 set s2 clear s7 clear s25
+char "q" default "q" rules 225 then clear s1 set s2 clear s7 clear s25
+char "r" default "r" rules 228 then clear s1 set s2 clear s7 clear s25
+char "s" default "s" rules 231 then clear s1 set s2 clear s7 clear s25
+char "t" default "t" rules 233 then clear s1 set s2 clear s7 clear s25
+char "u" default "u" rules 236 then clear s1 set s2 clear s7 clear s25
+char "v" default "v" rules 238 then clear s1 set s2 clear s7 clear s25
+char "w" default "w" rules 241 then clear s1 set s2 clear s7 clear s25
+char "x" default "x" rules 244 then clear s1 set s2 clear s7 clear s25
+char "y" default "y" rules 247 then clear s1 set s2 clear s7 clear s25
+char "z" default "z" rules 251 then clear s1 set s2 clear s7 clear s25
+char "\xec" default "-" rules 0
+
+node 1 "" none result 3 consume 1 -> "" end
+node 2 "" none result 3 consume 1 -> "" end
+node 3 "/" none result 3 consume 1 -> "\x1c" {copy} next 4
+node 4 "-" none result 3 consume 1 -> "\x1c" {copy} next 5
+node 5 "" none result 15 consume 1 -> "\x0f\x1c" {copy} end
+node 6 "ab" class c02 result 30 consume 1 -> "\x1c" {word} {copy} next 8
+node 7 "b" class c02 result 53 consume 1 -> "\x1c" {word} {copy} level 1
+node 8 "g1" class c02 result 29 consume 1 -> "\x1c" {word} {copy} next 13
+node 9 "1" class c02 result 51 consume 1 -> "\x1c" {word} {copy} next 11
+node 10 "" class c02 result 52 consume 1 -> "\x1c" {word} {copy} level 2
+node 11 "2" class c02 result 30 consume 1 -> "\x1c" {word} {copy} level 3
+node 12 "" class c02 result 53 consume 1 -> "\x1c" {word} {copy} level 1
+node 13 "fl-span" class c02 result 54 consume 1 -> "\x1c" {word} {copy} next 18
+node 14 "l-span" class c02 result 49 consume 1 -> "\x1c" {word} {copy} level 3
+node 15 "-lifg" class c02 result 55 consume 1 -> "\x1c" {word} {copy} level 4
+node 16 "lifg" class c02 result 50 consume 1 -> "\x1c" {word} {copy} next 17
+node 17 "none" class c02 result 56 consume 1 -> "\x1c" {word} {copy} level 1
+node 18 "in" class c02 result 29 consume 1 -> "\x1c" {word} {copy} next 21
+node 19 "n" class c02 result 51 consume 1 -> "\x1c" {word} {copy} level 3
+node 20 "" class c02 result 52 consume 1 -> "\x1c" {word} {copy} level 1
+node 21 "lnb" none result 3 consume 1 -> {style 2} {cmd c} {style 3} "\x1c" {word} {copy} {switch} next 37
+node 22 "ng~de" none result 62 consume 1 -> "\x1c" {word} {copy} level 3
+node 23 "g~en" none result 57 consume 1 -> "\x1c" {word} {copy} level 4
+node 24 "~es" none result 59 consume 1 -> "\x1c" {word} {copy} next 36
+node 25 "fi" class c02 result 58 consume 1 -> "\x1c" {word} {copy} next 27
+node 26 "r" none result 58 consume 1 -> "\x1c" {word} {copy} level 5
+node 27 "it" none result 61 consume 1 -> "\x1c" {word} {copy} next 28
+node 28 "la" none result 60 consume 1 -> "\x1c" {word} {copy} next 29
+node 29 "mao" class c02 result 63 consume 1 -> "\x1c" {word} {copy} next 32
+node 30 "i" class c02 result 63 consume 1 -> "\x1c" {word} {copy} next 31
+node 31 "s" none result 68 consume 1 -> "\x1c" {word} {copy} level 5
+node 32 "nl" class c02 result 58 consume 1 -> "\x1c" {word} {copy} next 33
+node 33 "pt" class c02 result 59 consume 1 -> "\x1c" {word} {copy} next 34
+node 34 "sv" class c02 result 58 consume 1 -> "\x1c" {word} {copy} level 6
+node 35 "w" none result 58 consume 1 -> "\x1c" {word} {copy} level 4
+node 36 "" none result 68 consume 1 -> "\x1c" {word} {copy} level 1
+node 37 "cbi" class c02 result 31 consume 1 -> "\x1c" {word} {copy} next 58
+node 38 "bn" class c02 result 31 consume 1 -> "\x1c" {word} {copy} next 53
+node 39 "-&" class c02 result 32 consume 1 -> "\x1c" {word} {copy} next 52
+node 40 "de" class c02 result 21 consume 1 -> "\x1c" {word} {copy} next 42
+node 41 "s" class c02 result 20 consume 1 -> "\x1c" {word} {copy} level 4
+node 42 "ee" class c02 result 32 consume 1 -> "\x1c" {word} {copy} next 44
+node 43 "s" class c02 result 23 consume 1 -> "\x1c" {word} {copy} level 4
+node 44 "ne" class c02 result 32 consume 1 -> "\x1c" {word} {copy} next 46
+node 45 "s" class c02 result 20 consume 1 -> "\x1c" {word} {copy} level 4
+node 46 "se" class c02 result 32 consume 1 -> "\x1c" {word} {copy} next 48
+node 47 "s" class c02 result 20 consume 1 -> "\x1c" {word} {copy} level 4
+node 48 "t1" class c02 result 32 consume 1 -> "\x1c" {word} {copy} next 50
+node 49 "2" class c02 result 32 consume 1 -> "\x1c" {word} {copy} level 4
+node 50 "ue" class c02 result 32 consume 1 -> "\x1c" {word} {copy} level 5
+node 51 "s" class c02 result 20 consume 1 -> "\x1c" {word} {copy} level 3
+node 52 "" class c02 result 31 consume 1 -> "\x1c" {word} {copy} level 2
+node 53 "s-off" class c02 result 15 consume 1 -> "\x1c" {word} {copy} next 55
+node 54 "" class c02 result 15 consume 1 -> "\x1c" {word} {copy} level 2
+node 55 "ap-invert" class c02 result 15 consume 1 -> "\x1c" {word} {copy} next 57
+node 56 "p-normal" class c02 result 15 consume 1 -> "\x1c" {word} {copy} level 2
+node 57 "z" class c02 result 31 consume 1 -> "\x1c" {word} {copy} level 1
+node 58 "txi" class c02 result 22 consume 1 -> "\x1c" {word} {copy} next 61
+node 59 "xn" class c02 result 22 consume 1 -> "\x1c" {word} {copy} level 3
+node 60 "" class c02 result 22 consume 1 -> "\x1c" {word} {copy} level 1
+node 61 "vrn~quo" class c02 result 46 consume 1 -> "\x1c" {word} {copy} next 64
+node 62 "rn~rlg" class c02 result 45 consume 1 -> "\x1c" {word} {copy} level 3
+node 63 "n" class c02 result 44 consume 1 -> "\x1c" {word} {copy} level 1
+node 64 "es" none result 117 consume 0 -> "\x0f\x1cfte~i\x1f" next 68
+node 65 "s" none result 15 consume 1 -> "\x0f\x1c" {word} {copy} {style 0} next 66
+node 66 "e" none result 117 consume 0 -> "\x1cfte~i\x1f" level 3
+node 67 "" none result 15 consume 1 -> "\x0f" {cmd a} "\x1c" {word} "\x1f" {cmd b} {style 1} level 1
+node 68 "<" none result 117 consume 0 -> "\x1cfte~i\x1f" next 69
+node 69 "" none result 15 consume 1 -> "\x0f\x1c" {word} {copy} end
+node 70 "" none result 3 consume 1 -> "\x1d" end
+node 71 "" none result 15 consume 1 -> "\x1e\x0f" end
+node 72 "" none result 3 consume 1 -> {cmd c} end
+node 73 "" none result 15 consume 1 -> "\x0f " end
+node 74 "" short-set @x0 result 36 consume 1 -> "!" end
+node 75 "6" none result 3 consume 2 -> "+" next 76
+node 76 "7" none result 3 consume 2 -> "=" next 77
+node 77 "9" short-set @x0 result 36 consume 2 -> "*" next 78
+node 78 "" short-set @x0 result 36 consume 1 -> "\x22" end
+node 79 "" class c09 result 2 consume 1 -> "" end
+node 80 "" none result 83 consume 1 -> "\x89" next 81
+node 81 "" short-set @x0 result 36 consume 1 -> "$" end
+node 82 "" none result 83 consume 1 -> "sh" next 83
+node 83 "" short-set @x0 result 36 consume 1 -> "%" end
+node 84 "" none result 83 consume 1 -> "\x87" next 85
+node 85 "" short-set @x0 result 36 consume 1 -> "&" end
+node 86 "''0" class c02 result 36 consume 4 -> "...\x22" next 91
+node 87 "'2" class c02 result 36 consume 4 -> "...;" level 3
+node 88 "7" short-set @x0 result 36 consume 4 -> "...)" next 89
+node 89 "8" class c02 result 36 consume 4 -> "...\x22" next 90
+node 90 "" none result 36 consume 3 -> "..." level 1
+node 91 "" none result 83 consume 1 -> "'" end
+node 92 "" short-set @x0 result 36 consume 1 -> "(" end
+node 93 "" short-set @x0 result 36 consume 1 -> ")" end
+node 94 "" none result 83 consume 1 -> "ch" next 95
+node 95 "" none result 83 consume 1 -> "ch" end
+node 96 "" none result 83 consume 1 -> "\xb2{" next 97
+node 97 "" none result 83 consume 1 -> "\xb2x" next 98
+node 98 "" none result 83 consume 1 -> "\xb8u" next 99
+node 99 "" none result 83 consume 1 -> "n\xe37" end
+node 100 "'" none result 38 consume 2 -> "\x0f" next 101
+node 101 "," none result 87 consume 2 -> "\x0e" next 103
+node 102 "" none result 37 consume 2 -> "\x0e" level 1
+node 103 "" none result 36 consume 1 -> "\x02" next 104
+node 104 "" none result 83 consume 1 -> "," end
+node 105 "" none result 36 consume 1 -> "-" end
+node 106 "0" none result 3 consume 2 -> "%" next 107
+node 107 "<" none result 3 consume 2 -> "[" next 108
+node 108 ">" none result 3 consume 2 -> "]" next 109
+node 109 "-" none result 3 consume 2 -> "_" next 110
+node 110 "" class c09 result 27 consume 1 -> "." next 111
+node 111 "" none result 27 consume 1 -> ".\x12" end
+node 112 "" none result 83 consume 1 -> "/" end
+node 113 "'" none result 83 consume 2 -> "`" next 114
+node 114 "" short-set @x0 result 87 consume 1 -> "\x22" next 115
+node 115 "" none result 83 consume 1 -> "\x22" end
+node 116 "" short-set @x0 result 43 consume 1 -> "," next 117
+node 117 "" class c09 result 27 consume 1 -> "," end
+node 118 "" none result 83 consume 1 -> "gb" next 119
+node 119 "" short-set @x0 result 36 consume 1 -> ";" end
+node 120 "" class c09 result 27 consume 1 -> ":" next 121
+node 121 "" short-set @x0 result 36 consume 1 -> ":" end
+node 122 "#" class c09 result 8 consume 1 -> "$" next 123
+node 123 "" short-set @x0 result 36 consume 1 -> "." end
+node 124 "" none result 83 consume 1 -> "\xb9i" next 125
+node 125 "" short-set @x0 result 36 consume 1 -> "?" end
+node 126 "" short-set @x0 result 36 consume 1 -> "!" end
+node 127 "''''" none result 36 consume 2 -> "]" next 131
+node 128 "''" none result 10 consume 1 -> ")" next 130
+node 129 "'" none result 36 consume 1 -> "(" level 2
+node 130 "" none result 36 consume 2 -> "]" level 1
+node 131 "" none result 8 consume 1 -> "(" next 132
+node 132 "" short-set @x0 result 36 consume 1 -> ")" next 133
+node 133 "" none result 9 consume 1 -> "(" next 134
+node 134 "" none result 36 consume 1 -> "(" end
+node 135 "" short-set @x0 result 36 consume 1 -> "?" next 136
+node 136 "" none result 36 consume 1 -> "\x22" end
+node 137 "" none result 83 consume 1 -> "\xb9{" end
+node 138 "" none result 83 consume 1 -> "\x96" next 139
+node 139 "" short-set @x0 result 36 consume 1 -> ":" end
+node 140 "q" none result 83 consume 2 -> "q" next 142
+node 141 "" none result 83 consume 2 -> "q" level 1
+node 142 "" none result 19 consume 1 -> "" end
+node 143 "" none result 83 consume 1 -> "gh" next 144
+node 144 "" none result 36 consume 1 -> "<" end
+node 145 "" short-set @x0 result 36 consume 1 -> "=" end
+node 146 "" none result 83 consume 1 -> "\x84" next 147
+node 147 "" none result 83 consume 1 -> "\x91" next 148
+node 148 "" none result 83 consume 1 -> "\xf5c" next 149
+node 149 "" short-set @x0 result 36 consume 1 -> ">" end
+node 150 "" none result 83 consume 1 -> "\x93" next 151
+node 151 "" short-set @x0 result 36 consume 1 -> "?" end
+node 152 "\x225" none result 3 consume 3 -> "^" next 154
+node 153 "a" none result 3 consume 3 -> "@" level 1
+node 154 "&" none result 3 consume 2 -> "&" next 155
+node 155 "5" none result 83 consume 2 -> "\xb9i\xe30" next 156
+node 156 "9" none result 83 consume 2 -> "\xb9{\xe30" next 157
+node 157 "<" none result 3 consume 2 -> "<" next 158
+node 158 "a" none result 83 consume 2 -> "\x85" next 159
+node 159 "e" none result 83 consume 2 -> "\x8a" next 160
+node 160 "i" none result 83 consume 2 -> "\x8d" next 161
+node 161 "o" none result 83 consume 2 -> "\x95" next 162
+node 162 "s" none result 3 consume 2 -> "$" next 163
+node 163 "u" none result 83 consume 2 -> "\x97" next 164
+node 164 "[" none result 83 consume 2 -> "\xb9}\xe30" next 165
+node 165 "\x5c" none result 83 consume 2 -> "\xb9\x95\xe30" next 166
+node 166 "" short-set @x0 result 36 consume 1 -> "@" next 167
+node 167 "" none result 36 consume 1 -> "@" end
+node 168 "" none result 83 consume 1 -> "`" end
+node 169 "" class c09 result 27 consume 1 -> "1" next 170
+node 170 "" none result 27 consume 1 -> "1\x12" next 171
+node 171 "" none result 83 consume 1 -> "a" next 172
+node 172 "" none result 81 consume 1 -> "a" end
+node 173 "" class c09 result 27 consume 1 -> "2" next 174
+node 174 "" none result 27 consume 1 -> "2\x12" next 175
+node 175 "" none result 83 consume 1 -> "b" next 176
+node 176 "" none result 81 consume 1 -> "b" end
+node 177 "" class c09 result 27 consume 1 -> "3" next 178
+node 178 "" none result 27 consume 1 -> "3\x12" next 179
+node 179 "" none result 83 consume 1 -> "c" next 180
+node 180 "" none result 81 consume 1 -> "c" end
+node 181 "" class c09 result 27 consume 1 -> "4" next 182
+node 182 "" none result 27 consume 1 -> "4\x12" next 183
+node 183 "" none result 83 consume 1 -> "d" next 184
+node 184 "" none result 81 consume 1 -> "d" end
+node 185 "" class c09 result 27 consume 1 -> "5" next 186
+node 186 "" none result 27 consume 1 -> "5\x12" next 187
+node 187 "" none result 83 consume 1 -> "e" next 188
+node 188 "" none result 81 consume 1 -> "e" end
+node 189 "" class c09 result 27 consume 1 -> "6" next 190
+node 190 "" none result 27 consume 1 -> "6\x12" next 191
+node 191 "" none result 83 consume 1 -> "f" next 192
+node 192 "" none result 81 consume 1 -> "f" end
+node 193 "" class c09 result 27 consume 1 -> "7" next 194
+node 194 "" none result 27 consume 1 -> "7\x12" next 195
+node 195 "" none result 83 consume 1 -> "g" next 196
+node 196 "" none result 81 consume 1 -> "g" end
+node 197 "" class c09 result 27 consume 1 -> "8" next 198
+node 198 "" none result 27 consume 1 -> "8\x12" next 199
+node 199 "" none result 83 consume 1 -> "h" next 200
+node 200 "" none result 81 consume 1 -> "h" end
+node 201 "" class c09 result 27 consume 1 -> "9" next 202
+node 202 "" none result 27 consume 1 -> "9\x12" next 203
+node 203 "" none result 83 consume 1 -> "i" next 204
+node 204 "" none result 81 consume 1 -> "i" end
+node 205 "" class c09 result 27 consume 1 -> "0" next 206
+node 206 "" none result 27 consume 1 -> "0\x12" next 207
+node 207 "" none result 83 consume 1 -> "j" next 208
+node 208 "" none result 81 consume 1 -> "j" end
+node 209 "" none result 83 consume 1 -> "k" next 210
+node 210 "" none result 81 consume 1 -> "k" end
+node 211 "" none result 83 consume 1 -> "l" next 212
+node 212 "" none result 83 consume 1 -> "l" next 213
+node 213 "" none result 81 consume 1 -> "l" end
+node 214 "" none result 83 consume 1 -> "m" next 215
+node 215 "" none result 83 consume 1 -> "m" next 216
+node 216 "" none result 81 consume 1 -> "m" end
+node 217 "" none result 83 consume 1 -> "n" next 218
+node 218 "" none result 83 consume 1 -> "n" next 219
+node 219 "" none result 81 consume 1 -> "n" end
+node 220 "" none result 83 consume 1 -> "o" next 221
+node 221 "" none result 81 consume 1 -> "o" end
+node 222 "" none result 83 consume 1 -> "p" next 223
+node 223 "" none result 83 consume 1 -> "p" next 224
+node 224 "" none result 81 consume 1 -> "p" end
+node 225 "" none result 83 consume 1 -> "kw" next 226
+node 226 "" none result 83 consume 1 -> "q" next 227
+node 227 "" none result 81 consume 1 -> "q" end
+node 228 "" none result 83 consume 1 -> "r" next 229
+node 229 "" none result 83 consume 1 -> "r" next 230
+node 230 "" none result 81 consume 1 -> "r" end
+node 231 "" none result 83 consume 1 -> "s" next 232
+node 232 "" none result 81 consume 1 -> "s" end
+node 233 "" none result 83 consume 1 -> "t" next 234
+node 234 "" none result 83 consume 1 -> "t" next 235
+node 235 "" none result 81 consume 1 -> "t" end
+node 236 "" none result 83 consume 1 -> "u" next 237
+node 237 "" none result 81 consume 1 -> "u" end
+node 238 "" none result 83 consume 1 -> "v" next 239
+node 239 "" none result 83 consume 1 -> "v" next 240
+node 240 "" none result 81 consume 1 -> "v" end
+node 241 "" none result 83 consume 1 -> "w" next 242
+node 242 "" none result 83 consume 1 -> "w" next 243
+node 243 "" none result 81 consume 1 -> "w" end
+node 244 "" none result 83 consume 1 -> "x" next 245
+node 245 "" none result 83 consume 1 -> "x" next 246
+node 246 "" none result 81 consume 1 -> "x" end
+node 247 "" none result 83 consume 1 -> "y" next 248
+node 248 "" none result 83 consume 1 -> "y" next 249
+node 249 "" none result 83 consume 1 -> "y" next 250
+node 250 "" none result 81 consume 1 -> "y" end
+node 251 "" none result 83 consume 1 -> "z" next 252
+node 252 "" none result 83 consume 1 -> "z" next 253
+node 253 "" none result 81 consume 1 -> "z" end
+node 254 "" none result 83 consume 1 -> "\xb9}" next 255
+node 255 "" none result 83 consume 1 -> "\xb9}" next 256
+node 256 "" none result 83 consume 1 -> "\xf5u" next 257
+node 257 "" short-set @x0 result 36 consume 1 -> "[" end
+node 258 "" none result 83 consume 1 -> "\xb9\x95" next 259
+node 259 "" short-set @x0 result 36 consume 1 -> "\x5c" end
+node 260 "" none result 83 consume 1 -> "\x8b" next 261
+node 261 "" none result 83 consume 1 -> "\xa4" next 262
+node 262 "" none result 83 consume 1 -> "]" next 263
+node 263 "" short-set @x0 result 36 consume 1 -> "]" end
+node 264 "5" none result 83 consume 2 -> "\xb9i\xe33" next 265
+node 265 "9" none result 83 consume 2 -> "\xb9{\xe33" next 266
+node 266 "a" none result 83 consume 2 -> "\xb21" next 267
+node 267 "e" none result 83 consume 2 -> "\xb2C" next 268
+node 268 "i" none result 83 consume 2 -> "\xb2[" next 269
+node 269 "o" none result 83 consume 2 -> "\xb2}" next 270
+node 270 "u" none result 83 consume 2 -> "\xb2\x9b" next 271
+node 271 "[" none result 83 consume 2 -> "\xb9}\xe33" next 272
+node 272 "\x5c" none result 83 consume 2 -> "\xb9\x95\xe33" next 273
+node 273 "" short-set @x0 result 36 consume 1 -> "^" end
+node 274 "\x22\x5c" none result 3 consume 3 -> "|" next 275
+node 275 "*" none result 3 consume 2 -> "\x5c" next 276
+node 276 "/" none result 3 consume 2 -> "/" next 277
+node 277 "5" none result 83 consume 2 -> "\xb9i\xe31" next 278
+node 278 "9" none result 83 consume 2 -> "\xb9{\xe31" next 279
+node 279 "<" none result 3 consume 2 -> "{" next 280
+node 280 ">" none result 3 consume 2 -> "}" next 282
+node 281 "" none result 83 consume 2 -> "\xb3\x93" level 1
+node 282 "?" none result 3 consume 2 -> "#" next 283
+node 283 "a" none result 83 consume 2 -> "\xa0" next 284
+node 284 "e" none result 83 consume 2 -> "\x82" next 285
+node 285 "i" none result 83 consume 2 -> "\xa1" next 286
+node 286 "o" none result 83 consume 2 -> "\xa2" next 287
+node 287 "u" none result 83 consume 2 -> "\xa3" next 288
+node 288 "[" none result 83 consume 2 -> "\xb9}\xe31" next 289
+node 289 "\x5c" none result 83 consume 2 -> "\xb9\x95\xe31" end
+
+scan input-mode 0
+scan trailing-blanks 1
+scan flag 28
+scan full-stop 46
+scan newline 1
+scan form-feed "\x15"
+scan paragraph "p"
+scan new-paragraphs 0
+scan rejoin-hyphens 0
+scan spaces 0
+scan tab-width 1
+scan ninmod 0
+scan fold-codes 1
+scan fold-words 1
+scan capital-cessation 0
+scan map-braces 0
+scan spare 0
+scan passage-ends 0
+scan nxsls 0
+scan format-word 28
+scan format-word2 27
+scan capital-sign 0
+scan capital-end 0
+scan address-switching 0
+scan mode-words "running" "spacing" "marking" "as-is" "compress" "sentence" "auto-tab" "par" "no-par" "par-skp" "par-ind"
+scan passage-words 0
+scan doubled-adjectives 0

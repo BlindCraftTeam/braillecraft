@@ -1,0 +1,1006 @@
+# The rules of idaacb.btb and gendxb.sct, recreated as BrailleMaker table source.
+table "Indonesian - basic, braille to print"
+default-char 42
+raw 0
+writer 2
+output 4
+tail-extra 0 0 0
+unknown 0
+
+state s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 s11 s12 s13 s14 s15 s16
+state s17 s18 s19 s20 s21 s22 s23 s24 s25 s26 s27 s28 s29 s30 s31 s32
+state s33 s34 s35 s36 s37 s38 s39 s40 s41 s42 s43 s44 s45 s46 s47 s48
+state s49 s50 s51 s52 s53 s54 s55 s56 s57 s58 s59 s60 s61 s62 s63 s64
+
+class c00 "\x01\x02\x1b\x1c\x1d\x1e\x1f -\xec"
+class c01 "\x01\x02\x1b\x1c\x1d\x1e\x1f '-01234678\xec"
+class c02 "\x1b\x1c\x1d\x1e\x1f `"
+class c03 "!$()59]aeiou"
+class c04 "!\x22$%&()*+,./0123456789:;<=>?[\x5c]^_abcdefghijklmnopqrstuvwxyz"
+class c05 "!&()="
+class c06 "\x22',-0123456789;\xec"
+class c07 "%&*+/0246:<=>?[\x5cbcdfghjklmnpqrstvwxyz"
+class c08 "-01234678\xec"
+class c09 ".abcdefghij"
+class c10 "47"
+class c11 "abcdefghijklmnopqrstuvwxyz"
+class c12 ""
+class c13 ""
+class c14 ""
+class c15 ""
+class c16 ""
+class c17 ""
+class c18 ""
+class c19 ""
+class c20 ""
+class c21 ""
+class c22 ""
+class c23 ""
+class c24 ""
+class c25 ""
+class c26 ""
+class c27 ""
+class c28 ""
+class c29 ""
+class c30 ""
+class c31 ""
+class c32 ""
+class c33 ""
+class c34 ""
+class c35 ""
+class c36 ""
+class c37 ""
+class c38 ""
+class c39 ""
+class c40 ""
+class c41 ""
+class c42 ""
+class c43 ""
+class c44 ""
+class c45 ""
+class c46 ""
+class c47 ""
+class c48 ""
+class c49 ""
+class c50 ""
+class c51 ""
+class c52 ""
+class c53 ""
+class c54 ""
+class c55 ""
+class c56 ""
+class c57 ""
+class c58 ""
+class c59 ""
+class c60 ""
+class c61 ""
+class c62 ""
+class c63 ""
+
+set x0 = c00 | c08 c01
+set x1 = c09 @x0 | "'" @x0 | c09 @x1 | "'" @x1 | "1" @x1
+set x2 = @x0 | c07 | "3" | "\x22" c07 | "^" c07 | "_" c07 | "]" | "i" @x0
+set x3 = c11 "4"
+set x4 = c02 | c01 @x4
+
+result 1 when !s3 !s4 s21 !s22 !s23 !s24 then clear s1 set s2 clear s7
+result 2 when !s4 then set s1 set s2 clear s7
+result 3
+result 4 when s2 !s3 !s4 s21 !s22 !s23 !s24 then clear s1 set s2 clear s7
+result 5
+result 6 when !s2 !s3 !s4 s21 !s22 !s23 !s24 then clear s1 set s2 clear s7
+result 7 when !s2 !s3 !s4 s21 !s22 !s23 !s24 then clear s1 clear s2 clear s7
+result 8 when !s1 !s2 !s4
+result 9 when s1 !s4 then clear s1 clear s7
+result 10 when s2 !s4
+result 11 when s2 !s4 then clear s5 clear s7
+result 12 when !s4 s21 !s22 !s23 !s24 then clear s1 set s2 clear s7
+result 13
+result 14 when !s4 then clear s1 clear s2 clear s7
+result 15 then clear s1 clear s2 clear s5 clear s7
+result 16 when !s4 then clear s1 clear s2 set s5 clear s7
+result 17 when !s4 then clear s1 clear s2 clear s5 clear s7
+result 18
+result 19
+result 20 then set s4 set s6 clear s7
+result 21 when s4 s6 then set s4 clear s6 clear s7
+result 22 then clear s4 clear s7
+result 23 then set s4 clear s7
+result 24 when s4 then set s7
+result 25 when s4 s7
+result 26
+result 27 when s1 !s4 then set s1 set s2 clear s7
+result 28
+result 29 when !s8 then set s3 clear s7
+result 30 when !s8 then clear s3 clear s7
+result 31 then set s4 clear s6 clear s7
+result 32 when s4 then clear s7
+result 33 then set s4 set s5 clear s7
+result 34 when s4 then clear s5 clear s7
+result 35 when s4 s5 then clear s1 set s2 clear s7
+result 36 when !s4 then clear s1 clear s7
+result 37 when !s4 then clear s1 set s5 clear s7
+result 38 when !s4 then clear s1 clear s5 clear s7
+result 39
+result 40
+result 41 when !s4 then clear s1 set s2 clear s7
+result 42 when !s4 then clear s1 set s2 set s5 clear s7
+result 43 when !s4
+result 44 then clear s26 clear s27 clear s28
+result 45 then clear s26 clear s27 set s28
+result 46 then set s26 set s27 set s28
+result 47 when !s4 s26 s27 s28 then clear s1 set s2 clear s7
+result 48 when !s4 !s21 !s22 s23 !s24 then clear s1 set s2 clear s7
+result 49 then clear s1 clear s2 clear s5 clear s7 set s8 set s9
+result 50 then clear s1 clear s2 clear s5 clear s7 set s8 clear s9
+result 51 when s8 s9 then set s3 clear s5 clear s7 set s8 set s9 clear s21 clear s22 set s23 clear s24
+result 52 then set s3 clear s5 clear s7 set s8 clear s9 clear s21 clear s22 clear s23 set s24
+result 53 then clear s3 clear s5 clear s7 set s21 clear s22 clear s23 clear s24
+result 54 when s3 then set s3 clear s5 clear s7 set s8 set s9 clear s21 clear s22 set s23 clear s24
+result 55 when s3 then set s3 clear s5 clear s7 set s8 clear s9 clear s21 clear s22 clear s23 set s24
+result 56 then clear s5 clear s7 clear s8 clear s9 set s21 clear s22 clear s23 clear s24
+result 57 then set s21 clear s22 clear s23 clear s24
+result 58 then clear s21 clear s22 clear s23 set s24
+result 59 then clear s21 clear s22 set s23 clear s24
+result 60 then clear s21 clear s22 set s23 set s24
+result 61 then clear s21 set s22 clear s23 clear s24
+result 62 then clear s21 set s22 clear s23 set s24
+result 63 then clear s21 set s22 set s23 clear s24
+result 64 when !s3 !s4 s21 s22 s23 !s24 then clear s1 set s2 clear s7
+result 65 when !s4 !s21 s22 s23 !s24 then clear s1 set s2 clear s7
+result 66 when !s3 !s4 s21 !s22 !s23 !s24 !s26 !s27 s28 then clear s1 set s2 clear s7
+result 67 when !s2 !s3 !s4 s21 !s22 !s23 !s24 !s26 !s27 s28 then clear s1 set s2 clear s7
+result 68 then clear s21 clear s22 clear s23 clear s24
+result 69
+result 70
+result 71
+result 72
+result 73
+result 74
+result 75
+result 76
+result 77
+result 78
+result 79
+result 80 when s2 !s3 !s4 !s21 !s22 !s23 !s24 then clear s1 set s2 clear s7
+result 81
+result 82
+result 83 when !s3 !s4 !s21 !s22 !s23 !s24 then clear s1 set s2 clear s7
+result 84 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 then clear s1 set s2 clear s7
+result 85 when !s4 !s21 !s22 !s23 !s24 then set s1 set s2 clear s7
+result 86 when !s2 !s4 !s21 !s22 !s23 !s24 then set s1 set s2 clear s7
+result 87 when !s4 !s21 !s22 !s23 !s24 then clear s1 clear s7
+result 88 when s1 !s4 !s21 !s22 !s23 !s24
+result 89
+result 90 when !s4 !s21 !s22 !s23 !s24 then clear s1 set s2 clear s7
+
+char "\x01" default "$" rules 1 then clear s1 clear s2 clear s7
+char "\x02" default "$" rules 2 then clear s1 clear s2 clear s7
+char "\x1b" default "$" rules 3 then clear s1 clear s2 clear s7
+char "\x1c" default "$" rules 6 then clear s1 clear s2 clear s7
+char "\x1d" default "$" rules 71 then clear s1 clear s2 clear s7
+char "\x1e" default "$" rules 72 then clear s1 clear s2 clear s7
+char "\x1f" default "$" rules 73 then clear s1 clear s2 clear s7
+char " " default " " rules 74 then clear s1 clear s2 clear s7
+char "!" default "!" rules 75
+char "\x22" default "\x22" rules 77
+char "#" default "#" rules 112
+char "$" default "$" rules 129
+char "%" default "%" rules 131
+char "&" default "&" rules 133
+char "'" default "'" rules 137
+char "(" default "(" rules 143
+char ")" default ")" rules 191
+char "*" default "*" rules 193
+char "+" default "+" rules 195
+char "," default "," rules 197
+char "-" default "-" rules 201
+char "." default "." rules 202
+char "/" default "/" rules 205
+char "0" default "0" rules 206
+char "1" default "1" rules 209
+char "2" default "2" rules 212
+char "3" default "3" rules 215
+char "4" default "4" rules 219
+char "5" default "5" rules 222
+char "6" default "6" rules 226
+char "7" default "7" rules 227
+char "8" default "8" rules 282
+char "9" default "9" rules 332
+char ":" default ":" rules 333
+char ";" default ";" rules 335
+char "<" default "<" rules 336
+char "=" default "=" rules 337
+char ">" default ">" rules 339
+char "?" default "?" rules 388
+char "@" default "@" rules 391
+char "[" default "[" rules 639
+char "\x5c" default "\x5c" rules 641
+char "]" default "]" rules 645
+char "^" default "^" rules 647
+char "_" default "_" rules 679
+char "`" default "@" rules 421
+char "a" default "a" rules 422 then clear s1 set s2 clear s7
+char "b" default "b" rules 431 then clear s1 set s2 clear s7
+char "c" default "c" rules 452 then clear s1 set s2 clear s7
+char "d" default "d" rules 460 then clear s1 set s2 clear s7
+char "e" default "e" rules 472 then clear s1 set s2 clear s7
+char "f" default "f" rules 476 then clear s1 set s2 clear s7
+char "g" default "g" rules 480 then clear s1 set s2 clear s7
+char "h" default "h" rules 494 then clear s1 set s2 clear s7
+char "i" default "i" rules 506 then clear s1 set s2 clear s7
+char "j" default "j" rules 514 then clear s1 set s2 clear s7
+char "k" default "k" rules 525 then clear s1 set s2 clear s7
+char "l" default "l" rules 536 then clear s1 set s2 clear s7
+char "m" default "m" rules 547 then clear s1 set s2 clear s7
+char "n" default "n" rules 560 then clear s1 set s2 clear s7
+char "o" default "o" rules 566 then clear s1 set s2 clear s7
+char "p" default "p" rules 569 then clear s1 set s2 clear s7
+char "q" default "q" rules 584 then clear s1 set s2 clear s7
+char "r" default "r" rules 586 then clear s1 set s2 clear s7
+char "s" default "s" rules 593 then clear s1 set s2 clear s7
+char "t" default "t" rules 610 then clear s1 set s2 clear s7
+char "u" default "u" rules 623 then clear s1 set s2 clear s7
+char "v" default "v" rules 627 then clear s1 set s2 clear s7
+char "w" default "w" rules 629 then clear s1 set s2 clear s7
+char "x" default "x" rules 633 then clear s1 set s2 clear s7
+char "y" default "y" rules 635 then clear s1 set s2 clear s7
+char "z" default "z" rules 637 then clear s1 set s2 clear s7
+char "\xec" default "-" rules 0
+
+node 1 "" none result 3 consume 1 -> "" end
+node 2 "" none result 3 consume 1 -> "" end
+node 3 "/" none result 3 consume 1 -> "\x1c" {copy} next 4
+node 4 "-" none result 3 consume 1 -> "\x1c" {copy} next 5
+node 5 "" none result 15 consume 1 -> "\x1c" {copy} end
+node 6 "ab" class c02 result 30 consume 1 -> "\x1c" {word} {copy} next 8
+node 7 "b" class c02 result 53 consume 1 -> "\x1c" {word} {copy} level 1
+node 8 "bqtbi~bcd" class c02 result 3 consume 10 -> "---" {drop-space} next 12
+node 9 "qtbi~lng" class c02 result 3 consume 10 -> "id" {drop-space} level 3
+node 10 "tbi~lnn" class c02 result 3 consume 10 -> "ind" {drop-space} level 4
+node 11 "bi~qly" class c02 result 3 consume 10 -> "x" {drop-space} level 1
+node 12 "g1" class c02 result 29 consume 1 -> "\x1c" {word} {copy} next 17
+node 13 "1" class c02 result 51 consume 1 -> "\x1c" {word} {copy} next 15
+node 14 "" class c02 result 52 consume 1 -> "\x1c" {word} {copy} level 2
+node 15 "2" class c02 result 30 consume 1 -> "\x1c" {word} {copy} level 3
+node 16 "" class c02 result 53 consume 1 -> "\x1c" {word} {copy} level 1
+node 17 "fl-span" class c02 result 54 consume 1 -> "\x1c" {word} {copy} next 22
+node 18 "l-span" class c02 result 49 consume 1 -> "\x1c" {word} {copy} level 3
+node 19 "-lifg" class c02 result 55 consume 1 -> "\x1c" {word} {copy} level 4
+node 20 "lifg" class c02 result 50 consume 1 -> "\x1c" {word} {copy} next 21
+node 21 "none" class c02 result 56 consume 1 -> "\x1c" {word} {copy} level 1
+node 22 "in" class c02 result 29 consume 1 -> "\x1c" {word} {copy} next 25
+node 23 "n" class c02 result 51 consume 1 -> "\x1c" {word} {copy} level 3
+node 24 "" class c02 result 52 consume 1 -> "\x1c" {word} {copy} level 1
+node 25 "lnb" none result 3 consume 1 -> {style 2} {cmd c} {style 3} "\x1c" {word} {copy} {switch} next 41
+node 26 "ng~de" none result 62 consume 1 -> "\x1c" {word} {copy} level 3
+node 27 "g~en" none result 57 consume 1 -> "\x1c" {word} {copy} level 4
+node 28 "~es" none result 59 consume 1 -> "\x1c" {word} {copy} next 40
+node 29 "fi" class c02 result 58 consume 1 -> "\x1c" {word} {copy} next 31
+node 30 "r" none result 58 consume 1 -> "\x1c" {word} {copy} level 5
+node 31 "it" none result 61 consume 1 -> "\x1c" {word} {copy} next 32
+node 32 "la" none result 60 consume 1 -> "\x1c" {word} {copy} next 33
+node 33 "mao" class c02 result 63 consume 1 -> "\x1c" {word} {copy} next 36
+node 34 "i" class c02 result 63 consume 1 -> "\x1c" {word} {copy} next 35
+node 35 "s" none result 68 consume 1 -> "\x1c" {word} {copy} level 5
+node 36 "nl" class c02 result 58 consume 1 -> "\x1c" {word} {copy} next 37
+node 37 "pt" class c02 result 59 consume 1 -> "\x1c" {word} {copy} next 38
+node 38 "sv" class c02 result 58 consume 1 -> "\x1c" {word} {copy} level 6
+node 39 "w" none result 58 consume 1 -> "\x1c" {word} {copy} level 4
+node 40 "" none result 68 consume 1 -> "\x1c" {word} {copy} level 1
+node 41 "cbi" class c02 result 31 consume 1 -> "\x1c" {word} {copy} next 62
+node 42 "bn" class c02 result 31 consume 1 -> "\x1c" {word} {copy} next 57
+node 43 "-&" class c02 result 32 consume 1 -> "\x1c" {word} {copy} next 56
+node 44 "de" class c02 result 21 consume 1 -> "\x1c" {word} {copy} next 46
+node 45 "s" class c02 result 20 consume 1 -> "\x1c" {word} {copy} level 4
+node 46 "ee" class c02 result 32 consume 1 -> "\x1c" {word} {copy} next 48
+node 47 "s" class c02 result 23 consume 1 -> "\x1c" {word} {copy} level 4
+node 48 "ne" class c02 result 32 consume 1 -> "\x1c" {word} {copy} next 50
+node 49 "s" class c02 result 20 consume 1 -> "\x1c" {word} {copy} level 4
+node 50 "se" class c02 result 32 consume 1 -> "\x1c" {word} {copy} next 52
+node 51 "s" class c02 result 20 consume 1 -> "\x1c" {word} {copy} level 4
+node 52 "t1" class c02 result 32 consume 1 -> "\x1c" {word} {copy} next 54
+node 53 "2" class c02 result 32 consume 1 -> "\x1c" {word} {copy} level 4
+node 54 "ue" class c02 result 32 consume 1 -> "\x1c" {word} {copy} level 5
+node 55 "s" class c02 result 20 consume 1 -> "\x1c" {word} {copy} level 3
+node 56 "" class c02 result 31 consume 1 -> "\x1c" {word} {copy} level 2
+node 57 "s-off" class c02 result 15 consume 1 -> "\x1c" {word} {copy} next 59
+node 58 "" class c02 result 15 consume 1 -> "\x1c" {word} {copy} level 2
+node 59 "ap-invert" class c02 result 15 consume 1 -> "\x1c" {word} {copy} next 61
+node 60 "p-normal" class c02 result 15 consume 1 -> "\x1c" {word} {copy} level 2
+node 61 "z" class c02 result 31 consume 1 -> "\x1c" {word} {copy} level 1
+node 62 "txi" class c02 result 22 consume 1 -> "\x1c" {word} {copy} next 65
+node 63 "xn" class c02 result 22 consume 1 -> "\x1c" {word} {copy} level 3
+node 64 "" class c02 result 22 consume 1 -> "\x1c" {word} {copy} level 1
+node 65 "vrn~quo" class c02 result 46 consume 1 -> "\x1c" {word} {copy} next 68
+node 66 "rn~rlg" class c02 result 45 consume 1 -> "\x1c" {word} {copy} level 3
+node 67 "n" class c02 result 44 consume 1 -> "\x1c" {word} {copy} level 1
+node 68 "es" none result 15 consume 1 -> "\x1c" {word} {copy} {style 0} next 70
+node 69 "e" none result 15 consume 1 -> {cmd a} "\x1c" {word} "\x1f" {cmd b} {style 1} level 1
+node 70 "" none result 15 consume 1 -> "\x1c" {word} {copy} end
+node 71 "" none result 3 consume 1 -> "\x1d" end
+node 72 "" none result 15 consume 1 -> "\x1e" end
+node 73 "" none result 3 consume 1 -> {cmd c} end
+node 74 "" none result 15 consume 1 -> "\x0f " end
+node 75 "" short-set @x4 result 84 consume 1 -> "nyata" next 76
+node 76 "" none result 83 consume 1 -> "nya" end
+node 77 "$" none result 83 consume 2 -> "nyanyi" next 78
+node 78 "%" none result 83 consume 2 -> "muka" next 79
+node 79 "&" none result 83 consume 2 -> "sebab" next 80
+node 80 ")" none result 83 consume 2 -> "kuasa" next 81
+node 81 "+" none result 83 consume 2 -> "suara" next 82
+node 82 "/" none result 83 consume 2 -> "diri" next 83
+node 83 ":" none result 83 consume 2 -> "sama" next 84
+node 84 "=" none result 83 consume 2 -> "tinggal" next 85
+node 85 ">" none result 83 consume 2 -> "antara" next 86
+node 86 "?" none result 83 consume 2 -> "kerja" next 87
+node 87 "b" none result 83 consume 2 -> "baik" next 88
+node 88 "c" none result 83 consume 2 -> "capai" next 89
+node 89 "d" none result 83 consume 2 -> "dalam" next 90
+node 90 "e" none result 83 consume 2 -> "erat" next 91
+node 91 "f" none result 83 consume 2 -> "fakta" next 92
+node 92 "g" none result 83 consume 2 -> "ganti" next 93
+node 93 "h" none result 83 consume 2 -> "hari" next 94
+node 94 "i" none result 83 consume 2 -> "ikat" next 95
+node 95 "j" none result 83 consume 2 -> "jalan" next 96
+node 96 "k" none result 83 consume 2 -> "kali" next 97
+node 97 "l" none result 83 consume 2 -> "lain" next 98
+node 98 "m" none result 83 consume 2 -> "mana" next 99
+node 99 "n" none result 83 consume 2 -> "naik" next 100
+node 100 "o" none result 83 consume 2 -> "orang" next 101
+node 101 "q" none result 83 consume 2 -> "kuantitas" next 102
+node 102 "r" none result 83 consume 2 -> "rakyat" next 103
+node 103 "s" none result 83 consume 2 -> "sangat" next 104
+node 104 "t" none result 83 consume 2 -> "tahu" next 105
+node 105 "u" none result 83 consume 2 -> "ubah" next 106
+node 106 "v" none result 83 consume 2 -> "variasi" next 107
+node 107 "w" none result 83 consume 2 -> "walau" next 108
+node 108 "x" none result 83 consume 2 -> "laksana" next 109
+node 109 "y" none result 83 consume 2 -> "yakin" next 110
+node 110 "z" none result 83 consume 2 -> "zakat" next 111
+node 111 "\x5c" none result 83 consume 2 -> "terang" end
+node 112 "(" none result 83 consume 2 -> "sedangkan" next 113
+node 113 ")" none result 83 consume 2 -> "sekunder" next 114
+node 114 "*" none result 83 consume 2 -> "selesai" next 115
+node 115 "+" none result 83 consume 2 -> "semua" next 116
+node 116 "/" none result 83 consume 2 -> "sendiri" next 117
+node 117 "=" none result 83 consume 2 -> "sehingga" next 118
+node 118 "k" none result 83 consume 2 -> "sekali" next 119
+node 119 "l" none result 83 consume 2 -> "selalu" next 120
+node 120 "m" none result 83 consume 2 -> "sebelum" next 121
+node 121 "n" none result 83 consume 2 -> "senang" next 122
+node 122 "p" none result 83 consume 2 -> "seperti" next 123
+node 123 "r" none result 83 consume 2 -> "sekarang" next 124
+node 124 "s" none result 83 consume 2 -> "sesuai" next 125
+node 125 "\x5c" none result 83 consume 2 -> "setelah" next 126
+node 126 "]" none result 83 consume 2 -> "sedang" next 127
+node 127 "" short-set @x4 result 84 consume 1 -> "sebagai" next 128
+node 128 "" class c09 result 2 consume 1 -> "" end
+node 129 "" short-set @x4 result 84 consume 1 -> "bukan" next 130
+node 130 "" none result 83 consume 1 -> "ny" end
+node 131 "" short-set @x4 result 84 consume 1 -> "kamu" next 132
+node 132 "" none result 83 consume 1 -> "mu" end
+node 133 "gl" none result 83 consume 3 -> "segala" next 135
+node 134 "r" none result 83 consume 3 -> "segera" level 1
+node 135 "" short-set @x4 result 84 consume 1 -> "serta" next 136
+node 136 "" none result 83 consume 1 -> "se" end
+node 137 "''0" class c02 result 36 consume 4 -> "...\x22" next 142
+node 138 "'2" class c02 result 36 consume 4 -> "...;" level 3
+node 139 "7" short-set @x0 result 36 consume 4 -> "...)" next 140
+node 140 "8" class c02 result 36 consume 4 -> "...\x22" next 141
+node 141 "" none result 36 consume 3 -> "..." level 1
+node 142 "" none result 83 consume 1 -> "'" end
+node 143 "\x22b" none result 83 consume 3 -> "kambaik" next 144
+node 144 "2lm" none result 83 consume 4 -> "kambelum" next 146
+node 145 "" none result 83 consume 2 -> "kambe" level 1
+node 146 "3]r" none result 83 consume 4 -> "kampengertian" next 148
+node 147 "" none result 83 consume 2 -> "kampe" level 1
+node 148 "4" none result 83 consume 2 -> "kamper" next 149
+node 149 "6" none result 83 consume 2 -> "kamber" next 150
+node 150 "bdh" none result 83 consume 4 -> "kambodoh" next 167
+node 151 "gm" none result 83 consume 4 -> "kambagaimana" next 153
+node 152 "s" none result 83 consume 4 -> "kambagus" level 2
+node 153 "hs" none result 83 consume 4 -> "kambahasa" next 155
+node 154 "]" none result 83 consume 4 -> "kambohong" level 2
+node 155 "lk" none result 83 consume 4 -> "kambalik" next 159
+node 156 "t" none result 83 consume 4 -> "kambulat" next 157
+node 157 "]" none result 83 consume 4 -> "kambilang" next 158
+node 158 "" none result 83 consume 3 -> "kambila" level 2
+node 159 "rl" none result 83 consume 4 -> "kambraille" next 162
+node 160 "s" none result 83 consume 4 -> "kambaris" next 161
+node 161 "" none result 83 consume 3 -> "kambaru" level 2
+node 162 "th" none result 83 consume 4 -> "kambutuh" next 165
+node 163 "r" none result 83 consume 4 -> "kambutir" next 164
+node 164 "" none result 83 consume 3 -> "kambuta" level 2
+node 165 "]n" none result 83 consume 4 -> "kambangun" next 166
+node 166 "" none result 83 consume 2 -> "kamb" level 1
+node 167 "pg" none result 83 consume 3 -> "kampagi" next 181
+node 168 "jt" none result 83 consume 4 -> "kampijat" next 170
+node 169 "]" none result 83 consume 4 -> "kampanjang" level 2
+node 170 "kr" none result 83 consume 4 -> "kampikir" next 171
+node 171 "lh" none result 83 consume 4 -> "kampilih" next 174
+node 172 "]" none result 83 consume 4 -> "kampulang" next 173
+node 173 "" none result 83 consume 3 -> "kampula" level 2
+node 174 "r]" none result 83 consume 4 -> "kampiring" next 175
+node 175 "sh" none result 83 consume 4 -> "kampisah" next 177
+node 176 "t" none result 83 consume 4 -> "kampusat" level 2
+node 177 "th" none result 83 consume 4 -> "kamputih" next 180
+node 178 "s" none result 83 consume 4 -> "kamputus" next 179
+node 179 "]" none result 83 consume 4 -> "kampotong" level 2
+node 180 "" none result 83 consume 2 -> "kamp" level 1
+node 181 "^b" none result 83 consume 3 -> "kambuka" next 184
+node 182 "p" none result 83 consume 3 -> "kampunya" next 183
+node 183 "" short-set @x4 result 83 consume 2 -> "kampun" level 1
+node 184 "_$" none result 83 consume 3 -> "kambukan" next 189
+node 185 "+" none result 83 consume 3 -> "kambuat" next 186
+node 186 "2" none result 83 consume 3 -> "kambahwa" next 187
+node 187 "b" none result 83 consume 3 -> "kambagi" next 188
+node 188 "p" none result 83 consume 3 -> "kampada" level 1
+node 189 "" short-set @x4 result 84 consume 1 -> "akan" next 190
+node 190 "" none result 83 consume 1 -> "kan" end
+node 191 "" short-set @x4 result 84 consume 1 -> "aku" next 192
+node 192 "" none result 83 consume 1 -> "ku" end
+node 193 "" short-set @x4 result 84 consume 1 -> "sampai" next 194
+node 194 "" none result 83 consume 1 -> "ai" end
+node 195 "" short-set @x4 result 84 consume 1 -> "buat" next 196
+node 196 "" none result 83 consume 1 -> "ua" end
+node 197 "," none result 87 consume 2 -> "\x0e" next 199
+node 198 "" none result 37 consume 2 -> "\x0e" level 1
+node 199 "'" none result 38 consume 2 -> "\x0f" next 200
+node 200 "" none result 36 consume 1 -> "\x02" end
+node 201 "" none result 36 consume 1 -> "-" end
+node 202 "" class c09 result 27 consume 1 -> "." next 203
+node 203 "" none result 27 consume 1 -> ".\x12" next 204
+node 204 "" short-set @x4 result 83 consume 1 -> "kah" end
+node 205 "" none result 83 consume 1 -> "di" end
+node 206 "" short-set @x0 result 87 consume 1 -> "\x22" next 207
+node 207 "tm" none result 83 consume 3 -> "terutama" next 208
+node 208 "" none result 83 consume 1 -> "ter" end
+node 209 "" short-set @x0 result 43 consume 1 -> "," next 210
+node 210 "" class c09 result 27 consume 1 -> "," next 211
+node 211 "" none result 80 consume 1 -> "aa" end
+node 212 "" short-set @x4 result 36 consume 1 -> ";" next 213
+node 213 "lm" none result 83 consume 3 -> "belum" next 214
+node 214 "" none result 83 consume 1 -> "be" end
+node 215 "" class c09 result 27 consume 1 -> ":" next 216
+node 216 "" short-set @x0 result 36 consume 1 -> ":" next 217
+node 217 "]r" none result 83 consume 3 -> "pengertian" next 218
+node 218 "" none result 83 consume 1 -> "pe" end
+node 219 "#" class c09 result 8 consume 1 -> "$" next 220
+node 220 "" short-set @x0 result 36 consume 1 -> "." next 221
+node 221 "" none result 83 consume 1 -> "per" end
+node 222 "" short-set @x4 result 84 consume 1 -> "memang" next 223
+node 223 "]r" none result 83 consume 3 -> "mengerti" next 224
+node 224 "^p" none result 83 consume 3 -> "mempunyai" next 225
+node 225 "" none result 83 consume 1 -> "me" end
+node 226 "" none result 83 consume 1 -> "ber" end
+node 227 "''''" none result 36 consume 2 -> "]" next 231
+node 228 "''" none result 10 consume 1 -> ")" next 230
+node 229 "'" none result 36 consume 1 -> "(" level 2
+node 230 "" none result 36 consume 2 -> "]" level 1
+node 231 "" none result 8 consume 1 -> "(" next 232
+node 232 "" short-set @x0 result 36 consume 1 -> ")" next 233
+node 233 "" none result 9 consume 1 -> "(" next 234
+node 234 "\x22b" none result 80 consume 3 -> "imbaik" next 235
+node 235 "2lm" none result 80 consume 4 -> "imbelum" next 237
+node 236 "" none result 80 consume 2 -> "imbe" level 1
+node 237 "3]r" none result 80 consume 4 -> "impengertian" next 239
+node 238 "" none result 80 consume 2 -> "impe" level 1
+node 239 "4" none result 80 consume 2 -> "imper" next 240
+node 240 "6" none result 80 consume 2 -> "imber" next 241
+node 241 "bdh" none result 80 consume 4 -> "imbodoh" next 258
+node 242 "gm" none result 80 consume 4 -> "imbagaimana" next 244
+node 243 "s" none result 80 consume 4 -> "imbagus" level 2
+node 244 "hs" none result 80 consume 4 -> "imbahasa" next 246
+node 245 "]" none result 80 consume 4 -> "imbohong" level 2
+node 246 "lk" none result 80 consume 4 -> "imbalik" next 250
+node 247 "t" none result 80 consume 4 -> "imbulat" next 248
+node 248 "]" none result 80 consume 4 -> "imbilang" next 249
+node 249 "" none result 80 consume 3 -> "imbila" level 2
+node 250 "rl" none result 80 consume 4 -> "imbraille" next 253
+node 251 "s" none result 80 consume 4 -> "imbaris" next 252
+node 252 "" none result 80 consume 3 -> "imbaru" level 2
+node 253 "th" none result 80 consume 4 -> "imbutuh" next 256
+node 254 "r" none result 80 consume 4 -> "imbutir" next 255
+node 255 "" none result 80 consume 3 -> "imbuta" level 2
+node 256 "]n" none result 80 consume 4 -> "imbangun" next 257
+node 257 "" none result 80 consume 2 -> "imb" level 1
+node 258 "pg" none result 80 consume 3 -> "impagi" next 272
+node 259 "jt" none result 80 consume 4 -> "impijat" next 261
+node 260 "]" none result 80 consume 4 -> "impanjang" level 2
+node 261 "kr" none result 80 consume 4 -> "impikir" next 262
+node 262 "lh" none result 80 consume 4 -> "impilih" next 265
+node 263 "]" none result 80 consume 4 -> "impulang" next 264
+node 264 "" none result 80 consume 3 -> "impula" level 2
+node 265 "r]" none result 80 consume 4 -> "impiring" next 266
+node 266 "sh" none result 80 consume 4 -> "impisah" next 268
+node 267 "t" none result 80 consume 4 -> "impusat" level 2
+node 268 "th" none result 80 consume 4 -> "imputih" next 271
+node 269 "s" none result 80 consume 4 -> "imputus" next 270
+node 270 "]" none result 80 consume 4 -> "impotong" level 2
+node 271 "" none result 80 consume 2 -> "imp" level 1
+node 272 "^b" none result 80 consume 3 -> "imbuka" next 275
+node 273 "p" none result 80 consume 3 -> "impunya" next 274
+node 274 "" short-set @x4 result 83 consume 2 -> "impun" level 1
+node 275 "_$" none result 80 consume 3 -> "imbukan" next 280
+node 276 "+" none result 80 consume 3 -> "imbuat" next 277
+node 277 "2" none result 80 consume 3 -> "imbahwa" next 278
+node 278 "b" none result 80 consume 3 -> "imbagi" next 279
+node 279 "p" none result 80 consume 3 -> "impada" level 1
+node 280 "" none result 80 consume 1 -> "in" next 281
+node 281 "" none result 36 consume 1 -> "(" end
+node 282 "" short-set @x4 result 84 consume 1 -> "masih" next 283
+node 283 "" short-set @x0 result 36 consume 1 -> "?" next 284
+node 284 "\x22b" none result 80 consume 3 -> "umbaik" next 285
+node 285 "2lm" none result 80 consume 4 -> "umbelum" next 287
+node 286 "" none result 80 consume 2 -> "umbe" level 1
+node 287 "3]r" none result 80 consume 4 -> "umpengertian" next 289
+node 288 "" none result 80 consume 2 -> "umpe" level 1
+node 289 "4" none result 80 consume 2 -> "umper" next 290
+node 290 "6" none result 80 consume 2 -> "umber" next 291
+node 291 "bdh" none result 80 consume 4 -> "umbodoh" next 308
+node 292 "gm" none result 80 consume 4 -> "umbagaimana" next 294
+node 293 "s" none result 80 consume 4 -> "umbagus" level 2
+node 294 "hs" none result 80 consume 4 -> "umbahasa" next 296
+node 295 "]" none result 80 consume 4 -> "umbohong" level 2
+node 296 "lk" none result 80 consume 4 -> "umbalik" next 300
+node 297 "t" none result 80 consume 4 -> "umbulat" next 298
+node 298 "]" none result 80 consume 4 -> "umbilang" next 299
+node 299 "" none result 80 consume 3 -> "umbila" level 2
+node 300 "rl" none result 80 consume 4 -> "umbraille" next 303
+node 301 "s" none result 80 consume 4 -> "umbaris" next 302
+node 302 "" none result 80 consume 3 -> "umbaru" level 2
+node 303 "th" none result 80 consume 4 -> "umbutuh" next 306
+node 304 "r" none result 80 consume 4 -> "umbutir" next 305
+node 305 "" none result 80 consume 3 -> "umbuta" level 2
+node 306 "]n" none result 80 consume 4 -> "umbangun" next 307
+node 307 "" none result 80 consume 2 -> "umb" level 1
+node 308 "pg" none result 80 consume 3 -> "umpagi" next 322
+node 309 "jt" none result 80 consume 4 -> "umpijat" next 311
+node 310 "]" none result 80 consume 4 -> "umpanjang" level 2
+node 311 "kr" none result 80 consume 4 -> "umpikir" next 312
+node 312 "lh" none result 80 consume 4 -> "umpilih" next 315
+node 313 "]" none result 80 consume 4 -> "umpulang" next 314
+node 314 "" none result 80 consume 3 -> "umpula" level 2
+node 315 "r]" none result 80 consume 4 -> "umpiring" next 316
+node 316 "sh" none result 80 consume 4 -> "umpisah" next 318
+node 317 "t" none result 80 consume 4 -> "umpusat" level 2
+node 318 "th" none result 80 consume 4 -> "umputih" next 321
+node 319 "s" none result 80 consume 4 -> "umputus" next 320
+node 320 "]" none result 80 consume 4 -> "umpotong" level 2
+node 321 "" none result 80 consume 2 -> "ump" level 1
+node 322 "^b" none result 80 consume 3 -> "umbuka" next 325
+node 323 "p" none result 80 consume 3 -> "umpunya" next 324
+node 324 "" short-set @x4 result 83 consume 2 -> "umpun" level 1
+node 325 "_$" none result 80 consume 3 -> "umbukan" next 330
+node 326 "+" none result 80 consume 3 -> "umbuat" next 327
+node 327 "2" none result 80 consume 3 -> "umbahwa" next 328
+node 328 "b" none result 80 consume 3 -> "umbagi" next 329
+node 329 "p" none result 80 consume 3 -> "umpada" level 1
+node 330 "" none result 80 consume 1 -> "un" next 331
+node 331 "" none result 36 consume 1 -> "\x22" end
+node 332 "" none result 83 consume 1 -> "ia" end
+node 333 "" short-set @x4 result 84 consume 1 -> "satu" next 334
+node 334 "" none result 83 consume 1 -> "st" end
+node 335 "" none result 36 consume 1 -> ";" end
+node 336 "" none result 36 consume 1 -> "<" end
+node 337 "" short-set @x4 result 84 consume 1 -> "hingga" next 338
+node 338 "" none result 80 consume 1 -> "ngg" end
+node 339 "" short-set @x4 result 84 consume 1 -> "dan" next 340
+node 340 "" short-set @x4 result 83 consume 1 -> "an" next 341
+node 341 "\x22b" none result 83 consume 3 -> "ambaik" next 342
+node 342 "2lm" none result 83 consume 4 -> "ambelum" next 344
+node 343 "" none result 83 consume 2 -> "ambe" level 1
+node 344 "3]r" none result 83 consume 4 -> "ampengertian" next 346
+node 345 "" none result 83 consume 2 -> "ampe" level 1
+node 346 "4" none result 83 consume 2 -> "amper" next 347
+node 347 "6" none result 83 consume 2 -> "amber" next 348
+node 348 "bdh" none result 83 consume 4 -> "ambodoh" next 365
+node 349 "gm" none result 83 consume 4 -> "ambagaimana" next 351
+node 350 "s" none result 83 consume 4 -> "ambagus" level 2
+node 351 "hs" none result 83 consume 4 -> "ambahasa" next 353
+node 352 "]" none result 83 consume 4 -> "ambohong" level 2
+node 353 "lk" none result 83 consume 4 -> "ambalik" next 357
+node 354 "t" none result 83 consume 4 -> "ambulat" next 355
+node 355 "]" none result 83 consume 4 -> "ambilang" next 356
+node 356 "" none result 83 consume 3 -> "ambila" level 2
+node 357 "rl" none result 83 consume 4 -> "ambraille" next 360
+node 358 "s" none result 83 consume 4 -> "ambaris" next 359
+node 359 "" none result 83 consume 3 -> "ambaru" level 2
+node 360 "th" none result 83 consume 4 -> "ambutuh" next 363
+node 361 "r" none result 83 consume 4 -> "ambutir" next 362
+node 362 "" none result 83 consume 3 -> "ambuta" level 2
+node 363 "]n" none result 83 consume 4 -> "ambangun" next 364
+node 364 "" none result 83 consume 2 -> "amb" level 1
+node 365 "pg" none result 83 consume 3 -> "ampagi" next 379
+node 366 "jt" none result 83 consume 4 -> "ampijat" next 368
+node 367 "]" none result 83 consume 4 -> "ampanjang" level 2
+node 368 "kr" none result 83 consume 4 -> "ampikir" next 369
+node 369 "lh" none result 83 consume 4 -> "ampilih" next 372
+node 370 "]" none result 83 consume 4 -> "ampulang" next 371
+node 371 "" none result 83 consume 3 -> "ampula" level 2
+node 372 "r]" none result 83 consume 4 -> "ampiring" next 373
+node 373 "sh" none result 83 consume 4 -> "ampisah" next 375
+node 374 "t" none result 83 consume 4 -> "ampusat" level 2
+node 375 "th" none result 83 consume 4 -> "amputih" next 378
+node 376 "s" none result 83 consume 4 -> "amputus" next 377
+node 377 "]" none result 83 consume 4 -> "ampotong" level 2
+node 378 "" none result 83 consume 2 -> "amp" level 1
+node 379 "^b" none result 83 consume 3 -> "ambuka" next 382
+node 380 "p" none result 83 consume 3 -> "ampunya" next 381
+node 381 "" short-set @x4 result 83 consume 2 -> "ampun" level 1
+node 382 "_$" none result 83 consume 3 -> "ambukan" next 387
+node 383 "+" none result 83 consume 3 -> "ambuat" next 384
+node 384 "2" none result 83 consume 3 -> "ambahwa" next 385
+node 385 "b" none result 83 consume 3 -> "ambagi" next 386
+node 386 "p" none result 83 consume 3 -> "ampada" level 1
+node 387 "" none result 83 consume 1 -> "an" end
+node 388 "bl" none result 83 consume 3 -> "kembali" next 389
+node 389 "lpk" none result 83 consume 4 -> "kelompok" next 390
+node 390 "" none result 83 consume 1 -> "ke" end
+node 391 "$" none result 83 consume 2 -> "anya" next 392
+node 392 ":" none result 83 consume 2 -> "asta" next 393
+node 393 "=" none result 83 consume 2 -> "angga" next 394
+node 394 "a" none result 83 consume 2 -> "atas" next 395
+node 395 "b" none result 83 consume 2 -> "aba" next 396
+node 396 "c" none result 83 consume 2 -> "aca" next 397
+node 397 "d" none result 83 consume 2 -> "ada" next 398
+node 398 "e" none result 83 consume 2 -> "aneh" next 399
+node 399 "f" none result 83 consume 2 -> "afa" next 400
+node 400 "g" none result 83 consume 2 -> "aga" next 401
+node 401 "h" none result 83 consume 2 -> "aha" next 402
+node 402 "i" none result 83 consume 2 -> "arti" next 403
+node 403 "j" none result 83 consume 2 -> "aja" next 404
+node 404 "k" none result 83 consume 2 -> "aka" next 405
+node 405 "l" none result 83 consume 2 -> "ala" next 406
+node 406 "m" none result 83 consume 2 -> "ama" next 407
+node 407 "n" none result 83 consume 2 -> "ana" next 408
+node 408 "o" none result 83 consume 2 -> "abnormal" next 409
+node 409 "p" none result 83 consume 2 -> "apa" next 410
+node 410 "q" none result 83 consume 2 -> "aqa" next 411
+node 411 "r" none result 83 consume 2 -> "ara" next 412
+node 412 "s" none result 83 consume 2 -> "asa" next 413
+node 413 "t" none result 83 consume 2 -> "ata" next 414
+node 414 "u" none result 83 consume 2 -> "arus" next 415
+node 415 "v" none result 83 consume 2 -> "ava" next 416
+node 416 "w" none result 83 consume 2 -> "awa" next 417
+node 417 "x" none result 83 consume 2 -> "axa" next 418
+node 418 "y" none result 83 consume 2 -> "aya" next 419
+node 419 "z" none result 83 consume 2 -> "aza" next 420
+node 420 "]" none result 83 consume 2 -> "anga" end
+node 421 "" none result 83 consume 1 -> "`" end
+node 422 "" class c09 result 27 consume 1 -> "1" next 423
+node 423 "" none result 27 consume 1 -> "1\x12" next 424
+node 424 "gar<" short-set @x4 result 84 consume 5 -> "agar-agar" next 425
+node 425 "kh" none result 83 consume 3 -> "akhir" next 426
+node 426 "" short-set @x4 result 84 consume 1 -> "a" next 427
+node 427 "" short-set @x4 result 84 consume 1 -> "anda" next 428
+node 428 "" none result 83 consume 1 -> "a" next 429
+node 429 "" short-set @x4 result 83 consume 1 -> "a" next 430
+node 430 "" none result 83 consume 1 -> "a" end
+node 431 "" class c09 result 27 consume 1 -> "2" next 432
+node 432 "" none result 27 consume 1 -> "2\x12" next 433
+node 433 "dh" none result 83 consume 3 -> "bodoh" next 434
+node 434 "gm" none result 83 consume 3 -> "bagaimana" next 436
+node 435 "s" none result 83 consume 3 -> "bagus" level 1
+node 436 "hs" none result 83 consume 3 -> "bahasa" next 438
+node 437 "]" none result 83 consume 3 -> "bohong" level 1
+node 438 "lk" none result 83 consume 3 -> "balik" next 442
+node 439 "t" none result 83 consume 3 -> "bulat" next 440
+node 440 "]" none result 83 consume 3 -> "bilang" next 441
+node 441 "" none result 83 consume 2 -> "bila" level 1
+node 442 "rl" none result 83 consume 3 -> "braille" next 445
+node 443 "s" none result 83 consume 3 -> "baris" next 444
+node 444 "" none result 83 consume 2 -> "baru" level 1
+node 445 "th" none result 83 consume 3 -> "butuh" next 448
+node 446 "r" none result 83 consume 3 -> "butir" next 447
+node 447 "" none result 83 consume 2 -> "buta" level 1
+node 448 "]n" none result 83 consume 3 -> "bangun" next 449
+node 449 "" short-set @x4 result 84 consume 1 -> "bagi" next 450
+node 450 "" none result 83 consume 1 -> "b" next 451
+node 451 "" none result 83 consume 1 -> "b" end
+node 452 "" class c09 result 27 consume 1 -> "3" next 453
+node 453 "" none result 27 consume 1 -> "3\x12" next 454
+node 454 "ln" none result 83 consume 3 -> "calon" next 455
+node 455 "pt" none result 83 consume 3 -> "cepat" next 456
+node 456 "rt" none result 83 consume 3 -> "cerita" next 457
+node 457 "th" none result 83 consume 3 -> "contoh" next 458
+node 458 "" short-set @x4 result 84 consume 1 -> "cara" next 459
+node 459 "" none result 83 consume 1 -> "c" end
+node 460 "" class c09 result 27 consume 1 -> "4" next 461
+node 461 "" none result 27 consume 1 -> "4\x12" next 462
+node 462 "hl" none result 83 consume 3 -> "dahulu" next 463
+node 463 "kt" none result 83 consume 3 -> "dekat" next 464
+node 464 "l" none result 83 consume 2 -> "dulu" next 465
+node 465 "mk" none result 83 consume 3 -> "demikian" next 466
+node 466 "pt" none result 83 consume 3 -> "dapat" next 468
+node 467 "" none result 83 consume 2 -> "daripada" level 1
+node 468 "rh" none result 83 consume 3 -> "daerah" next 469
+node 469 "]r" none result 83 consume 3 -> "dengar" next 470
+node 470 "" short-set @x4 result 84 consume 1 -> "dari" next 471
+node 471 "" none result 83 consume 1 -> "d" end
+node 472 "" class c09 result 27 consume 1 -> "5" next 473
+node 473 "" none result 27 consume 1 -> "5\x12" next 474
+node 474 "" short-set @x4 result 84 consume 1 -> "emas" next 475
+node 475 "" none result 83 consume 1 -> "e" end
+node 476 "" class c09 result 27 consume 1 -> "6" next 477
+node 477 "" none result 27 consume 1 -> "6\x12" next 478
+node 478 "" short-set @x4 result 84 consume 1 -> "faktor" next 479
+node 479 "" none result 83 consume 1 -> "f" end
+node 480 "" class c09 result 27 consume 1 -> "7" next 481
+node 481 "" none result 27 consume 1 -> "7\x12" next 482
+node 482 "d]" none result 83 consume 3 -> "gedung" next 483
+node 483 "jl" none result 83 consume 3 -> "gejala" next 484
+node 484 "lp" none result 83 consume 3 -> "gelap" next 488
+node 485 "r" none result 83 consume 3 -> "gilir" next 486
+node 486 "s" none result 83 consume 3 -> "gelas" next 487
+node 487 "]" none result 83 consume 3 -> "golong" level 1
+node 488 "rk" none result 83 consume 3 -> "gerak" next 491
+node 489 "s" none result 83 consume 3 -> "garis" next 490
+node 490 "" none result 83 consume 2 -> "guru" level 1
+node 491 "tr" none result 83 consume 3 -> "getar" next 492
+node 492 "" short-set @x4 result 84 consume 1 -> "lagi" next 493
+node 493 "" none result 83 consume 1 -> "g" end
+node 494 "" class c09 result 27 consume 1 -> "8" next 495
+node 495 "" none result 27 consume 1 -> "8\x12" next 496
+node 496 "bs" none result 83 consume 3 -> "habis" next 497
+node 497 "dp" none result 83 consume 3 -> "hidup" next 498
+node 498 "l]" none result 83 consume 3 -> "hilang" next 499
+node 499 "rf" none result 83 consume 3 -> "huruf" next 501
+node 500 "g" none result 83 consume 3 -> "harga" level 1
+node 501 "sl" none result 83 consume 3 -> "hasil" next 502
+node 502 "tm" none result 83 consume 3 -> "hitam" next 504
+node 503 "" none result 83 consume 2 -> "hati" level 1
+node 504 "" short-set @x4 result 84 consume 1 -> "harus" next 505
+node 505 "" none result 83 consume 1 -> "h" end
+node 506 "" class c09 result 27 consume 1 -> "9" next 507
+node 507 "" none result 27 consume 1 -> "9\x12" next 508
+node 508 "nd" none result 83 consume 3 -> "indonesia" next 509
+node 509 "" short-set @x4 result 84 consume 1 -> "itu" next 510
+node 510 "" none result 80 consume 1 -> "i" next 511
+node 511 "" none result 83 consume 1 -> "i" next 512
+node 512 "" short-set @x4 result 83 consume 1 -> "i" next 513
+node 513 "" none result 83 consume 1 -> "i" end
+node 514 "" class c09 result 27 consume 1 -> "0" next 515
+node 515 "" none result 27 consume 1 -> "0\x12" next 516
+node 516 "dl" none result 83 consume 3 -> "judul" next 517
+node 517 "g" none result 83 consume 2 -> "juga" next 518
+node 518 "jr" none result 83 consume 3 -> "jujur" next 519
+node 519 "k" none result 83 consume 2 -> "jika" next 520
+node 520 "lk" none result 83 consume 3 -> "jelek" next 521
+node 521 "th" none result 83 consume 3 -> "jatuh" next 523
+node 522 "" none result 83 consume 2 -> "juta" level 1
+node 523 "" short-set @x4 result 84 consume 1 -> "jadi" next 524
+node 524 "" none result 83 consume 1 -> "j" end
+node 525 "a" short-set @x4 result 84 consume 2 -> "ka" next 526
+node 526 "l" none result 83 consume 2 -> "kalau" next 527
+node 527 "m" none result 83 consume 2 -> "kami" next 528
+node 528 "pd" none result 83 consume 3 -> "kepada" next 529
+node 529 "rm" none result 83 consume 3 -> "kirim" next 531
+node 530 "" none result 83 consume 2 -> "kira" level 1
+node 531 "tr" none result 83 consume 3 -> "kotor" next 532
+node 532 "" short-set @x4 result 84 consume 1 -> "k" next 533
+node 533 "" short-set @x4 result 84 consume 1 -> "kita" next 534
+node 534 "" none result 83 consume 1 -> "k" next 535
+node 535 "" none result 83 consume 1 -> "k" end
+node 536 "br" none result 83 consume 3 -> "lebar" next 537
+node 537 "g" none result 83 consume 2 -> "lagu" next 538
+node 538 "hr" none result 83 consume 3 -> "lahir" next 540
+node 539 "t" none result 83 consume 3 -> "lihat" level 1
+node 540 "k<" none result 83 consume 3 -> "laki-laki" next 541
+node 541 "mh" none result 83 consume 3 -> "lemah" next 542
+node 542 "pr" none result 83 consume 3 -> "lapor" next 545
+node 543 "s" none result 83 consume 3 -> "lepas" next 544
+node 544 "t" none result 83 consume 3 -> "lipat" level 1
+node 545 "" short-set @x4 result 84 consume 1 -> "lalu" next 546
+node 546 "" none result 83 consume 1 -> "l" end
+node 547 "bl" none result 83 consume 3 -> "mobil" next 548
+node 548 "dl" none result 83 consume 3 -> "modal" next 549
+node 549 "hn" none result 83 consume 3 -> "mohon" next 550
+node 550 "j" none result 83 consume 2 -> "maju" next 551
+node 551 "lk" none result 83 consume 3 -> "milik" next 552
+node 552 "sk" none result 83 consume 3 -> "masuk" next 555
+node 553 "y" none result 83 consume 3 -> "masyarakat" next 554
+node 554 "]<" none result 83 consume 4 -> "masing-masing" level 1
+node 555 "tr" none result 83 consume 3 -> "motor" next 556
+node 556 "" short-set @x4 result 84 consume 1 -> "mereka" next 557
+node 557 "" none result 83 consume 1 -> "m" next 558
+node 558 "" short-set @x4 result 83 consume 1 -> "m" next 559
+node 559 "" none result 83 consume 1 -> "m" end
+node 560 "gr" none result 83 consume 3 -> "negara" next 561
+node 561 "mr" none result 83 consume 3 -> "nomor" next 562
+node 562 "" short-set @x4 result 84 consume 1 -> "ini" next 563
+node 563 "" short-set @x4 result 84 consume 1 -> "n" next 564
+node 564 "" short-set @x4 result 83 consume 1 -> "n" next 565
+node 565 "" none result 83 consume 1 -> "n" end
+node 566 "rg" none result 83 consume 3 -> "organisasi" next 567
+node 567 "" short-set @x4 result 84 consume 1 -> "oleh" next 568
+node 568 "" none result 83 consume 1 -> "o" end
+node 569 "g" none result 83 consume 2 -> "pagi" next 570
+node 570 "jt" none result 83 consume 3 -> "pijat" next 572
+node 571 "]" none result 83 consume 3 -> "panjang" level 1
+node 572 "kr" none result 83 consume 3 -> "pikir" next 573
+node 573 "lh" none result 83 consume 3 -> "pilih" next 576
+node 574 "]" none result 83 consume 3 -> "pulang" next 575
+node 575 "" none result 83 consume 2 -> "pula" level 1
+node 576 "r]" none result 83 consume 3 -> "piring" next 577
+node 577 "sh" none result 83 consume 3 -> "pisah" next 579
+node 578 "t" none result 83 consume 3 -> "pusat" level 1
+node 579 "th" none result 83 consume 3 -> "putih" next 582
+node 580 "s" none result 83 consume 3 -> "putus" next 581
+node 581 "]" none result 83 consume 3 -> "potong" level 1
+node 582 "" short-set @x4 result 84 consume 1 -> "pada" next 583
+node 583 "" none result 83 consume 1 -> "p" end
+node 584 "" short-set @x4 result 84 consume 1 -> "kualitas" next 585
+node 585 "" none result 83 consume 1 -> "q" end
+node 586 "b" none result 83 consume 2 -> "ribu" next 587
+node 587 "dh" none result 83 consume 3 -> "rendah" next 588
+node 588 "hs" none result 83 consume 3 -> "rahasia" next 589
+node 589 "sk" none result 83 consume 3 -> "rusak" next 590
+node 590 "ts" none result 83 consume 3 -> "ratus" next 591
+node 591 "" short-set @x4 result 84 consume 1 -> "karena" next 592
+node 592 "" none result 83 consume 1 -> "r" end
+node 593 "=h" none result 83 consume 3 -> "sungguh" next 594
+node 594 "bk" none result 83 consume 3 -> "sibuk" next 595
+node 595 "dr" none result 83 consume 3 -> "saudara" next 598
+node 596 "t" none result 83 consume 3 -> "sudut" next 597
+node 597 "]" none result 83 consume 3 -> "sidang" level 1
+node 598 "ft" none result 83 consume 3 -> "sifat" next 599
+node 599 "kp" none result 83 consume 3 -> "sikap" next 603
+node 600 "r" none result 83 consume 3 -> "sukar" next 601
+node 601 "t" none result 83 consume 3 -> "sakit" next 602
+node 602 "" none result 83 consume 2 -> "suka" level 1
+node 603 "lt" none result 83 consume 3 -> "sulit" next 604
+node 604 "rt" none result 83 consume 3 -> "surat" next 605
+node 605 "tm" none result 83 consume 3 -> "sistem" next 606
+node 606 "w" none result 83 consume 2 -> "siswa" next 607
+node 607 "" short-set @x4 result 84 consume 1 -> "saya" next 608
+node 608 "" short-set @x4 result 83 consume 1 -> "s" next 609
+node 609 "" none result 83 consume 1 -> "s" end
+node 610 "bh" none result 83 consume 3 -> "tubuh" next 612
+node 611 "" none result 83 consume 2 -> "tiba" level 1
+node 612 "dk" none result 83 consume 3 -> "tidak" next 614
+node 613 "r" none result 83 consume 3 -> "tidur" level 1
+node 614 "kr" none result 83 consume 3 -> "tukar" next 615
+node 615 "ls" none result 83 consume 3 -> "tulis" next 617
+node 616 "]" none result 83 consume 3 -> "tulang" level 1
+node 617 "p" none result 83 consume 2 -> "tanpa" next 618
+node 618 "tk" none result 83 consume 3 -> "titik" next 620
+node 619 "p" none result 83 consume 3 -> "tutup" level 1
+node 620 "" short-set @x4 result 84 consume 1 -> "t" next 621
+node 621 "" short-set @x4 result 84 consume 1 -> "tak" next 622
+node 622 "" none result 83 consume 1 -> "t" end
+node 623 "" short-set @x4 result 84 consume 1 -> "untuk" next 624
+node 624 "" none result 80 consume 1 -> "u" next 625
+node 625 "" short-set @x4 result 83 consume 1 -> "u" next 626
+node 626 "" none result 83 consume 1 -> "u" end
+node 627 "" short-set @x4 result 84 consume 1 -> "vitamin" next 628
+node 628 "" none result 83 consume 1 -> "v" end
+node 629 "jb" none result 83 consume 3 -> "wajib" next 630
+node 630 "kl" none result 83 consume 3 -> "wakil" next 631
+node 631 "" short-set @x4 result 84 consume 1 -> "waktu" next 632
+node 632 "" none result 83 consume 1 -> "w" end
+node 633 "" short-set @x4 result 84 consume 1 -> "aksi" next 634
+node 634 "" none result 83 consume 1 -> "x" end
+node 635 "" short-set @x4 result 84 consume 1 -> "yang" next 636
+node 636 "" none result 83 consume 1 -> "y" end
+node 637 "" short-set @x4 result 84 consume 1 -> "zat" next 638
+node 638 "" none result 83 consume 1 -> "z" end
+node 639 "" short-set @x4 result 84 consume 1 -> "atau" next 640
+node 640 "" none result 83 consume 1 -> "au" end
+node 641 "lp" none result 83 consume 3 -> "telepon" next 642
+node 642 "t" none result 83 consume 2 -> "tetapi" next 643
+node 643 "" short-set @x4 result 84 consume 1 -> "telah" next 644
+node 644 "" none result 83 consume 1 -> "te" end
+node 645 "" short-set @x4 result 84 consume 1 -> "jangan" next 646
+node 646 "" none result 83 consume 1 -> "ng" end
+node 647 "&" none result 83 consume 2 -> "seluruh" next 648
+node 648 ")" none result 83 consume 2 -> "kuitansi" next 649
+node 649 "+" none result 83 consume 2 -> "suatu" next 650
+node 650 ":" none result 83 consume 2 -> "tunanetra" next 651
+node 651 "=" none result 83 consume 2 -> "ganggu" next 652
+node 652 ">" none result 83 consume 2 -> "anjur" next 653
+node 653 "?" none result 83 consume 2 -> "kemudian" next 654
+node 654 "a" none result 83 consume 2 -> "atur" next 655
+node 655 "b" none result 83 consume 2 -> "buka" next 656
+node 656 "c" none result 83 consume 2 -> "cukup" next 657
+node 657 "d" none result 83 consume 2 -> "duduk" next 658
+node 658 "e" none result 83 consume 2 -> "engkau" next 659
+node 659 "f" none result 83 consume 2 -> "fungsi" next 660
+node 660 "g" none result 83 consume 2 -> "guna" next 661
+node 661 "h" none result 83 consume 2 -> "hubung" next 662
+node 662 "i" none result 83 consume 2 -> "ikut" next 663
+node 663 "j" none result 83 consume 2 -> "juru" next 664
+node 664 "k" none result 83 consume 2 -> "kurang" next 665
+node 665 "l" none result 83 consume 2 -> "luar" next 666
+node 666 "m" none result 83 consume 2 -> "mungkin" next 667
+node 667 "n" none result 83 consume 2 -> "nurani" next 668
+node 668 "p" none result 83 consume 2 -> "punya" next 669
+node 669 "q" none result 83 consume 2 -> "khusus" next 670
+node 670 "r" none result 83 consume 2 -> "rupa" next 671
+node 671 "s" none result 83 consume 2 -> "sudah" next 672
+node 672 "t" none result 83 consume 2 -> "tuju" next 673
+node 673 "u" none result 83 consume 2 -> "umum" next 674
+node 674 "v" none result 83 consume 2 -> "volume" next 675
+node 675 "w" none result 83 consume 2 -> "wujud" next 676
+node 676 "x" none result 83 consume 2 -> "maksud" next 677
+node 677 "\x5c" none result 83 consume 2 -> "terus" next 678
+node 678 "" short-set @x4 result 83 consume 1 -> "pun" end
+node 679 "" short-set @x4 result 83 consume 1 -> "lah" next 680
+node 680 "!" none result 83 consume 2 -> "nyata" next 681
+node 681 "#" none result 83 consume 2 -> "sebagai" next 682
+node 682 "$" none result 83 consume 2 -> "bukan" next 683
+node 683 "%" none result 83 consume 2 -> "kamu" next 684
+node 684 "&" none result 83 consume 2 -> "serta" next 685
+node 685 "(" none result 83 consume 2 -> "akan" next 686
+node 686 ")" none result 83 consume 2 -> "aku" next 687
+node 687 "*" none result 83 consume 2 -> "sampai" next 688
+node 688 "+" none result 83 consume 2 -> "buat" next 689
+node 689 "0" none result 83 consume 2 -> "supaya" next 690
+node 690 "2" none result 83 consume 2 -> "bahwa" next 691
+node 691 "4" none result 83 consume 2 -> "dengan" next 692
+node 692 "5" none result 83 consume 2 -> "memang" next 693
+node 693 "6" none result 83 consume 2 -> "maka" next 694
+node 694 "7" none result 83 consume 2 -> "agar" next 695
+node 695 "8" none result 83 consume 2 -> "masih" next 696
+node 696 "9" none result 83 consume 2 -> "ia" next 697
+node 697 ":" none result 83 consume 2 -> "satu" next 698
+node 698 "=" none result 83 consume 2 -> "hingga" next 699
+node 699 ">" none result 83 consume 2 -> "dan" next 700
+node 700 "a" none result 83 consume 2 -> "anda" next 701
+node 701 "b" none result 83 consume 2 -> "bagi" next 702
+node 702 "c" none result 83 consume 2 -> "cara" next 703
+node 703 "d" none result 83 consume 2 -> "dari" next 704
+node 704 "e" none result 83 consume 2 -> "emas" next 705
+node 705 "f" none result 83 consume 2 -> "faktor" next 706
+node 706 "g" none result 83 consume 2 -> "lagi" next 707
+node 707 "h" none result 83 consume 2 -> "harus" next 708
+node 708 "i" none result 83 consume 2 -> "itu" next 709
+node 709 "j" none result 83 consume 2 -> "jadi" next 710
+node 710 "k" none result 83 consume 2 -> "kita" next 711
+node 711 "l" none result 83 consume 2 -> "lalu" next 712
+node 712 "m" none result 83 consume 2 -> "mereka" next 713
+node 713 "n" none result 83 consume 2 -> "ini" next 714
+node 714 "o" none result 83 consume 2 -> "oleh" next 715
+node 715 "p" none result 83 consume 2 -> "pada" next 716
+node 716 "q" none result 83 consume 2 -> "kualitas" next 717
+node 717 "r" none result 83 consume 2 -> "karena" next 718
+node 718 "s" none result 83 consume 2 -> "saya" next 719
+node 719 "t" none result 83 consume 2 -> "tak" next 720
+node 720 "u" none result 83 consume 2 -> "untuk" next 721
+node 721 "v" none result 83 consume 2 -> "vitamin" next 722
+node 722 "w" none result 83 consume 2 -> "waktu" next 723
+node 723 "x" none result 83 consume 2 -> "aksi" next 724
+node 724 "y" none result 83 consume 2 -> "yang" next 725
+node 725 "z" none result 83 consume 2 -> "zat" next 726
+node 726 "[" none result 83 consume 2 -> "atau" next 727
+node 727 "\x5c" none result 83 consume 2 -> "telah" next 728
+node 728 "]" none result 83 consume 2 -> "jangan" end
+
+scan input-mode 0
+scan trailing-blanks 1
+scan flag 28
+scan full-stop 46
+scan newline 1
+scan form-feed "\x15"
+scan paragraph "p"
+scan new-paragraphs 0
+scan rejoin-hyphens 0
+scan spaces 0
+scan tab-width 1
+scan ninmod 0
+scan fold-codes 1
+scan fold-words 1
+scan capital-cessation 0
+scan map-braces 0
+scan spare 0
+scan passage-ends 0
+scan nxsls 0
+scan format-word 28
+scan format-word2 27
+scan capital-sign 0
+scan capital-end 0
+scan address-switching 0
+scan mode-words "running" "spacing" "marking" "as-is" "compress" "sentence" "auto-tab" "par" "no-par" "par-skp" "par-ind"
+scan passage-words 0
+scan doubled-adjectives 0

@@ -127,14 +127,15 @@ impl Translator {
         })
     }
 
-    /// Compiles a table source (.bmt, see `compile`) and makes a translator from it; no table files are needed.
+    /// Compiles a table source (.bmt, see `compile`) and makes a translator from it, with the built-in character
+    /// table; no table files are needed.
     pub fn from_source(source: &str) -> Result<Translator, EngineError> {
         let c = compile::compile(source)?;
         let rules = RuleTable::read(&c.table)?;
         Ok(Translator {
             rules: Rc::new(rules),
             scan: c.scan,
-            chitab: Chitab::default(),
+            chitab: Chitab::builtin(),
             styles: None,
             languages: None,
             output_mode: OUTPUT_MODE_DOCUMENT,
@@ -307,6 +308,12 @@ mod tests {
         let path = format!("{}/../../tables/{name}", env!("CARGO_MANIFEST_DIR"));
         let text = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{path}: {e}"));
         Translator::from_source(&text).unwrap_or_else(|e| panic!("{path}: {e}"))
+    }
+
+    #[test]
+    fn builtin_character_table_matches_the_binary_one() {
+        let Some(f) = folder() else { return };
+        assert_eq!(Chitab::builtin(), Chitab::read_folder(std::path::Path::new(&f)));
     }
 
     #[test]

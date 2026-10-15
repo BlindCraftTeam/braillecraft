@@ -1,0 +1,1277 @@
+# The rules of huaacb.btb and gendxb.sct, recreated as BrailleMaker table source.
+table "Hungarian - basic, braille to print"
+default-char 42
+raw 0
+writer 2
+output 4
+tail-extra 0 0 0
+unknown 0
+
+state s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 s11 s12 s13 s14 s15 s16
+state s17 s18 s19 s20 s21 s22 s23 s24 s25 s26 s27 s28 s29 s30 s31 s32
+state s33 s34 s35 s36 s37 s38 s39 s40 s41 s42 s43 s44 s45 s46 s47 s48
+state s49 s50 s51 s52 s53 s54 s55 s56 s57 s58 s59 s60 s61 s62 s63 s64
+
+class c00 "\x01\x02\x1b\x1c\x1d\x1e\x1f ',-012345679^"
+class c01 "\x1b\x1c\x1d\x1e\x1f `"
+class c02 " '-"
+class c03 "!\x22#$%&()*+./0123456789:;<=>?@[\x5c]^_`abcdefghijklmnopqrstuvwxyz"
+class c04 "7"
+class c05 "abcdefghij"
+class c06 ""
+class c07 ""
+class c08 ""
+class c09 ""
+class c10 ""
+class c11 ""
+class c12 ""
+class c13 ""
+class c14 ""
+class c15 ""
+class c16 ""
+class c17 ""
+class c18 ""
+class c19 ""
+class c20 ""
+class c21 ""
+class c22 ""
+class c23 ""
+class c24 ""
+class c25 ""
+class c26 ""
+class c27 ""
+class c28 ""
+class c29 ""
+class c30 ""
+class c31 ""
+class c32 ""
+class c33 ""
+class c34 ""
+class c35 ""
+class c36 ""
+class c37 ""
+class c38 ""
+class c39 ""
+class c40 ""
+class c41 ""
+class c42 ""
+class c43 ""
+class c44 ""
+class c45 ""
+class c46 ""
+class c47 ""
+class c48 ""
+class c49 ""
+class c50 ""
+class c51 ""
+class c52 ""
+class c53 ""
+class c54 ""
+class c55 ""
+class c56 ""
+class c57 ""
+class c58 ""
+class c59 ""
+class c60 ""
+class c61 ""
+class c62 ""
+class c63 ""
+
+set x0 = "'" | c02 | c00 @x0 | "7" "," "s" "7" @x0 | "1" | "\x1c" "l"
+
+result 1 when !s3 then clear s1 set s2 set s5 clear s10
+result 2 when !s1 then set s1 set s2 set s5 clear s10
+result 3 when !s2 !s3 then clear s1 set s2 set s5 clear s10
+result 4 when s2 !s3
+result 5
+result 6 when !s2 !s3 then clear s1 clear s2 clear s5 clear s10
+result 7 when !s3 then clear s1 set s2 set s5 clear s10
+result 8 when s3 then clear s1 set s2 set s5 clear s10
+result 9 when !s3 then clear s2 set s5 clear s10
+result 10 when !s3 then clear s1 clear s2 set s5 clear s10
+result 11 when s5 then clear s1 clear s2 set s5 clear s10
+result 12
+result 13 when !s3 then clear s1 clear s2 clear s5 clear s10
+result 14 then clear s1 clear s2 clear s5 clear s10
+result 15 when s1 then clear s1 set s2 set s5 clear s10
+result 16 then set s6 clear s7
+result 17 then set s7
+result 18 when s6 then clear s6 set s7
+result 19 when s7 then clear s6 clear s7
+result 20 when !s10 then clear s1 clear s2 set s5 set s10
+result 21 when s10
+result 22 when !s1 s2 !s10 then clear s1 clear s2 set s5 set s10
+result 23 when !s1 s2 !s10 then clear s2 set s5 clear s10
+result 24
+result 25
+result 26 when !s3 then set s1 set s2 set s5 clear s10
+result 27 when s1 then set s1 set s2 set s5 clear s10
+result 28
+result 29 then set s3
+result 30 then clear s3
+result 31 when !s11 then set s11
+result 32 when s11 then clear s11
+result 33 when s11
+result 34 when !s11
+result 35
+result 36 when !s3 then clear s1 clear s2 set s5 clear s10
+result 37 when !s3 then clear s1 clear s2 set s5 clear s10
+result 38
+result 39
+result 40 when !s3 then clear s1 set s2 set s5 clear s10
+result 41 then clear s1 set s2 set s5 clear s10
+result 42
+result 43 when !s2 then set s8 clear s9
+result 44 when !s2 then clear s8 set s9
+result 45 when !s2 s8 then clear s8 set s9
+result 46 when s9 then clear s8 set s9
+result 47 when s9 then clear s8 clear s9
+result 48
+result 49
+result 50
+result 51
+result 52
+result 53
+result 54
+result 55
+result 56
+result 57
+result 58
+result 59
+result 60
+result 61
+result 62
+result 63
+result 64
+result 65
+result 66
+result 67
+result 68 when !s3 then clear s1 set s5
+result 69
+result 70
+result 71
+result 72
+result 73
+result 74
+result 75
+result 76
+
+char "\x01" default "$" rules 1 then clear s1 clear s2 clear s5 clear s10
+char "\x02" default "$" rules 2 then clear s1 clear s2 clear s5 clear s10
+char "\x1b" default "$" rules 3 then clear s1 clear s2 clear s5 clear s10
+char "\x1c" default "$" rules 7 then clear s1 clear s2 clear s5 clear s10
+char "\x1d" default "$" rules 24 then clear s1 clear s2 clear s5 clear s10
+char "\x1e" default "$" rules 25 then clear s1 clear s2 clear s5 clear s10
+char "\x1f" default "$" rules 26 then clear s1 clear s2 clear s5 clear s10
+char " " default " " rules 27 then clear s1 clear s2 clear s5 clear s10
+char "!" default "\x8a" rules 31 then clear s1 set s2 set s5 clear s10
+char "\x22" default "_" rules 32 then clear s1 clear s2 set s5 clear s10
+char "#" default "0" rules 57 then set s1 set s2 set s5 clear s10
+char "$" default "\x89" rules 68 then clear s1 set s2 set s5 clear s10
+char "%" default "\x8c" rules 75 then clear s1 set s2 set s5 clear s10
+char "&" default "\x87" rules 88 then clear s1 set s2 set s5 clear s10
+char "'" default "." rules 89 then clear s1 clear s2 set s5 clear s10
+char "(" default "\x85" rules 96 then clear s1 set s2 set s5 clear s10
+char ")" default "\x97" rules 109 then clear s1 set s2 set s5 clear s10
+char "*" default "\x83" rules 114 then clear s1 set s2 set s5 clear s10
+char "+" default "\x95" rules 153
+char "," default "'" rules 162 then clear s2 set s5 clear s10
+char "-" default "-" rules 174 then clear s2 set s5 clear s10
+char "." default "\x01" rules 180 then clear s1 clear s2 set s5 clear s10
+char "/" default "\x8d" rules 191 then clear s1 clear s2 set s5 clear s10
+char "0" default "\x22" rules 194 then clear s1 clear s2 set s5 clear s10
+char "1" default "," rules 198 then clear s2 set s5 clear s10
+char "2" default ";" rules 209 then clear s1 clear s2 set s5 clear s10
+char "3" default ":" rules 215 then clear s2 set s5 clear s10
+char "4" default "." rules 221 then clear s2 set s5 clear s10
+char "5" default "?" rules 224 then clear s1 clear s2 set s5 clear s10
+char "6" default "!" rules 229 then clear s1 clear s2 set s5 clear s10
+char "7" default "=" rules 234 then clear s1 clear s2 set s5 clear s10
+char "8" default "(" rules 252 then clear s1 clear s2 set s5 clear s10
+char "9" default "*" rules 256 then clear s1 clear s2 set s5 clear s10
+char ":" default "\x96" rules 258 then clear s1 set s2 set s5 clear s10
+char ";" default "<" rules 305 then clear s1 clear s2 set s5 clear s10
+char "<" default "\x88" rules 308 then clear s1 set s2 set s5 clear s10
+char "=" default "\x82" rules 312 then clear s1 set s2 set s5 clear s10
+char ">" default "\x84" rules 313 then clear s1 set s2 set s5 clear s10
+char "?" default "\x93" rules 317 then clear s1 set s2 set s5 clear s10
+char "@" default "\x22" rules 327 then clear s1 clear s2 set s5 clear s10
+char "[" default "\x94" rules 998 then clear s1 set s2 set s5 clear s10
+char "\x5c" default "\x81" rules 1001 then clear s1 set s2 set s5 clear s10
+char "]" default "\x8b" rules 1003 then clear s1 set s2 set s5 clear s10
+char "^" default ">" rules 1014 then clear s1 clear s2 set s5 clear s10
+char "_" default "!" rules 1015 then clear s1 clear s2 set s5 clear s10
+char "`" default "@" rules 331 then clear s1 set s2 set s5 clear s10
+char "a" default "a" rules 333 then clear s1 set s2 set s5 clear s10
+char "b" default "b" rules 368 then clear s1 set s2 set s5 clear s10
+char "c" default "c" rules 400 then clear s1 set s2 set s5 clear s10
+char "d" default "d" rules 411 then clear s1 set s2 set s5 clear s10
+char "e" default "e" rules 434 then clear s1 set s2 set s5 clear s10
+char "f" default "f" rules 500 then clear s1 set s2 set s5 clear s10
+char "g" default "g" rules 537 then clear s1 set s2 set s5 clear s10
+char "h" default "h" rules 551 then clear s1 set s2 set s5 clear s10
+char "i" default "i" rules 590 then clear s1 set s2 set s5 clear s10
+char "j" default "j" rules 615 then clear s1 set s2 set s5 clear s10
+char "k" default "k" rules 628 then clear s1 set s2 set s5 clear s10
+char "l" default "l" rules 701 then clear s1 set s2 set s5 clear s10
+char "m" default "m" rules 721 then clear s1 set s2 set s5 clear s10
+char "n" default "n" rules 780 then clear s1 set s2 set s5 clear s10
+char "o" default "o" rules 804 then clear s1 set s2 set s5 clear s10
+char "p" default "p" rules 813 then clear s1 set s2 set s5 clear s10
+char "q" default "q" rules 833 then clear s1 set s2 set s5 clear s10
+char "r" default "r" rules 851 then clear s1 set s2 set s5 clear s10
+char "s" default "s" rules 877 then clear s1 set s2 set s5 clear s10
+char "t" default "t" rules 910 then clear s1 set s2 set s5 clear s10
+char "u" default "u" rules 943 then clear s1 set s2 set s5 clear s10
+char "v" default "v" rules 950 then clear s1 set s2 set s5 clear s10
+char "w" default "w" rules 985 then clear s1 set s2 set s5 clear s10
+char "x" default "x" rules 987 then clear s1 set s2 set s5 clear s10
+char "y" default "y" rules 990 then clear s1 set s2 set s5 clear s10
+char "z" default "z" rules 997 then clear s1 set s2 set s5 clear s10
+
+node 1 "" none result 5 consume 1 -> "" end
+node 2 "" none result 5 consume 1 -> "" end
+node 3 "'" none result 5 consume 1 -> " " next 4
+node 4 "/" none result 5 consume 1 -> "\x1c" {copy} next 5
+node 5 "-" none result 5 consume 1 -> "\x1c" {copy} next 6
+node 6 "" none result 14 consume 1 -> "\x0f\x1c" {copy} end
+node 7 "bqtbi~bcd" class c01 result 3 consume 10 -> "---" {drop-space} next 11
+node 8 "qtbi~lng" class c01 result 3 consume 10 -> "hu" {drop-space} level 3
+node 9 "tbi~lnn" class c01 result 3 consume 10 -> "hun" {drop-space} level 4
+node 10 "bi~qly" class c01 result 3 consume 10 -> "x" {drop-space} level 1
+node 11 "g1" class c01 result 29 consume 1 -> "\x1c" {word} {copy} next 13
+node 12 "2" class c01 result 30 consume 1 -> "\x1c" {word} {copy} level 1
+node 13 "lnb" none result 5 consume 1 -> {style 2} {cmd c} {style 3} "\x1c" {word} {copy} {switch} next 15
+node 14 "ng" none result 5 consume 1 -> "\x1c" {word} {copy} level 1
+node 15 "vrn~tc" none result 31 consume 1 -> "\x1c" {word} {copy} next 17
+node 16 "rn~" none result 32 consume 1 -> "\x1c" {word} {copy} level 1
+node 17 "i" class c01 result 68 consume 2 -> {drop-space} next 18
+node 18 "cz" class c01 result 5 consume 1 -> "\x1c" {word} {copy} next 19
+node 19 "tx" class c01 result 5 consume 1 -> "\x1c" {word} {copy} next 20
+node 20 "es" none result 14 consume 1 -> "\x0f\x1c" {word} {copy} {style 0} next 23
+node 21 "e" none result 47 consume 0 -> "\x1cfte~i\x1f" level 3
+node 22 "" none result 14 consume 1 -> "\x0f" {cmd a} "\x1c" {word} "\x1f" {cmd b} {style 1} level 1
+node 23 "" none result 14 consume 1 -> "\x0f\x1c" {word} {copy} end
+node 24 "" none result 5 consume 1 -> "\x1d" end
+node 25 "" none result 14 consume 1 -> "\x1e\x0f" end
+node 26 "" none result 14 consume 1 -> {cmd c} end
+node 27 "_" none result 46 consume 2 -> "\x0f " next 28
+node 28 "" none result 47 consume 1 -> "\x1cfte~i\x1f\x0f " next 29
+node 29 "" none result 14 consume 1 -> " \x0f" next 30
+node 30 "1" class c03 result 7 consume 1 -> " a " end
+node 31 "" none result 41 consume 1 -> "(" end
+node 32 "a" none result 40 consume 2 -> "\x84" next 33
+node 33 "c" none result 36 consume 2 -> "`" next 34
+node 34 "d" none result 40 consume 2 -> "$" next 35
+node 35 "e" none result 41 consume 2 -> "\xb2K" next 36
+node 36 "g" none result 41 consume 2 -> "\xb2O" next 37
+node 37 "h" none result 36 consume 2 -> "^" next 38
+node 38 "i" none result 41 consume 2 -> "\x8d" next 39
+node 39 "k" none result 41 consume 2 -> "\xb2g" next 40
+node 40 "l" none result 41 consume 2 -> "\xb2j" next 41
+node 41 "n" none result 41 consume 2 -> "\xb2t" next 42
+node 42 "o" none result 41 consume 2 -> "\x93" next 43
+node 43 "r" none result 41 consume 2 -> "\xb2\x85" next 44
+node 44 "s" none result 41 consume 2 -> "\xb2\x8b" next 45
+node 45 "t" none result 41 consume 2 -> "\xb2\x93" next 46
+node 46 "u" none result 41 consume 2 -> "\x96" next 47
+node 47 "y" none result 41 consume 2 -> "\x980" next 48
+node 48 "z" none result 36 consume 2 -> "}" next 49
+node 49 "1" none result 36 consume 2 -> "/" next 50
+node 50 "6" none result 36 consume 2 -> "+" next 51
+node 51 "!" none result 36 consume 2 -> "{" next 52
+node 52 "&" none result 40 consume 2 -> "&" next 53
+node 53 "\x5c" none result 36 consume 2 -> "|" next 54
+node 54 "*" none result 36 consume 2 -> "\x5c" next 55
+node 55 "" none result 5 consume 1 -> "\x0f" next 56
+node 56 "" none result 40 consume 1 -> "_" end
+node 57 "v" none result 41 consume 2 -> "\xf5'" next 58
+node 58 "#" none result 41 consume 1 -> "#" next 59
+node 59 "'" class c05 result 2 consume 2 -> "'" next 60
+node 60 "" classes c05 c05 result 2 consume 1 -> "" next 61
+node 61 "" classes c05 c00 result 2 consume 1 -> "" next 62
+node 62 "j00" none result 26 consume 3 -> "%" next 64
+node 63 "0" none result 36 consume 3 -> "%" level 1
+node 64 "1" class c05 result 2 consume 2 -> "," next 65
+node 65 "" none result 27 consume 1 -> "." next 66
+node 66 "" class c05 result 2 consume 1 -> "" next 67
+node 67 "" none result 41 consume 1 -> "0" end
+node 68 "$" none result 41 consume 2 -> "nny" next 69
+node 69 "elv" set @x0 result 3 consume 4 -> "nyelv" next 71
+node 70 "regb" set @x0 result 3 consume 6 -> "nyeregben" level 1
+node 71 "ilv@ntart@sb" set @x0 result 3 consume 13 -> "nyilv\xa0ntart\xa0sban" next 72
+node 72 "olcv" set @x0 result 3 consume 5 -> "nyolcvan" next 74
+node 73 "mo<@sb" set @x0 result 3 consume 8 -> "nyomoz\xa0sban" level 1
+node 74 "" none result 41 consume 1 -> "ny" end
+node 75 "%" none result 41 consume 2 -> "ccs" next 76
+node 76 "apatb" set @x0 result 3 consume 6 -> "csapatban" next 77
+node 77 "endb" set @x0 result 3 consume 5 -> "csendben" next 79
+node 78 "ndesebb" set @x0 result 3 consume 9 -> "csendesebben" level 1
+node 79 "h" set @x0 result 3 consume 2 -> "csakhogy" next 81
+node 80 "amar" set @x0 result 3 consume 6 -> "csakhamar" level 1
+node 81 "i" set @x0 result 3 consume 2 -> "csakis" next 82
+node 82 "n" set @x0 result 3 consume 2 -> "csaknem" next 83
+node 83 "oportb" set @x0 result 3 consume 7 -> "csoportban" next 84
+node 84 "qndb" set @x0 result 3 consume 5 -> "cs\x94ndben" next 85
+node 85 "u?an" set @x0 result 3 consume 5 -> "csakugyan" next 86
+node 86 "" set @x0 result 3 consume 1 -> "csak" next 87
+node 87 "" none result 41 consume 1 -> "cs" end
+node 88 "" none result 41 consume 1 -> "q" end
+node 89 "''" none result 10 consume 3 -> "..." next 91
+node 90 "" class c03 result 6 consume 2 -> "az az " level 1
+node 91 "*v" set @x0 result 3 consume 3 -> "az \x82v" next 92
+node 92 "" class c03 result 6 consume 1 -> "az " next 93
+node 93 "" class c05 result 27 consume 1 -> "." next 94
+node 94 "" none result 9 consume 1 -> "." next 95
+node 95 "" none result 12 consume 1 -> "." end
+node 96 "?ekb" set @x0 result 3 consume 5 -> "\x81gyekben" next 100
+node 97 "b" set @x0 result 3 consume 3 -> "\x81gyben" next 98
+node 98 "h<" set @x0 result 3 consume 4 -> "\x81gyh\x94z" next 99
+node 99 "rl" set @x0 result 3 consume 4 -> "\x81gyr\xb2\x81l" level 1
+node 100 "<emb" set @x0 result 3 consume 5 -> "\x81zemben" next 104
+node 101 "letbl" set @x0 result 3 consume 7 -> "\x81zletb\xb2\x81l" level 3
+node 102 "eth<" set @x0 result 3 consume 7 -> "\x81zlethez" level 4
+node 103 "trl" set @x0 result 3 consume 7 -> "\x81zletr\xb2\x81l" level 1
+node 104 "vegb" set @x0 result 3 consume 5 -> "\x81vegben" next 106
+node 105 "egbl" set @x0 result 3 consume 6 -> "\x81vegb\xb2\x81l" level 1
+node 106 "b" set @x0 result 4 consume 2 -> "\x81ben" next 107
+node 107 "dv" set @x0 result 3 consume 3 -> "\x81dv" next 108
+node 108 "" none result 41 consume 1 -> "\x81" end
+node 109 "b" set @x0 result 4 consume 2 -> "\xb2\xa1ben" next 110
+node 110 "hz" set @x0 result 4 consume 3 -> "\xb2\xa1h\x94z" next 111
+node 111 "v" set @x0 result 4 consume 2 -> "\xb2\xa1vel" next 112
+node 112 "rbl" set @x0 result 3 consume 4 -> "\xb2\xa1rb\xb2\x81l" next 113
+node 113 "" none result 41 consume 1 -> "\xb2\xa1" end
+node 114 ":b" set @x0 result 3 consume 3 -> "\x82szben" next 116
+node 115 "h<" set @x0 result 3 consume 4 -> "\x82szhez" level 1
+node 116 "b" set @x0 result 4 consume 2 -> "\x82ben" next 118
+node 117 "l" set @x0 result 4 consume 3 -> "\x82b\xb2\x81l" level 1
+node 118 "gb" set @x0 result 3 consume 3 -> "\x82gben" next 120
+node 119 "bl" set @x0 result 3 consume 4 -> "\x82gb\xb2\x81l" level 1
+node 120 "hz" set @x0 result 4 consume 3 -> "\x82hez" next 121
+node 121 "let(kb" set @x0 result 3 consume 7 -> "\x82let\x81kben" next 133
+node 122 "et(nkb" set @x0 result 3 consume 8 -> "\x82let\x81nkben" level 3
+node 123 "tbl" set @x0 result 3 consume 6 -> "\x82letb\xb2\x81l" level 4
+node 124 "edb" set @x0 result 3 consume 7 -> "\x82letedben" next 130
+node 125 "dbl" set @x0 result 3 consume 8 -> "\x82letedb\xb2\x81l" next 127
+node 126 "rl" set @x0 result 3 consume 8 -> "\x82letedr\xb2\x81l" level 5
+node 127 "mbl" set @x0 result 3 consume 8 -> "\x82letemb\xb2\x81l" level 6
+node 128 "b" set @x0 result 3 consume 7 -> "\x82letemben" next 129
+node 129 "rl" set @x0 result 3 consume 8 -> "\x82letemr\xb2\x81l" level 4
+node 130 "h<" set @x0 result 3 consume 6 -> "\x82lethez" next 131
+node 131 "rl" set @x0 result 3 consume 6 -> "\x82letr\xb2\x81l" next 132
+node 132 "tl" set @x0 result 3 consume 6 -> "\x82lett\xb2\x81l" level 1
+node 133 "p(letbl" set @x0 result 3 consume 8 -> "\x82p\x81letb\xb2\x81l" next 135
+node 134 "s*gb" set @x0 result 3 consume 6 -> "\x82ps\x82gben" level 1
+node 135 "rb" set @x0 result 4 consume 3 -> "\x82rben" next 142
+node 136 "dekedb" set @x0 result 3 consume 8 -> "\x82rdekedben" next 138
+node 137 "ekemb" set @x0 result 3 consume 8 -> "\x82rdekemben" level 2
+node 138 "l" set @x0 result 4 consume 3 -> "\x82r\xb2\x81l" next 139
+node 139 "telemb" set @x0 result 3 consume 8 -> "\x82rtelemben" next 140
+node 140 "v*$b" set @x0 result 3 consume 6 -> "\x82rv\x82nyben" level 3
+node 141 "" set @x0 result 3 consume 3 -> "\x82rv" level 1
+node 142 "sb" set @x0 result 4 consume 3 -> "\x82sben" next 144
+node 143 "p" set @x0 result 3 consume 3 -> "\x82spedig" level 1
+node 144 "tteremb" set @x0 result 3 consume 8 -> "\x82tteremben" next 146
+node 145 "l" set @x0 result 4 consume 3 -> "\x82t\xb2\x81l" level 1
+node 146 "vekbl" set @x0 result 3 consume 6 -> "\x82vekb\xb2\x81l" next 151
+node 147 "ekb" set @x0 result 3 consume 5 -> "\x82vekben" next 148
+node 148 "" set @x0 result 3 consume 2 -> "\x82v" next 149
+node 149 "v" set @x0 result 3 consume 3 -> "\x82vvel" next 150
+node 150 "" set @x0 result 4 consume 2 -> "\x82vel" level 1
+node 151 "" set @x0 result 3 consume 1 -> "\x82s" next 152
+node 152 "" none result 41 consume 1 -> "\x82" end
+node 153 "?v" set @x0 result 3 consume 3 -> "\xa3gyvan" next 154
+node 154 "i" set @x0 result 3 consume 2 -> "\xa3gyis" next 155
+node 155 "j*v" set @x0 result 3 consume 4 -> "\xa3j\x82v" next 157
+node 156 "abb" set @x0 result 3 consume 5 -> "\xa3jabban" level 1
+node 157 "rl" set @x0 result 4 consume 3 -> "\xb2\xa1r\xb2\x81l" next 158
+node 158 "tb" set @x0 result 3 consume 3 -> "\xa3tban" next 160
+node 159 "l" set @x0 result 4 consume 3 -> "\xb2\xa1t\xb2\x81l" level 1
+node 160 "" set @x0 result 3 consume 1 -> "\xa3gy" next 161
+node 161 "" none result 41 consume 1 -> "\xa3" end
+node 162 "0" none result 41 consume 2 -> "\xf8" next 163
+node 163 "8" none result 10 consume 2 -> "`" next 164
+node 164 "9" none result 41 consume 2 -> "\xecR" next 165
+node 165 "ai" set @x0 result 3 consume 3 -> "ai" next 166
+node 166 "ei" set @x0 result 3 consume 3 -> "ei" next 167
+node 167 "v" set @x0 result 3 consume 2 -> "v" next 168
+node 168 "'," none result 41 consume 3 -> "'" next 170
+node 169 "" none result 41 consume 2 -> "'" level 1
+node 170 "_" none result 41 consume 2 -> "_" next 171
+node 171 "-" none result 20 consume 2 -> "--" next 172
+node 172 "" class c03 result 3 consume 1 -> "" next 173
+node 173 "" none result 41 consume 1 -> "'" end
+node 174 "-#" none result 41 consume 2 -> "-" next 175
+node 175 "'" set @x0 result 22 consume 2 -> "--\x0f" next 177
+node 176 "" set @x0 result 21 consume 2 -> "--" level 1
+node 177 "," none result 7 consume 2 -> "-" next 178
+node 178 "" class c03 result 23 consume 1 -> "-\x0f" next 179
+node 179 "" none result 7 consume 1 -> "-" end
+node 180 "." none result 8 consume 2 -> "\x0e" next 182
+node 181 "" none result 33 consume 2 -> "\x0e" level 1
+node 182 "" none result 33 consume 1 -> "\x02" next 183
+node 183 "," none result 7 consume 2 -> "\x0e" next 185
+node 184 "" none result 8 consume 2 -> "\x02" level 1
+node 185 "v'" none result 7 consume 3 -> "V." next 186
+node 186 "!" none result 36 consume 2 -> "[" next 187
+node 187 "z" none result 36 consume 2 -> "]" next 188
+node 188 "" none result 7 consume 1 -> "\x0e" next 189
+node 189 "" none result 8 consume 1 -> "\x02" next 190
+node 190 "" none result 41 consume 1 -> "." end
+node 191 "" set @x0 result 3 consume 1 -> "\xa1gy" next 192
+node 192 "r@sb" set @x0 result 3 consume 5 -> "\xa1r\xa0sban" next 193
+node 193 "" none result 41 consume 1 -> "\xa1" end
+node 194 "1" none result 7 consume 2 -> "\x22, " next 195
+node 195 "'" none result 7 consume 2 -> "\x22." next 196
+node 196 " " none result 11 consume 1 -> "\x22" next 197
+node 197 "" none result 12 consume 1 -> "\x1cfts~i\x1f" end
+node 198 "#" none result 7 consume 1 -> "a " next 199
+node 199 "" none result 27 consume 1 -> "," next 200
+node 200 "\x1cskn0\x1f" set @x0 result 11 consume 7 -> ", " next 202
+node 201 "skn0\x1f" class c03 result 11 consume 7 -> ", " level 1
+node 202 "1" set @x0 result 13 consume 2 -> ", a " next 204
+node 203 "" class c03 result 13 consume 2 -> ", a " level 1
+node 204 "8" class c03 result 6 consume 1 -> " a " next 205
+node 205 "" class c03 result 6 consume 1 -> "a " next 206
+node 206 "" set @x0 result 11 consume 1 -> ", " next 207
+node 207 "" class c03 result 13 consume 1 -> ", " next 208
+node 208 "" none result 41 consume 1 -> ", " end
+node 209 " " none result 15 consume 1 -> ";" next 211
+node 210 "" none result 36 consume 1 -> ";" level 1
+node 211 "" none result 15 consume 1 -> ";" next 212
+node 212 "" class c02 result 11 consume 1 -> ";" next 213
+node 213 "" set @x0 result 11 consume 1 -> ";" next 214
+node 214 "" none result 41 consume 1 -> ";" end
+node 215 "" class c05 result 27 consume 1 -> ":" next 216
+node 216 " " none result 15 consume 1 -> ":" next 218
+node 217 "" none result 36 consume 1 -> ":" level 1
+node 218 "" none result 15 consume 1 -> ":" next 219
+node 219 "" set @x0 result 11 consume 1 -> ":" next 220
+node 220 "" none result 41 consume 1 -> ":" end
+node 221 "" none result 15 consume 1 -> "." next 222
+node 222 "" set @x0 result 11 consume 1 -> "." next 223
+node 223 "" none result 41 consume 1 -> "." end
+node 224 " " none result 15 consume 1 -> "?" next 226
+node 225 "" none result 36 consume 1 -> "?" level 1
+node 226 "" none result 15 consume 1 -> "?" next 227
+node 227 "" set @x0 result 11 consume 1 -> "?" next 228
+node 228 "" none result 41 consume 1 -> "?" end
+node 229 " " none result 15 consume 1 -> "!" next 231
+node 230 "" none result 36 consume 1 -> "!" level 1
+node 231 "" none result 15 consume 1 -> "!" next 232
+node 232 "" set @x0 result 11 consume 1 -> "!" next 233
+node 233 "" none result 41 consume 1 -> "!" end
+node 234 "#a" classes c05 c04 result 15 consume 1 -> "(" next 245
+node 235 "b" classes c05 c04 result 15 consume 1 -> "(" next 236
+node 236 "c" classes c05 c04 result 15 consume 1 -> "(" next 237
+node 237 "d" classes c05 c04 result 15 consume 1 -> "(" next 238
+node 238 "e" classes c05 c04 result 15 consume 1 -> "(" next 239
+node 239 "f" classes c05 c04 result 15 consume 1 -> "(" next 240
+node 240 "g" classes c05 c04 result 15 consume 1 -> "(" next 241
+node 241 "h" classes c05 c04 result 15 consume 1 -> "(" next 242
+node 242 "i" classes c05 c04 result 15 consume 1 -> "(" next 243
+node 243 "j" classes c05 c04 result 15 consume 1 -> "(" next 244
+node 244 "" classes c05 c04 result 15 consume 1 -> "(" level 1
+node 245 "" none result 15 consume 1 -> ")" next 246
+node 246 " " none result 11 consume 1 -> ")" next 247
+node 247 "7" none result 11 consume 2 -> ")(" next 248
+node 248 "" set @x0 result 11 consume 1 -> ")" next 249
+node 249 ",s7" none result 9 consume 1 -> "(" next 250
+node 250 "" none result 10 consume 1 -> "(" next 251
+node 251 "" none result 41 consume 1 -> "=" end
+node 252 " " none result 12 consume 1 -> "\x1cfte~i\x1f" next 253
+node 253 "'" none result 12 consume 1 -> "\x1cfte~i\x1f" next 254
+node 254 "" none result 10 consume 1 -> "\x22" next 255
+node 255 "" none result 41 consume 1 -> "(" end
+node 256 "" none result 10 consume 1 -> "*" next 257
+node 257 "" none result 41 consume 1 -> "*" end
+node 258 "(leiv" set @x0 result 3 consume 6 -> "sz\x81leivel" next 259
+node 259 "*fb" set @x0 result 3 consume 4 -> "sz\x82fben" next 263
+node 260 "kb" set @x0 result 3 consume 4 -> "sz\x82kben" next 261
+node 261 "lb" set @x0 result 3 consume 4 -> "sz\x82lben" next 262
+node 262 "trobb" set @x0 result 3 consume 7 -> "sz\x82trobban" level 1
+node 263 "/nb" set @x0 result 3 consume 4 -> "sz\xa1nben" next 273
+node 264 "nh@<b" set @x0 result 3 consume 7 -> "sz\xa1nh\xa0zban" next 265
+node 265 "v(nkb" set @x0 result 3 consume 7 -> "sz\xa1v\x81nkben" level 3
+node 266 "" set @x0 result 3 consume 3 -> "sz\xa1v" next 267
+node 267 "bl" set @x0 result 3 consume 5 -> "sz\xa1vb\xb2\x81l" next 268
+node 268 "edb" set @x0 result 3 consume 6 -> "sz\xa1vedben" next 272
+node 269 "mb" set @x0 result 3 consume 6 -> "sz\xa1vemben" next 271
+node 270 "bl" set @x0 result 3 consume 7 -> "sz\xa1vemb\xb2\x81l" level 4
+node 271 "sebb" set @x0 result 3 consume 8 -> "sz\xa1vesebben" level 3
+node 272 "v" set @x0 result 3 consume 4 -> "sz\xa1vvel" level 1
+node 273 ":" none result 41 consume 2 -> "ssz" next 274
+node 274 "arb" set @x0 result 3 consume 4 -> "szarban" next 277
+node 275 "rdarab" set @x0 result 3 consume 8 -> "szardarab" level 3
+node 276 "rl" set @x0 result 3 consume 5 -> "szarr\xa2l" level 1
+node 277 "d" set @x0 result 3 consume 2 -> "szabad" next 278
+node 278 "ebb" set @x0 result 3 consume 4 -> "szebben" next 299
+node 279 "kr*$b" set @x0 result 3 consume 7 -> "szekr\x82nyben" next 282
+node 280 "r*$emb" set @x0 result 3 consume 9 -> "szekr\x82nyemben" next 281
+node 281 "torb" set @x0 result 3 consume 7 -> "szektorban" level 2
+node 282 "llemekb" set @x0 result 3 consume 9 -> "szellemekben" next 283
+node 283 "m(kb" set @x0 result 3 consume 6 -> "szem\x81kben" next 291
+node 284 "*tdomb" set @x0 result 3 consume 9 -> "szem\x82tdomb" next 285
+node 285 ":qgbl" set @x0 result 3 consume 8 -> "szemsz\x94gb\xb2\x81l" next 286
+node 286 "b" set @x0 result 3 consume 4 -> "szemben" next 287
+node 287 "edb" set @x0 result 3 consume 6 -> "szemedben" next 290
+node 288 "iv" set @x0 result 3 consume 6 -> "szemeivel" next 289
+node 289 "mb" set @x0 result 3 consume 6 -> "szememben" level 3
+node 290 "tl" set @x0 result 3 consume 5 -> "szemt\xb2\x81l" level 2
+node 291 "rb" set @x0 result 3 consume 4 -> "szerb" next 298
+node 292 "elemb" set @x0 result 3 consume 8 -> "szerelemben" next 297
+node 293 "lembl" set @x0 result 3 consume 9 -> "szerelemb\xb2\x81l" level 5
+node 294 "emh<" set @x0 result 3 consume 9 -> "szerelemhez" level 6
+node 295 "mrl" set @x0 result 3 consume 9 -> "szerelemr\xb2\x81l" level 7
+node 296 "tl" set @x0 result 3 consume 9 -> "szerelemt\xb2\x81l" level 3
+node 297 "v" set @x0 result 3 consume 4 -> "szerv" level 2
+node 298 "xrl" set @x0 result 3 consume 5 -> "szexr\xb2\x81l" level 1
+node 299 "igetrl" set @x0 result 3 consume 7 -> "szigetr\xb2\x81l" next 300
+node 300 "nob" set @x0 result 3 consume 4 -> "sznob" next 301
+node 301 "olg@latb" set @x0 result 3 consume 9 -> "szolg\xa0latban" next 302
+node 302 "qgb" set @x0 result 3 consume 4 -> "sz\x94gben" next 304
+node 303 "gbl" set @x0 result 3 consume 5 -> "sz\x94gb\xb2\x81l" level 1
+node 304 "" none result 41 consume 1 -> "sz" end
+node 305 "e" none result 41 consume 2 -> "\xed\x5c" next 306
+node 306 "os" set @x0 result 3 consume 3 -> "os" next 307
+node 307 "" none result 41 consume 1 -> "<" end
+node 308 "avarb" set @x0 result 3 consume 6 -> "zavarban" next 309
+node 309 "enekarb" set @x0 result 3 consume 8 -> "zenekarban" next 310
+node 310 "b" set @x0 result 4 consume 2 -> "zben" next 311
+node 311 "" none result 41 consume 1 -> "z" end
+node 312 "" none result 41 consume 1 -> "\x82" end
+node 313 ">" none result 41 consume 2 -> "zzs" next 314
+node 314 "ebedb" set @x0 result 3 consume 6 -> "zsebedben" next 316
+node 315 "bemb" set @x0 result 3 consume 6 -> "zsebemben" level 1
+node 316 "" none result 41 consume 1 -> "zs" end
+node 317 "?" none result 41 consume 2 -> "ggy" next 318
+node 318 "@rb" set @x0 result 3 consume 4 -> "gy\xa0rban" next 319
+node 319 "]<elemh<" set @x0 result 3 consume 9 -> "gy\xb2\x81zelemhez" next 320
+node 320 "akrabb" set @x0 result 3 consume 7 -> "gyakrabban" next 321
+node 321 "erekekrl" set @x0 result 3 consume 9 -> "gyerekekr\xb2\x81l" next 323
+node 322 "rekrl" set @x0 result 3 consume 7 -> "gyerekr\xb2\x81l" level 1
+node 323 "orsabb" set @x0 result 3 consume 7 -> "gyorsabb" next 325
+node 324 "rsabb" set @x0 result 3 consume 7 -> "gyorsabban" level 1
+node 325 "s" set @x0 result 3 consume 2 -> "gyors" next 326
+node 326 "" none result 41 consume 1 -> "gy" end
+node 327 "llapotb" set @x0 result 3 consume 8 -> "\xa0llapotban" next 328
+node 328 "ruh@<b" set @x0 result 3 consume 7 -> "\xa0ruh\xa0zban" next 330
+node 329 "vah@<b" set @x0 result 3 consume 8 -> "\xa0rvah\xa0zban" level 1
+node 330 "" none result 41 consume 1 -> "\xa0" end
+node 331 " " none result 14 consume 2 -> " \x0f" next 332
+node 332 "" none result 41 consume 1 -> "@" end
+node 333 "" none result 27 consume 1 -> "1" next 334
+node 334 "bb" set @x0 result 3 consume 3 -> "abban" next 335
+node 335 "d@sb" set @x0 result 3 consume 5 -> "ad\xa0sban" next 336
+node 336 "gre::/v" set @x0 result 3 consume 8 -> "agressz\xa1v" next 337
+node 337 "i" set @x0 result 3 consume 2 -> "annyi" next 338
+node 338 "k@r%" set @x0 result 3 consume 5 -> "ak\xa0rcsak" next 347
+node 339 "ib" set @x0 result 3 consume 4 -> "akiben" next 346
+node 340 "h<" set @x0 result 3 consume 5 -> "akihez" next 341
+node 341 "kb" set @x0 result 3 consume 5 -> "akikben" next 343
+node 342 "rl" set @x0 result 3 consume 6 -> "akikr\xb2\x81l" level 3
+node 343 "rl" set @x0 result 3 consume 5 -> "akir\xb2\x81l" next 344
+node 344 "tl" set @x0 result 3 consume 5 -> "akit\xb2\x81l" next 345
+node 345 "v" set @x0 result 3 consume 4 -> "akivel" level 2
+node 346 "t/v" set @x0 result 3 consume 5 -> "akt\xa1v" level 1
+node 347 "lag+tb" set @x0 result 3 consume 7 -> "alag\xa3tban" next 349
+node 348 "agsorb" set @x0 result 3 consume 8 -> "alagsorban" level 1
+node 349 "me$$ib" set @x0 result 3 consume 7 -> "amennyiben" next 360
+node 350 "e_b" set @x0 result 3 consume 5 -> "amelyben" next 352
+node 351 "_ikb" set @x0 result 3 consume 7 -> "amelyikben" level 2
+node 352 "ib" set @x0 result 3 consume 4 -> "amiben" level 3
+node 353 "bl" set @x0 result 3 consume 5 -> "amib\xb2\x81l" next 354
+node 354 "h<" set @x0 result 3 consume 5 -> "amihez" next 355
+node 355 "kb" set @x0 result 3 consume 5 -> "amikben" next 357
+node 356 "rl" set @x0 result 3 consume 6 -> "amikr\xb2\x81l" level 3
+node 357 "rl" set @x0 result 3 consume 5 -> "amir\xb2\x81l" next 358
+node 358 "tl" set @x0 result 3 consume 5 -> "amit\xb2\x81l" next 359
+node 359 "v" set @x0 result 3 consume 4 -> "amivel" level 1
+node 360 "rab" set @x0 result 3 consume 4 -> "arab" next 362
+node 361 "rl" set @x0 result 3 consume 4 -> "arr\xa2l" level 1
+node 362 "simov" set @x0 result 3 consume 6 -> "asimov" next 363
+node 363 "ugu:tusb" set @x0 result 3 consume 9 -> "augusztusban" next 364
+node 364 "t/v" none result 4 consume 4 -> "at\xa1v" next 365
+node 365 "<[" set @x0 result 3 consume 3 -> "az\xa2ta" next 367
+node 366 "u" set @x0 result 3 consume 3 -> "azut\xa0n" level 1
+node 367 "" none result 41 consume 1 -> "a" end
+node 368 "" none result 27 consume 1 -> "2" next 369
+node 369 "*%b" set @x0 result 3 consume 4 -> "b\x82csben" next 370
+node 370 "@b" set @x0 result 3 consume 3 -> "b\xa0b" next 377
+node 371 "rb" set @x0 result 3 consume 4 -> "b\xa0rban" level 3
+node 372 "kiv" set @x0 result 3 consume 6 -> "b\xa0rkivel" next 373
+node 373 "mib" set @x0 result 3 consume 6 -> "b\xa0rmiben" level 4
+node 374 "ih<" set @x0 result 3 consume 7 -> "b\xa0rmihez" level 5
+node 375 "rl" set @x0 result 3 consume 7 -> "b\xa0rmir\xb2\x81l" next 376
+node 376 "v" set @x0 result 3 consume 6 -> "b\xa0rmivel" level 1
+node 377 "" set @x0 result 4 consume 1 -> "ban" next 378
+node 378 "ab" set @x0 result 3 consume 3 -> "bab" next 381
+node 379 "lesetrl" set @x0 result 3 consume 9 -> "balesetr\xb2\x81l" next 380
+node 380 "rb" set @x0 result 3 consume 4 -> "barb" level 1
+node 381 "b" set @x0 result 3 consume 2 -> "bb" next 383
+node 382 "" set @x0 result 4 consume 2 -> "bb" level 1
+node 383 "el(lrl" set @x0 result 3 consume 7 -> "bel\x81lr\xb2\x81l" next 390
+node 384 "lv@rosb" set @x0 result 3 consume 9 -> "belv\xa0rosban" next 385
+node 385 "ntrl" set @x0 result 3 consume 6 -> "bentr\xb2\x81l" next 386
+node 386 "rb" set @x0 result 4 consume 4 -> "berben" next 388
+node 387 "linb" set @x0 result 3 consume 7 -> "berlinben" level 2
+node 388 "tegs*gb" set @x0 result 3 consume 9 -> "betegs\x82gben" next 389
+node 389 "v" set @x0 result 3 consume 3 -> "bev" level 1
+node 390 "g" set @x0 result 3 consume 2 -> "boldog" next 392
+node 391 "" set @x0 result 3 consume 2 -> "boldog" level 1
+node 392 "l" set @x0 result 4 consume 2 -> "b\xa2l" next 394
+node 393 "" set @x0 result 4 consume 2 -> "b\xa2l" level 1
+node 394 "ob" set @x0 result 3 consume 3 -> "bob" next 396
+node 395 "ltb" set @x0 result 3 consume 5 -> "boltban" level 1
+node 396 "qrtqnb" set @x0 result 3 consume 7 -> "b\x94rt\x94nben" next 399
+node 397 "rtqnb" set @x0 result 3 consume 7 -> "b\x94rt\x94nben" level 3
+node 398 "tqnbl" set @x0 result 3 consume 8 -> "b\x94rt\x94nb\xb2\x81l" level 1
+node 399 "" none result 41 consume 1 -> "b" end
+node 400 "" none result 27 consume 1 -> "3" next 401
+node 401 "'" set @x0 result 9 consume 1 -> "c" next 402
+node 402 "*gh<" set @x0 result 3 consume 5 -> "c\x82ghez" next 404
+node 403 "gtl" set @x0 result 3 consume 5 -> "c\x82gt\xb2\x81l" level 1
+node 404 "aleb" set @x0 result 3 consume 5 -> "caleb" next 406
+node 405 "rl" set @x0 result 3 consume 4 -> "carl" level 1
+node 406 "entiv" set @x0 result 3 consume 6 -> "centivel" next 407
+node 407 "lub" set @x0 result 3 consume 4 -> "club" next 409
+node 408 "ubb" set @x0 result 3 consume 5 -> "clubban" level 1
+node 409 "4-(-d4" none result 10 consume 7 -> "c.-\x85-d." next 410
+node 410 "" none result 41 consume 1 -> "c" end
+node 411 "" none result 27 consume 1 -> "4" next 412
+node 412 "'" set @x0 result 9 consume 1 -> "d" next 413
+node 413 "*lb" set @x0 result 3 consume 4 -> "d\x82lben" next 415
+node 414 "lrl" set @x0 result 3 consume 5 -> "d\x82lr\xb2\x81l" level 1
+node 415 ">ungelb" set @x0 result 3 consume 8 -> "dzsungelben" next 416
+node 416 "allasb" set @x0 result 3 consume 7 -> "dallasban" next 419
+node 417 "rab" set @x0 result 3 consume 5 -> "darab" level 3
+node 418 "abb" set @x0 result 3 consume 6 -> "darabban" level 1
+node 419 "eb" set @x0 result 3 consume 3 -> "deb" next 423
+node 420 "tekt/v" set @x0 result 3 consume 8 -> "detekt\xa1v" next 422
+node 421 "roitb" set @x0 result 3 consume 8 -> "detroitban" level 2
+node 422 "v" set @x0 result 3 consume 3 -> "dev" level 1
+node 423 "hi" set @x0 result 3 consume 3 -> "dehogyis" next 425
+node 424 "" set @x0 result 3 consume 2 -> "dehogy" level 1
+node 425 "irekt" set @x0 result 3 consume 6 -> "direkt" next 426
+node 426 "ob" set @x0 result 3 consume 3 -> "dob" next 432
+node 427 "bo<b" set @x0 result 3 consume 6 -> "dobozban" next 428
+node 428 "ll@rb" set @x0 result 3 consume 7 -> "doll\xa0rban" next 430
+node 429 "l@rrl" set @x0 result 3 consume 8 -> "doll\xa0rr\xa2l" level 2
+node 430 "mb" set @x0 result 3 consume 4 -> "domb" next 431
+node 431 "nov" set @x0 result 3 consume 5 -> "donovan" level 1
+node 432 "" set @x0 result 3 consume 1 -> "de" next 433
+node 433 "" none result 41 consume 1 -> "d" end
+node 434 "" none result 27 consume 1 -> "5" next 435
+node 435 "$$ib" set @x0 result 3 consume 5 -> "ennyiben" next 438
+node 436 "$iv" set @x0 result 3 consume 5 -> "ennyivel" next 437
+node 437 "*mb" set @x0 result 3 consume 5 -> "eny\x82mben" level 1
+node 438 ":emb" set @x0 result 3 consume 5 -> "eszemben" next 439
+node 439 "?*b" set @x0 result 3 consume 4 -> "egy\x82b" next 449
+node 440 "b" set @x0 result 3 consume 3 -> "egyben" next 442
+node 441 "l" set @x0 result 3 consume 4 -> "egyb\xb2\x81l" level 2
+node 442 "etemb" set @x0 result 3 consume 7 -> "egyetemben" next 444
+node 443 "temrl" set @x0 result 3 consume 8 -> "egyetemr\xb2\x81l" level 2
+node 444 "h<" set @x0 result 3 consume 4 -> "egyhez" next 445
+node 445 "ikb" set @x0 result 3 consume 5 -> "egyikben" next 446
+node 446 "m@sb" set @x0 result 3 consume 6 -> "egym\xa0sban" next 447
+node 447 "s*gb" set @x0 result 3 consume 6 -> "egys\x82gben" next 448
+node 448 "tl" set @x0 result 3 consume 4 -> "egyt\xb2\x81l" level 1
+node 449 "<[" set @x0 result 3 consume 3 -> "ez\xa2ta" next 456
+node 450 "ekb" set @x0 result 3 consume 5 -> "ezekben" next 455
+node 451 "kbl" set @x0 result 3 consume 6 -> "ezekb\xb2\x81l" level 4
+node 452 "h<" set @x0 result 3 consume 6 -> "ezekhez" next 453
+node 453 "rl" set @x0 result 3 consume 6 -> "ezekr\xb2\x81l" next 454
+node 454 "tl" set @x0 result 3 consume 6 -> "ezekt\xb2\x81l" level 2
+node 455 "u" set @x0 result 3 consume 3 -> "ezut\xa0n" level 1
+node 456 "arl" set @x0 result 3 consume 4 -> "earl" next 457
+node 457 "b" set @x0 result 3 consume 2 -> "eb" next 461
+node 458 "b" set @x0 result 3 consume 3 -> "ebben" next 460
+node 459 "l" set @x0 result 3 consume 4 -> "ebb\xb2\x81l" level 2
+node 460 "l" set @x0 result 4 consume 3 -> "eb\xb2\x81l" level 1
+node 461 "g*:b" set @x0 result 3 consume 5 -> "eg\x82szben" next 466
+node 462 "*:bl" set @x0 result 3 consume 6 -> "eg\x82szb\xb2\x81l" level 3
+node 463 ":h<" set @x0 result 3 consume 6 -> "eg\x82szhez" level 4
+node 464 "rl" set @x0 result 3 consume 6 -> "eg\x82szr\xb2\x81l" next 465
+node 465 "s*gb" set @x0 result 3 consume 8 -> "eg\x82szs\x82gben" level 1
+node 466 "hh<" set @x0 result 3 consume 4 -> "ehhez" next 467
+node 467 "i" set @x0 result 3 consume 2 -> "ennyi" next 469
+node 468 "b" set @x0 result 4 consume 3 -> "eiben" level 1
+node 469 "l]$b" set @x0 result 3 consume 5 -> "el\xb2\x81nyben" next 475
+node 470 "]lrl" set @x0 result 3 consume 6 -> "el\xb2\x81lr\xb2\x81l" next 471
+node 471 "lenb" set @x0 result 3 consume 6 -> "ellenben" next 472
+node 472 "qlrl" set @x0 result 3 consume 6 -> "el\x94lr\xb2\x81l" next 473
+node 473 "s]sorb" set @x0 result 3 consume 8 -> "els\xb2\x81sorban" next 474
+node 474 "v" set @x0 result 3 consume 3 -> "elv" level 1
+node 475 "mberbl" set @x0 result 3 consume 7 -> "emberb\xb2\x81l" next 485
+node 476 "bereiv" set @x0 result 3 consume 8 -> "embereivel" next 484
+node 477 "erekb" set @x0 result 3 consume 8 -> "emberekben" level 4
+node 478 "rekbl" set @x0 result 3 consume 9 -> "emberekb\xb2\x81l" level 5
+node 479 "ekh<" set @x0 result 3 consume 9 -> "emberekhez" next 482
+node 480 "krl" set @x0 result 3 consume 9 -> "emberekr\xb2\x81l" level 7
+node 481 "tl" set @x0 result 3 consume 9 -> "emberekt\xb2\x81l" level 5
+node 482 "h<" set @x0 result 3 consume 7 -> "emberhez" next 483
+node 483 "tl" set @x0 result 3 consume 7 -> "embert\xb2\x81l" level 2
+node 484 "eletrl" set @x0 result 3 consume 8 -> "emeletr\xb2\x81l" level 1
+node 485 "r]db" set @x0 result 3 consume 5 -> "er\xb2\x81dben" next 490
+node 486 "]sebb" set @x0 result 3 consume 7 -> "er\xb2\x81sebben" next 487
+node 487 "b" set @x0 result 4 consume 3 -> "erben" next 488
+node 488 "l" set @x0 result 4 consume 3 -> "er\xb2\x81l" next 489
+node 489 "rl" set @x0 result 3 consume 4 -> "err\xb2\x81l" level 1
+node 490 "sb" set @x0 result 4 consume 3 -> "esben" next 494
+node 491 "etekb" set @x0 result 3 consume 7 -> "esetekben" level 3
+node 492 "temb" set @x0 result 3 consume 7 -> "esetemben" level 4
+node 493 "rl" set @x0 result 3 consume 6 -> "esetr\xb2\x81l" level 1
+node 494 "tl" set @x0 result 4 consume 3 -> "et\xb2\x81l" next 496
+node 495 "tl" set @x0 result 3 consume 4 -> "ett\xb2\x81l" level 1
+node 496 "v" set @x0 result 3 consume 2 -> "evan" next 498
+node 497 "v" set @x0 result 3 consume 3 -> "evvel" level 1
+node 498 "xklu</v" set @x0 result 3 consume 8 -> "exkluz\xa1v" next 499
+node 499 "" none result 41 consume 1 -> "e" end
+node 500 "" none result 27 consume 1 -> "6" next 501
+node 501 "*$b" set @x0 result 3 consume 4 -> "f\x82nyben" next 507
+node 502 "l*v" set @x0 result 3 consume 5 -> "f\x82l\x82v" next 505
+node 503 "elemb" set @x0 result 3 consume 8 -> "f\x82lelemben" level 4
+node 504 "lemtl" set @x0 result 3 consume 9 -> "f\x82lelemt\xb2\x81l" level 2
+node 505 "rfiv" set @x0 result 3 consume 6 -> "f\x82rfivel" level 3
+node 506 "jh<" set @x0 result 3 consume 6 -> "f\x82rjhez" level 1
+node 507 "]:erepb" set @x0 result 3 consume 8 -> "f\xb2\x81szerepben" next 508
+node 508 "a::op[" set @x0 result 3 consume 7 -> "fasszop\xa2" next 509
+node 509 "bl" set @x0 result 3 consume 3 -> "fbl" next 510
+node 510 "ej*h<" set @x0 result 3 consume 6 -> "fej\x82hez" next 523
+node 511 "jb" set @x0 result 3 consume 4 -> "fejben" next 517
+node 512 "edb" set @x0 result 3 consume 6 -> "fejedben" level 4
+node 513 "dbl" set @x0 result 3 consume 7 -> "fejedb\xb2\x81l" next 514
+node 514 "mb" set @x0 result 3 consume 6 -> "fejemben" level 5
+node 515 "bl" set @x0 result 3 consume 7 -> "fejemb\xb2\x81l" next 516
+node 516 "h<" set @x0 result 3 consume 7 -> "fejemhez" level 2
+node 517 "l(lrl" set @x0 result 3 consume 7 -> "fel\x81lr\xb2\x81l" next 522
+node 518 "es*gemh<" set @x0 result 3 consume 11 -> "feles\x82gemhez" next 520
+node 519 "s*gemrl" set @x0 result 3 consume 11 -> "feles\x82gemr\xb2\x81l" level 3
+node 520 "h/v" set @x0 result 3 consume 6 -> "felh\xa1v" next 521
+node 521 "robb" set @x0 result 3 consume 7 -> "felrobban" level 2
+node 522 "ntrl" set @x0 result 3 consume 6 -> "fentr\xb2\x81l" level 1
+node 523 "i+rl" set @x0 result 3 consume 5 -> "fi\xa3r\xa2l" next 529
+node 524 "lmb" set @x0 result 3 consume 5 -> "filmben" level 3
+node 525 "mbl" set @x0 result 3 consume 6 -> "filmb\xb2\x81l" level 4
+node 526 "ekb" set @x0 result 3 consume 7 -> "filmekben" next 527
+node 527 "h<" set @x0 result 3 consume 6 -> "filmhez" next 528
+node 528 "rl" set @x0 result 3 consume 6 -> "filmr\xb2\x81l" level 1
+node 529 "o_amatb" set @x0 result 3 consume 8 -> "folyamatban" next 531
+node 530 "rgat[kq$v" set @x0 result 3 consume 11 -> "forgat\xa2k\x94nyv" level 1
+node 531 "qldb" set @x0 result 3 consume 5 -> "f\x94ldben" next 536
+node 532 "ldbl" set @x0 result 3 consume 6 -> "f\x94ldb\xb2\x81l" level 3
+node 533 "dh<" set @x0 result 3 consume 6 -> "f\x94ldh\x94z" level 4
+node 534 "rl" set @x0 result 3 consume 6 -> "f\x94ldr\xb2\x81l" next 535
+node 535 "tl" set @x0 result 3 consume 6 -> "f\x94ldt\xb2\x81l" level 1
+node 536 "" none result 41 consume 1 -> "f" end
+node 537 "*pb" set @x0 result 3 consume 4 -> "g\x82pben" next 539
+node 538 "ph<" set @x0 result 3 consume 5 -> "g\x82phez" level 1
+node 539 "alamb" set @x0 result 3 consume 6 -> "galamb" next 541
+node 540 "laxisb" set @x0 result 3 consume 8 -> "galaxisban" level 1
+node 541 "d" set @x0 result 3 consume 2 -> "gond" next 542
+node 542 "imib" set @x0 result 3 consume 5 -> "gimiben" next 544
+node 543 "rl" set @x0 result 3 consume 4 -> "girl" level 1
+node 544 "omb" set @x0 result 3 consume 4 -> "gomb" next 546
+node 545 "ndolatb" set @x0 result 3 consume 9 -> "gondolatban" level 1
+node 546 "g" set @x0 result 3 consume 2 -> "f\x81gg" next 547
+node 547 "qmb" set @x0 result 3 consume 4 -> "g\x94mb" next 548
+node 548 "ustav" set @x0 result 3 consume 6 -> "gustav" next 549
+node 549 "" none result 27 consume 1 -> "7" next 550
+node 550 "" none result 41 consume 1 -> "g" end
+node 551 "" none result 27 consume 1 -> "8" next 552
+node 552 "/rekb" set @x0 result 3 consume 6 -> "h\xa1rekben" next 555
+node 553 "rn*v" set @x0 result 3 consume 6 -> "h\xa1rn\x82v" next 554
+node 554 "v" set @x0 result 3 consume 3 -> "h\xa1v" level 1
+node 555 "@<b" set @x0 result 3 consume 4 -> "h\xa0zban" next 559
+node 556 "bor+rl" set @x0 result 3 consume 8 -> "h\xa0bor\xa3r\xa2l" next 557
+node 557 "rmasb" set @x0 result 3 consume 7 -> "h\xa0rmasban" next 558
+node 558 "trav" set @x0 result 3 consume 6 -> "h\xa0travan" level 1
+node 559 "]s*gb" set @x0 result 3 consume 6 -> "h\xb2\x81s\x82gben" next 560
+node 560 "" set @x0 result 3 consume 1 -> "hogy" next 561
+node 561 "<" set @x0 result 4 consume 2 -> "hoz" next 562
+node 562 "ab" set @x0 result 3 consume 3 -> "hab" next 568
+node 563 "dseregb" set @x0 result 3 consume 9 -> "hadseregben" next 564
+node 564 "lkabb" set @x0 result 3 consume 7 -> "halkabban" next 565
+node 565 "ngosabb" set @x0 result 3 consume 9 -> "hangosabban" next 567
+node 566 "gulatb" set @x0 result 3 consume 9 -> "hangulatban" level 2
+node 567 "tv" set @x0 result 3 consume 4 -> "hatvan" level 1
+node 568 "e?ekb" set @x0 result 3 consume 6 -> "hegyekben" next 582
+node 569 "?rl" set @x0 result 3 consume 5 -> "hegyr\xb2\x81l" next 570
+node 570 "_:/nrl" set @x0 result 3 consume 8 -> "helysz\xa1nr\xb2\x81l" next 580
+node 571 "<etbl" set @x0 result 3 consume 8 -> "helyzetb\xb2\x81l" next 574
+node 572 "etekb" set @x0 result 3 consume 9 -> "helyzetekben" level 5
+node 573 "trl" set @x0 result 3 consume 8 -> "helyzetr\xb2\x81l" level 3
+node 574 "b" set @x0 result 3 consume 4 -> "helyben" next 575
+node 575 "edb" set @x0 result 3 consume 6 -> "helyedben" next 577
+node 576 "mb" set @x0 result 3 consume 6 -> "helyemben" level 3
+node 577 "h<" set @x0 result 3 consume 5 -> "helyhez" next 578
+node 578 "rl" set @x0 result 3 consume 5 -> "helyr\xb2\x81l" next 579
+node 579 "tl" set @x0 result 3 consume 5 -> "helyt\xb2\x81l" level 2
+node 580 "rb" set @x0 result 3 consume 4 -> "herb" next 581
+node 581 "tekb" set @x0 result 3 consume 6 -> "hetekben" level 1
+node 582 "idegb" set @x0 result 3 consume 6 -> "hidegben" next 584
+node 583 "v" set @x0 result 3 consume 3 -> "hiv" level 1
+node 584 "oldf*$b" set @x0 result 3 consume 8 -> "holdf\x82nyben" next 588
+node 585 "lnaptl" set @x0 result 3 consume 8 -> "holnapt\xa2l" next 586
+node 586 "telb" set @x0 result 3 consume 6 -> "hotelban" level 3
+node 587 "elb" set @x0 result 3 consume 6 -> "hotelben" level 1
+node 588 "ullah@<b" set @x0 result 3 consume 9 -> "hullah\xa0zban" next 589
+node 589 "" none result 41 consume 1 -> "h" end
+node 590 "" none result 27 consume 1 -> "9" next 591
+node 591 "_esmib" set @x0 result 3 consume 7 -> "ilyesmiben" next 596
+node 592 "esmib" set @x0 result 3 consume 7 -> "ilyesmiben" level 3
+node 593 "smih<" set @x0 result 3 consume 8 -> "ilyesmihez" level 4
+node 594 "mirl" set @x0 result 3 consume 8 -> "ilyesmir\xb2\x81l" level 5
+node 595 "iv" set @x0 result 3 consume 7 -> "ilyesmivel" level 1
+node 596 ".pad" none result 3 consume 5 -> "iPad" next 599
+node 597 "phone" none result 3 consume 7 -> "iPhone" next 598
+node 598 "tune" none result 3 consume 6 -> "iTune" level 1
+node 599 "" set @x0 result 3 consume 1 -> "is" next 600
+node 600 "d]kb" set @x0 result 3 consume 5 -> "id\xb2\x81kben" next 604
+node 601 "]kbl" set @x0 result 3 consume 6 -> "id\xb2\x81kb\xb2\x81l" level 3
+node 602 "mb" set @x0 result 3 consume 5 -> "id\xb2\x81mben" next 603
+node 603 "pontb" set @x0 result 3 consume 8 -> "id\xb2\x81pontban" level 1
+node 604 "nnentl" set @x0 result 3 consume 7 -> "innent\xb2\x81l" next 606
+node 605 "ten</v" set @x0 result 3 consume 8 -> "intenz\xa1v" level 1
+node 606 "stenb" set @x0 result 3 consume 6 -> "istenben" next 610
+node 607 "tenh<" set @x0 result 3 consume 7 -> "istenhez" level 3
+node 608 "enrl" set @x0 result 3 consume 7 -> "istenr\xb2\x81l" level 4
+node 609 "ntl" set @x0 result 3 consume 7 -> "istent\xb2\x81l" level 1
+node 610 "t/v" set @x0 result 4 consume 4 -> "it\xa1v" next 611
+node 611 "v" set @x0 result 3 consume 2 -> "iv" next 613
+node 612 "" set @x0 result 3 consume 2 -> "ivan" level 1
+node 613 "'" set @x0 result 9 consume 1 -> "i" next 614
+node 614 "" none result 41 consume 1 -> "i" end
+node 615 "" none result 27 consume 1 -> "0" next 616
+node 616 "@ratb" set @x0 result 3 consume 6 -> "j\xa0ratban" next 617
+node 617 "[lv" set @x0 result 3 consume 4 -> "j\xa2lvan" next 618
+node 618 "+liusb" set @x0 result 3 consume 7 -> "j\xa3liusban" next 620
+node 619 "niusb" set @x0 result 3 consume 7 -> "j\xa3niusban" level 1
+node 620 "acob" set @x0 result 3 consume 5 -> "jacob" next 622
+node 621 "nu@rb" set @x0 result 3 consume 7 -> "janu\xa0rban" level 1
+node 622 "e?<]kq$v" set @x0 result 3 consume 9 -> "jegyz\xb2\x81k\x94nyv" next 624
+node 623 "?b" set @x0 result 3 consume 4 -> "jegyben" level 1
+node 624 "obb" set @x0 result 3 consume 4 -> "jobb" next 626
+node 625 "bb" set @x0 result 3 consume 4 -> "jobban" level 1
+node 626 "'" set @x0 result 9 consume 1 -> "j" next 627
+node 627 "" none result 41 consume 1 -> "j" end
+node 628 "(<delemb" set @x0 result 3 consume 9 -> "k\x81zdelemben" next 633
+node 629 "lqnb" set @x0 result 3 consume 6 -> "k\x81l\x94nb" level 3
+node 630 "qnb" set @x0 result 3 consume 6 -> "k\x81l\x94nben" next 632
+node 631 "nqsebb" set @x0 result 3 consume 10 -> "k\x81l\x94n\x94sebben" level 3
+node 632 "v@rosb" set @x0 result 3 consume 9 -> "k\x81lv\xa0rosban" level 1
+node 633 "*<ikq$v" set @x0 result 3 consume 8 -> "k\x82zik\x94nyv" next 636
+node 634 "pb" set @x0 result 3 consume 4 -> "k\x82pben" level 3
+node 635 "bl" set @x0 result 3 consume 5 -> "k\x82pb\xb2\x81l" level 1
+node 636 "/v(lrl" set @x0 result 3 consume 7 -> "k\xa1v\x81lr\xb2\x81l" next 637
+node 637 "[rh@<b" set @x0 result 3 consume 7 -> "k\xa2rh\xa0zban" next 638
+node 638 "" set @x0 result 3 consume 1 -> "kell" next 639
+node 639 "a$arb" set @x0 result 3 consume 6 -> "kanyarban" next 643
+node 640 "b@tb" set @x0 result 3 consume 6 -> "kab\xa0tban" next 641
+node 641 "p%olatb" set @x0 result 3 consume 9 -> "kapcsolatban" next 642
+node 642 "rl" set @x0 result 3 consume 4 -> "karl" level 1
+node 643 "b" set @x0 result 3 consume 2 -> "kb" next 644
+node 644 "e<(kb" set @x0 result 3 consume 6 -> "kez\x81kben" next 661
+node 645 "<(nkb" set @x0 result 3 consume 7 -> "kez\x81nkben" next 653
+node 646 "(nkbl" set @x0 result 3 consume 8 -> "kez\x81nkb\xb2\x81l" next 647
+node 647 "detektl" set @x0 result 3 consume 10 -> "kezdetekt\xb2\x81l" next 649
+node 648 "ettl" set @x0 result 3 consume 8 -> "kezdett\xb2\x81l" level 3
+node 649 "edb" set @x0 result 3 consume 6 -> "kezedben" level 4
+node 650 "kb" set @x0 result 3 consume 6 -> "kezekben" next 651
+node 651 "mb" set @x0 result 3 consume 6 -> "kezemben" level 5
+node 652 "bl" set @x0 result 3 consume 7 -> "kezemb\xb2\x81l" level 2
+node 653 "dv" set @x0 result 3 consume 4 -> "kedvel" next 655
+node 654 "vemb" set @x0 result 3 consume 7 -> "kedvemben" level 2
+node 655 "letrl" set @x0 result 3 consume 7 -> "keletr\xb2\x81l" next 656
+node 656 "m*$ebb" set @x0 result 3 consume 8 -> "kem\x82nyebben" next 657
+node 657 "trecb" set @x0 result 3 consume 7 -> "ketrecben" next 659
+node 658 "t]nkrl" set @x0 result 3 consume 9 -> "kett\xb2\x81nkr\xb2\x81l" level 2
+node 659 "v" set @x0 result 3 consume 3 -> "kev" level 3
+node 660 "esebb" set @x0 result 3 consume 8 -> "kevesebben" level 1
+node 661 "gb" set @x0 result 3 consume 3 -> "kgb" next 662
+node 662 "i%iv" set @x0 result 3 consume 5 -> "kicsivel" next 671
+node 663 "b" set @x0 result 3 consume 3 -> "kiben" next 664
+node 664 "h<" set @x0 result 3 consume 4 -> "kihez" next 665
+node 665 "ntrl" set @x0 result 3 consume 6 -> "kintr\xb2\x81l" next 666
+node 666 "rl" set @x0 result 3 consume 4 -> "kir\xb2\x81l" next 667
+node 667 "sv@rosb" set @x0 result 3 consume 9 -> "kisv\xa0rosban" next 668
+node 668 "tl" set @x0 result 3 consume 4 -> "kit\xb2\x81l" next 669
+node 669 "v" set @x0 result 3 consume 3 -> "kivan" level 3
+node 670 "" set @x0 result 3 consume 3 -> "kivel" level 1
+node 671 "lub" set @x0 result 3 consume 4 -> "klub" next 673
+node 672 "ubb" set @x0 result 3 consume 5 -> "klubban" level 1
+node 673 "olostorb" set @x0 result 3 consume 9 -> "kolostorban" next 681
+node 674 "mo_abb" set @x0 result 3 consume 8 -> "komolyabban" next 675
+node 675 "n<erv" set @x0 result 3 consume 7 -> "konzerv" next 676
+node 676 "r@bb" set @x0 result 3 consume 6 -> "kor\xa0bban" next 680
+node 677 "b" set @x0 result 3 consume 4 -> "korban" next 678
+node 678 "h@<b" set @x0 result 3 consume 7 -> "korh\xa0zban" next 679
+node 679 "rekt" set @x0 result 3 consume 7 -> "korrekt" level 2
+node 680 "s@rb" set @x0 result 3 consume 6 -> "kos\xa0rban" level 1
+node 681 "q$$ebb" set @x0 result 3 consume 7 -> "k\x94nnyebben" next 698
+node 682 "$v" set @x0 result 3 consume 4 -> "k\x94nyv" next 687
+node 683 "vbl" set @x0 result 3 consume 6 -> "k\x94nyvb\xb2\x81l" level 4
+node 684 "ekb" set @x0 result 3 consume 7 -> "k\x94nyvekben" next 685
+node 685 "t@rb" set @x0 result 3 consume 8 -> "k\x94nyvt\xa0rban" next 686
+node 686 "v" set @x0 result 3 consume 5 -> "k\x94nyvvel" level 2
+node 687 "<elb" set @x0 result 3 consume 6 -> "k\x94zelben" next 694
+node 688 "elebbrl" set @x0 result 3 consume 10 -> "k\x94zelebbr\xb2\x81l" next 692
+node 689 "ledb" set @x0 result 3 consume 8 -> "k\x94zeledben" level 5
+node 690 "emb" set @x0 result 3 consume 8 -> "k\x94zelemben" next 691
+node 691 "rl" set @x0 result 3 consume 7 -> "k\x94zelr\xb2\x81l" level 3
+node 692 "pontb" set @x0 result 3 consume 8 -> "k\x94zpontban" next 693
+node 693 "qss*gb" set @x0 result 3 consume 9 -> "k\x94z\x94ss\x82gben" level 2
+node 694 "db" set @x0 result 3 consume 4 -> "k\x94dben" next 695
+node 695 "r$*krl" set @x0 result 3 consume 8 -> "k\x94rny\x82kr\xb2\x81l" level 3
+node 696 "(nkb" set @x0 result 3 consume 7 -> "k\x94r\x81nkben" next 697
+node 697 "qkb" set @x0 result 3 consume 6 -> "k\x94r\x94kben" level 1
+node 698 "s" set @x0 result 3 consume 2 -> "keres" next 699
+node 699 "t" set @x0 result 4 consume 2 -> "k\x82nt" next 700
+node 700 "" none result 41 consume 1 -> "k" end
+node 701 "@b" set @x0 result 3 consume 3 -> "l\xa0b" next 702
+node 702 "'" set @x0 result 9 consume 1 -> "l" next 703
+node 703 "" set @x0 result 3 consume 1 -> "lesz" next 704
+node 704 "*lekb" set @x0 result 3 consume 6 -> "l\x82lekben" next 706
+node 705 "p*srl" set @x0 result 3 consume 7 -> "l\x82p\x82sr\xb2\x81l" level 1
+node 706 "aborb" set @x0 result 3 consume 6 -> "laborban" next 709
+node 707 "ssabb" set @x0 result 3 consume 7 -> "lassabban" next 708
+node 708 "k@sb" set @x0 result 3 consume 6 -> "lak\xa0sban" level 1
+node 709 "eg:/vesebb" set @x0 result 3 consume 11 -> "legsz\xa1vesebben" next 719
+node 710 "g?orsabb" set @x0 result 3 consume 10 -> "leggyorsabban" next 715
+node 711 "jobb" set @x0 result 3 consume 7 -> "legjobb" next 713
+node 712 "obb" set @x0 result 3 consume 7 -> "legjobban" level 3
+node 713 "tqbb" set @x0 result 3 consume 7 -> "legt\x94bben" level 4
+node 714 "qbb" set @x0 result 3 consume 7 -> "legt\x94bb" level 2
+node 715 "ntrl" set @x0 result 3 consume 6 -> "lentr\xb2\x81l" next 716
+node 716 "v*lb" set @x0 result 3 consume 6 -> "lev\x82lben" level 3
+node 717 "" set @x0 result 3 consume 3 -> "lev" next 718
+node 718 "eg]h<" set @x0 result 3 consume 8 -> "leveg\xb2\x81h\x94z" level 1
+node 719 "iv" set @x0 result 3 consume 3 -> "liv" next 720
+node 720 "" none result 41 consume 1 -> "l" end
+node 721 "'" set @x0 result 9 consume 1 -> "m" next 722
+node 722 ")he_b" set @x0 result 3 consume 6 -> "m\xb2\xa1helyben" next 724
+node 723 "sorb" set @x0 result 3 consume 6 -> "m\xb2\xa1sorban" level 1
+node 724 "*_ebb" set @x0 result 3 consume 6 -> "m\x82lyebben" next 727
+node 725 "gp" set @x0 result 3 consume 4 -> "m\x82gpedig" next 726
+node 726 "rt*kb" set @x0 result 3 consume 7 -> "m\x82rt\x82kben" level 1
+node 727 "@jusb" set @x0 result 3 consume 6 -> "m\xa0jusban" next 733
+node 728 "rciusb" set @x0 result 3 consume 8 -> "m\xa0rciusban" next 729
+node 729 "sb" set @x0 result 3 consume 4 -> "m\xa0sban" level 3
+node 730 "k(lqnb" set @x0 result 3 consume 9 -> "m\xa0sk\x81l\x94nben" next 731
+node 731 "odpercb" set @x0 result 3 consume 10 -> "m\xa0sodpercben" next 732
+node 732 "r*:rl" set @x0 result 3 consume 8 -> "m\xa0sr\x82szr\xb2\x81l" level 1
+node 733 "" set @x0 result 3 consume 1 -> "mely" next 734
+node 734 "+ltb" set @x0 result 3 consume 5 -> "m\xa3ltban" next 735
+node 735 "a::/v" set @x0 result 3 consume 6 -> "massz\xa1v" next 739
+node 736 "gasb" set @x0 result 3 consume 6 -> "magasban" next 737
+node 737 "jdn" set @x0 result 3 consume 5 -> "majdnem" next 738
+node 738 "nhattanb" set @x0 result 3 consume 10 -> "manhattanben" level 1
+node 739 "d" set @x0 result 3 consume 2 -> "mind" next 740
+node 740 "e$$b" set @x0 result 3 consume 5 -> "mennyben" next 754
+node 741 "$$bl" set @x0 result 3 consume 6 -> "mennyb\xb2\x81l" next 746
+node 742 "$ekb" set @x0 result 3 consume 7 -> "mennyekben" level 4
+node 743 "ib" set @x0 result 3 consume 6 -> "mennyiben" level 5
+node 744 "s*gb" set @x0 result 3 consume 9 -> "mennyis\x82gben" next 745
+node 745 "v" set @x0 result 3 consume 6 -> "mennyivel" level 2
+node 746 "::irl" set @x0 result 3 consume 7 -> "messzir\xb2\x81l" next 747
+node 747 "_b" set @x0 result 3 consume 4 -> "melyben" next 749
+node 748 "ikb" set @x0 result 3 consume 6 -> "melyikben" level 2
+node 749 "</tl@b" set @x0 result 3 consume 8 -> "mez\xa1tl\xa0b" next 750
+node 750 "gh/v" set @x0 result 3 consume 6 -> "megh\xa1v" next 752
+node 751 "v" set @x0 result 3 consume 4 -> "megvan" level 2
+node 752 "legb" set @x0 result 3 consume 6 -> "melegben" next 753
+node 753 "rev" set @x0 result 3 consume 5 -> "merev" level 1
+node 754 "i[" set @x0 result 3 consume 3 -> "mi\xa2ta" next 775
+node 755 "b" set @x0 result 3 consume 3 -> "miben" next 757
+node 756 "l" set @x0 result 3 consume 4 -> "mib\xb2\x81l" level 2
+node 757 "h<" set @x0 result 3 consume 4 -> "mihez" next 758
+node 758 "nde?ikb" set @x0 result 3 consume 9 -> "mindegyikben" next 770
+node 759 "dehh<" set @x0 result 3 consume 8 -> "mindehhez" level 4
+node 760 "enb" set @x0 result 3 consume 7 -> "mindenben" level 5
+node 761 "nbl" set @x0 result 3 consume 8 -> "mindenb\xb2\x81l" level 6
+node 762 "h<" set @x0 result 3 consume 8 -> "mindenhez" next 763
+node 763 "kiv" set @x0 result 3 consume 9 -> "mindenkivel" next 768
+node 764 "ib" set @x0 result 3 consume 9 -> "mindenkiben" level 8
+node 765 "h<" set @x0 result 3 consume 10 -> "mindenkihez" next 766
+node 766 "rl" set @x0 result 3 consume 10 -> "mindenkir\xb2\x81l" next 767
+node 767 "tl" set @x0 result 3 consume 10 -> "mindenkit\xb2\x81l" level 6
+node 768 "rl" set @x0 result 3 consume 8 -> "mindenr\xb2\x81l" next 769
+node 769 "tl" set @x0 result 3 consume 8 -> "mindent\xb2\x81l" level 2
+node 770 "rl" set @x0 result 3 consume 4 -> "mir\xb2\x81l" next 771
+node 771 "tl" set @x0 result 3 consume 4 -> "mit\xb2\x81l" next 772
+node 772 "u" set @x0 result 3 consume 3 -> "miut\xa0n" next 773
+node 773 "v" set @x0 result 3 consume 3 -> "mivan" level 3
+node 774 "" set @x0 result 3 consume 3 -> "mivel" level 1
+node 775 "o%@rb" set @x0 result 3 consume 6 -> "mocs\xa0rban" next 778
+node 776 "<g@sb" set @x0 result 3 consume 7 -> "mozg\xa0sban" next 777
+node 777 "telb" set @x0 result 3 consume 6 -> "motelben" level 1
+node 778 "t" set @x0 result 3 consume 2 -> "mint" next 779
+node 779 "" none result 41 consume 1 -> "m" end
+node 780 "" set @x0 result 3 consume 1 -> "nem" next 781
+node 781 "'" set @x0 result 9 consume 1 -> "n" next 782
+node 782 "%" set @x0 result 3 consume 2 -> "nemcsak" next 783
+node 783 "*v" set @x0 result 3 consume 3 -> "n\x82v" next 785
+node 784 "vv" set @x0 result 3 consume 4 -> "n\x82vvel" level 1
+node 785 "]h<" set @x0 result 3 consume 4 -> "n\xb2\x81h\x94z" next 789
+node 786 "kh<" set @x0 result 3 consume 5 -> "n\xb2\x81kh\x94z" level 3
+node 787 "rl" set @x0 result 3 consume 5 -> "n\xb2\x81kr\xb2\x81l" next 788
+node 788 "tl" set @x0 result 3 consume 5 -> "n\xb2\x81kt\xb2\x81l" level 1
+node 789 "a/v" set @x0 result 3 consume 4 -> "na\xa1v" next 795
+node 790 "?darab" set @x0 result 3 consume 8 -> "nagydarab" next 791
+node 791 "iv" set @x0 result 3 consume 4 -> "naiv" next 792
+node 792 "pf*$b" set @x0 result 3 consume 7 -> "napf\x82nyben" level 3
+node 793 "rl" set @x0 result 3 consume 5 -> "napr\xa2l" next 794
+node 794 "tl" set @x0 result 3 consume 5 -> "napt\xa2l" level 1
+node 795 "d" set @x0 result 3 consume 2 -> "nemde" next 796
+node 796 "e?edb" set @x0 result 3 consume 6 -> "negyedben" next 801
+node 797 "he<ebb" set @x0 result 3 consume 8 -> "nehezebben" next 798
+node 798 "mr*gib" set @x0 result 3 consume 8 -> "nemr\x82giben" next 799
+node 799 "vedb" set @x0 result 3 consume 6 -> "nevedben" level 3
+node 800 "emb" set @x0 result 3 consume 6 -> "nevemben" level 1
+node 801 "l@t[" set @x0 result 3 consume 5 -> "neml\xa0t\xa2" next 802
+node 802 "r*g" set @x0 result 3 consume 4 -> "nemr\x82g" next 803
+node 803 "" none result 41 consume 1 -> "n" end
+node 804 "bjekt/v" set @x0 result 3 consume 8 -> "objekt\xa1v" next 805
+node 805 "dav" set @x0 result 3 consume 4 -> "odavan" next 806
+node 806 "l%[bb" set @x0 result 3 consume 6 -> "olcs\xa2bban" next 807
+node 807 "rleansb" set @x0 result 3 consume 8 -> "orleansban" next 808
+node 808 "gos" set @x0 result 3 consume 4 -> "orsz\xa0gos" next 810
+node 809 "" set @x0 result 3 consume 2 -> "orsz\xa0g" level 1
+node 810 "s[" set @x0 result 3 consume 3 -> "olvas\xa2" next 812
+node 811 "" set @x0 result 3 consume 2 -> "olvas" level 1
+node 812 "" none result 41 consume 1 -> "o" end
+node 813 "*n<bl" set @x0 result 3 consume 6 -> "p\x82nzb\xb2\x81l" next 816
+node 814 "n<h<" set @x0 result 3 consume 6 -> "p\x82nzhez" level 3
+node 815 "<rl" set @x0 result 3 consume 6 -> "p\x82nzr\xb2\x81l" level 1
+node 816 ":ichi@terh<" set @x0 result 3 consume 12 -> "pszichi\xa0terhez" next 817
+node 817 "@rb" set @x0 result 3 consume 4 -> "p\xa0rban" next 818
+node 818 "" set @x0 result 3 consume 1 -> "pedig" next 819
+node 819 "<" set @x0 result 3 consume 2 -> "p\x82nz" next 820
+node 820 "a::/v" set @x0 result 3 consume 6 -> "passz\xa1v" next 821
+node 821 "earl" set @x0 result 3 consume 5 -> "pearl" next 824
+node 822 "rcb" set @x0 result 3 consume 5 -> "percben" level 3
+node 823 "ctl" set @x0 result 3 consume 6 -> "perct\xb2\x81l" level 1
+node 824 "hz" set @x0 result 4 consume 3 -> "phez" next 825
+node 825 "illanatb" set @x0 result 3 consume 9 -> "pillanatban" next 826
+node 826 "ontb" set @x0 result 3 consume 5 -> "pontban" next 827
+node 827 "rl" set @x0 result 4 consume 3 -> "pr\xb2\x81l" next 829
+node 828 "ojekt" set @x0 result 3 consume 7 -> "projekt" level 1
+node 829 "tos" set @x0 result 3 consume 4 -> "pontos" next 832
+node 830 "" set @x0 result 3 consume 2 -> "pont" next 831
+node 831 "l" set @x0 result 4 consume 3 -> "pt\xb2\x81l" level 1
+node 832 "" none result 41 consume 1 -> "p" end
+node 833 "bqlb" set @x0 result 3 consume 5 -> "\x94b\x94lben" next 835
+node 834 "qlb" set @x0 result 3 consume 5 -> "\x94b\x94lben" level 1
+node 835 "e" set @x0 result 3 consume 2 -> "\x94ssze" next 836
+node 836 "hz" set @x0 result 4 consume 3 -> "\x94h\x94z" next 837
+node 837 "ltq$b" set @x0 result 3 consume 6 -> "\x94lt\x94nyben" next 838
+node 838 "nb" set @x0 result 3 consume 3 -> "\x94nben" next 845
+node 839 "h<" set @x0 result 3 consume 4 -> "\x94nh\x94z" next 840
+node 840 "qkh<" set @x0 result 3 consume 6 -> "\x94n\x94kh\x94z" next 842
+node 841 "ktl" set @x0 result 3 consume 6 -> "\x94n\x94kt\xb2\x81l" level 2
+node 842 "rl" set @x0 result 3 consume 4 -> "\x94nr\xb2\x81l" next 843
+node 843 "tl" set @x0 result 3 consume 4 -> "\x94nt\xb2\x81l" next 844
+node 844 "v*delembl" set @x0 result 3 consume 11 -> "\x94nv\x82delemb\xb2\x81l" level 1
+node 845 "rdqgb" set @x0 result 3 consume 6 -> "\x94rd\x94gben" next 848
+node 846 "dqgrl" set @x0 result 3 consume 7 -> "\x94rd\x94gr\xb2\x81l" next 847
+node 847 "qmtl" set @x0 result 3 consume 6 -> "\x94r\x94mt\xb2\x81l" level 1
+node 848 "u'" none result 9 consume 3 -> "qu'" next 849
+node 849 "v" set @x0 result 3 consume 2 -> "\x94v" next 850
+node 850 "" none result 41 consume 1 -> "\x94" end
+node 851 "*:b" set @x0 result 3 consume 4 -> "r\x82szben" next 857
+node 852 ":emrl" set @x0 result 3 consume 7 -> "r\x82szemr\xb2\x81l" next 854
+node 853 "emrl" set @x0 result 3 consume 7 -> "r\x82szemr\xb2\x81l" level 2
+node 854 "g[" set @x0 result 3 consume 4 -> "r\x82g\xa2ta" level 3
+node 855 "ebb" set @x0 result 3 consume 6 -> "r\x82gebb" level 4
+node 856 "bb" set @x0 result 3 consume 6 -> "r\x82gebben" level 1
+node 857 "ab" set @x0 result 3 consume 3 -> "rab" next 860
+node 858 "dioakt/v" set @x0 result 3 consume 10 -> "radioakt\xa1v" next 859
+node 859 "kt@rb" set @x0 result 3 consume 7 -> "rakt\xa0rban" level 1
+node 860 "d" set @x0 result 3 consume 2 -> "r\x94vid" next 861
+node 861 "eggeltl" set @x0 result 3 consume 8 -> "reggelt\xb2\x81l" next 867
+node 862 "m*$b" set @x0 result 3 consume 6 -> "rem\x82nyben" next 863
+node 863 "nb" set @x0 result 3 consume 4 -> "renben" next 866
+node 864 "d]rs*gtl" set @x0 result 3 consume 11 -> "rend\xb2\x81rs\x82gt\xb2\x81l" level 4
+node 865 "b" set @x0 result 3 consume 5 -> "rendben" level 2
+node 866 "ub" set @x0 result 3 consume 4 -> "reuben" level 1
+node 867 "hz" set @x0 result 4 consume 3 -> "rhez" next 868
+node 868 "ingb" set @x0 result 3 consume 5 -> "ringben" next 869
+node 869 "l" set @x0 result 4 consume 2 -> "r\xa2l" next 870
+node 870 "ob" set @x0 result 3 consume 3 -> "rob" next 873
+node 871 "bb" set @x0 result 3 consume 4 -> "robban" next 872
+node 872 "sseb" set @x0 result 3 consume 6 -> "rosseb" level 1
+node 873 "r" set @x0 result 3 consume 2 -> "forr" next 875
+node 874 "l" set @x0 result 4 consume 3 -> "rr\xb2\x81l" level 1
+node 875 "ub" set @x0 result 3 consume 3 -> "ruben" next 876
+node 876 "" none result 41 consume 1 -> "r" end
+node 877 "'" set @x0 result 9 consume 1 -> "s" next 878
+node 878 "/rb" set @x0 result 3 consume 4 -> "s\xa1rban" next 879
+node 879 "@rb" set @x0 result 3 consume 4 -> "s\xa0rban" next 881
+node 880 "torb" set @x0 result 3 consume 6 -> "s\xa0torban" level 1
+node 881 "aab" set @x0 result 3 consume 4 -> "saab" next 884
+node 882 "nch<" set @x0 result 3 consume 6 -> "sanchez" next 883
+node 883 "v" set @x0 result 3 consume 3 -> "sav" level 1
+node 884 "eb" set @x0 result 3 consume 3 -> "seb" next 898
+node 885 "ggedb" set @x0 result 3 consume 7 -> "seggedben" next 887
+node 886 "gemb" set @x0 result 3 consume 7 -> "seggemben" level 2
+node 887 "mmib" set @x0 result 3 consume 6 -> "semmiben" next 893
+node 888 "mibl" set @x0 result 3 consume 7 -> "semmib\xb2\x81l" level 4
+node 889 "ih<" set @x0 result 3 consume 7 -> "semmihez" level 5
+node 890 "rl" set @x0 result 3 consume 7 -> "semmir\xb2\x81l" next 891
+node 891 "tl" set @x0 result 3 consume 7 -> "semmit\xb2\x81l" next 892
+node 892 "v" set @x0 result 3 consume 6 -> "semmivel" level 2
+node 893 "nkib" set @x0 result 3 consume 6 -> "senkiben" next 897
+node 894 "kih<" set @x0 result 3 consume 7 -> "senkihez" level 4
+node 895 "itl" set @x0 result 3 consume 7 -> "senkit\xb2\x81l" level 5
+node 896 "v" set @x0 result 3 consume 6 -> "senkivel" level 2
+node 897 "regb" set @x0 result 3 consume 6 -> "seregben" level 1
+node 898 "ik@torb" set @x0 result 3 consume 8 -> "sik\xa0torban" next 900
+node 899 "ttrl" set @x0 result 3 consume 6 -> "sittr\xb2\x81l" level 1
+node 900 "orb" set @x0 result 3 consume 4 -> "sorban" next 903
+node 901 "ro<atb" set @x0 result 3 consume 8 -> "sorozatban" level 3
+node 902 "rendb" set @x0 result 3 consume 8 -> "sorrendben" level 1
+node 903 "qt*ts*gb" set @x0 result 3 consume 9 -> "s\x94t\x82ts\x82gben" next 904
+node 904 "t/lusb" set @x0 result 3 consume 7 -> "st\xa1lusban" next 907
+node 905 "@b" set @x0 result 3 consume 4 -> "st\xa0b" next 906
+node 906 "b" set @x0 result 3 consume 3 -> "stb" level 1
+node 907 "ub" set @x0 result 3 consume 3 -> "sub" next 909
+node 908 "lliv" set @x0 result 3 consume 6 -> "sullivan" level 1
+node 909 "" none result 41 consume 1 -> "s" end
+node 910 "'" set @x0 result 9 consume 1 -> "t" next 911
+node 911 "%" set @x0 result 3 consume 2 -> "tan\xa0cs" next 912
+node 912 ")<h<" set @x0 result 3 consume 5 -> "t\xb2\xa1zh\x94z" next 914
+node 913 "<tl" set @x0 result 3 consume 5 -> "t\xb2\xa1zt\xb2\x81l" level 1
+node 914 "*ved*sbl" set @x0 result 3 consume 9 -> "t\x82ved\x82sb\xb2\x81l" next 915
+node 915 "@borb" set @x0 result 3 consume 6 -> "t\xa0borban" next 917
+node 916 "r?al[teremb" set @x0 result 3 consume 13 -> "t\xa0rgyal\xa2teremben" level 1
+node 917 "" set @x0 result 3 consume 1 -> "teh\xa0t" next 918
+node 918 "+l*l*sh<" set @x0 result 3 consume 9 -> "t\xa3l\x82l\x82shez" next 919
+node 919 "b" set @x0 result 4 consume 2 -> "tben" next 920
+node 920 "engerh<" set @x0 result 3 consume 8 -> "tengerhez" next 926
+node 921 "remb" set @x0 result 3 consume 6 -> "teremben" next 924
+node 922 "v" set @x0 result 3 consume 4 -> "terv" level 4
+node 923 "v" set @x0 result 3 consume 5 -> "tervvel" level 2
+node 924 "stemb" set @x0 result 3 consume 7 -> "testemben" next 925
+node 925 "xasb" set @x0 result 3 consume 6 -> "texasban" level 1
+node 926 "i:t@bb" set @x0 result 3 consume 7 -> "tiszt\xa0bban" next 928
+node 927 "losb" set @x0 result 3 consume 6 -> "tilosban" level 1
+node 928 "l" set @x0 result 4 consume 2 -> "t\xa2l" next 929
+node 929 "ov" set @x0 result 3 consume 3 -> "tov" next 930
+node 930 "qbb" set @x0 result 3 consume 4 -> "t\x94bb" next 940
+node 931 "bb" set @x0 result 3 consume 4 -> "t\x94bben" next 936
+node 932 "biekh<" set @x0 result 3 consume 9 -> "t\x94bbiekhez" level 4
+node 933 "ih<" set @x0 result 3 consume 7 -> "t\x94bbihez" next 935
+node 934 "v" set @x0 result 3 consume 6 -> "t\x94bbivel" level 4
+node 935 "rl" set @x0 result 3 consume 6 -> "t\x94bbr\xb2\x81l" level 2
+node 936 "mb" set @x0 result 3 consume 4 -> "t\x94mb" next 938
+node 937 "egb" set @x0 result 3 consume 6 -> "t\x94megben" level 2
+node 938 "rt*nelemb" set @x0 result 3 consume 11 -> "t\x94rt\x82nelemben" level 3
+node 939 "t*ntekrl" set @x0 result 3 consume 11 -> "t\x94rt\x82ntekr\xb2\x81l" level 1
+node 940 "s" set @x0 result 3 consume 2 -> "teljes" next 941
+node 941 "v" set @x0 result 3 consume 2 -> "tv" next 942
+node 942 "" none result 41 consume 1 -> "t" end
+node 943 "" set @x0 result 3 consume 1 -> "ut\xa0n " next 944
+node 944 "?anabb" set @x0 result 3 consume 7 -> "ugyanabban" next 948
+node 945 "anarrl" set @x0 result 3 consume 8 -> "ugyanarr\xa2l" level 3
+node 946 "nebb" set @x0 result 3 consume 7 -> "ugyanebben" level 4
+node 947 "%" set @x0 result 3 consume 5 -> "ugyancsak" level 1
+node 948 "dvarb" set @x0 result 3 consume 6 -> "udvarban" next 949
+node 949 "" none result 41 consume 1 -> "u" end
+node 950 "*g*h<" set @x0 result 3 consume 6 -> "v\x82g\x82hez" next 955
+node 951 "gh<" set @x0 result 3 consume 5 -> "v\x82ghez" next 952
+node 952 "redb" set @x0 result 3 consume 6 -> "v\x82redben" level 3
+node 953 "emb" set @x0 result 3 consume 6 -> "v\x82remben" next 954
+node 954 "tl" set @x0 result 3 consume 5 -> "v\x82rt\xb2\x81l" level 1
+node 955 "/<bl" set @x0 result 3 consume 5 -> "v\xa1zb\xb2\x81l" next 958
+node 956 "<h<" set @x0 result 3 consume 5 -> "v\xa1zhez" level 3
+node 957 "tl" set @x0 result 3 consume 5 -> "v\xa1zt\xb2\x81l" level 1
+node 958 "@rosb" set @x0 result 3 consume 6 -> "v\xa0rosban" next 959
+node 959 "" set @x0 result 4 consume 1 -> "val" next 960
+node 960 "" set @x0 result 3 consume 1 -> "van" next 961
+node 961 "alakib" set @x0 result 3 consume 7 -> "valakiben" next 972
+node 962 "lakih<" set @x0 result 3 consume 8 -> "valakihez" level 3
+node 963 "akirl" set @x0 result 3 consume 8 -> "valakir\xb2\x81l" level 4
+node 964 "kitl" set @x0 result 3 consume 8 -> "valakit\xb2\x81l" next 966
+node 965 "iv" set @x0 result 3 consume 7 -> "valakivel" level 4
+node 966 "mib" set @x0 result 3 consume 7 -> "valamiben" level 5
+node 967 "ibl" set @x0 result 3 consume 8 -> "valamib\xb2\x81l" level 6
+node 968 "h<" set @x0 result 3 consume 8 -> "valamihez" next 969
+node 969 "rl" set @x0 result 3 consume 8 -> "valamir\xb2\x81l" next 970
+node 970 "tl" set @x0 result 3 consume 8 -> "valamit\xb2\x81l" next 971
+node 971 "v" set @x0 result 3 consume 7 -> "valamivel" level 1
+node 972 "b" set @x0 result 4 consume 2 -> "vben" next 973
+node 973 "e:*_b" set @x0 result 3 consume 6 -> "vesz\x82lyben" next 977
+node 974 "gasb" set @x0 result 3 consume 6 -> "vegasban" next 975
+node 975 "r*b" set @x0 result 3 consume 5 -> "ver\x82b" level 3
+node 976 "se$b" set @x0 result 3 consume 7 -> "versenyben" level 1
+node 977 "g" set @x0 result 3 consume 2 -> "vil\xa0g" next 978
+node 978 "iccbl" set @x0 result 3 consume 6 -> "viccb\xb2\x81l" next 981
+node 979 "harb" set @x0 result 3 consume 6 -> "viharban" next 980
+node 980 "l@ge?etemb" set @x0 result 3 consume 12 -> "vil\xa0gegyetemben" level 1
+node 981 "ql?b" set @x0 result 3 consume 5 -> "v\x94lgyben" next 982
+node 982 "rl" set @x0 result 4 consume 3 -> "vr\xb2\x81l" next 983
+node 983 "t" set @x0 result 3 consume 2 -> "volt" next 984
+node 984 "" none result 41 consume 1 -> "v" end
+node 985 "eb" set @x0 result 3 consume 3 -> "web" next 986
+node 986 "" none result 41 consume 1 -> "w" end
+node 987 "b" set @x0 result 4 consume 2 -> "xben" next 988
+node 988 "v'" none result 41 consume 3 -> "xv." next 989
+node 989 "" none result 41 consume 1 -> "x" end
+node 990 "b" set @x0 result 4 consume 2 -> "yben" next 992
+node 991 "l" set @x0 result 4 consume 3 -> "yb\xb2\x81l" level 1
+node 992 "hz" set @x0 result 4 consume 3 -> "yhez" next 993
+node 993 "rl" set @x0 result 4 consume 3 -> "yr\xb2\x81l" next 994
+node 994 "tl" set @x0 result 4 consume 3 -> "yt\xb2\x81l" next 995
+node 995 "v" set @x0 result 4 consume 2 -> "yvel" next 996
+node 996 "" none result 41 consume 1 -> "y" end
+node 997 "" none result 41 consume 1 -> ")" end
+node 998 "vatosabb" set @x0 result 3 consume 9 -> "\xa2vatosabban" next 999
+node 999 "" set @x0 result 3 consume 1 -> "\xa2ta" next 1000
+node 1000 "" none result 41 consume 1 -> "\xa2" end
+node 1001 "\x5c" none result 41 consume 2 -> "tty" next 1002
+node 1002 "" none result 41 consume 1 -> "ty" end
+node 1003 "b" set @x0 result 4 consume 2 -> "\xb2\x81ben" next 1005
+node 1004 "l" set @x0 result 4 consume 3 -> "\xb2\x81b\xb2\x81l" level 1
+node 1005 "hz" set @x0 result 4 consume 3 -> "\xb2\x81h\x94z" next 1006
+node 1006 "rl" set @x0 result 4 consume 3 -> "\xb2\x81r\xb2\x81l" next 1007
+node 1007 "tl" set @x0 result 4 consume 3 -> "\xb2\x81t\xb2\x81l" next 1008
+node 1008 "v" set @x0 result 4 consume 2 -> "\xb2\x81vel" next 1009
+node 1009 "" none result 41 consume 1 -> "\xb2\x81" next 1010
+node 1010 "" none result 41 consume 1 -> "\x8b" next 1011
+node 1011 "" none result 41 consume 1 -> "\x8b" next 1012
+node 1012 "" none result 48 consume 1 -> "\xa4" next 1013
+node 1013 "" none result 41 consume 1 -> "\x8b" end
+node 1014 "" none result 41 consume 1 -> "@" end
+node 1015 "_" none result 41 consume 2 -> "lly" next 1016
+node 1016 "/" none result 36 consume 2 -> "/" next 1017
+node 1017 "?" none result 36 consume 2 -> "#" next 1018
+node 1018 "" none result 41 consume 1 -> "ly" end
+
+scan input-mode 0
+scan trailing-blanks 1
+scan flag 28
+scan full-stop 46
+scan newline 1
+scan form-feed "\x15"
+scan paragraph "p"
+scan new-paragraphs 0
+scan rejoin-hyphens 0
+scan spaces 0
+scan tab-width 1
+scan ninmod 0
+scan fold-codes 1
+scan fold-words 1
+scan capital-cessation 0
+scan map-braces 0
+scan spare 0
+scan passage-ends 0
+scan nxsls 0
+scan format-word 28
+scan format-word2 27
+scan capital-sign 0
+scan capital-end 0
+scan address-switching 0
+scan mode-words "running" "spacing" "marking" "as-is" "compress" "sentence" "auto-tab" "par" "no-par" "par-skp" "par-ind"
+scan passage-words 0
+scan doubled-adjectives 0

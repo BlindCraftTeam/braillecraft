@@ -1,0 +1,1804 @@
+# The rules of tlaacb.btb and gendxb.sct, recreated as BrailleMaker table source.
+table "Tagalog - basic, braille to print"
+default-char 42
+raw 0
+writer 2
+output 4
+tail-extra 0 0 0
+unknown 0
+
+state s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 s11 s12 s13 s14 s15 s16
+state s17 s18 s19 s20 s21 s22 s23 s24 s25 s26 s27 s28 s29 s30 s31 s32
+state s33 s34 s35 s36 s37 s38 s39 s40 s41 s42 s43 s44 s45 s46 s47 s48
+state s49 s50 s51 s52 s53 s54 s55 s56 s57 s58 s59 s60 s61 s62 s63 s64
+
+class c00 "\x01\x02\x1b\x1c\x1d\x1e\x1f -\xec"
+class c01 "\x01\x02\x1b\x1c\x1d\x1e\x1f '-01234678\xec"
+class c02 "\x1b\x1c\x1d\x1e\x1f `"
+class c03 "!$()59]aeiou"
+class c04 "!\x22$%&()*+,./0123456789:;<=>?[\x5c]^_abcdefghijklmnopqrstuvwxyz"
+class c05 "!&()="
+class c06 "\x22',-0123456789;\xec"
+class c07 "%&*+/0246:<=>?[\x5cbcdfghjklmnpqrstvwxyz"
+class c08 "-01234678\xec"
+class c09 ".abcdefghij"
+class c10 "47"
+class c11 "abcdefghijklmnopqrstuvwxyz"
+class c12 ""
+class c13 ""
+class c14 ""
+class c15 ""
+class c16 ""
+class c17 ""
+class c18 ""
+class c19 ""
+class c20 ""
+class c21 ""
+class c22 ""
+class c23 ""
+class c24 ""
+class c25 ""
+class c26 ""
+class c27 ""
+class c28 ""
+class c29 ""
+class c30 ""
+class c31 ""
+class c32 ""
+class c33 ""
+class c34 ""
+class c35 ""
+class c36 ""
+class c37 ""
+class c38 ""
+class c39 ""
+class c40 ""
+class c41 ""
+class c42 ""
+class c43 ""
+class c44 ""
+class c45 ""
+class c46 ""
+class c47 ""
+class c48 ""
+class c49 ""
+class c50 ""
+class c51 ""
+class c52 ""
+class c53 ""
+class c54 ""
+class c55 ""
+class c56 ""
+class c57 ""
+class c58 ""
+class c59 ""
+class c60 ""
+class c61 ""
+class c62 ""
+class c63 ""
+
+set x0 = c00 | c08 c01
+set x1 = c09 @x0 | "'" @x0 | c09 @x1 | "'" @x1 | "1" @x1
+set x2 = @x0 | c07 | "3" | "\x22" c07 | "^" c07 | "_" c07 | "]" | "i" @x0
+set x3 = c11 "4"
+set x4 = c02 | c01 @x4 | "'" "y"
+set x5 = "<" | "r" | ">" | "s" | "n" | ":" | "u" | "v" | "y" | "+" | "m" | "p" | "%" | "[" | "w" | "o" | "g" | "&" | "*" | "&" | "\x5c" | "x" | "(" | "t" | "?" | "z" | "!"
+set x6 = "@" | "c" | "," | "\x22" | "e" | "^" | "h" | "d" | "j" | "." | ";" | "f" | "i"
+set x7 = "^" | "_" | "!" | "0"
+set x8 = "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" | "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "w" | "x" | "y" | "z" | "*" | "%" | ":" | "<" | "?" | "+" | "[" | "!" | "&"
+
+result 1 when !s3 !s4 s21 !s22 !s23 !s24 then clear s1 set s2 clear s7 clear s25
+result 2 when !s4 then set s1 set s2 clear s7
+result 3
+result 4 when s2 !s3 !s4 s21 !s22 !s23 !s24 then clear s1 set s2 clear s7 clear s25
+result 5
+result 6 when !s2 !s3 !s4 s21 !s22 !s23 !s24 then clear s1 set s2 clear s7 clear s25
+result 7 when !s2 !s3 !s4 s21 !s22 !s23 !s24 then clear s1 clear s2 clear s7
+result 8 when !s1 !s2 !s4
+result 9 when s1 !s4 then clear s1 clear s7
+result 10 when s2 !s4
+result 11 when s2 !s4 then clear s5 clear s7
+result 12 when !s4 s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s25
+result 13
+result 14 when !s4 then clear s1 clear s2 clear s7
+result 15 then clear s1 clear s2 clear s5 clear s7 clear s25 clear s26 clear s27 clear s28
+result 16 when !s4 then clear s1 clear s2 set s5 clear s7
+result 17 when !s4 then clear s1 clear s2 clear s5 clear s7 clear s25 clear s26 clear s27 clear s28
+result 18
+result 19
+result 20 then set s4 set s6 clear s7
+result 21 when s4 s6 then set s4 clear s6 clear s7
+result 22 then clear s4 clear s7
+result 23 then set s4 clear s7
+result 24 when s4 then set s7
+result 25 when s4 s7
+result 26
+result 27 when s1 !s4 then set s1 set s2 clear s7
+result 28
+result 29 when !s8 then set s3 clear s7
+result 30 when !s8 then clear s3 clear s7
+result 31 then set s4 clear s6 clear s7
+result 32 when s4 then clear s7
+result 33 then set s4 set s5 clear s7
+result 34 when s4 then clear s5 clear s7
+result 35 when s4 s5 then clear s1 set s2 clear s7 clear s25
+result 36 when !s4 then clear s1 clear s7
+result 37 when !s4 then clear s1 set s5 clear s7
+result 38 when !s4 then clear s1 clear s5 clear s7 set s25 clear s26 clear s27 clear s28
+result 39 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s25
+result 40 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 then set s25
+result 41 when !s4 then clear s1 set s2 clear s7 clear s25
+result 42 when !s4 then clear s1 set s2 set s5 clear s7
+result 43 when !s4
+result 44 then clear s26 clear s27 clear s28
+result 45 then clear s26 clear s27 set s28
+result 46 then set s26 set s27 set s28
+result 47 when !s4 s26 s27 s28 then clear s1 set s2 clear s7 clear s25
+result 48 when !s4 !s21 !s22 s23 !s24 then clear s1 set s2 clear s7 clear s25
+result 49 then clear s1 clear s2 clear s5 clear s7 set s8 set s9
+result 50 then clear s1 clear s2 clear s5 clear s7 set s8 clear s9
+result 51 when s8 s9 then set s3 clear s5 clear s7 set s8 set s9 clear s21 clear s22 set s23 clear s24
+result 52 then set s3 clear s5 clear s7 set s8 clear s9 clear s21 clear s22 clear s23 set s24
+result 53 then clear s3 clear s5 clear s7 set s21 clear s22 clear s23 clear s24
+result 54 when s3 then set s3 clear s5 clear s7 set s8 set s9 clear s21 clear s22 set s23 clear s24
+result 55 when s3 then set s3 clear s5 clear s7 set s8 clear s9 clear s21 clear s22 clear s23 set s24
+result 56 then clear s5 clear s7 clear s8 clear s9 set s21 clear s22 clear s23 clear s24
+result 57 then set s21 clear s22 clear s23 clear s24
+result 58 then clear s21 clear s22 clear s23 set s24
+result 59 then clear s21 clear s22 set s23 clear s24
+result 60 then clear s21 clear s22 set s23 set s24
+result 61 then clear s21 set s22 clear s23 clear s24
+result 62 then clear s21 set s22 clear s23 set s24
+result 63 then clear s21 set s22 set s23 clear s24
+result 64 when !s3 !s4 s21 s22 s23 !s24 then clear s1 set s2 clear s7 clear s25
+result 65 when !s4 !s21 s22 s23 !s24 then clear s1 set s2 clear s7 clear s25
+result 66 when !s3 !s4 s21 !s22 !s23 !s24 !s25 !s26 !s27 s28 then clear s1 set s2 clear s7 clear s25
+result 67 when !s2 !s3 !s4 s21 !s22 !s23 !s24 !s25 !s26 !s27 s28 then clear s1 set s2 clear s7 clear s25
+result 68 then clear s21 clear s22 clear s23 clear s24
+result 69
+result 70 when !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 set s17 clear s18
+result 71 when !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s17 set s18
+result 72 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 set s17 clear s18
+result 73 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s17 set s18
+result 74 when s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 set s17 clear s18
+result 75 when s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s17 set s18
+result 76 when s2 !s3 !s4 s17 !s18 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 set s17 clear s18
+result 77 when s2 !s3 !s4 s17 !s18 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s17 set s18
+result 78 when s2 !s3 !s4 !s17 s18 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 set s17 clear s18
+result 79 when s2 !s3 !s4 !s17 s18 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s17 set s18
+result 80 when s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s25
+result 81 when s3 then clear s1 set s2 clear s7 clear s25
+result 82 when !s2 s3 !s4 then clear s1 set s2 clear s7 clear s25
+result 83 when !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s25
+result 84 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s25
+result 85 when !s4 !s21 !s22 !s23 !s24 !s25 then set s1 set s2 clear s7
+result 86 when !s2 !s4 !s21 !s22 !s23 !s24 !s25 then set s1 set s2 clear s7
+result 87 when !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 clear s7
+result 88 when s1 !s4 !s21 !s22 !s23 !s24 !s25
+result 89
+result 90 when !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s25
+result 91 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 set s20
+result 92 then clear s1 set s2 clear s7 clear s20
+result 93 when !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 set s30 clear s31 clear s32 clear s33
+result 94 when !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s30 set s31 clear s32 clear s33
+result 95 when !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s30 clear s31 set s32 clear s33
+result 96 when !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s30 clear s31 clear s32 set s33
+result 97 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 set s30 clear s31 clear s32 clear s33
+result 98 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s30 set s31 clear s32 clear s33
+result 99 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s30 clear s31 set s32 clear s33
+result 100 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 !s25 then clear s1 set s2 clear s7 clear s25
+result 101 when !s3 !s4 !s21 !s22 !s23 !s24 s30 then clear s1 set s2 clear s7 clear s25
+result 102 when !s3 !s4 !s21 !s22 !s23 !s24 s31 then clear s1 set s2 clear s7 clear s25
+result 103 when !s3 !s4 !s21 !s22 !s23 !s24 s32 then clear s1 set s2 clear s7 clear s25
+result 104 when !s3 !s4 !s21 !s22 !s23 !s24 s33 then clear s1 set s2 clear s7 clear s25
+result 105 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 s30 then clear s1 set s2 clear s7 clear s25
+result 106 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 s31 then clear s1 set s2 clear s7 clear s25
+result 107 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 s32 then clear s1 set s2 clear s7 clear s25
+result 108 when !s2 !s3 !s4 !s21 !s22 !s23 !s24 s33 then clear s1 set s2 clear s7 clear s25
+result 109 when s2 !s3 !s4 !s21 !s22 !s23 !s24 s30 then clear s1 set s2 clear s7 clear s25
+result 110 when s2 !s3 !s4 !s21 !s22 !s23 !s24 s31 then clear s1 set s2 clear s7 clear s25
+result 111 when s2 !s3 !s4 !s21 !s22 !s23 !s24 s32 then clear s1 set s2 clear s7 clear s25
+result 112 when s2 !s3 !s4 !s21 !s22 !s23 !s24 s33 then clear s1 set s2 clear s7 clear s25
+result 113 when !s2 !s4 !s21 !s22 !s23 !s24 !s25 then set s17 clear s18
+result 114 when !s2 !s4 !s21 !s22 !s23 !s24 !s25 then clear s17 set s18
+result 115 when !s2 !s4 s17 then clear s17 set s18
+result 116 when s18 then clear s17 set s18
+result 117 when s18 then clear s17 clear s18
+
+char "\x01" default "$" rules 1 then clear s1 clear s2 clear s7
+char "\x02" default "$" rules 2 then clear s1 clear s2 clear s7
+char "\x1b" default "$" rules 3 then clear s1 clear s2 clear s7
+char "\x1c" default "$" rules 6 then clear s1 clear s2 clear s7
+char "\x1d" default "$" rules 76 then clear s1 clear s2 clear s7
+char "\x1e" default "$" rules 77 then clear s1 clear s2 clear s7
+char "\x1f" default "$" rules 78 then clear s1 clear s2 clear s7
+char " " default " " rules 79 then clear s1 clear s2 clear s7
+char "!" default "!" rules 82
+char "\x22" default "\x22" rules 93
+char "#" default "#" rules 138
+char "$" default "$" rules 144
+char "%" default "%" rules 167
+char "&" default "&" rules 181
+char "'" default "'" rules 391
+char "(" default "(" rules 397
+char ")" default ")" rules 401
+char "*" default "*" rules 404
+char "+" default "+" rules 420
+char "," default "," rules 423
+char "-" default "-" rules 429
+char "." default "." rules 460
+char "/" default "/" rules 471
+char "0" default "0" rules 474
+char "1" default "1" rules 477
+char "2" default "2" rules 479
+char "3" default "3" rules 499
+char "4" default "4" rules 550
+char "5" default "5" rules 567
+char "6" default "6" rules 568
+char "7" default "7" rules 605
+char "8" default "8" rules 621
+char "9" default "9" rules 626
+char ":" default ":" rules 633
+char ";" default ";" rules 639
+char "<" default "<" rules 641
+char "=" default "=" rules 644
+char ">" default ">" rules 647
+char "?" default "?" rules 651
+char "@" default "@" rules 698
+char "[" default "[" rules 1388
+char "\x5c" default "\x5c" rules 1391
+char "]" default "]" rules 1415
+char "^" default "^" rules 1418
+char "_" default "_" rules 1481
+char "`" default "@" rules 710
+char "a" default "a" rules 711 then clear s1 set s2 clear s7 clear s25
+char "b" default "b" rules 758 then clear s1 set s2 clear s7 clear s25
+char "c" default "c" rules 798 then clear s1 set s2 clear s7 clear s25
+char "d" default "d" rules 809 then clear s1 set s2 clear s7 clear s25
+char "e" default "e" rules 843 then clear s1 set s2 clear s7 clear s25
+char "f" default "f" rules 851 then clear s1 set s2 clear s7 clear s25
+char "g" default "g" rules 858 then clear s1 set s2 clear s7 clear s25
+char "h" default "h" rules 884 then clear s1 set s2 clear s7 clear s25
+char "i" default "i" rules 914 then clear s1 set s2 clear s7 clear s25
+char "j" default "j" rules 970 then clear s1 set s2 clear s7 clear s25
+char "k" default "k" rules 975 then clear s1 set s2 clear s7 clear s25
+char "l" default "l" rules 1021 then clear s1 set s2 clear s7 clear s25
+char "m" default "m" rules 1055 then clear s1 set s2 clear s7 clear s25
+char "n" default "n" rules 1132 then clear s1 set s2 clear s7 clear s25
+char "o" default "o" rules 1180 then clear s1 set s2 clear s7 clear s25
+char "p" default "p" rules 1185 then clear s1 set s2 clear s7 clear s25
+char "q" default "q" rules 1229 then clear s1 set s2 clear s7 clear s25
+char "r" default "r" rules 1233 then clear s1 set s2 clear s7 clear s25
+char "s" default "s" rules 1246 then clear s1 set s2 clear s7 clear s25
+char "t" default "t" rules 1293 then clear s1 set s2 clear s7 clear s25
+char "u" default "u" rules 1344 then clear s1 set s2 clear s7 clear s25
+char "v" default "v" rules 1353 then clear s1 set s2 clear s7 clear s25
+char "w" default "w" rules 1356 then clear s1 set s2 clear s7 clear s25
+char "x" default "x" rules 1373 then clear s1 set s2 clear s7 clear s25
+char "y" default "y" rules 1378 then clear s1 set s2 clear s7 clear s25
+char "z" default "z" rules 1385 then clear s1 set s2 clear s7 clear s25
+char "\xec" default "-" rules 0
+
+node 1 "" none result 3 consume 1 -> "" end
+node 2 "" none result 3 consume 1 -> "" end
+node 3 "/" none result 3 consume 1 -> "\x1c" {copy} next 4
+node 4 "-" none result 3 consume 1 -> "\x1c" {copy} next 5
+node 5 "" none result 15 consume 1 -> "\x1c" {copy} end
+node 6 "ab" class c02 result 30 consume 1 -> "\x1c" {word} {copy} next 8
+node 7 "b" class c02 result 53 consume 1 -> "\x1c" {word} {copy} level 1
+node 8 "bqtbi~bcd" class c02 result 3 consume 10 -> "---" {drop-space} next 12
+node 9 "qtbi~lng" class c02 result 3 consume 10 -> "tl" {drop-space} level 3
+node 10 "tbi~lnn" class c02 result 3 consume 10 -> "fil" {drop-space} level 4
+node 11 "bi~qly" class c02 result 3 consume 10 -> "x" {drop-space} level 1
+node 12 "g1" class c02 result 29 consume 1 -> "\x1c" {word} {copy} next 17
+node 13 "1" class c02 result 51 consume 1 -> "\x1c" {word} {copy} next 15
+node 14 "" class c02 result 52 consume 1 -> "\x1c" {word} {copy} level 2
+node 15 "2" class c02 result 30 consume 1 -> "\x1c" {word} {copy} level 3
+node 16 "" class c02 result 53 consume 1 -> "\x1c" {word} {copy} level 1
+node 17 "fl-span" class c02 result 54 consume 1 -> "\x1c" {word} {copy} next 22
+node 18 "l-span" class c02 result 49 consume 1 -> "\x1c" {word} {copy} level 3
+node 19 "-lifg" class c02 result 55 consume 1 -> "\x1c" {word} {copy} level 4
+node 20 "lifg" class c02 result 50 consume 1 -> "\x1c" {word} {copy} next 21
+node 21 "none" class c02 result 56 consume 1 -> "\x1c" {word} {copy} level 1
+node 22 "in" class c02 result 29 consume 1 -> "\x1c" {word} {copy} next 25
+node 23 "n" class c02 result 51 consume 1 -> "\x1c" {word} {copy} level 3
+node 24 "" class c02 result 52 consume 1 -> "\x1c" {word} {copy} level 1
+node 25 "lnb" none result 3 consume 1 -> {style 2} {cmd c} {style 3} "\x1c" {word} {copy} {switch} next 42
+node 26 "ng~de" none result 62 consume 1 -> "\x1c" {word} {copy} next 41
+node 27 "g~en" none result 57 consume 1 -> "\x1c" {word} {copy} level 4
+node 28 "~es" none result 59 consume 1 -> "\x1c" {word} {copy} next 40
+node 29 "fi" class c02 result 58 consume 1 -> "\x1c" {word} {copy} next 31
+node 30 "r" none result 58 consume 1 -> "\x1c" {word} {copy} level 5
+node 31 "it" none result 61 consume 1 -> "\x1c" {word} {copy} next 32
+node 32 "la" none result 60 consume 1 -> "\x1c" {word} {copy} next 33
+node 33 "mao" class c02 result 63 consume 1 -> "\x1c" {word} {copy} next 36
+node 34 "i" class c02 result 63 consume 1 -> "\x1c" {word} {copy} next 35
+node 35 "s" none result 68 consume 1 -> "\x1c" {word} {copy} level 5
+node 36 "nl" class c02 result 58 consume 1 -> "\x1c" {word} {copy} next 37
+node 37 "pt" class c02 result 59 consume 1 -> "\x1c" {word} {copy} next 38
+node 38 "sv" class c02 result 58 consume 1 -> "\x1c" {word} {copy} level 6
+node 39 "w" none result 58 consume 1 -> "\x1c" {word} {copy} level 4
+node 40 "" none result 68 consume 1 -> "\x1c" {word} {copy} level 2
+node 41 "\x1f" none result 15 consume 3 -> "\x0f\x1cl\x1f" level 1
+node 42 "cbi" class c02 result 31 consume 1 -> "\x1c" {word} {copy} next 63
+node 43 "bn" class c02 result 31 consume 1 -> "\x1c" {word} {copy} next 58
+node 44 "-&" class c02 result 32 consume 1 -> "\x1c" {word} {copy} next 57
+node 45 "de" class c02 result 21 consume 1 -> "\x1c" {word} {copy} next 47
+node 46 "s" class c02 result 20 consume 1 -> "\x1c" {word} {copy} level 4
+node 47 "ee" class c02 result 32 consume 1 -> "\x1c" {word} {copy} next 49
+node 48 "s" class c02 result 23 consume 1 -> "\x1c" {word} {copy} level 4
+node 49 "ne" class c02 result 32 consume 1 -> "\x1c" {word} {copy} next 51
+node 50 "s" class c02 result 20 consume 1 -> "\x1c" {word} {copy} level 4
+node 51 "se" class c02 result 32 consume 1 -> "\x1c" {word} {copy} next 53
+node 52 "s" class c02 result 20 consume 1 -> "\x1c" {word} {copy} level 4
+node 53 "t1" class c02 result 32 consume 1 -> "\x1c" {word} {copy} next 55
+node 54 "2" class c02 result 32 consume 1 -> "\x1c" {word} {copy} level 4
+node 55 "ue" class c02 result 32 consume 1 -> "\x1c" {word} {copy} level 5
+node 56 "s" class c02 result 20 consume 1 -> "\x1c" {word} {copy} level 3
+node 57 "" class c02 result 31 consume 1 -> "\x1c" {word} {copy} level 2
+node 58 "s-off" class c02 result 15 consume 1 -> "\x1c" {word} {copy} next 60
+node 59 "" class c02 result 15 consume 1 -> "\x1c" {word} {copy} level 2
+node 60 "ap-invert" class c02 result 15 consume 1 -> "\x1c" {word} {copy} next 62
+node 61 "p-normal" class c02 result 15 consume 1 -> "\x1c" {word} {copy} level 2
+node 62 "z" class c02 result 31 consume 1 -> "\x1c" {word} {copy} level 1
+node 63 "txi" class c02 result 22 consume 1 -> "\x1c" {word} {copy} next 66
+node 64 "xn" class c02 result 22 consume 1 -> "\x1c" {word} {copy} level 3
+node 65 "" class c02 result 22 consume 1 -> "\x1c" {word} {copy} level 1
+node 66 "vrn~quo" class c02 result 46 consume 1 -> "\x1c" {word} {copy} next 69
+node 67 "rn~rlg" class c02 result 45 consume 1 -> "\x1c" {word} {copy} level 3
+node 68 "n" class c02 result 44 consume 1 -> "\x1c" {word} {copy} level 1
+node 69 "es" none result 117 consume 0 -> "\x1cfte~i\x1f" next 73
+node 70 "s" none result 15 consume 1 -> "\x0f\x1c" {word} {copy} {style 0} next 71
+node 71 "e" none result 117 consume 0 -> "\x1cfte~i\x1f" level 3
+node 72 "" none result 15 consume 1 -> "\x0f" {cmd a} "\x1c" {word} "\x1f" {cmd b} {style 1} level 1
+node 73 "<" none result 117 consume 0 -> "\x1cfte~i\x1f" next 75
+node 74 "\x1f" none result 15 consume 3 -> "\x0f\x1c<\x1f" level 1
+node 75 "" none result 15 consume 1 -> "\x1c" {word} {copy} end
+node 76 "" none result 3 consume 1 -> "\x1d" end
+node 77 "" none result 15 consume 1 -> "\x1e" end
+node 78 "" none result 3 consume 1 -> {cmd c} end
+node 79 "." none result 116 consume 2 -> "\x0f " next 80
+node 80 "" none result 117 consume 1 -> "\x1cfte~i\x1f\x0f " next 81
+node 81 "" none result 15 consume 1 -> "\x0f " end
+node 82 "-" none result 83 consume 2 -> "ang-" next 83
+node 83 "a.s" none result 83 consume 4 -> "angasusu" next 84
+node 84 "" none result 83 consume 1 -> "ang" next 85
+node 85 "" none result 83 consume 1 -> "ang" next 86
+node 86 "" none result 83 consume 1 -> "ang" next 87
+node 87 "" none result 83 consume 1 -> "ang" next 88
+node 88 "" none result 83 consume 1 -> "ang" next 89
+node 89 "" none result 83 consume 1 -> "ang" next 90
+node 90 "" none result 83 consume 1 -> "ang" next 91
+node 91 "" none result 83 consume 1 -> "ang" next 92
+node 92 "" short-set @x4 result 83 consume 1 -> "ang" end
+node 93 "!" none result 83 consume 2 -> "anggi" next 95
+node 94 "" none result 83 consume 2 -> "anggi" level 1
+node 95 "#" none result 83 consume 2 -> "bulaklak" next 96
+node 96 "$" none result 83 consume 2 -> "nawa" next 97
+node 97 "%" none result 83 consume 2 -> "masama" next 98
+node 98 "&" none result 83 consume 2 -> "alam" next 99
+node 99 "*" none result 83 consume 2 -> "kabila" next 100
+node 100 "+" none result 83 consume 2 -> "ukol" next 102
+node 101 "" none result 83 consume 2 -> "ukul" level 1
+node 102 "/" none result 83 consume 2 -> "sinta" next 103
+node 103 ":" none result 83 consume 2 -> "sabi" next 104
+node 104 "<" none result 83 consume 2 -> "ngunit" next 105
+node 105 "?" none result 83 consume 2 -> "panahon" next 106
+node 106 "b" none result 83 consume 2 -> "binata" next 107
+node 107 "c" none result 83 consume 2 -> "karaniwan" next 108
+node 108 "d" none result 83 consume 2 -> "dalaga" next 109
+node 109 "e" none result 83 consume 2 -> "ewan" next 110
+node 110 "f" none result 83 consume 2 -> "papaano" next 111
+node 111 "g" none result 83 consume 2 -> "gunita" next 112
+node 112 "h:" short-set @x4 result 84 consume 3 -> "hapunan" next 115
+node 113 "" none result 83 consume 2 -> "hapon" next 114
+node 114 "" none result 83 consume 2 -> "hapun" level 1
+node 115 "i)" none result 83 consume 3 -> "isip-isip" next 117
+node 116 "" none result 83 consume 2 -> "isip" level 1
+node 117 "j" none result 83 consume 2 -> "halaman" next 118
+node 118 "k" none result 83 consume 2 -> "kailangan" next 119
+node 119 "l" none result 83 consume 2 -> "larawan" next 120
+node 120 "m" none result 83 consume 2 -> "mabuti" next 121
+node 121 "n" none result 83 consume 2 -> "noon" next 122
+node 122 "o" none result 83 consume 2 -> "opo" next 123
+node 123 "p" none result 83 consume 2 -> "patuloy" next 124
+node 124 "q" none result 83 consume 2 -> "kislap" next 125
+node 125 "r" none result 83 consume 2 -> "roon" next 126
+node 126 "s" none result 83 consume 2 -> "subalit" next 127
+node 127 "t" none result 83 consume 2 -> "talaga" next 128
+node 128 "u" none result 83 consume 2 -> "ugali" next 129
+node 129 "v" none result 83 consume 2 -> "buhay" next 130
+node 130 "w" none result 83 consume 2 -> "wasto" next 131
+node 131 "x" none result 83 consume 2 -> "eksamen" next 132
+node 132 "y" none result 83 consume 2 -> "ayaw" next 133
+node 133 "z" none result 83 consume 2 -> "salita" next 134
+node 134 "[" none result 83 consume 2 -> "wakas" next 135
+node 135 "\x5c9" short-set @x4 result 84 consume 3 -> "tungkulin" level 2
+node 136 "" none result 83 consume 2 -> "tungkol" next 137
+node 137 "" none result 83 consume 2 -> "tungkul" end
+node 138 "" none result 27 consume 1 -> ":" next 139
+node 139 "" class c09 result 2 consume 1 -> "" next 140
+node 140 "" short-set @x4 result 84 consume 1 -> "at" next 141
+node 141 "" none result 80 consume 1 -> "at" next 142
+node 142 "" short-set @x4 result 83 consume 1 -> "at" next 143
+node 143 "" class c09 result 2 consume 1 -> "" end
+node 144 "-" none result 83 consume 2 -> "nag-" next 146
+node 145 "&usap" short-set @x4 result 84 consume 7 -> "nag-usap-usap" level 1
+node 146 ".b" none result 83 consume 3 -> "nagbubu" next 153
+node 147 "h" none result 83 consume 3 -> "naghuhu" next 148
+node 148 "k" none result 83 consume 3 -> "nagkuku" next 149
+node 149 "l" none result 83 consume 3 -> "naglulu" next 150
+node 150 "m" none result 83 consume 3 -> "nagmumu" next 151
+node 151 "p" none result 83 consume 3 -> "nagpupu" next 152
+node 152 "s" none result 83 consume 3 -> "nagsusu" level 1
+node 153 "2" short-set @x4 result 84 consume 2 -> "nagba" next 154
+node 154 "33" none result 83 consume 3 -> "nagkaka" next 156
+node 155 "totoo" short-set @x4 result 84 consume 7 -> "nagkatotoo" level 1
+node 156 "66-upa" short-set @x4 result 84 consume 7 -> "nagpapa-upa" next 157
+node 157 "88ti" short-set @x4 result 84 consume 5 -> "naghahati" next 158
+node 158 ";km6s" short-set @x4 result 84 consume 6 -> "nagkukukumpas" next 160
+node 159 "t" none result 83 consume 3 -> "nagtututu" level 1
+node 160 "g" none result 83 consume 2 -> "nagiging" next 161
+node 161 "la2't" short-set @x4 result 84 consume 6 -> "naglaba't" next 162
+node 162 "mu&mok" short-set @x4 result 84 consume 7 -> "nagmumukmok" next 163
+node 163 "s" short-set @x4 result 84 consume 2 -> "nags" next 164
+node 164 "" short-set @x4 result 84 consume 1 -> "naging" next 165
+node 165 "" none result 83 consume 1 -> "nag" next 166
+node 166 "" none result 83 consume 1 -> "nag" end
+node 167 "-" none result 83 consume 2 -> "mag-" next 168
+node 168 ".bo" short-set @x4 result 84 consume 4 -> "magbubuo" next 174
+node 169 "h" none result 84 consume 3 -> "maghuhu" next 170
+node 170 "k" none result 84 consume 3 -> "magkuku" next 171
+node 171 "m" none result 84 consume 3 -> "magmumu" next 172
+node 172 "p" none result 84 consume 3 -> "magpupu" next 173
+node 173 "s" none result 84 consume 3 -> "magsusu" level 1
+node 174 "33totoo" short-set @x4 result 84 consume 8 -> "magkakatotoo" next 176
+node 175 "totoo" short-set @x4 result 84 consume 7 -> "magkatotoo" level 1
+node 176 "g" none result 83 consume 2 -> "magiging" next 177
+node 177 "kw" none result 83 consume 3 -> "magkuwentu" next 178
+node 178 "" short-set @x4 result 84 consume 1 -> "maging" next 179
+node 179 "" none result 83 consume 1 -> "mag" next 180
+node 180 "" none result 83 consume 1 -> "mag" end
+node 181 "\x22:" none result 83 consume 3 -> "sabi-sabi" next 183
+node 182 "i" short-set @x4 result 84 consume 3 -> "isip-isip" level 1
+node 183 "27y" none result 83 consume 4 -> "bagay-bagay" next 196
+node 184 "8y" short-set @x4 result 84 consume 4 -> "bahay-bahay" next 185
+node 185 "go" none result 83 consume 4 -> "bagu-bago" next 187
+node 186 "" none result 83 consume 3 -> "bagbag" level 2
+node 187 "ko" short-set @x4 result 84 consume 4 -> "baku-bako" next 188
+node 188 "lik" none result 83 consume 5 -> "balik-balik" next 190
+node 189 "i" none result 83 consume 4 -> "bali-bali" level 2
+node 190 "ro<" none result 83 consume 5 -> "barung-barong" next 191
+node 191 "sta" none result 83 consume 5 -> "basta-basta" next 194
+node 192 "ta" none result 83 consume 5 -> "bastabasta" next 193
+node 193 "" none result 83 consume 3 -> "basbas" level 2
+node 194 "y:" none result 83 consume 4 -> "bayan-bayan" level 3
+node 195 "" none result 83 consume 3 -> "baybay" level 1
+node 196 "3bit" none result 83 consume 5 -> "kabit-kabit" next 199
+node 197 "re" short-set @x4 result 84 consume 4 -> "kare-kare" next 198
+node 198 "sal" short-set @x4 result 84 consume 5 -> "kasal-kasal" level 1
+node 199 "4(" short-set @x4 result 84 consume 3 -> "dahan-dahan" next 205
+node 200 "g" none result 83 consume 3 -> "dagdag" next 201
+node 201 "la" none result 83 consume 4 -> "dala-dala" next 204
+node 202 "i" none result 83 consume 4 -> "dali-dali" next 203
+node 203 "" none result 83 consume 3 -> "daldal" level 2
+node 204 "m" none result 83 consume 3 -> "damdam" level 1
+node 205 "6d" none result 83 consume 3 -> "padpad" next 211
+node 206 "k" none result 83 consume 3 -> "pakpak" next 207
+node 207 "l" none result 83 consume 3 -> "palpal" next 208
+node 208 "tak" short-set @x4 result 84 consume 5 -> "patak-patak" next 209
+node 209 "ra" none result 83 consume 4 -> "parapara" level 3
+node 210 "o" none result 83 consume 4 -> "paru-paro" level 1
+node 211 "7l!" none result 83 consume 4 -> "galang-galang" next 214
+node 212 "los" none result 83 consume 5 -> "galos-galos" next 213
+node 213 "s" none result 83 consume 3 -> "gasgas" level 1
+node 214 "8<a" none result 83 consume 4 -> "hanga-hanga" next 217
+node 215 "g" none result 83 consume 3 -> "haghag" next 216
+node 216 "ti" none result 83 consume 4 -> "hati-hati" level 1
+node 217 ":o" none result 83 consume 3 -> "ano-ano" next 220
+node 218 "o" none result 83 consume 3 -> "anu-ano" next 219
+node 219 "t+" none result 83 consume 4 -> "anting-anting" level 1
+node 220 "<[" none result 83 consume 3 -> "ngawngaw" next 222
+node 221 "o" none result 83 consume 3 -> "ngongo" level 1
+node 222 ">" none result 83 consume 2 -> "araw-araw" next 224
+node 223 "" none result 83 consume 2 -> "arawaraw" level 1
+node 224 "a7d" none result 83 consume 4 -> "agad-agad" next 235
+node 225 "7m" none result 83 consume 4 -> "agam-agam" next 226
+node 226 "kit" none result 83 consume 5 -> "akit-akit" next 227
+node 227 "l!" none result 83 consume 4 -> "alang-alang" next 230
+node 228 "a" short-set @x4 result 84 consume 4 -> "alaala" level 4
+node 229 "" none result 83 consume 4 -> "ala-ala" level 2
+node 230 "mp!" none result 83 consume 5 -> "ampang-ampang" next 231
+node 231 "sam" none result 83 consume 5 -> "asam-asam" next 232
+node 232 "ya" none result 83 consume 4 -> "aya-aya" level 3
+node 233 "a" none result 83 consume 4 -> "ayaaya" next 234
+node 234 "os" none result 83 consume 5 -> "ayos-ayos" level 1
+node 235 "b#" none result 83 consume 3 -> "batbat" next 244
+node 236 "9i" none result 83 consume 4 -> "binibini" next 237
+node 237 "ek" none result 83 consume 4 -> "bekbek" next 239
+node 238 "" none result 83 consume 3 -> "bebe" level 2
+node 239 "it" none result 83 consume 4 -> "bitbit" next 240
+node 240 "og" none result 83 consume 4 -> "bugbog" next 242
+node 241 "" none result 83 consume 3 -> "bobo" level 2
+node 242 "uhay" none result 83 consume 6 -> "buhay-buhay" level 3
+node 243 "w:" none result 83 consume 5 -> "buwan-buwan" level 1
+node 244 "co" none result 83 consume 3 -> "coco" next 247
+node 245 "" short-set @x4 result 84 consume 2 -> "kanya-kanya" next 246
+node 246 "" none result 83 consume 2 -> "kaniya-kaniya" level 1
+node 247 "d+" none result 83 consume 3 -> "dingding" next 253
+node 248 "ib" none result 83 consume 4 -> "dibdib" next 252
+node 249 "yos" short-set @x4 result 84 consume 6 -> "diyos-diyos" level 4
+node 250 "os" short-set @x4 result 84 consume 6 -> "diyus-diyos" next 251
+node 251 "us" short-set @x4 result 84 consume 6 -> "diyus-diyus" level 2
+node 252 "yip" none result 83 consume 5 -> "dyip-dyip" level 1
+node 253 "ga:" none result 83 consume 4 -> "gaan-gaan" next 259
+node 254 "amo" none result 83 consume 5 -> "gamu-gamo" next 255
+node 255 "ilid" none result 83 consume 6 -> "gilid-gilid" next 257
+node 256 "ray" none result 83 consume 6 -> "giray-giray" level 2
+node 257 "ub#" none result 83 consume 5 -> "gubat-gubat" level 3
+node 258 "ni" none result 83 consume 5 -> "guni-guni" level 1
+node 259 "h9" none result 83 consume 3 -> "hinhin" next 265
+node 260 "a2g" none result 83 consume 5 -> "habag-habag" next 263
+node 261 "3" none result 83 consume 4 -> "haka-haka" next 262
+node 262 "mak" none result 83 consume 6 -> "hamak-hamak" level 2
+node 263 "iya" none result 83 consume 5 -> "hiya-hiya" next 264
+node 264 "u2d" none result 83 consume 5 -> "hubad-hubad" level 1
+node 265 "i2" none result 83 consume 3 -> "iba-iba" next 270
+node 266 "ba" short-set @x4 result 83 consume 4 -> "iba-iba" next 268
+node 267 "ig" none result 83 consume 5 -> "ibig-ibig" level 2
+node 268 "lo" none result 83 consume 4 -> "iloilo" next 269
+node 269 "sa" none result 83 consume 4 -> "isa-isa" level 1
+node 270 "j" none result 83 consume 2 -> "hakbang-hakbang" next 271
+node 271 "kis" none result 83 consume 4 -> "kiskis" next 279
+node 272 "ob" none result 83 consume 4 -> "kubkob" next 276
+node 273 "ntra" none result 83 consume 7 -> "kontra-kontra" next 274
+node 274 "s" none result 83 consume 4 -> "kuskos" next 275
+node 275 "" none result 83 consume 3 -> "kuko" level 2
+node 276 "ul!" none result 83 consume 5 -> "kulang-kulang" level 3
+node 277 "ro" none result 83 consume 5 -> "kuro-kuro" level 4
+node 278 "o" none result 83 consume 5 -> "kuru-kuro" level 1
+node 279 "l!3y" none result 83 consume 5 -> "langkay-langkay" next 303
+node 280 "#" none result 83 consume 3 -> "latlat" next 281
+node 281 "+go" short-set @x4 result 84 consume 5 -> "linggu-linggo" next 282
+node 282 "5" none result 83 consume 3 -> "lenlen" next 283
+node 283 ":" none result 83 consume 3 -> "lanlan" next 284
+node 284 "abis" none result 83 consume 6 -> "labis-labis" next 290
+node 285 "boy" none result 83 consume 6 -> "laboy-laboy" next 286
+node 286 "gi" none result 83 consume 5 -> "lagi-lagi" next 288
+node 287 "" none result 83 consume 4 -> "laglag" level 3
+node 288 "h#" none result 83 consume 5 -> "lahat-lahat" next 289
+node 289 "y" none result 83 consume 4 -> "laylay" level 2
+node 290 "ibo" short-set @x4 result 83 consume 5 -> "libo-libo" next 296
+node 291 "bo" short-set @x4 result 83 consume 5 -> "libu-libo" next 293
+node 292 "" none result 83 consume 4 -> "liblib" level 3
+node 293 "g" none result 83 consume 4 -> "liglig" next 294
+node 294 "m6k" none result 83 consume 6 -> "limpak-limpak" next 295
+node 295 "p#" none result 83 consume 5 -> "lipat-lipat" level 2
+node 296 "ok" none result 83 consume 4 -> "luklok" next 300
+node 297 "ob" none result 83 consume 5 -> "loob-loob" next 298
+node 298 "t" none result 83 consume 4 -> "lotlot" next 299
+node 299 "" short-set @x4 result 84 consume 3 -> "lolo" level 2
+node 300 "ugod" none result 83 consume 6 -> "lugod-lugod" level 3
+node 301 "nos" none result 83 consume 6 -> "lunos-lunos" level 4
+node 302 "os" none result 83 consume 6 -> "lunus-lunos" level 1
+node 303 "m!ha" none result 83 consume 5 -> "mangha-mangha" next 313
+node 304 "!" none result 83 consume 3 -> "mangmang" next 305
+node 305 "9s:" none result 83 consume 5 -> "minsan-minsan" next 306
+node 306 "alay" none result 83 consume 6 -> "malay-malay" next 309
+node 307 "ya" none result 83 consume 5 -> "maya-maya" level 4
+node 308 "" none result 83 consume 4 -> "maymay" level 2
+node 309 "ilyon" none result 83 consume 7 -> "milyun-milyon" next 310
+node 310 "ok" none result 83 consume 4 -> "mukmok" next 312
+node 311 "s" none result 83 consume 4 -> "musmos" level 2
+node 312 "uni" none result 83 consume 5 -> "muni-muni" level 1
+node 313 "n+" none result 83 consume 3 -> "ningning" next 319
+node 314 "ais" none result 83 consume 5 -> "nais-nais" next 316
+node 315 "k" none result 83 consume 4 -> "naknak" level 2
+node 316 "il[" none result 83 consume 5 -> "nilaw-nilaw" next 317
+node 317 "og" none result 83 consume 4 -> "nugnog" level 3
+node 318 "" none result 83 consume 3 -> "nuno" level 1
+node 319 "p#" none result 83 consume 3 -> "patpat" next 327
+node 320 ":s9" none result 83 consume 5 -> "pansin-pansin" next 322
+node 321 "tay" none result 83 consume 6 -> "pantay-pantay" level 2
+node 322 "atak" short-set @x4 result 84 consume 6 -> "patak-patak" next 323
+node 323 "os" none result 83 consume 4 -> "puspos" next 324
+node 324 "ulo" none result 83 consume 5 -> "pulo-pulo" level 3
+node 325 "lo" none result 83 consume 5 -> "pulu-pulo" next 326
+node 326 "na" none result 83 consume 5 -> "puna-puna" level 1
+node 327 "s!" none result 83 consume 3 -> "sangsang" next 352
+node 328 "+" none result 83 consume 3 -> "singsing" next 329
+node 329 "9o" none result 83 consume 4 -> "sinu-sino" next 330
+node 330 ">i" short-set @x4 result 84 consume 4 -> "sari-sari" next 332
+node 331 "i" short-set @x4 result 84 consume 4 -> "sarisari" level 2
+node 332 "a2y" none result 83 consume 5 -> "sabay-sabay" next 340
+node 333 ":" none result 83 consume 4 -> "saan-saan" next 334
+node 334 "k" short-set @x4 result 84 consume 4 -> "saksak" next 335
+node 335 "lit" none result 83 consume 6 -> "salit-salit" next 337
+node 336 "o" none result 83 consume 5 -> "salu-salo" level 3
+node 337 "ma" none result 83 consume 5 -> "sama-sama" next 338
+node 338 "ya" short-set @x4 result 84 consume 5 -> "saya-saya" level 4
+node 339 "" none result 83 consume 4 -> "saysay" level 2
+node 340 "ige" none result 83 consume 5 -> "sigi-sige" next 346
+node 341 "k" short-set @x4 result 84 consume 4 -> "siksik" next 342
+node 342 "la" none result 83 consume 5 -> "sila-sila" next 343
+node 343 "m" none result 83 consume 4 -> "simsim" next 344
+node 344 "p" none result 83 consume 4 -> "sipsip" next 345
+node 345 "ya" none result 83 consume 5 -> "siya-siya" level 2
+node 346 "obra" none result 83 consume 6 -> "sobra-sobra" next 348
+node 347 "" none result 83 consume 3 -> "suso" level 2
+node 348 "uklam" none result 83 consume 7 -> "suklam-suklam" level 3
+node 349 "lpot" none result 83 consume 7 -> "sulput-sulpot" next 350
+node 350 "nod" none result 83 consume 6 -> "sunod-sunod" level 4
+node 351 "od" none result 83 consume 6 -> "sunud-sunod" level 1
+node 352 "t+e" none result 83 consume 4 -> "tingi-tinge" next 377
+node 353 "!7p" none result 83 consume 5 -> "tanggap-tanggap" next 355
+node 354 "i" none result 83 consume 4 -> "tangi-tangi" level 2
+node 355 "94" short-set @x4 result 84 consume 4 -> "tinda-tinda" next 356
+node 356 "ago" none result 83 consume 5 -> "tagu-tago" next 365
+node 357 "ka" none result 83 consume 5 -> "taka-taka" next 359
+node 358 "ot" none result 83 consume 6 -> "takot-takot" level 3
+node 359 "lon" none result 83 consume 6 -> "talon-talon" next 361
+node 360 "o" none result 83 consume 5 -> "talu-talo" level 3
+node 361 "on" short-set @x4 result 84 consume 5 -> "taun-taon" next 363
+node 362 "n" none result 83 consume 5 -> "taon-taon" level 3
+node 363 "pos" none result 83 consume 6 -> "tapos-tapos" next 364
+node 364 "y" none result 83 consume 4 -> "taytay" level 2
+node 365 "ipon" none result 83 consume 6 -> "tipun-tipon" next 367
+node 366 "sod" none result 83 consume 6 -> "tisud-tisod" level 2
+node 367 "og" none result 83 consume 4 -> "tugtog" next 376
+node 368 "k" none result 83 consume 4 -> "tuktok" next 369
+node 369 "n" none result 83 consume 4 -> "tunton" next 370
+node 370 "s" none result 83 consume 4 -> "tustos" next 371
+node 371 "" short-set @x4 result 84 consume 3 -> "toto" next 372
+node 372 "" short-set @x4 result 84 consume 3 -> "toto" next 373
+node 373 "" short-set @x4 result 84 consume 3 -> "toto" next 374
+node 374 "" none result 83 consume 3 -> "toto" next 375
+node 375 "" none result 83 consume 3 -> "toto" level 2
+node 376 "" none result 83 consume 2 -> "tayu-tayo" level 1
+node 377 "ulit" none result 83 consume 5 -> "ulit-ulit" next 383
+node 378 "n!" none result 83 consume 4 -> "unang-unang" next 382
+node 379 "a" none result 83 consume 4 -> "una-una" next 380
+node 380 "ti" none result 83 consume 5 -> "unti-unti" level 4
+node 381 "i" none result 83 consume 5 -> "unti-until" level 2
+node 382 "sap" none result 83 consume 5 -> "usap-usap" level 1
+node 383 "w!" none result 83 consume 3 -> "wangwang" next 385
+node 384 "ay" none result 83 consume 4 -> "wayway" level 1
+node 385 "yo" none result 83 consume 3 -> "yoyo" next 386
+node 386 "[a" none result 83 consume 3 -> "awa-awa" next 387
+node 387 "\x5clo<" none result 83 consume 5 -> "tulung-tulong" next 390
+node 388 "loy" short-set @x4 result 84 consume 5 -> "tuluy-tuloy" level 3
+node 389 "oy" none result 83 consume 5 -> "tuloy-tuloy" level 1
+node 390 "" short-set @x4 result 84 consume 1 -> "ay" end
+node 391 "''0" class c02 result 36 consume 4 -> "...\x22" next 396
+node 392 "'2" class c02 result 36 consume 4 -> "...;" level 3
+node 393 "7" short-set @x0 result 36 consume 4 -> "...)" next 394
+node 394 "8" class c02 result 36 consume 4 -> "...\x22" next 395
+node 395 "" none result 36 consume 3 -> "..." level 1
+node 396 "" none result 83 consume 1 -> "'" end
+node 397 "" short-set @x4 result 84 consume 1 -> "hanggang" next 398
+node 398 "" none result 83 consume 1 -> "han" next 399
+node 399 "" none result 83 consume 1 -> "han" next 400
+node 400 "" none result 83 consume 1 -> "han" end
+node 401 "'t" none result 84 consume 3 -> "na't" next 403
+node 402 "y" none result 84 consume 3 -> "na'y" level 1
+node 403 "" short-set @x4 result 84 consume 1 -> "na" end
+node 404 "<" short-set @x4 result 84 consume 2 -> "kanilang" next 406
+node 405 "" none result 83 consume 2 -> "ngingi" level 1
+node 406 "b" none result 83 consume 2 -> "bibi" next 407
+node 407 "d" none result 83 consume 2 -> "didi" next 408
+node 408 "g" none result 83 consume 2 -> "gigi" next 409
+node 409 "h" none result 83 consume 2 -> "hihi" next 410
+node 410 "k" none result 83 consume 2 -> "kiki" next 411
+node 411 "l" none result 83 consume 2 -> "lili" next 412
+node 412 "m" none result 83 consume 2 -> "mimi" next 413
+node 413 "n" none result 83 consume 2 -> "nini" next 414
+node 414 "p" none result 83 consume 2 -> "pipi" next 415
+node 415 "r" none result 83 consume 2 -> "riri" next 416
+node 416 "s" none result 83 consume 2 -> "sisi" next 418
+node 417 "" none result 83 consume 2 -> "sisi" level 1
+node 418 "t" none result 83 consume 2 -> "titi" next 419
+node 419 "" short-set @x4 result 84 consume 1 -> "kanila" end
+node 420 "-" none result 83 consume 2 -> "ing-" next 421
+node 421 "" short-set @x4 result 84 consume 1 -> "ingay" next 422
+node 422 "" none result 83 consume 1 -> "ing" end
+node 423 "8" none result 36 consume 2 -> "`" next 424
+node 424 "'" none result 38 consume 2 -> "\x0f" next 425
+node 425 "," none result 87 consume 2 -> "\x0e" next 427
+node 426 "" none result 37 consume 2 -> "\x0e" level 1
+node 427 "" none result 36 consume 1 -> "\x02" next 428
+node 428 "" none result 83 consume 1 -> "," end
+node 429 "#" class c09 result 2 consume 2 -> "-" next 431
+node 430 "" none result 2 consume 2 -> "-" level 1
+node 431 "" class c09 result 27 consume 1 -> "-" next 432
+node 432 ";" none result 83 consume 1 -> "-" next 433
+node 433 "&3m" short-set @x4 result 84 consume 4 -> "kinakamkam" next 434
+node 434 ".b" none result 84 consume 3 -> "kinabubu" next 438
+node 435 "l" none result 84 consume 3 -> "kinalulu" next 436
+node 436 "m" none result 84 consume 3 -> "kinamumu" next 437
+node 437 "s" none result 84 consume 3 -> "kinasusu" level 1
+node 438 "bl" none result 83 consume 3 -> "kinabulag" next 439
+node 439 "3i" short-set @x4 result 84 consume 3 -> "kinakai" next 440
+node 440 "4p" none result 83 consume 3 -> "-dapat" next 441
+node 441 "@&" short-set @x4 result 83 consume 3 -> "-ayon" next 442
+node 442 ">" short-set @x4 result 83 consume 2 -> "-arawa" next 443
+node 443 ":" short-set @x4 result 83 consume 2 -> "-anak" next 444
+node 444 "an" short-set @x4 result 83 consume 3 -> "-an" next 446
+node 445 "" short-set @x4 result 83 consume 2 -> "-a" level 1
+node 446 "free" none result 83 consume 5 -> "-free" next 447
+node 447 "cbn" none result 83 consume 4 -> "-cbn" next 448
+node 448 "g" short-set @x4 result 83 consume 2 -> "-g" next 453
+node 449 "" short-set @x4 result 83 consume 2 -> "-g" next 450
+node 450 "" short-set @x4 result 83 consume 2 -> "-g" next 451
+node 451 "" short-set @x4 result 83 consume 2 -> "-g" next 452
+node 452 "" short-set @x4 result 83 consume 2 -> "-g" level 1
+node 453 "ii" none result 83 consume 3 -> "-ii" next 456
+node 454 "" short-set @x4 result 84 consume 2 -> "kinai" next 455
+node 455 "" short-set @x4 result 84 consume 2 -> "kinai" level 1
+node 456 "ray" none result 83 consume 4 -> "-ray" next 457
+node 457 "" short-set @x4 result 84 consume 1 -> "kina" next 458
+node 458 "" none result 83 consume 1 -> "kina" next 459
+node 459 "" none result 36 consume 1 -> "-" end
+node 460 "" class c09 result 27 consume 1 -> "." next 461
+node 461 "" none result 27 consume 1 -> ".\x12" next 462
+node 462 "." none result 113 consume 2 -> " \x1cfts~i\x1f" next 463
+node 463 "<" none result 83 consume 2 -> "ngungu" next 464
+node 464 "b" none result 83 consume 2 -> "bubu" next 465
+node 465 "d" none result 83 consume 2 -> "dudu" next 466
+node 466 "n" none result 83 consume 2 -> "nunu" next 467
+node 467 "r" none result 83 consume 2 -> "ruru" next 468
+node 468 "t" none result 83 consume 2 -> "tutu" next 469
+node 469 "" none result 115 consume 1 -> "" next 470
+node 470 "" none result 114 consume 1 -> "\x1cfts~i\x1f" end
+node 471 "" none result 27 consume 1 -> "/" next 472
+node 472 "" none result 83 consume 1 -> "ibig" next 473
+node 473 "" none result 83 consume 1 -> "/" end
+node 474 "'" class c01 result 36 consume 2 -> "`" next 475
+node 475 "" short-set @x0 result 87 consume 1 -> "\x22" next 476
+node 476 "" none result 80 consume 1 -> "umi" end
+node 477 "" short-set @x0 result 43 consume 1 -> "," next 478
+node 478 "" class c09 result 27 consume 1 -> "," end
+node 479 "'y" none result 83 consume 3 -> "ba'y" next 480
+node 480 "2+-bb" short-set @x4 result 84 consume 6 -> "babaing-babae" next 481
+node 481 "7" none result 84 consume 2 -> "baga" next 482
+node 482 "8)" none result 83 consume 3 -> "baha-baha" next 486
+node 483 "in" none result 83 consume 4 -> "bahain" next 484
+node 484 "y)" none result 83 consume 4 -> "bahay-bahay" level 3
+node 485 "-3la3l" short-set @x4 result 84 consume 9 -> "bahay-kalakal" level 1
+node 486 "go1<" short-set @x4 result 84 consume 5 -> "bagung-bago" next 487
+node 487 "ha1<" none result 83 consume 5 -> "bahang-baha" next 488
+node 488 "k):" short-set @x4 result 84 consume 4 -> "bakbakan" next 490
+node 489 "o)<" short-set @x4 result 84 consume 5 -> "baku-bakong" level 1
+node 490 "ra7t:" short-set @x4 result 84 consume 6 -> "baragatan" next 491
+node 491 "s):" short-set @x4 result 84 consume 4 -> "basbasan" next 492
+node 492 "ta1<" none result 83 consume 5 -> "batang-bata" next 493
+node 493 "y)" none result 83 consume 3 -> "baybay" next 494
+node 494 "" short-set @x4 result 84 consume 1 -> "ba" next 495
+node 495 "" short-set @x4 result 36 consume 1 -> ";" next 496
+node 496 "" none result 80 consume 1 -> "ba" next 497
+node 497 "" none result 83 consume 1 -> "ba" next 498
+node 498 "" none result 83 consume 1 -> "ba" end
+node 499 "" class c09 result 27 consume 1 -> ":" next 500
+node 500 "\x22?:" short-set @x4 result 84 consume 4 -> "kapanahunan" next 501
+node 501 "&\x22v" short-set @x4 result 84 consume 4 -> "kabuhay-buhay" next 510
+node 502 "82g" short-set @x4 result 84 consume 5 -> "kahabag-habag" next 503
+node 503 "hiya" short-set @x4 result 84 consume 6 -> "kahiyahiya" next 504
+node 504 "isa" short-set @x4 result 84 consume 5 -> "kaisa-isa" next 505
+node 505 "lumon" none result 83 consume 7 -> "kaunus-lunos" next 506
+node 506 "suklam" short-set @x4 result 84 consume 8 -> "kasuklamsuklam" next 507
+node 507 "takot" short-set @x4 result 84 consume 7 -> "katakut-takot" level 3
+node 508 "o" short-set @x4 result 84 consume 4 -> "katoto" level 4
+node 509 "" none result 83 consume 4 -> "katuto" level 1
+node 510 ".l" none result 83 consume 3 -> "kalulu" next 511
+node 511 "/" short-set @x4 result 84 consume 2 -> "kaibig" next 512
+node 512 "2" none result 83 consume 1 -> "ka" next 514
+node 513 "2ih!" short-set @x4 result 84 consume 6 -> "kababaihang" level 1
+node 514 "6" none result 83 consume 1 -> "ka" next 515
+node 515 "7t9" short-set @x4 result 84 consume 4 -> "kagatin" next 516
+node 516 "8<a-h!!" short-set @x4 result 84 consume 8 -> "kahanga-hangang" next 518
+node 517 "ti" short-set @x4 result 84 consume 4 -> "kahati" level 1
+node 518 "9in" short-set @x4 result 84 consume 4 -> "kainin" next 519
+node 519 "?43'y" short-set @x4 result 84 consume 6 -> "kapagdaka'y" next 520
+node 520 "bi7t:" short-set @x4 result 84 consume 6 -> "kabigatan" next 521
+node 521 "isa-is" short-set @x4 result 84 consume 7 -> "kaisa-isang" next 523
+node 522 "" short-set @x4 result 84 consume 2 -> "kai" level 1
+node 523 "l1a" short-set @x4 result 84 consume 4 -> "kalakal" next 532
+node 524 "1a" none result 83 consume 4 -> "kalakal" next 525
+node 525 "a3l!" short-set @x4 result 84 consume 6 -> "kalakalang" next 529
+node 526 "3l-" none result 83 consume 6 -> "kalakal-" next 528
+node 527 "l:" short-set @x4 result 84 consume 6 -> "kalakalan" level 3
+node 528 "8ti" short-set @x4 result 84 consume 6 -> "kalahati" level 2
+node 529 "l(" short-set @x4 result 84 consume 4 -> "kalalakihan" next 531
+node 530 "h!" short-set @x4 result 84 consume 5 -> "kalalakihang" level 2
+node 531 "pn" short-set @x4 result 84 consume 4 -> "kalipunan" level 1
+node 532 "m!8-" none result 83 consume 5 -> "kamangha-" next 534
+node 533 ")9" short-set @x4 result 84 consume 4 -> "kamkamin" level 1
+node 534 "ni)" none result 83 consume 4 -> "kani-kani" next 535
+node 535 "p" short-set @x4 result 84 consume 2 -> "kap" next 536
+node 536 "ra7t!" short-set @x4 result 84 consume 6 -> "karagatang" next 539
+node 537 "a7t:" short-set @x4 result 84 consume 6 -> "karagatan" level 3
+node 538 "p#" short-set @x4 result 83 consume 5 -> "karapat" level 1
+node 539 "sal)" none result 83 consume 5 -> "kasal-kasal" next 540
+node 540 "ta3-tak!" short-set @x4 result 84 consume 9 -> "kataka-takang" next 544
+node 541 "oto(!" short-set @x4 result 84 consume 7 -> "katotohanang" level 3
+node 542 "to(:" short-set @x4 result 84 consume 7 -> "katotohanan" level 4
+node 543 "o(" short-set @x4 result 84 consume 6 -> "katotohan" level 1
+node 544 "" short-set @x0 result 36 consume 1 -> ":" next 545
+node 545 "" none result 80 consume 1 -> "ka" next 546
+node 546 "" none result 83 consume 1 -> "ka" next 547
+node 547 "" none result 83 consume 1 -> "ka" next 548
+node 548 "" none result 84 consume 1 -> "ka" next 549
+node 549 "" short-set @x4 result 83 consume 1 -> "ka" end
+node 550 "#" class c09 result 8 consume 1 -> "$" next 551
+node 551 "7't" short-set @x0 result 84 consume 4 -> "daga't" next 552
+node 552 "()" none result 83 consume 3 -> "dahan-dahan" next 553
+node 553 ":)" none result 83 consume 3 -> "daan-daan" next 554
+node 554 "g#)" none result 83 consume 4 -> "dagatdagat" next 558
+node 555 "#" short-set @x4 result 83 consume 3 -> "dagat" next 556
+node 556 ")" short-set @x4 result 84 consume 3 -> "dagdag" level 3
+node 557 "" none result 83 consume 3 -> "dagdag" level 1
+node 558 "l)" none result 83 consume 3 -> "daldal" next 560
+node 559 "i)<" short-set @x4 result 84 consume 5 -> "dali-daling" level 1
+node 560 "pu:" none result 83 consume 4 -> "dapuan" next 562
+node 561 "" none result 83 consume 2 -> "dapat" level 1
+node 562 "" none result 27 consume 1 -> "." next 563
+node 563 "" none result 36 consume 1 -> "." next 564
+node 564 "" none result 80 consume 1 -> "da" next 565
+node 565 "" none result 83 consume 1 -> "da" next 566
+node 566 "" short-set @x4 result 83 consume 1 -> "da" end
+node 567 "" none result 83 consume 1 -> "en" end
+node 568 "0" short-set @x4 result 36 consume 2 -> "!\x22" next 569
+node 569 "&ala" none result 83 consume 5 -> "paalaala" next 571
+node 570 "h9to" short-set @x4 result 84 consume 6 -> "pahintu-hinto" level 1
+node 571 "*k23't" short-set @x4 result 84 consume 7 -> "pakikibaka't" next 572
+node 572 ".h" none result 83 consume 3 -> "pahuhu" next 578
+node 573 "k" none result 83 consume 3 -> "pakuku" next 574
+node 574 "l" none result 83 consume 3 -> "palulu" next 575
+node 575 "m" none result 84 consume 3 -> "pamumu" next 576
+node 576 "p" none result 83 consume 3 -> "papupu" next 577
+node 577 "s" none result 83 consume 3 -> "pasusu" level 1
+node 578 "1g-" none result 83 consume 4 -> "pag-upa" next 579
+node 579 "2gu-2go<" short-set @x4 result 84 consume 9 -> "pabagu-bagong" next 580
+node 580 "3i" short-set @x4 result 84 consume 3 -> "pakai" next 582
+node 581 "i" short-set @x4 result 84 consume 3 -> "pakai" level 1
+node 582 "82i" short-set @x4 result 84 consume 4 -> "pahabai" next 583
+node 583 "isa-is" short-set @x4 result 84 consume 7 -> "paisa-isang" next 584
+node 584 "ksa" none result 83 consume 4 -> "paksa" next 585
+node 585 "la)" none result 83 consume 4 -> "pala-pala" next 589
+node 586 "a\x5cn\x5cn!" short-set @x4 result 84 consume 8 -> "palatuntunang" next 588
+node 587 "\x5cn\x5cn:" none result 83 consume 8 -> "palatuntunan" level 2
+node 588 "i)" none result 83 consume 4 -> "pali-pali" level 1
+node 589 "m)" none result 83 consume 3 -> "pampam" next 592
+node 590 "6nitik!" short-set @x4 result 84 consume 9 -> "pampanitikang" next 591
+node 591 "pm" short-set @x4 result 84 consume 4 -> "pampamahalaan" level 1
+node 592 "na)ho<" short-set @x4 result 84 consume 7 -> "pana-panahong" next 593
+node 593 "ra)<" short-set @x4 result 84 consume 5 -> "paraparang" next 595
+node 594 "e)" none result 83 consume 4 -> "pare-pare" level 1
+node 595 "swit" none result 83 consume 5 -> "paswit" next 596
+node 596 "toto" none result 84 consume 5 -> "patoto" next 597
+node 597 "^b9" short-set @x4 result 84 consume 4 -> "pababain" next 598
+node 598 "" short-set @x4 result 36 consume 1 -> "!" next 599
+node 599 "" none result 80 consume 1 -> "pa" next 600
+node 600 "" none result 83 consume 1 -> "pa" next 601
+node 601 "" none result 83 consume 1 -> "pa" next 602
+node 602 "" none result 84 consume 1 -> "pa" next 603
+node 603 "" none result 84 consume 1 -> "pa" next 604
+node 604 "" short-set @x4 result 83 consume 1 -> "pa" end
+node 605 "''''" none result 36 consume 2 -> "]" next 609
+node 606 "''" none result 10 consume 1 -> ")" next 608
+node 607 "'" none result 36 consume 1 -> "(" level 2
+node 608 "" none result 36 consume 2 -> "]" level 1
+node 609 "" none result 8 consume 1 -> "(" next 610
+node 610 "" short-set @x0 result 36 consume 1 -> ")" next 611
+node 611 "" none result 9 consume 1 -> "(" next 612
+node 612 "" none result 80 consume 1 -> "ga" next 613
+node 613 "" none result 80 consume 1 -> "ga" next 614
+node 614 "" none result 83 consume 1 -> "ga" next 615
+node 615 "" none result 83 consume 1 -> "ga" next 616
+node 616 "" none result 83 consume 1 -> "ga" next 617
+node 617 "" none result 83 consume 1 -> "ga" next 618
+node 618 "" short-set @x4 result 83 consume 1 -> "ga" next 619
+node 619 "" short-set @x4 result 83 consume 1 -> "ga" next 620
+node 620 "" none result 36 consume 1 -> "(" end
+node 621 "" none result 8 consume 1 -> "\x22" next 622
+node 622 "" short-set @x0 result 36 consume 1 -> "?" next 623
+node 623 "" none result 80 consume 1 -> "ha" next 624
+node 624 "" none result 83 consume 1 -> "ha" next 625
+node 625 "" short-set @x4 result 83 consume 1 -> "ha" end
+node 626 ")" none result 83 consume 2 -> "inyo-inyo" next 627
+node 627 "<" short-set @x4 result 84 consume 2 -> "inyong" next 628
+node 628 "i.l" none result 83 consume 4 -> "inalulu" next 629
+node 629 "s" none result 83 consume 2 -> "inaasahan" next 630
+node 630 "" short-set @x4 result 84 consume 1 -> "inyo" next 631
+node 631 "" none result 83 consume 1 -> "in" next 632
+node 632 "" short-set @x4 result 83 consume 1 -> "in" end
+node 633 "o)<" short-set @x4 result 84 consume 4 -> "anu-anong" next 634
+node 634 "ti-" none result 83 consume 4 -> "anti-" next 635
+node 635 "u6't" short-set @x4 result 84 consume 5 -> "anupa't" next 636
+node 636 "-" none result 84 consume 2 -> "anak-" next 637
+node 637 "" short-set @x4 result 84 consume 1 -> "anak" next 638
+node 638 "" none result 83 consume 1 -> "an" end
+node 639 "" none result 40 consume 1 -> "" next 640
+node 640 "" none result 36 consume 1 -> "" end
+node 641 "-" none result 83 consume 2 -> "ng-" next 642
+node 642 "" none result 83 consume 1 -> "ng" next 643
+node 643 "" none result 36 consume 1 -> "<" end
+node 644 "a7'y" short-set @x4 result 84 consume 5 -> "mahalaga'y" next 645
+node 645 "" short-set @x4 result 84 consume 1 -> "mahal" next 646
+node 646 "" none result 83 consume 1 -> "mahal" end
+node 647 "i)" none result 83 consume 3 -> "ari-ari" next 648
+node 648 "-" none result 83 consume 2 -> "araw-" next 649
+node 649 "" short-set @x4 result 83 consume 1 -> "araw" next 650
+node 650 "" none result 83 consume 1 -> "ar" end
+node 651 "&to" none result 84 consume 4 -> "pagtuto" next 652
+node 652 "-" none result 84 consume 2 -> "pag-" next 655
+node 653 "" none result 83 consume 2 -> "pa-" next 654
+node 654 "[" none result 83 consume 3 -> "pag-ako" level 1
+node 655 ".h" none result 83 consume 3 -> "paghuhu" next 661
+node 656 "k" none result 83 consume 3 -> "pagkuku" next 657
+node 657 "l" none result 83 consume 3 -> "paglulu" next 658
+node 658 "m" none result 83 consume 3 -> "pagmumu" next 659
+node 659 "p" none result 83 consume 3 -> "pagpupu" next 660
+node 660 "s" none result 83 consume 3 -> "pagsusu" level 1
+node 661 ";p" none result 83 consume 3 -> "pagpupupu" next 663
+node 662 "t" none result 83 consume 3 -> "pagtututu" level 1
+node 663 "3&laki" short-set @x4 result 84 consume 7 -> "pagkalaki-laki" next 672
+node 664 "-" none result 83 consume 3 -> "pagka-" next 665
+node 665 "2" short-set @x4 result 84 consume 3 -> "pagkaba" next 666
+node 666 "3-iba" short-set @x4 result 84 consume 7 -> "pagkaka-iba" next 670
+node 667 "28-" none result 83 consume 6 -> "pagkakabaha-" next 668
+node 668 "8ti" short-set @x4 result 84 consume 6 -> "pagkakahati" next 669
+node 669 "" none result 83 consume 3 -> "pagkaka" level 2
+node 670 "\x5cto<" short-set @x4 result 84 consume 6 -> "pagkatutong" next 671
+node 671 "" none result 83 consume 2 -> "pagka" level 1
+node 672 "43'y" short-set @x4 result 84 consume 5 -> "pagdaka'y" next 674
+node 673 "d\x22&8ti" short-set @x4 result 84 consume 8 -> "pagdadalamhati" level 1
+node 674 "66-unlad" short-set @x4 result 84 consume 9 -> "pagpapa-unlad" next 676
+node 675 "6-upa" short-set @x4 result 84 consume 7 -> "pagpapa-upa" level 1
+node 676 "88ti" short-set @x4 result 84 consume 5 -> "paghahati" next 677
+node 677 "g" none result 83 consume 2 -> "pagiging" next 678
+node 678 "kuha" none result 83 consume 5 -> "pagkuha" next 680
+node 679 "" none result 83 consume 2 -> "pagkat" level 1
+node 680 "mu&muni" short-set @x4 result 84 consume 8 -> "pagmumuni-muni" next 682
+node 681 "u&muni" short-set @x4 result 84 consume 8 -> "pagmumunimuni" level 1
+node 682 "s" short-set @x4 result 84 consume 2 -> "pags" next 683
+node 683 "\x5c&tos" short-set @x4 result 84 consume 6 -> "pagtutustos" next 686
+node 684 "nto<" short-set @x4 result 84 consume 6 -> "pagtuntong" next 685
+node 685 "tol" short-set @x4 result 84 consume 5 -> "pagtutol" level 1
+node 686 "" none result 83 consume 1 -> "pag" next 687
+node 687 "" none result 83 consume 1 -> "pag" next 688
+node 688 "" none result 83 consume 1 -> "pag" next 689
+node 689 "" none result 83 consume 1 -> "pag" next 690
+node 690 "" none result 83 consume 1 -> "pag" next 691
+node 691 "" none result 83 consume 1 -> "pag" next 692
+node 692 "" none result 83 consume 1 -> "pag" next 693
+node 693 "" none result 83 consume 1 -> "pag" next 694
+node 694 "" none result 83 consume 1 -> "pag" next 695
+node 695 "" none result 83 consume 1 -> "pag" next 696
+node 696 "" none result 83 consume 1 -> "pag" next 697
+node 697 "" short-set @x4 result 83 consume 1 -> "pag" end
+node 698 "3p" none result 83 consume 3 -> "%" next 699
+node 699 "&" short-set @x4 result 84 consume 2 -> "ayon" next 702
+node 700 "" short-set @x4 result 84 consume 2 -> "ayon" next 701
+node 701 "" none result 83 consume 2 -> "ayon" level 1
+node 702 "e" none result 83 consume 2 -> "\x82" next 703
+node 703 "i" none result 83 consume 2 -> "\xa1" next 704
+node 704 "n" none result 84 consume 2 -> "napaka" next 706
+node 705 "" none result 83 consume 2 -> "\xa4" level 1
+node 706 "p" none result 83 consume 2 -> "pinaka" next 707
+node 707 "s" none result 83 consume 2 -> "syon" next 708
+node 708 "z" none result 83 consume 2 -> "siyon" next 709
+node 709 "" none result 36 consume 1 -> "@" end
+node 710 "" none result 83 consume 1 -> "`" end
+node 711 "" class c09 result 27 consume 1 -> "1" next 712
+node 712 "" none result 27 consume 1 -> "1\x12" next 713
+node 713 "&ala" none result 83 consume 5 -> "aalaala" next 714
+node 714 "-" none result 83 consume 2 -> "a-" next 715
+node 715 "3" short-set @x4 result 83 consume 2 -> "aka" next 716
+node 716 "d-" none result 83 consume 3 -> "ad-" next 717
+node 717 "g.s" none result 83 consume 4 -> "agsusu" next 719
+node 718 "u)" short-set @x4 result 83 consume 4 -> "agugu" level 1
+node 719 "ktr" none result 83 consume 4 -> "aktr" next 721
+node 720 "ma1<" none result 83 consume 6 -> "akmang-akma" level 1
+node 721 "l1mus" none result 83 consume 6 -> "almusal" next 724
+node 722 "a)" none result 83 consume 4 -> "alaala" next 723
+node 723 "" short-set @x4 result 83 consume 2 -> "al" level 1
+node 724 "n-" none result 84 consume 3 -> "an-" next 725
+node 725 "s" short-set @x4 result 83 consume 2 -> "as" next 726
+node 726 "\x5c\x5c" none result 83 consume 3 -> "atutu" next 727
+node 727 "^t" none result 83 consume 3 -> "atata" next 728
+node 728 "" none result 80 consume 1 -> "a" next 729
+node 729 "" none result 80 consume 1 -> "a" next 730
+node 730 "" none result 80 consume 1 -> "a" next 731
+node 731 "" none result 80 consume 1 -> "a" next 732
+node 732 "" none result 80 consume 1 -> "a" next 733
+node 733 "" none result 80 consume 1 -> "a" next 734
+node 734 "" none result 80 consume 1 -> "a" next 735
+node 735 "" none result 83 consume 1 -> "a" next 736
+node 736 "" none result 83 consume 1 -> "a" next 737
+node 737 "" none result 83 consume 1 -> "a" next 738
+node 738 "" none result 83 consume 1 -> "a" next 739
+node 739 "" none result 83 consume 1 -> "a" next 740
+node 740 "" none result 83 consume 1 -> "a" next 741
+node 741 "" none result 83 consume 1 -> "a" next 742
+node 742 "" none result 83 consume 1 -> "a" next 743
+node 743 "" none result 83 consume 1 -> "a" next 744
+node 744 "" none result 83 consume 1 -> "a" next 745
+node 745 "" none result 83 consume 1 -> "a" next 746
+node 746 "" none result 83 consume 1 -> "a" next 747
+node 747 "" none result 83 consume 1 -> "a" next 748
+node 748 "" none result 83 consume 1 -> "a" next 749
+node 749 "" none result 83 consume 1 -> "a" next 750
+node 750 "" none result 83 consume 1 -> "a" next 751
+node 751 "" none result 83 consume 1 -> "a" next 752
+node 752 "" none result 83 consume 1 -> "a" next 753
+node 753 "" none result 83 consume 1 -> "a" next 754
+node 754 "" none result 83 consume 1 -> "a" next 755
+node 755 "" none result 83 consume 1 -> "a" next 756
+node 756 "" short-set @x4 result 83 consume 1 -> "a" next 757
+node 757 "" none result 83 consume 1 -> "a" end
+node 758 "" class c09 result 27 consume 1 -> "2" next 759
+node 759 "" none result 27 consume 1 -> "2\x12" next 760
+node 760 "!3):" none result 83 consume 5 -> "bangka-bangkaan" next 762
+node 761 "us" short-set @x4 result 84 consume 4 -> "bangus" level 1
+node 762 "#ya" short-set @x4 result 84 consume 4 -> "batya" next 763
+node 763 "/y!" short-set @x4 result 84 consume 4 -> "bibigyang" next 765
+node 764 "y:" none result 84 consume 4 -> "bibigyan" level 1
+node 765 "9/y!-di9" short-set @x4 result 84 consume 9 -> "binibigyang-diin" next 767
+node 766 "i" short-set @x4 result 84 consume 3 -> "bini" level 1
+node 767 "@&" short-set @x4 result 84 consume 3 -> "bayon" next 769
+node 768 "&" none result 84 consume 3 -> "bayon" level 1
+node 769 "ak)" none result 83 consume 4 -> "bakbak" next 770
+node 770 "b<" short-set @x4 result 84 consume 3 -> "babaing" next 774
+node 771 "1<" none result 83 consume 4 -> "babaing-babae" next 772
+node 772 "" none result 83 consume 2 -> "babae" next 773
+node 773 "" none result 83 consume 2 -> "babai" level 1
+node 774 "gy" none result 83 consume 3 -> "barangay" next 776
+node 775 "y" none result 83 consume 3 -> "baranggay" level 1
+node 776 "i" none result 83 consume 2 -> "bi" next 777
+node 777 "le" none result 83 consume 2 -> "bl" next 779
+node 778 "" short-set @x4 result 83 consume 2 -> "bulag" level 1
+node 779 "o)" none result 83 consume 3 -> "bubo" next 780
+node 780 "rl" none result 83 consume 3 -> "braille" next 781
+node 781 "u)" none result 83 consume 3 -> "bubu" next 791
+node 782 ")" none result 83 consume 3 -> "bubu" next 785
+node 783 "" none result 83 consume 3 -> "bubu" next 784
+node 784 "" none result 84 consume 3 -> "bubu" level 2
+node 785 "8<" none result 83 consume 4 -> "buhang" next 786
+node 786 "buks:" short-set @x4 result 84 consume 7 -> "bubuksan" next 787
+node 787 "laga" short-set @x4 result 84 consume 6 -> "bulaga" next 788
+node 788 "o)" none result 83 consume 4 -> "buo-buo" next 790
+node 789 "1<" none result 83 consume 5 -> "buong-buo" level 2
+node 790 "" none result 83 consume 2 -> "bu" level 1
+node 791 "" short-set @x4 result 84 consume 1 -> "bakit" next 792
+node 792 "" none result 83 consume 1 -> "b" next 793
+node 793 "" none result 83 consume 1 -> "b" next 794
+node 794 "" short-set @x4 result 83 consume 1 -> "b" next 795
+node 795 "" short-set @x4 result 83 consume 1 -> "b" next 796
+node 796 "" short-set @x4 result 83 consume 1 -> "b" next 797
+node 797 "" none result 83 consume 1 -> "b" end
+node 798 "" class c09 result 27 consume 1 -> "3" next 799
+node 799 "" none result 27 consume 1 -> "3\x12" next 800
+node 800 "'y" short-set @x4 result 84 consume 3 -> "kaniya'y" next 801
+node 801 ")" none result 83 consume 2 -> "kanya-kanya" next 802
+node 802 "<" short-set @x4 result 84 consume 2 -> "kaniyang" next 804
+node 803 "" none result 83 consume 2 -> "kanyang" level 1
+node 804 "h1ur" none result 83 consume 5 -> "church" next 806
+node 805 ">lot" none result 83 consume 6 -> "charlot" level 1
+node 806 "" short-set @x4 result 84 consume 1 -> "kaniya" next 807
+node 807 "" short-set @x4 result 84 consume 1 -> "kanya" next 808
+node 808 "" none result 83 consume 1 -> "c" end
+node 809 "" class c09 result 27 consume 1 -> "4" next 810
+node 810 "" none result 27 consume 1 -> "4\x12" next 811
+node 811 "\x22&8ti" short-set @x4 result 84 consume 6 -> "dalamhati" next 812
+node 812 "9i)" none result 83 consume 4 -> "dinidini" next 813
+node 813 "d" none result 83 consume 2 -> "damdamin" next 814
+node 814 "e-" none result 84 consume 3 -> "de-" next 817
+node 815 "1p5" short-set @x4 result 84 consume 5 -> "depende" level 3
+node 816 "p5" none result 83 consume 5 -> "depende" level 1
+node 817 "i-" none result 84 consume 3 -> "di-" next 823
+node 818 "os)" none result 83 consume 5 -> "diosdios" next 819
+node 819 "re)" none result 83 consume 5 -> "dire-dire" next 820
+node 820 "yos)" none result 83 consume 6 -> "diyos-diyos" level 3
+node 821 "os)" none result 83 consume 6 -> "diyus-diyos" next 822
+node 822 "us)" none result 83 consume 6 -> "diyus-diyus" level 1
+node 823 "l<" short-set @x4 result 84 consume 3 -> "dakilang" next 827
+node 824 "" short-set @x4 result 84 consume 2 -> "dakila" next 825
+node 825 "!" none result 83 consume 2 -> "dl" next 826
+node 826 "" none result 83 consume 2 -> "dakila" level 1
+node 827 "oly>" none result 83 consume 5 -> "dolyar" next 829
+node 828 "" short-set @x4 result 83 consume 2 -> "do" level 1
+node 829 "umr" short-set @x4 result 84 consume 4 -> "dumarami" next 830
+node 830 "wt" none result 83 consume 3 -> "datapwat" next 831
+node 831 "" short-set @x4 result 84 consume 1 -> "dahil" next 832
+node 832 "" none result 83 consume 1 -> "d" next 833
+node 833 "" none result 83 consume 1 -> "d" next 834
+node 834 "" none result 83 consume 1 -> "d" next 835
+node 835 "" none result 83 consume 1 -> "d" next 836
+node 836 "" none result 83 consume 1 -> "d" next 837
+node 837 "" none result 83 consume 1 -> "d" next 838
+node 838 "" none result 83 consume 1 -> "d" next 839
+node 839 "" short-set @x4 result 83 consume 1 -> "d" next 840
+node 840 "" short-set @x4 result 83 consume 1 -> "d" next 841
+node 841 "" short-set @x4 result 83 consume 1 -> "d" next 842
+node 842 "" none result 83 consume 1 -> "d" end
+node 843 "" class c09 result 27 consume 1 -> "5" next 844
+node 844 "" none result 27 consume 1 -> "5\x12" next 845
+node 845 "-" none result 84 consume 2 -> "e-" next 846
+node 846 "o1rop" none result 83 consume 6 -> "europeo" next 847
+node 847 "s-" none result 83 consume 3 -> "es-" next 848
+node 848 "" none result 83 consume 1 -> "e" next 849
+node 849 "" none result 83 consume 1 -> "e" next 850
+node 850 "" none result 83 consume 1 -> "e" end
+node 851 "" class c09 result 27 consume 1 -> "6" next 852
+node 852 "" none result 27 consume 1 -> "6\x12" next 853
+node 853 "<" short-set @x4 result 84 consume 2 -> "paanong" next 854
+node 854 "aq" none result 83 consume 3 -> "faq" next 855
+node 855 "ull-" none result 83 consume 5 -> "full-" next 856
+node 856 "" short-set @x4 result 84 consume 1 -> "paano" next 857
+node 857 "" none result 83 consume 1 -> "f" end
+node 858 "" class c09 result 27 consume 1 -> "7" next 859
+node 859 "" none result 27 consume 1 -> "7\x12" next 860
+node 860 "!" none result 83 consume 2 -> "gang" next 861
+node 861 ":y:1g" none result 83 consume 6 -> "ganyang-ganyan" next 862
+node 862 "@&" short-set @x4 result 84 consume 3 -> "gayon" next 863
+node 863 "ata" short-set @x4 result 84 consume 4 -> "gata" next 864
+node 864 "g" short-set @x4 result 83 consume 2 -> "ganong" next 866
+node 865 "" short-set @x4 result 83 consume 2 -> "ganoong" level 1
+node 866 "o)" short-set @x4 result 84 consume 3 -> "gugo" next 868
+node 867 ")" none result 83 consume 3 -> "gugo" level 1
+node 868 "u)" none result 83 consume 3 -> "gugu" next 872
+node 869 ".gl9" short-set @x4 result 84 consume 6 -> "gugugulin" next 870
+node 870 "sto1<" none result 83 consume 7 -> "gustong-gusto" level 3
+node 871 "to1<" none result 83 consume 7 -> "gustung-gusto" level 1
+node 872 "" short-set @x4 result 84 consume 1 -> "ganon" next 873
+node 873 "" short-set @x4 result 84 consume 1 -> "ganoon" next 874
+node 874 "" none result 80 consume 1 -> "g" next 875
+node 875 "" none result 80 consume 1 -> "g" next 876
+node 876 "" none result 80 consume 1 -> "g" next 877
+node 877 "" none result 80 consume 1 -> "g" next 878
+node 878 "" none result 80 consume 1 -> "g" next 879
+node 879 "" none result 83 consume 1 -> "g" next 880
+node 880 "" none result 83 consume 1 -> "g" next 881
+node 881 "" short-set @x4 result 83 consume 1 -> "g" next 882
+node 882 "" short-set @x4 result 83 consume 1 -> "g" next 883
+node 883 "" none result 83 consume 1 -> "g" end
+node 884 "" class c09 result 27 consume 1 -> "8" next 885
+node 885 "" none result 27 consume 1 -> "8\x12" next 886
+node 886 "!7't" short-set @x4 result 84 consume 5 -> "hangga't" next 888
+node 887 "a" short-set @x4 result 84 consume 3 -> "hanga" level 1
+node 888 "1<" none result 83 consume 3 -> "hinding-hindi" next 889
+node 889 "9a8ti" short-set @x4 result 84 consume 6 -> "hinahati" next 890
+node 890 "<" short-set @x4 result 84 consume 2 -> "hinding" next 891
+node 891 "@&" none result 83 consume 3 -> "hayon" next 892
+node 892 "a(to<" short-set @x4 result 84 consume 6 -> "hahantong" next 896
+node 893 "l<" none result 83 consume 4 -> "halimbawang" next 895
+node 894 "" short-set @x4 result 84 consume 3 -> "halimbawa" level 2
+node 895 "" short-set @x4 result 83 consume 2 -> "ha" level 1
+node 896 "ehe1" none result 83 consume 5 -> "hehehe" next 897
+node 897 "g" none result 83 consume 2 -> "huwag" next 898
+node 898 "iwa)" none result 83 consume 5 -> "hiwa-hiwa" next 899
+node 899 "l" none result 83 consume 2 -> "halos" next 900
+node 900 "r" none result 83 consume 2 -> "oras" next 901
+node 901 "u)" none result 83 consume 3 -> "huhu" next 902
+node 902 "" short-set @x4 result 84 consume 1 -> "hindi" next 903
+node 903 "" none result 80 consume 1 -> "h" next 904
+node 904 "" none result 83 consume 1 -> "h" next 905
+node 905 "" none result 83 consume 1 -> "h" next 906
+node 906 "" none result 83 consume 1 -> "h" next 907
+node 907 "" none result 83 consume 1 -> "h" next 908
+node 908 "" none result 83 consume 1 -> "h" next 909
+node 909 "" short-set @x4 result 83 consume 1 -> "h" next 910
+node 910 "" short-set @x4 result 83 consume 1 -> "h" next 911
+node 911 "" short-set @x4 result 83 consume 1 -> "h" next 912
+node 912 "" short-set @x4 result 83 consume 1 -> "h" next 913
+node 913 "" none result 83 consume 1 -> "h" end
+node 914 "" class c09 result 27 consume 1 -> "9" next 915
+node 915 "" none result 27 consume 1 -> "9\x12" next 916
+node 916 "-i" none result 83 consume 3 -> "i-i" next 918
+node 917 "" none result 84 consume 2 -> "i-" level 1
+node 918 ".bhos" short-set @x4 result 84 consume 6 -> "ibubuhos" next 922
+node 919 "km6ra" short-set @x4 result 84 consume 7 -> "ikukumpara" next 920
+node 920 "l" none result 83 consume 3 -> "ilulu" next 921
+node 921 "s" none result 83 consume 3 -> "isusu" level 1
+node 922 "2'" none result 84 consume 3 -> "iba'" next 926
+node 923 ")<" none result 83 consume 4 -> "iba-ibang" next 924
+node 924 "-" none result 84 consume 3 -> "iba-" next 925
+node 925 "1<" none result 83 consume 4 -> "ibang-iba" level 1
+node 926 "3'" none result 84 consume 3 -> "ika'" next 930
+node 927 "-" none result 84 consume 3 -> "ika-" next 928
+node 928 ".l" none result 83 consume 4 -> "ikalulu" next 929
+node 929 "" short-set @x4 result 83 consume 2 -> "ika" level 1
+node 930 "6-\x22&" short-set @x4 result 84 consume 5 -> "ipa-alam" next 931
+node 931 "b9ib9t!" short-set @x4 result 84 consume 8 -> "ibinibintang" next 933
+node 932 "in)" none result 83 consume 5 -> "ibinibin" level 1
+node 933 "i-" none result 83 consume 3 -> "ii-" next 934
+node 934 "k-" none result 83 consume 3 -> "ik-" next 940
+node 935 "9asug#" short-set @x4 result 84 consume 8 -> "ikinasugat" next 936
+node 936 "i?3/" short-set @x4 result 83 consume 6 -> "ikipagkaibig" next 937
+node 937 "s" short-set @x4 result 83 consume 3 -> "iks" next 938
+node 938 "ukw" none result 84 consume 5 -> "ikukuwento" next 939
+node 939 "w" none result 84 consume 3 -> "ikuwento" level 1
+node 940 "l:)g" short-set @x4 result 84 consume 5 -> "ilan-ilang" next 942
+node 941 "" short-set @x4 result 84 consume 2 -> "ilalim" level 1
+node 942 "p19a4k" none result 83 consume 7 -> "ipinadakip" next 945
+node 943 "9##[ag" short-set @x4 result 84 consume 8 -> "ipinatatawag" next 944
+node 944 "" short-set @x4 result 83 consume 2 -> "ip" level 1
+node 945 "s)" none result 83 consume 3 -> "isis" next 951
+node 946 "a)" none result 83 consume 4 -> "isa-isa" next 950
+node 947 ")" none result 83 consume 4 -> "isaisa" next 948
+node 948 "1't" none result 83 consume 6 -> "isa't-isa" level 4
+node 949 "t" none result 83 consume 5 -> "isat-isa" level 2
+node 950 "" short-set @x4 result 84 consume 2 -> "isang" level 1
+node 951 "" short-set @x4 result 84 consume 1 -> "ikaw" next 952
+node 952 "" none result 83 consume 1 -> "i" next 953
+node 953 "" none result 83 consume 1 -> "i" next 954
+node 954 "" none result 83 consume 1 -> "i" next 955
+node 955 "" none result 83 consume 1 -> "i" next 956
+node 956 "" none result 83 consume 1 -> "i" next 957
+node 957 "" none result 83 consume 1 -> "i" next 958
+node 958 "" none result 83 consume 1 -> "i" next 959
+node 959 "" none result 83 consume 1 -> "i" next 960
+node 960 "" none result 83 consume 1 -> "i" next 961
+node 961 "" none result 83 consume 1 -> "i" next 962
+node 962 "" none result 83 consume 1 -> "i" next 963
+node 963 "" none result 83 consume 1 -> "i" next 964
+node 964 "" none result 83 consume 1 -> "i" next 965
+node 965 "" none result 83 consume 1 -> "i" next 966
+node 966 "" short-set @x4 result 83 consume 1 -> "i" next 967
+node 967 "" short-set @x4 result 83 consume 1 -> "i" next 968
+node 968 "" short-set @x4 result 83 consume 1 -> "i" next 969
+node 969 "" none result 83 consume 1 -> "i" end
+node 970 "" class c09 result 27 consume 1 -> "0" next 971
+node 971 "" none result 27 consume 1 -> "0\x12" next 972
+node 972 "onath:" none result 83 consume 7 -> "jonathan" next 973
+node 973 "" short-set @x4 result 84 consume 1 -> "hakbang" next 974
+node 974 "" none result 83 consume 1 -> "j" end
+node 975 "\x22+!" none result 83 consume 4 -> "kukulang" next 976
+node 976 "1<" none result 83 consume 3 -> "kayang-kaya" next 977
+node 977 "<" short-set @x4 result 83 consume 2 -> "kayang" next 978
+node 978 ">d" short-set @x4 result 84 consume 3 -> "kard" next 980
+node 979 "" none result 83 consume 2 -> "karunungan" level 1
+node 980 "a-6milya" short-set @x4 result 84 consume 9 -> "ka-pamilya" next 985
+node 981 "6" none result 84 consume 3 -> "ka!" next 982
+node 982 "la)" none result 83 consume 5 -> "kalakala" next 983
+node 983 "m)" none result 83 consume 4 -> "kamkam" next 984
+node 984 "" short-set @x4 result 84 consume 2 -> "ka" level 1
+node 985 "d" none result 83 consume 2 -> "kundi" next 986
+node 986 "g" none result 83 consume 2 -> "kung" next 987
+node 987 "i?3i" short-set @x4 result 83 consume 5 -> "kipagkai" next 991
+node 988 "lala" short-set @x4 result 84 consume 6 -> "kilala" next 989
+node 989 "ta1<" none result 83 consume 6 -> "kitang-kita" next 990
+node 990 "" short-set @x4 result 83 consume 2 -> "ki" level 1
+node 991 "l" short-set @x4 result 84 consume 2 -> "kalayaan" next 992
+node 992 "mn" none result 83 consume 3 -> "komunikasyon" next 994
+node 993 "n" none result 83 consume 3 -> "kumunikasyon" level 1
+node 994 "o)" none result 83 consume 3 -> "koko" next 995
+node 995 "pa" none result 83 consume 2 -> "kp" next 998
+node 996 ":" none result 83 consume 2 -> "kp" next 997
+node 997 "" none result 83 consume 2 -> "karapatan" level 1
+node 998 "rg" short-set @x4 result 84 consume 3 -> "karanasang" next 1003
+node 999 "a" none result 83 consume 1 -> "k" next 1000
+node 1000 "i" none result 83 consume 1 -> "k" next 1001
+node 1001 "u" none result 83 consume 1 -> "k" next 1002
+node 1002 "" none result 83 consume 2 -> "karanasan" level 1
+node 1003 "so" none result 83 consume 2 -> "ks" next 1008
+node 1004 "yg" none result 83 consume 4 -> "kasaysayang" next 1007
+node 1005 "" none result 83 consume 3 -> "kasaysayan" next 1006
+node 1006 "" short-set @x4 result 83 consume 3 -> "kasaysayan" level 2
+node 1007 "" none result 83 consume 2 -> "kasalukuyan" level 1
+node 1008 "tron" none result 83 consume 5 -> "ktron" next 1010
+node 1009 "r" none result 83 consume 3 -> "kultura" level 1
+node 1010 "u)8" short-set @x4 result 84 consume 4 -> "kukuha" next 1015
+node 1011 ")" none result 83 consume 3 -> "kuku" next 1012
+node 1012 "dl" none result 83 consume 4 -> "kudl" next 1013
+node 1013 "kote" short-set @x4 result 84 consume 6 -> "kukote" next 1014
+node 1014 "" none result 83 consume 2 -> "ku" level 1
+node 1015 "w<" short-set @x4 result 84 consume 3 -> "kwentong" next 1018
+node 1016 "" none result 84 consume 2 -> "kuwento" next 1017
+node 1017 "" none result 84 consume 2 -> "kuwentu" level 1
+node 1018 "" short-set @x4 result 84 consume 1 -> "kaya" next 1019
+node 1019 "" short-set @x4 result 83 consume 1 -> "k" next 1020
+node 1020 "" none result 83 consume 1 -> "k" end
+node 1021 "ag1a" none result 83 consume 5 -> "lagalag" next 1026
+node 1022 "ksa)" none result 83 consume 6 -> "laksa-laksa" next 1023
+node 1023 "lo1<" none result 83 consume 6 -> "lalong-lalo" next 1025
+node 1024 "o1<" none result 83 consume 6 -> "lalung-lalo" level 2
+node 1025 "" short-set @x4 result 84 consume 2 -> "la" level 1
+node 1026 "ibo)" none result 83 consume 5 -> "libo-libo" next 1029
+node 1027 "bo)" none result 83 consume 5 -> "libu-libo" next 1028
+node 1028 "g1a" none result 83 consume 5 -> "ligalig" level 1
+node 1029 "l<" short-set @x4 result 84 consume 3 -> "lalaking" next 1031
+node 1030 "" none result 84 consume 2 -> "lalaki" level 1
+node 1031 "o)" none result 83 consume 3 -> "lolo" next 1033
+node 1032 "p1a" none result 83 consume 5 -> "lupalop" level 1
+node 1033 "png" short-set @x4 result 84 consume 4 -> "lipunang" next 1036
+node 1034 "n" short-set @x4 result 84 consume 3 -> "lipunan" level 3
+node 1035 "" none result 83 consume 3 -> "lipunan" level 1
+node 1036 "u)" none result 83 consume 3 -> "lulu" next 1043
+node 1037 "6'" none result 83 consume 4 -> "lupa'" next 1038
+node 1038 "8'" none result 83 consume 4 -> "luha'" next 1039
+node 1039 "k)" none result 83 consume 4 -> "lukluk" next 1040
+node 1040 "luha" short-set @x4 result 84 consume 6 -> "luluha" next 1042
+node 1041 "un4g" short-set @x4 result 84 consume 7 -> "lulundag" level 2
+node 1042 "wal8ti" short-set @x4 result 84 consume 8 -> "luwalhati" level 1
+node 1043 "" short-set @x4 result 84 consume 1 -> "lamang" next 1044
+node 1044 "" none result 83 consume 1 -> "l" next 1045
+node 1045 "" none result 83 consume 1 -> "l" next 1046
+node 1046 "" none result 83 consume 1 -> "l" next 1047
+node 1047 "" none result 83 consume 1 -> "l" next 1048
+node 1048 "" none result 83 consume 1 -> "l" next 1049
+node 1049 "" none result 83 consume 1 -> "l" next 1050
+node 1050 "" none result 83 consume 1 -> "l" next 1051
+node 1051 "" none result 83 consume 1 -> "l" next 1052
+node 1052 "" short-set @x4 result 83 consume 1 -> "l" next 1053
+node 1053 "" short-set @x4 result 83 consume 1 -> "l" next 1054
+node 1054 "" none result 83 consume 1 -> "l" end
+node 1055 "!.h" none result 83 consume 4 -> "manghuhu" next 1057
+node 1056 ".klam" short-set @x4 result 84 consume 7 -> "mangkukulam" level 1
+node 1057 "##" none result 83 consume 3 -> "matat" next 1060
+node 1058 "a" none result 83 consume 3 -> "mata" next 1059
+node 1059 "uk" none result 84 consume 4 -> "matuk" level 1
+node 1060 "6" short-set @x4 result 83 consume 2 -> "mpa" next 1061
+node 1061 ":)" none result 83 consume 3 -> "manman" next 1063
+node 1062 ".l" none result 83 consume 4 -> "manlulu" level 1
+node 1063 ">" short-set @x4 result 84 consume 2 -> "marahil" next 1064
+node 1064 "a?-" none result 84 consume 4 -> "mapagi-" next 1108
+node 1065 ".bo" short-set @x4 result 84 consume 5 -> "mabubuo" next 1075
+node 1066 "gl#" short-set @x4 result 84 consume 6 -> "magugulat" next 1068
+node 1067 "tom" short-set @x4 result 84 consume 7 -> "magugutom" level 3
+node 1068 "h" none result 83 consume 4 -> "mahuhu" next 1069
+node 1069 "k" none result 83 consume 4 -> "makuku" next 1070
+node 1070 "l" none result 83 consume 4 -> "malulu" next 1071
+node 1071 "m" none result 84 consume 4 -> "mamumu" next 1072
+node 1072 "p" none result 83 consume 4 -> "mapupu" next 1073
+node 1073 "s" none result 84 consume 4 -> "masusu" next 1074
+node 1074 "tto" none result 84 consume 6 -> "matututo" level 2
+node 1075 "13da" none result 83 consume 6 -> "makadama" next 1085
+node 1076 "3lu" none result 83 consume 6 -> "makaluma" next 1078
+node 1077 "sa" none result 83 consume 6 -> "makasama" level 3
+node 1078 "4ra" none result 83 consume 6 -> "madarama" next 1080
+node 1079 "" none result 83 consume 4 -> "madama" level 3
+node 1080 "6sa" none result 83 consume 6 -> "mapasama" next 1081
+node 1081 "isa" none result 83 consume 6 -> "maisama" next 1082
+node 1082 "kidig" none result 83 consume 8 -> "makidigma" next 1084
+node 1083 "isa" none result 83 consume 7 -> "makisama" level 3
+node 1084 "ndirig" none result 83 consume 9 -> "mandirigma" level 2
+node 1085 "3-" none result 83 consume 4 -> "maka-" next 1093
+node 1086 ".kha" short-set @x4 result 84 consume 7 -> "makakukuha" next 1089
+node 1087 "p" none result 83 consume 5 -> "makapupu" next 1088
+node 1088 "s" none result 83 consume 5 -> "makasusu" level 3
+node 1089 "3y!" short-set @x4 result 84 consume 6 -> "makakayang" next 1091
+node 1090 "" short-set @x4 result 84 consume 4 -> "makaka" level 3
+node 1091 "toto" none result 83 consume 7 -> "makatoto" next 1092
+node 1092 "y!" short-set @x4 result 84 consume 5 -> "makayang" level 2
+node 1093 "88ti" short-set @x4 result 84 consume 6 -> "mahahati" next 1096
+node 1094 "<9" short-set @x4 result 84 consume 5 -> "mahangin" next 1095
+node 1095 "ti" short-set @x4 result 84 consume 5 -> "mahati" level 2
+node 1096 ";t" none result 83 consume 4 -> "matututu" next 1097
+node 1097 "i.s" none result 83 consume 5 -> "maisusu" next 1099
+node 1098 "" short-set @x4 result 83 consume 3 -> "mai" level 2
+node 1099 "laca@n!" short-set @x4 result 84 consume 9 -> "malaca\xf1ang" next 1101
+node 1100 "ak:y!" short-set @x4 result 84 consume 8 -> "malakanyang" level 2
+node 1101 "pu&pos" none result 83 consume 8 -> "mapupuspos" next 1102
+node 1102 "sak&lo" short-set @x4 result 84 consume 8 -> "masaklolo" next 1103
+node 1103 "\x5ckoy" none result 84 consume 6 -> "matukoy" next 1107
+node 1104 "\x5cto<" short-set @x4 result 84 consume 7 -> "matututong" next 1106
+node 1105 "tu:" short-set @x4 result 84 consume 7 -> "matuturuan" level 3
+node 1106 "" none result 84 consume 3 -> "matu" level 2
+node 1107 "" short-set @x4 result 83 consume 2 -> "ma" level 1
+node 1108 "ilyon)g" short-set @x4 result 84 consume 8 -> "milyun-milyong" next 1110
+node 1109 "lyon)" none result 83 consume 7 -> "milyon-milyon" level 1
+node 1110 "mg" short-set @x4 result 84 consume 3 -> "mamamayang" next 1112
+node 1111 "" short-set @x4 result 84 consume 2 -> "mamamayan" level 1
+node 1112 "r<" short-set @x4 result 84 consume 3 -> "maraming" next 1114
+node 1113 "" short-set @x4 result 84 consume 2 -> "marami" level 1
+node 1114 "u)" none result 83 consume 3 -> "mumu" next 1115
+node 1115 "" short-set @x4 result 84 consume 1 -> "mga" next 1116
+node 1116 "" none result 83 consume 1 -> "m" next 1117
+node 1117 "" none result 83 consume 1 -> "m" next 1118
+node 1118 "" none result 83 consume 1 -> "m" next 1119
+node 1119 "" none result 83 consume 1 -> "m" next 1120
+node 1120 "" none result 83 consume 1 -> "m" next 1121
+node 1121 "" none result 83 consume 1 -> "m" next 1122
+node 1122 "" none result 83 consume 1 -> "m" next 1123
+node 1123 "" none result 83 consume 1 -> "m" next 1124
+node 1124 "" none result 83 consume 1 -> "m" next 1125
+node 1125 "" none result 83 consume 1 -> "m" next 1126
+node 1126 "" none result 83 consume 1 -> "m" next 1127
+node 1127 "" none result 83 consume 1 -> "m" next 1128
+node 1128 "" none result 83 consume 1 -> "m" next 1129
+node 1129 "" none result 83 consume 1 -> "m" next 1130
+node 1130 "" short-set @x4 result 83 consume 1 -> "m" next 1131
+node 1131 "" none result 83 consume 1 -> "m" end
+node 1132 "!.glo" short-set @x4 result 84 consume 6 -> "nanggugulo" next 1136
+node 1133 ".g" none result 83 consume 4 -> "nanggu" next 1135
+node 1134 "h" none result 83 consume 4 -> "nanghuhu" level 2
+node 1135 "una" none result 83 consume 5 -> "nanguna" level 1
+node 1136 "#a" none result 83 consume 3 -> "nata" next 1138
+node 1137 "#" none result 83 consume 3 -> "natat" level 1
+node 1138 "@&" short-set @x4 result 84 consume 3 -> "nayon" next 1139
+node 1139 "a&to" none result 84 consume 5 -> "natuto" next 1167
+node 1140 "4pa" none result 84 consume 5 -> "nadapa" next 1141
+node 1141 "'<" none result 84 consume 4 -> "na'ng" next 1142
+node 1142 "*mg8ti" short-set @x4 result 84 consume 8 -> "namimighati" next 1143
+node 1143 ".bo<" short-set @x4 result 84 consume 6 -> "nabubuong" next 1153
+node 1144 "bo" short-set @x4 result 84 consume 5 -> "nabubuo" next 1145
+node 1145 "g" none result 83 consume 4 -> "nagugu" next 1146
+node 1146 "h" none result 83 consume 4 -> "nahuhu" next 1147
+node 1147 "k" none result 83 consume 4 -> "nakuku" next 1148
+node 1148 "l" none result 83 consume 4 -> "nalulu" next 1149
+node 1149 "m" none result 83 consume 4 -> "namumu" next 1150
+node 1150 "p" none result 83 consume 4 -> "napupu" next 1151
+node 1151 "s7t:" short-set @x4 result 84 consume 7 -> "nasusugatan" level 4
+node 1152 "" none result 83 consume 4 -> "nasusu" level 2
+node 1153 "1ma" none result 83 consume 5 -> "namana" next 1156
+node 1154 "pu" none result 83 consume 5 -> "napuna" next 1155
+node 1155 "uu" none result 83 consume 5 -> "nauuna" level 2
+node 1156 "3.l" none result 83 consume 5 -> "nakalulu" next 1159
+node 1157 "i" short-set @x4 result 84 consume 4 -> "nakai" next 1158
+node 1158 "\x5ctok" short-set @x4 result 84 consume 7 -> "nakatutok" level 2
+node 1159 "88ti" short-set @x4 result 84 consume 6 -> "nahahati" next 1161
+node 1160 "ti" short-set @x4 result 84 consume 5 -> "nahati" level 2
+node 1161 ";t" none result 83 consume 4 -> "natututu" next 1162
+node 1162 "\x5cto<" short-set @x4 result 84 consume 6 -> "natutong" next 1164
+node 1163 "" none result 84 consume 3 -> "natu" level 2
+node 1164 "^<la8ti" short-set @x4 result 84 consume 9 -> "nangangalahati" next 1166
+node 1165 "wla" short-set @x4 result 84 consume 6 -> "nawawala" level 2
+node 1166 "" none result 84 consume 2 -> "na" level 1
+node 1167 "e7tibo<" short-set @x4 result 84 consume 8 -> "negatibong" next 1169
+node 1168 "7tibo" short-set @x4 result 84 consume 7 -> "negatibo" level 1
+node 1169 "g" short-set @x4 result 84 consume 2 -> "ngayong" next 1170
+node 1170 "i.l" none result 83 consume 4 -> "nilulu" next 1171
+node 1171 "" short-set @x4 result 84 consume 1 -> "ngayon" next 1172
+node 1172 "" none result 83 consume 1 -> "n" next 1173
+node 1173 "" none result 83 consume 1 -> "n" next 1174
+node 1174 "" none result 83 consume 1 -> "n" next 1175
+node 1175 "" none result 83 consume 1 -> "n" next 1176
+node 1176 "" none result 83 consume 1 -> "n" next 1177
+node 1177 "" none result 83 consume 1 -> "n" next 1178
+node 1178 "" none result 83 consume 1 -> "n" next 1179
+node 1179 "" none result 83 consume 1 -> "n" end
+node 1180 "d-" none result 83 consume 3 -> "od-" next 1181
+node 1181 "n-" none result 83 consume 3 -> "on-" next 1182
+node 1182 "s-" none result 83 consume 3 -> "os-" next 1183
+node 1183 "" none result 83 consume 1 -> "o" next 1184
+node 1184 "" none result 83 consume 1 -> "o" end
+node 1185 "!-" none result 84 consume 3 -> "pang-" next 1192
+node 1186 ".g" none result 83 consume 4 -> "panggugu" next 1190
+node 1187 "h" none result 83 consume 4 -> "panghuhu" next 1188
+node 1188 "k" none result 83 consume 4 -> "pangkuku" next 1189
+node 1189 "l" none result 83 consume 4 -> "panglulu" level 2
+node 1190 "3i" short-set @x4 result 84 consume 4 -> "pangkai" next 1191
+node 1191 "7to<" short-set @x4 result 84 consume 6 -> "panggatong" level 1
+node 1192 "9##[ad" short-set @x4 result 84 consume 7 -> "pinatatawad" next 1195
+node 1193 "a.m" none result 83 consume 5 -> "pinamumu" level 3
+node 1194 ".s" none result 83 consume 5 -> "pinasusu" level 1
+node 1195 ":.l" none result 83 consume 4 -> "panlulu" next 1198
+node 1196 "4" short-set @x4 result 84 consume 3 -> "panda" next 1197
+node 1197 "lpn" none result 83 consume 5 -> "panlipunan" level 1
+node 1198 "<" short-set @x4 result 83 consume 2 -> "parang" next 1199
+node 1199 "]a6" short-set @x4 result 84 consume 4 -> "pera!" next 1200
+node 1200 "ana)" none result 83 consume 5 -> "pana-pana" next 1202
+node 1201 "" short-set @x4 result 84 consume 2 -> "pa" level 1
+node 1202 "h" short-set @x4 result 84 consume 2 -> "palibhasa" next 1203
+node 1203 "i$3k:yon" short-set @x4 result 84 consume 9 -> "pinagkakanyon" next 1209
+node 1204 "$;bks:" short-set @x4 result 84 consume 8 -> "pinagbububuksan" next 1207
+node 1205 ";kha" short-set @x4 result 84 consume 7 -> "pinagkukukuha" level 4
+node 1206 "ptol" short-set @x4 result 84 consume 8 -> "pinagpupuputol" level 2
+node 1207 "g8ti" short-set @x4 result 84 consume 6 -> "pighati" next 1208
+node 1208 "ra)" none result 83 consume 5 -> "pira-pira" level 1
+node 1209 "l" short-set @x4 result 84 consume 2 -> "palaisipan" next 1210
+node 1210 "mg" short-set @x4 result 84 consume 3 -> "pamahalaang" next 1213
+node 1211 "" short-set @x4 result 84 consume 2 -> "pamahalaan" next 1212
+node 1212 "" short-set @x4 result 84 consume 2 -> "pamahalaan" level 1
+node 1213 "ng" short-set @x4 result 84 consume 3 -> "panitikang" next 1215
+node 1214 "" none result 83 consume 2 -> "panitikan" level 1
+node 1215 "o)" none result 83 consume 3 -> "popu" next 1216
+node 1216 "re-" none result 83 consume 4 -> "pre-" next 1217
+node 1217 "sp" none result 83 consume 3 -> "pangungusap" next 1218
+node 1218 "u)" none result 83 consume 3 -> "pupu" next 1224
+node 1219 "la1<" short-set @x4 result 84 consume 6 -> "pulang-pula" next 1220
+node 1220 "no1<" none result 83 consume 6 -> "punong-puno" next 1222
+node 1221 "o1<" none result 83 consume 6 -> "punung-puno" level 2
+node 1222 "r7toryo" short-set @x4 result 84 consume 9 -> "purgatoryo" next 1223
+node 1223 "s)" none result 83 consume 4 -> "puspus" level 1
+node 1224 "" short-set @x4 result 84 consume 1 -> "para" next 1225
+node 1225 "" none result 83 consume 1 -> "p" next 1226
+node 1226 "" none result 83 consume 1 -> "p" next 1227
+node 1227 "" short-set @x4 result 83 consume 1 -> "p" next 1228
+node 1228 "" none result 83 consume 1 -> "p" end
+node 1229 "aq" none result 83 consume 3 -> "qaq" next 1230
+node 1230 "g" short-set @x4 result 84 consume 2 -> "kailang" next 1231
+node 1231 "" short-set @x4 result 84 consume 1 -> "kailan" next 1232
+node 1232 "" none result 83 consume 1 -> "q" end
+node 1233 "e)" none result 83 consume 3 -> "rere" next 1235
+node 1234 ")" none result 83 consume 3 -> "rere" level 1
+node 1235 "g" short-set @x4 result 84 consume 2 -> "ring" next 1236
+node 1236 "o)" none result 83 consume 3 -> "ruro" next 1237
+node 1237 "" short-set @x4 result 84 consume 1 -> "rin" next 1238
+node 1238 "" none result 83 consume 1 -> "r" next 1239
+node 1239 "" none result 83 consume 1 -> "r" next 1240
+node 1240 "" none result 83 consume 1 -> "r" next 1241
+node 1241 "" none result 83 consume 1 -> "r" next 1242
+node 1242 "" none result 83 consume 1 -> "r" next 1243
+node 1243 "" none result 83 consume 1 -> "r" next 1244
+node 1244 "" none result 83 consume 1 -> "r" next 1245
+node 1245 "" none result 83 consume 1 -> "r" end
+node 1246 "06" none result 83 consume 3 -> "sumipa" next 1247
+node 1247 "9a.p" none result 83 consume 5 -> "sinapupu" next 1250
+node 1248 "u.sg:" short-set @x4 result 84 consume 7 -> "sinususugan" level 3
+node 1249 "7t:" short-set @x4 result 84 consume 6 -> "sinugatan" level 1
+node 1250 ">i)" none result 83 consume 4 -> "sari-sari" next 1252
+node 1251 "i)" none result 83 consume 4 -> "sarisari" level 1
+node 1252 "?k" short-set @x4 result 84 consume 3 -> "sapagka't" next 1254
+node 1253 "k" none result 83 consume 3 -> "sapagkat" level 1
+node 1254 "a1r" none result 83 consume 4 -> "sarsa" next 1262
+node 1255 "3)" none result 83 consume 4 -> "saka-saka" next 1256
+node 1256 "b)" none result 83 consume 4 -> "sabsab" next 1257
+node 1257 "g1i" short-set @x4 result 84 consume 5 -> "sagisag" next 1259
+node 1258 "1i" none result 83 consume 5 -> "sagisag" level 2
+node 1259 "k)" none result 83 consume 4 -> "saksak" next 1260
+node 1260 "ma)" short-set @x4 result 84 consume 5 -> "sama-sama" next 1261
+node 1261 "ya)" none result 83 consume 5 -> "saya-saya" level 1
+node 1262 "e)" none result 83 consume 3 -> "sese" next 1263
+node 1263 "g" none result 83 consume 2 -> "sangguni" next 1265
+node 1264 "" none result 83 consume 2 -> "sangguni" level 1
+node 1265 "i1ni" none result 83 consume 5 -> "sinisi" next 1268
+node 1266 "g1a" none result 83 consume 5 -> "sigasig" next 1267
+node 1267 "k)" none result 83 consume 4 -> "siksik" level 1
+node 1268 "l" none result 83 consume 2 -> "suliranin" next 1269
+node 1269 "m<" short-set @x4 result 84 consume 3 -> "samantalang" next 1274
+node 1270 "k" none result 83 consume 3 -> "samakatuwid" next 1271
+node 1271 "o" short-set @x4 result 83 consume 3 -> "smo" next 1272
+node 1272 "" short-set @x4 result 84 consume 2 -> "samantala" next 1273
+node 1273 "" none result 83 consume 2 -> "samantala" level 1
+node 1274 "o)g" none result 83 consume 4 -> "susog" next 1276
+node 1275 "bra)" none result 83 consume 6 -> "sobra-sobra" level 1
+node 1276 "s" short-set @x4 result 84 consume 2 -> "sumusunod" next 1277
+node 1277 "u)" none result 83 consume 3 -> "susu" next 1282
+node 1278 "7t" none result 83 consume 4 -> "sugat" next 1279
+node 1279 "g#" short-set @x4 result 84 consume 4 -> "sugat" next 1280
+node 1280 "musug#" short-set @x4 result 84 consume 8 -> "sumusugat" next 1281
+node 1281 "sund:" short-set @x4 result 84 consume 7 -> "susundan" level 1
+node 1282 "weldo" none result 83 consume 6 -> "sweldo" next 1284
+node 1283 "" none result 83 consume 2 -> "salawikain" level 1
+node 1284 "" short-set @x4 result 84 consume 1 -> "sang-ayon" next 1285
+node 1285 "" none result 83 consume 1 -> "s" next 1286
+node 1286 "" none result 83 consume 1 -> "s" next 1287
+node 1287 "" none result 83 consume 1 -> "s" next 1288
+node 1288 "" short-set @x4 result 83 consume 1 -> "s" next 1289
+node 1289 "" short-set @x4 result 83 consume 1 -> "s" next 1290
+node 1290 "" short-set @x4 result 83 consume 1 -> "s" next 1291
+node 1291 "" short-set @x4 result 83 consume 1 -> "s" next 1292
+node 1292 "" none result 83 consume 1 -> "s" end
+node 1293 "06" none result 83 consume 3 -> "tumipa" next 1294
+node 1294 "94)" none result 83 consume 4 -> "tinda-tinda" next 1295
+node 1295 "<" short-set @x4 result 84 consume 2 -> "tayong" next 1297
+node 1296 "" none result 83 consume 2 -> "tayong" level 1
+node 1297 "a1rhe" none result 83 consume 6 -> "tarheta" next 1309
+node 1298 "7-" none result 84 consume 3 -> "taga-" next 1304
+node 1299 "-supo" none result 83 consume 8 -> "taga-suporta" next 1300
+node 1300 "?2li" none result 83 consume 7 -> "tagapagbalita" next 1301
+node 1301 "ki" none result 83 consume 5 -> "tagakita" next 1302
+node 1302 "supor" none result 83 consume 8 -> "tagasuporta" next 1303
+node 1303 "" none result 84 consume 3 -> "taga" level 2
+node 1304 "g-" none result 84 consume 3 -> "tag-" next 1305
+node 1305 "la\x5cn\x5cn:" short-set @x4 result 84 consume 9 -> "talatuntunan" next 1306
+node 1306 "ma1<" none result 83 consume 6 -> "tamang-tama" next 1307
+node 1307 "on)" none result 83 consume 5 -> "taun-taon" next 1308
+node 1308 "" short-set @x4 result 83 consume 2 -> "ta" level 1
+node 1309 "g" short-set @x4 result 84 consume 2 -> "tayog" next 1310
+node 1310 "im)" none result 83 consume 4 -> "timtim" next 1311
+node 1311 "k!" short-set @x4 result 84 consume 3 -> "talakayang" next 1314
+node 1312 "9" none result 83 consume 3 -> "talakayin" next 1313
+node 1313 "" short-set @x4 result 83 consume 2 -> "talakay" level 1
+node 1314 "l" none result 83 consume 2 -> "talata" next 1315
+node 1315 "o)" short-set @x4 result 84 consume 3 -> "toto" next 1319
+node 1316 ")" none result 83 consume 3 -> "toto" next 1317
+node 1317 "1ron" none result 83 consume 6 -> "toronto" next 1318
+node 1318 "too<" short-set @x4 result 84 consume 6 -> "totoong" level 1
+node 1319 "p" short-set @x4 result 84 consume 2 -> "tagumpay" next 1321
+node 1320 "" none result 83 consume 2 -> "tagumpay" level 1
+node 1321 "r<" short-set @x4 result 84 consume 3 -> "trabahong" next 1324
+node 1322 "" short-set @x4 result 84 consume 2 -> "trabaho" next 1323
+node 1323 "" short-set @x4 result 84 consume 2 -> "trabaho" level 1
+node 1324 "'y" short-set @x4 result 84 consume 3 -> "tayo'y" next 1325
+node 1325 "" short-set @x4 result 84 consume 1 -> "tayo" next 1326
+node 1326 "" none result 83 consume 1 -> "t" next 1327
+node 1327 "" none result 83 consume 1 -> "t" next 1328
+node 1328 "" none result 83 consume 1 -> "t" next 1329
+node 1329 "" none result 83 consume 1 -> "t" next 1330
+node 1330 "" none result 83 consume 1 -> "t" next 1331
+node 1331 "" none result 83 consume 1 -> "t" next 1332
+node 1332 "" none result 83 consume 1 -> "t" next 1333
+node 1333 "" none result 83 consume 1 -> "t" next 1334
+node 1334 "" none result 83 consume 1 -> "t" next 1335
+node 1335 "" none result 83 consume 1 -> "t" next 1336
+node 1336 "" none result 83 consume 1 -> "t" next 1337
+node 1337 "" none result 83 consume 1 -> "t" next 1338
+node 1338 "" none result 83 consume 1 -> "t" next 1339
+node 1339 "" short-set @x4 result 83 consume 1 -> "t" next 1340
+node 1340 "" short-set @x4 result 83 consume 1 -> "t" next 1341
+node 1341 "" short-set @x4 result 83 consume 1 -> "t" next 1342
+node 1342 "" short-set @x4 result 83 consume 1 -> "t" next 1343
+node 1343 "" none result 83 consume 1 -> "t" end
+node 1344 "lit)" none result 84 consume 5 -> "ulit-ulit" next 1345
+node 1345 "na1<" none result 83 consume 5 -> "unang-una" next 1347
+node 1346 "ti)<" short-set @x4 result 84 consume 6 -> "unti-unting" level 1
+node 1347 "sap)" none result 83 consume 5 -> "usap-usap" next 1348
+node 1348 "\x5c" short-set @x4 result 83 consume 2 -> "utu" next 1349
+node 1349 "" short-set @x4 result 84 consume 1 -> "upang" next 1350
+node 1350 "" none result 83 consume 1 -> "u" next 1351
+node 1351 "" short-set @x4 result 83 consume 1 -> "u" next 1352
+node 1352 "" none result 83 consume 1 -> "u" end
+node 1353 "aq" none result 83 consume 3 -> "vaq" next 1354
+node 1354 "" short-set @x4 result 84 consume 1 -> "bagaman" next 1355
+node 1355 "" none result 83 consume 1 -> "v" end
+node 1356 "9i3'y" none result 84 consume 6 -> "winika'y" next 1357
+node 1357 "<" short-set @x4 result 84 consume 2 -> "walang" next 1362
+node 1358 "" none result 83 consume 2 -> "walang" next 1359
+node 1359 "" none result 83 consume 2 -> "walang" next 1360
+node 1360 "" none result 83 consume 2 -> "walang" next 1361
+node 1361 "" none result 83 consume 2 -> "walang" level 1
+node 1362 "al8ti" short-set @x4 result 83 consume 6 -> "walhati" next 1363
+node 1363 "i3'y" none result 84 consume 5 -> "wika'y" next 1364
+node 1364 "ww" none result 83 consume 3 -> "www" next 1366
+node 1365 "" none result 83 consume 2 -> "watawat" level 1
+node 1366 "" short-set @x4 result 84 consume 1 -> "wala" next 1367
+node 1367 "" none result 83 consume 1 -> "w" next 1368
+node 1368 "" none result 83 consume 1 -> "w" next 1369
+node 1369 "" none result 83 consume 1 -> "w" next 1370
+node 1370 "" none result 83 consume 1 -> "w" next 1371
+node 1371 "" short-set @x4 result 83 consume 1 -> "w" next 1372
+node 1372 "" none result 83 consume 1 -> "w" end
+node 1373 "<" none result 84 consume 2 -> "itong" next 1374
+node 1374 "'y" short-set @x4 result 84 consume 3 -> "ito'y" next 1375
+node 1375 "-ray" none result 83 consume 5 -> "x-ray" next 1376
+node 1376 "" short-set @x4 result 84 consume 1 -> "ito" next 1377
+node 1377 "" none result 83 consume 1 -> "x" end
+node 1378 "-" none result 83 consume 2 -> "y-" next 1379
+node 1379 "3" short-set @x4 result 83 consume 2 -> "yka" next 1380
+node 1380 "ag!" none result 83 consume 4 -> "yagang" next 1382
+node 1381 "" short-set @x4 result 83 consume 2 -> "ya" level 1
+node 1382 "g" none result 84 consume 2 -> "yamang" next 1383
+node 1383 "" short-set @x4 result 84 consume 1 -> "yaman" next 1384
+node 1384 "" none result 83 consume 1 -> "y" end
+node 1385 "aq" none result 83 consume 3 -> "zaq" next 1386
+node 1386 "" short-set @x4 result 84 consume 1 -> "sa" next 1387
+node 1387 "" none result 83 consume 1 -> "z" end
+node 1388 "<" short-set @x4 result 84 consume 2 -> "akong" next 1389
+node 1389 "" short-set @x4 result 84 consume 1 -> "ako" next 1390
+node 1390 "" none result 83 consume 1 -> "aw" end
+node 1391 "g)" none result 83 consume 3 -> "tugtug" next 1392
+node 1392 "n)" short-set @x4 result 84 consume 3 -> "tuntun" next 1394
+node 1393 ")" none result 83 consume 3 -> "tuntun" level 1
+node 1394 "s)" none result 83 consume 3 -> "tustus" next 1395
+node 1395 "wa1<" short-set @x4 result 84 consume 5 -> "tuwang-tuwa" next 1396
+node 1396 "\x5cp" short-set @x4 result 84 consume 3 -> "tutup" next 1397
+node 1397 "" short-set @x4 result 84 consume 1 -> "tunay" next 1398
+node 1398 "" none result 83 consume 1 -> "tu" next 1399
+node 1399 "" none result 83 consume 1 -> "tu" next 1400
+node 1400 "" none result 83 consume 1 -> "tu" next 1401
+node 1401 "" none result 83 consume 1 -> "tu" next 1402
+node 1402 "" none result 83 consume 1 -> "tu" next 1403
+node 1403 "" none result 83 consume 1 -> "tu" next 1404
+node 1404 "" none result 83 consume 1 -> "tu" next 1405
+node 1405 "" none result 83 consume 1 -> "tu" next 1406
+node 1406 "" none result 83 consume 1 -> "tu" next 1407
+node 1407 "" none result 83 consume 1 -> "tu" next 1408
+node 1408 "" none result 83 consume 1 -> "tu" next 1409
+node 1409 "" none result 83 consume 1 -> "tu" next 1410
+node 1410 "" none result 83 consume 1 -> "tu" next 1411
+node 1411 "" none result 83 consume 1 -> "tu" next 1412
+node 1412 "" none result 83 consume 1 -> "tu" next 1413
+node 1413 "" none result 83 consume 1 -> "tu" next 1414
+node 1414 "" none result 83 consume 1 -> "tu" end
+node 1415 "" short-set @x4 result 84 consume 1 -> "raw" next 1416
+node 1416 "" none result 83 consume 1 -> "er" next 1417
+node 1417 "" none result 83 consume 1 -> "]" end
+node 1418 "<" none result 83 consume 2 -> "nganga" next 1419
+node 1419 "b89" none result 83 consume 4 -> "babahain" next 1422
+node 1420 "^" none result 83 consume 3 -> "baba" next 1421
+node 1421 "" none result 83 consume 2 -> "baba" level 1
+node 1422 "g" short-set @x4 result 84 consume 2 -> "gaga" next 1435
+node 1423 "" short-set @x4 result 84 consume 2 -> "gaga" next 1424
+node 1424 "" short-set @x4 result 84 consume 2 -> "gaga" next 1425
+node 1425 "" short-set @x4 result 84 consume 2 -> "gaga" next 1426
+node 1426 "" short-set @x4 result 84 consume 2 -> "gaga" next 1427
+node 1427 "" none result 83 consume 2 -> "gaga" next 1428
+node 1428 "" none result 83 consume 2 -> "gaga" next 1429
+node 1429 "" none result 83 consume 2 -> "gaga" next 1430
+node 1430 "" none result 83 consume 2 -> "gaga" next 1431
+node 1431 "" none result 83 consume 2 -> "gaga" next 1432
+node 1432 "" none result 83 consume 2 -> "gaga" next 1433
+node 1433 "" none result 83 consume 2 -> "gaga" next 1434
+node 1434 "" short-set @x4 result 83 consume 2 -> "gaga" level 1
+node 1435 "h" short-set @x4 result 84 consume 2 -> "haha" next 1452
+node 1436 "" short-set @x4 result 84 consume 2 -> "haha" next 1437
+node 1437 "" short-set @x4 result 84 consume 2 -> "haha" next 1438
+node 1438 "" short-set @x4 result 84 consume 2 -> "haha" next 1439
+node 1439 "" short-set @x4 result 84 consume 2 -> "haha" next 1440
+node 1440 "" short-set @x4 result 84 consume 2 -> "haha" next 1441
+node 1441 "" short-set @x4 result 84 consume 2 -> "haha" next 1442
+node 1442 "" none result 83 consume 2 -> "haha" next 1443
+node 1443 "" none result 83 consume 2 -> "haha" next 1444
+node 1444 "" none result 83 consume 2 -> "haha" next 1445
+node 1445 "" none result 83 consume 2 -> "haha" next 1446
+node 1446 "" none result 83 consume 2 -> "haha" next 1447
+node 1447 "" none result 83 consume 2 -> "haha" next 1448
+node 1448 "" none result 83 consume 2 -> "haha" next 1449
+node 1449 "" none result 83 consume 2 -> "haha" next 1450
+node 1450 "" none result 83 consume 2 -> "haha" next 1451
+node 1451 "" none result 83 consume 2 -> "haha" level 1
+node 1452 "k69" none result 83 consume 4 -> "kakapain" next 1456
+node 1453 "" short-set @x4 result 84 consume 2 -> "kaka" next 1454
+node 1454 "" none result 83 consume 2 -> "kaka" next 1455
+node 1455 "" none result 83 consume 2 -> "kaka" level 1
+node 1456 "lkit" none result 84 consume 5 -> "lalakit" next 1463
+node 1457 "" none result 83 consume 2 -> "lala" next 1458
+node 1458 "" none result 83 consume 2 -> "lala" next 1459
+node 1459 "" none result 83 consume 2 -> "lala" next 1460
+node 1460 "" none result 83 consume 2 -> "lala" next 1461
+node 1461 "" none result 83 consume 2 -> "lala" next 1462
+node 1462 "" short-set @x4 result 83 consume 2 -> "lala" level 1
+node 1463 "m" none result 83 consume 2 -> "mama" next 1467
+node 1464 "" none result 83 consume 2 -> "mama" next 1465
+node 1465 "" none result 83 consume 2 -> "mama" next 1466
+node 1466 "" none result 83 consume 2 -> "mama" level 1
+node 1467 "n" none result 83 consume 2 -> "nana" next 1468
+node 1468 "p" none result 83 consume 2 -> "papa" next 1469
+node 1469 "r" none result 83 consume 2 -> "rara" next 1470
+node 1470 "s" none result 83 consume 2 -> "sasa" next 1475
+node 1471 "" none result 83 consume 2 -> "sasa" next 1472
+node 1472 "" none result 83 consume 2 -> "sasa" next 1473
+node 1473 "" none result 83 consume 2 -> "sasa" next 1474
+node 1474 "" none result 83 consume 2 -> "sasa" level 1
+node 1475 "ty" short-set @x4 result 84 consume 3 -> "tatay" next 1478
+node 1476 "" none result 83 consume 2 -> "tata" next 1477
+node 1477 "" none result 83 consume 2 -> "tata" level 1
+node 1478 "w" none result 83 consume 2 -> "wawa" next 1480
+node 1479 "" none result 83 consume 2 -> "wawa" level 1
+node 1480 "y" none result 83 consume 2 -> "yaya" end
+node 1481 "b" none result 83 consume 2 -> "bababa" next 1482
+node 1482 "d" none result 83 consume 2 -> "dadada" next 1483
+node 1483 "g" none result 83 consume 2 -> "gagaga" next 1484
+node 1484 "h" none result 83 consume 2 -> "hahaha" next 1485
+node 1485 "k" none result 83 consume 2 -> "kakaka" next 1486
+node 1486 "l" none result 83 consume 2 -> "lalala" next 1487
+node 1487 "m" none result 83 consume 2 -> "mamama" next 1489
+node 1488 "" short-set @x4 result 83 consume 2 -> "mamama" level 1
+node 1489 "n" none result 83 consume 2 -> "nanana" next 1490
+node 1490 "p" none result 83 consume 2 -> "papapa" next 1491
+node 1491 "sbi" none result 83 consume 4 -> "sasasabi" next 1492
+node 1492 "t" none result 83 consume 2 -> "tatata" next 1493
+node 1493 "yin" none result 83 consume 4 -> "yayayain" level 2
+node 1494 "" none result 83 consume 2 -> "yayaya" next 1495
+node 1495 "" short-set @x4 result 83 consume 2 -> "yayaya" end
+
+scan input-mode 0
+scan trailing-blanks 1
+scan flag 28
+scan full-stop 46
+scan newline 1
+scan form-feed "\x15"
+scan paragraph "p"
+scan new-paragraphs 0
+scan rejoin-hyphens 0
+scan spaces 0
+scan tab-width 1
+scan ninmod 0
+scan fold-codes 1
+scan fold-words 1
+scan capital-cessation 0
+scan map-braces 0
+scan spare 0
+scan passage-ends 0
+scan nxsls 0
+scan format-word 28
+scan format-word2 27
+scan capital-sign 0
+scan capital-end 0
+scan address-switching 0
+scan mode-words "running" "spacing" "marking" "as-is" "compress" "sentence" "auto-tab" "par" "no-par" "par-skp" "par-ind"
+scan passage-words 0
+scan doubled-adjectives 0

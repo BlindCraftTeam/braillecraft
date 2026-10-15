@@ -1,0 +1,2699 @@
+# The rules of frabp.btb and gendxb.sct, recreated as BrailleMaker table source.
+table "frabp, braille to print"
+default-char 42
+raw 0
+writer 2
+output 4
+tail-extra 0 0 0
+unknown 0
+
+state s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 s11 s12 s13 s14 s15 s16
+state s17 s18 s19 s20 s21 s22 s23 s24 s25 s26 s27 s28 s29 s30 s31 s32
+state s33 s34 s35 s36 s37 s38 s39 s40 s41 s42 s43 s44 s45 s46 s47 s48
+state s49 s50 s51 s52 s53 s54 s55 s56 s57 s58 s59 s60 s61 s62 s63 s64
+
+class c00 "\x01\x02\x1b\x1c\x1d\x1e\x1f ',-012345679^"
+class c01 " ^"
+class c02 " '-"
+class c03 "\x1b\x1c\x1d\x1e\x1f `"
+class c04 "!\x22#$%&()*+./0123456789:;<=>?@[\x5c]^_`abcdefghijklmnopqrstuvwxyz"
+class c05 "!\x22#$%&()*+./0123456789:;<=>?@[\x5c]^_abcdefghijklmnopqrstuvwxyz"
+class c06 "!$%&(*2<>?]^_kwxz"
+class c07 "!$%&(*<>?]^_kwz"
+class c08 "!$%&(*02<>?]^_kwxz"
+class c09 "\x22#)+,./14589:;=@[\x5c`aeiouy"
+class c10 "367bcdfghjlmnpqrstv"
+class c11 "7"
+class c12 "abcdefghij"
+class c13 "x"
+class c14 ""
+class c15 ""
+class c16 ""
+class c17 ""
+class c18 ""
+class c19 ""
+class c20 ""
+class c21 ""
+class c22 ""
+class c23 ""
+class c24 ""
+class c25 ""
+class c26 ""
+class c27 ""
+class c28 ""
+class c29 ""
+class c30 ""
+class c31 ""
+class c32 ""
+class c33 ""
+class c34 ""
+class c35 ""
+class c36 ""
+class c37 ""
+class c38 ""
+class c39 ""
+class c40 ""
+class c41 ""
+class c42 ""
+class c43 ""
+class c44 ""
+class c45 ""
+class c46 ""
+class c47 ""
+class c48 ""
+class c49 ""
+class c50 ""
+class c51 ""
+class c52 ""
+class c53 ""
+class c54 ""
+class c55 ""
+class c56 ""
+class c57 ""
+class c58 ""
+class c59 ""
+class c60 ""
+class c61 ""
+class c62 ""
+class c63 ""
+
+set x0 = c02 | c00 @x0 | "7" "," "s" "7" @x0
+set x1 = @x0 | "s" @x0
+set x2 = c10 | c08 @x3 | c13 @x0
+set x3 = c09 | c06 @x2 | c07 @x0
+set x4 = "e" @x0 | ":" @x0
+
+result 1 when !s3 !s14 !s16 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 clear s15
+result 2 when !s1 !s14 then set s1 clear s2 set s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s15 set s16
+result 3
+result 4 when s2 !s3 !s14 !s16 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 clear s15
+result 5
+result 6 when !s2 !s3 !s14 !s16 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 clear s15
+result 7 when !s3 s8 !s14 !s16 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 clear s15
+result 8 when !s2 !s3 !s9 !s14 !s16 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 clear s15
+result 9 when !s14 then clear s2 set s5 clear s6 clear s7 clear s8 set s9 clear s10 clear s15 clear s16
+result 10 when !s14 then clear s1 clear s2 set s5 clear s6 clear s7 clear s8 set s9 clear s10 clear s15 clear s16
+result 11 when s5 !s14 then clear s1 clear s2 set s5 clear s6 clear s7 clear s8 set s9 clear s10 clear s15 clear s16
+result 12
+result 13 when !s14 then clear s1 clear s2 clear s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s12 clear s15 clear s16
+result 14 then clear s1 clear s2 clear s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s12 clear s15 clear s16
+result 15 when s1 !s14 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 clear s15
+result 16 when s14
+result 17 when !s3 !s14 !s16 then clear s1 clear s2 clear s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s12 clear s15 clear s16
+result 18 when !s3 !s14 !s16 then clear s2 set s5 clear s6 clear s7 clear s8 set s9 clear s10 clear s15 clear s16
+result 19
+result 20 when !s10 !s14 then clear s1 clear s2 set s5 clear s6 clear s7 clear s8 set s9 set s10 clear s15 clear s16
+result 21 when s10 !s14
+result 22 when !s1 s2 !s10 !s14 then clear s1 clear s2 set s5 clear s6 clear s7 clear s8 set s9 set s10 clear s15 clear s16
+result 23 when !s1 s2 !s10 !s14 then clear s2 set s5 clear s6 clear s7 clear s8 set s9 clear s10 clear s15 clear s16
+result 24
+result 25
+result 26 when !s14 then set s1 clear s2 set s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s15 set s16
+result 27 when s1 !s14 then set s1 clear s2 set s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s15 set s16
+result 28
+result 29 then set s3 clear s14
+result 30 then clear s3 clear s14
+result 31 then set s14
+result 32 then clear s14
+result 33
+result 34
+result 35 when !s1 !s2 !s6 !s14 then clear s1 clear s2 set s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s15
+result 36 when !s14 then clear s1 clear s2 set s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s15
+result 37 when !s14 then clear s1 clear s2 set s5 clear s6 clear s7 clear s8 clear s9 clear s10 set s12 clear s15
+result 38
+result 39
+result 40 when !s14 then clear s1 set s2 set s5 set s6 clear s7 set s8 clear s9 clear s10 clear s15
+result 41 when !s14 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 clear s15
+result 42 when !s3 !s6 !s14 !s16 then clear s1 set s2 set s5 set s7 clear s8 clear s9 clear s10 clear s15
+result 43 when !s3 !s6 !s14 !s16 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 set s15
+result 44 when !s1 s2 !s3 s6 !s14 s15 !s16
+result 45 when !s2 !s3 !s14 !s16 then clear s1 set s2 set s5 set s7 clear s8 clear s9 clear s10 clear s15
+result 46 when !s3 !s6 !s14 !s16 then clear s1 set s2 set s5 clear s7 set s8 clear s9 clear s10 clear s15
+result 47
+result 48
+result 49
+result 50
+result 51 when !s3 !s14 !s16 then clear s1 set s2 set s5 set s6 clear s7 set s8 clear s9 clear s10 clear s15
+result 52 when !s2 !s3 !s14 !s16 then clear s1 set s2 set s5 clear s7 set s8 clear s9 clear s10 clear s15
+result 53
+result 54 when s2 !s3 !s14 !s16 then clear s1 set s2 set s5 set s6 clear s7 set s8 clear s9 clear s10 clear s15
+result 55
+result 56 when !s2 !s3 !s12 !s14 !s16 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 clear s15
+result 57
+result 58
+result 59
+result 60
+result 61
+result 62
+result 63
+result 64
+result 65
+result 66
+result 67 when !s14
+result 68 when !s14 then clear s1 set s5 clear s15 set s16
+result 69
+result 70
+result 71
+result 72
+result 73
+result 74 when !s14 then clear s12 set s13
+result 75 when s13 !s14 then clear s1 clear s2 clear s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s12 clear s15 clear s16
+result 76 when s13 !s14 then clear s12 clear s13
+
+char "\x01" default "$" rules 2415 then clear s1 clear s2 clear s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s12 clear s15 clear s16
+char "\x02" default "$" rules 2416 then clear s1 clear s2 clear s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s12 clear s15 clear s16
+char "\x1b" default "$" rules 2417 then clear s1 clear s2 clear s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s12 clear s15 clear s16
+char "\x1c" default "$" rules 2420 then clear s1 clear s2 clear s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s12 clear s15 clear s16
+char "\x1d" default "$" rules 2434 then clear s1 clear s2 clear s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s12 clear s15 clear s16
+char "\x1e" default "$" rules 2435 then clear s1 clear s2 clear s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s12 clear s15 clear s16
+char "\x1f" default "$" rules 2436 then clear s1 clear s2 clear s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s12 clear s15 clear s16
+char " " default " " rules 1 then clear s1 clear s2 clear s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s12 clear s15 clear s16
+char "!" default "\x8a" rules 3 then clear s1 set s2 set s5 set s6 clear s7 set s8 clear s9 clear s10 clear s15
+char "\x22" default "_" rules 8 then clear s1 clear s2 set s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s15
+char "#" default "0" rules 16 then set s1 clear s2 set s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s15 set s16
+char "$" default "\x89" rules 26 then clear s1 set s2 set s5 set s6 clear s7 set s8 clear s9 clear s10 clear s15
+char "%" default "\x8c" rules 39 then clear s1 set s2 set s5 set s6 clear s7 set s8 clear s9 clear s10 clear s15
+char "&" default "\x87" rules 47 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 clear s15
+char "'" default "." rules 51 then clear s1 clear s2 set s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s15
+char "(" default "\x85" rules 112 then clear s1 set s2 set s5 set s6 clear s7 set s8 clear s9 clear s10 clear s15
+char ")" default "\x97" rules 159 then clear s1 set s2 set s5 set s6 clear s7 set s8 clear s9 clear s10 clear s15
+char "*" default "\x83" rules 162 then clear s1 set s2 set s5 set s6 clear s7 set s8 clear s9 clear s10 clear s15
+char "+" default "#" rules 177
+char "," default "'" rules 178 then clear s2 set s5 clear s6 clear s7 clear s8 set s9 clear s10 clear s15 clear s16
+char "-" default "-" rules 182 then clear s2 set s5 clear s6 clear s7 clear s8 set s9 clear s10 clear s15 clear s16
+char "." default "\x01" rules 213 then clear s1 clear s2 set s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s15
+char "/" default "&" rules 225 then clear s1 clear s2 set s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s15
+char "0" default ")" rules 227 then clear s1 clear s2 set s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s15
+char "1" default "," rules 272 then clear s2 set s5 clear s6 clear s7 clear s8 set s9 clear s10 clear s15 clear s16
+char "2" default ";" rules 279 then clear s1 clear s2 set s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s15
+char "3" default ":" rules 300 then clear s2 set s5 clear s6 clear s7 clear s8 set s9 clear s10 clear s15 clear s16
+char "4" default "." rules 365 then clear s2 set s5 clear s6 clear s7 clear s8 set s9 clear s10 clear s15 clear s16
+char "5" default "?" rules 388 then clear s1 clear s2 set s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s15
+char "6" default "!" rules 431 then clear s1 clear s2 set s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s15
+char "7" default "=" rules 527 then clear s1 clear s2 set s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s15
+char "8" default "(" rules 550 then clear s1 clear s2 set s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s15
+char "9" default "*" rules 557 then clear s1 clear s2 set s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s15
+char ":" default "\x96" rules 681 then clear s1 set s2 set s5 set s6 clear s7 set s8 clear s9 clear s10 clear s15
+char ";" default "<" rules 696 then clear s1 clear s2 set s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s15
+char "<" default "\x88" rules 699 then clear s1 set s2 set s5 set s6 clear s7 set s8 clear s9 clear s10 clear s15
+char "=" default "\x82" rules 705 then clear s1 set s2 set s5 set s6 clear s7 set s8 clear s9 clear s10 clear s15
+char ">" default "\x84" rules 763 then clear s1 set s2 set s5 set s6 clear s7 set s8 clear s9 clear s10 clear s15
+char "?" default "\x93" rules 776 then clear s1 set s2 set s5 set s6 clear s7 set s8 clear s9 clear s10 clear s15
+char "@" default "\x22" rules 783 then clear s1 clear s2 set s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s15
+char "[" default "\x94" rules 791 then clear s1 set s2 set s5 set s6 clear s7 set s8 clear s9 clear s10 clear s15
+char "\x5c" default "\x81" rules 827 then clear s1 set s2 set s5 set s6 clear s7 set s8 clear s9 clear s10 clear s15
+char "]" default "\x8b" rules 841 then clear s1 set s2 set s5 set s6 clear s7 set s8 clear s9 clear s10 clear s15
+char "^" default ">" rules 865 then clear s1 clear s2 set s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s15
+char "_" default "!" rules 875 then clear s1 clear s2 set s5 clear s6 clear s7 clear s8 clear s9 clear s10 clear s15
+char "`" default "@" rules 884 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 clear s15
+char "a" default "a" rules 885 then clear s1 set s2 set s5 set s6 clear s7 set s8 clear s9 clear s10 clear s15
+char "b" default "b" rules 986 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 clear s15
+char "c" default "c" rules 1046 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 clear s15
+char "d" default "d" rules 1144 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 clear s15
+char "e" default "e" rules 1283 then clear s1 set s2 set s5 set s6 clear s7 set s8 clear s9 clear s10 clear s15
+char "f" default "f" rules 1304 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 clear s15
+char "g" default "g" rules 1354 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 clear s15
+char "h" default "h" rules 1395 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 clear s15
+char "i" default "i" rules 1458 then clear s1 set s2 set s5 set s6 clear s7 set s8 clear s9 clear s10 clear s15
+char "j" default "j" rules 1507 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 clear s15
+char "k" default "k" rules 1530 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 clear s15
+char "l" default "l" rules 1570 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 clear s15
+char "m" default "m" rules 1649 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 clear s15
+char "n" default "n" rules 1751 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 clear s15
+char "o" default "o" rules 1802 then clear s1 set s2 set s5 set s6 clear s7 set s8 clear s9 clear s10 clear s15
+char "p" default "p" rules 1852 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 clear s15
+char "q" default "q" rules 1956 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 clear s15
+char "r" default "r" rules 1992 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 clear s15
+char "s" default "s" rules 2071 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 clear s15
+char "t" default "t" rules 2212 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 clear s15
+char "u" default "u" rules 2268 then clear s1 set s2 set s5 set s6 clear s7 set s8 clear s9 clear s10 clear s15
+char "v" default "v" rules 2301 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 clear s15
+char "w" default "w" rules 2346 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 clear s15
+char "x" default "x" rules 2358 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 clear s15
+char "y" default "y" rules 2404 then clear s1 set s2 set s5 set s6 clear s7 set s8 clear s9 clear s10 clear s15
+char "z" default "z" rules 2406 then clear s1 set s2 set s5 set s6 set s7 clear s8 clear s9 clear s10 clear s15
+
+node 1 "" none result 75 consume 1 -> " " next 2
+node 2 "" none result 14 consume 1 -> " \x0f" end
+node 3 "'" none result 1 consume 1 -> "\x8a" next 4
+node 4 "" short-set @x0 result 6 consume 1 -> "sans" next 5
+node 5 "z" short-set @x0 result 7 consume 1 -> "ss" next 6
+node 6 "4" short-set @x0 result 7 consume 2 -> "ssien" next 7
+node 7 "" short-set @x3 result 7 consume 1 -> "ss" end
+node 8 "8" none result 10 consume 2 -> "&." next 9
+node 9 ":" short-set @x0 result 6 consume 2 -> "eues" next 10
+node 10 "e" short-set @x0 result 6 consume 2 -> "eue" next 11
+node 11 "ras4" short-set @x0 result 6 consume 5 -> "eurasien" next 13
+node 12 "op=5" short-set @x0 result 6 consume 6 -> "europ\x82en" level 1
+node 13 "scar4" short-set @x0 result 6 consume 6 -> "euscarien" next 15
+node 14 "" short-set @x0 result 6 consume 2 -> "eus" level 1
+node 15 "" none result 51 consume 1 -> "eu" end
+node 16 "'" class c12 result 2 consume 2 -> "'" next 17
+node 17 "" classes c12 c12 result 2 consume 1 -> "" next 18
+node 18 "" classes c12 c00 result 2 consume 1 -> "" next 19
+node 19 "0jj" none result 26 consume 3 -> "%" next 21
+node 20 "j" none result 36 consume 3 -> "%" level 1
+node 21 "1" class c12 result 2 consume 2 -> "," next 22
+node 22 "" none result 27 consume 1 -> "." next 23
+node 23 "" none result 4 consume 1 -> "ion" next 24
+node 24 "" short-set @x0 result 6 consume 1 -> "lui" next 25
+node 25 "" class c12 result 2 consume 1 -> "" end
+node 26 "=biscit#s" short-set @x0 result 6 consume 10 -> "pl\x82biscitions" next 28
+node 27 "b=4" short-set @x0 result 6 consume 5 -> "pl\x82b\x82ien" level 1
+node 28 "_?" short-set @x0 result 6 consume 3 -> "plus t\x93t" next 30
+node 29 "t" short-set @x0 result 6 consume 3 -> "plus tard" level 1
+node 30 "cm" short-set @x1 result 43 consume 2 -> "place" next 32
+node 31 "" short-set @x1 result 43 consume 2 -> "place" level 1
+node 32 "k" none result 1 consume 1 -> "pl" next 33
+node 33 "r" short-set @x1 result 43 consume 2 -> "plaisir" next 34
+node 34 "s" short-set @x0 result 6 consume 2 -> "plusieurs" next 35
+node 35 "t" short-set @x0 result 6 consume 2 -> "plut\x93t" next 36
+node 36 "uton4" short-set @x0 result 6 consume 6 -> "plutonien" next 37
+node 37 "" short-set @x0 result 6 consume 1 -> "plus" next 38
+node 38 "" short-set @x3 result 1 consume 1 -> "pl" end
+node 39 "4t" short-set @x0 result 6 consume 3 -> "client" next 40
+node 40 "k" none result 1 consume 1 -> "cl" next 41
+node 41 "l4" short-set @x0 result 6 consume 3 -> "\x8clien" next 42
+node 42 "s" short-set @x0 result 4 consume 1 -> "ait" next 43
+node 43 "unis4" short-set @x0 result 6 consume 6 -> "clunisien" next 44
+node 44 "" short-set @x0 result 4 consume 1 -> "ait" next 45
+node 45 "" short-set @x0 result 6 consume 1 -> "cet" next 46
+node 46 "" short-set @x3 result 1 consume 1 -> "cl" end
+node 47 "l4" short-set @x0 result 6 consume 3 -> "ourlien" next 48
+node 48 "" short-set @x0 result 4 consume 1 -> "our" next 49
+node 49 "" short-set @x0 result 6 consume 1 -> "pour" next 50
+node 50 "" short-set @x2 result 1 consume 1 -> "our" end
+node 51 "er" none result 15 consume 3 -> "er" next 52
+node 52 "me" none result 15 consume 3 -> "\x8ame" next 54
+node 53 "0" short-set @x1 result 43 consume 3 -> "remettre" level 1
+node 54 "!uscit#s" short-set @x0 result 6 consume 9 -> "ressuscitions" next 55
+node 55 "$c" short-set @x1 result 43 consume 3 -> "replace" next 56
+node 56 "''" none result 10 consume 3 -> "..." next 57
+node 57 "(g" short-set @x1 result 43 consume 3 -> "rechange" next 58
+node 58 "-ms" short-set @x0 result 6 consume 3 -> "recommencement" next 63
+node 59 "m" short-set @x0 result 6 consume 3 -> "recommencement" next 60
+node 60 "t" short-set @x1 result 43 consume 3 -> "recompl\x8ate" next 61
+node 61 "" short-set @x2 result 45 consume 2 -> "recom" next 62
+node 62 "" class c04 result 8 consume 1 -> "la" level 1
+node 63 "0v:" short-set @x1 result 43 consume 3 -> "retravers" next 66
+node 64 "ve" short-set @x1 result 43 consume 3 -> "retravers" next 65
+node 65 "" short-set @x2 result 45 consume 2 -> "retrans" level 1
+node 66 "2(m" short-set @x1 result 43 consume 3 -> "rebranche" next 68
+node 67 "(" short-set @x1 result 43 consume 3 -> "rebranche" level 1
+node 68 "3nc" short-set @x1 result 43 consume 4 -> "reconnaissance" next 71
+node 69 "nut" short-set @x1 result 43 consume 5 -> "reconnut" level 3
+node 70 "" short-set @x1 result 43 consume 3 -> "reconna\x8ctre" level 1
+node 71 "4p" short-set @x1 result 43 consume 3 -> "redisposition" next 73
+node 72 "" short-set @x2 result 45 consume 2 -> "redis" level 1
+node 73 "5" short-set @x0 result 1 consume 2 -> "'en" next 74
+node 74 "6d#" short-set @x1 result 43 consume 4 -> "reproduction" next 81
+node 75 "d." short-set @x1 result 43 consume 4 -> "reproducteur" level 3
+node 76 "f" short-set @x1 result 43 consume 4 -> "reproductif" next 77
+node 77 "v" short-set @x1 result 43 consume 4 -> "reproductive" next 78
+node 78 ":" short-set @x1 result 43 consume 3 -> "reproduit" next 79
+node 79 "e" short-set @x1 result 43 consume 3 -> "reproduit" next 80
+node 80 "" short-set @x1 result 43 consume 3 -> "reproduit" level 1
+node 81 ":" none result 45 consume 2 -> "rees" next 82
+node 82 "]pm" short-set @x1 result 43 consume 3 -> "regroupe" next 84
+node 83 "p" short-set @x1 result 43 consume 3 -> "regroupe" level 1
+node 84 "cd*" short-set @x1 result 43 consume 4 -> "reconsid\x82ration" next 86
+node 85 "til7" short-set @x1 result 43 consume 6 -> "rectiligne" level 1
+node 86 "d\x5c" short-set @x0 result 6 consume 3 -> "redoute" next 87
+node 87 "lr" short-set @x1 result 43 consume 3 -> "relecture" next 88
+node 88 "nll" short-set @x1 result 6 consume 4 -> "renouvelle" next 92
+node 89 "lm" short-set @x1 result 6 consume 4 -> "renouvellement" next 90
+node 90 "vx" short-set @x1 result 43 consume 4 -> "renouveaux" level 3
+node 91 "" short-set @x1 result 43 consume 3 -> "renouveau" level 1
+node 92 "p$m" short-set @x1 result 43 consume 3 -> "repeuple" next 95
+node 93 "$" short-set @x1 result 43 consume 3 -> "repeuple" next 94
+node 94 "til4" short-set @x0 result 6 consume 6 -> "reptilien" level 1
+node 95 "sstm" short-set @x1 result 43 consume 4 -> "ressenti" next 96
+node 96 "t4t" short-set @x0 result 6 consume 4 -> "retient" next 100
+node 97 "n:" short-set @x1 result 43 consume 3 -> "retenir" level 3
+node 98 "e" short-set @x1 result 43 consume 3 -> "retenir" next 99
+node 99 "" short-set @x1 result 43 consume 3 -> "retenir" level 1
+node 100 "v4t" short-set @x0 result 6 consume 4 -> "revient" next 107
+node 101 "c" short-set @x0 result 6 consume 3 -> "revoici" next 102
+node 102 "l" short-set @x0 result 6 consume 3 -> "revoil\x85" next 103
+node 103 "n:" short-set @x1 result 43 consume 3 -> "revenir" next 106
+node 104 "e" short-set @x1 result 43 consume 3 -> "revenir" next 105
+node 105 "" short-set @x1 result 43 consume 3 -> "revenir" level 2
+node 106 "v" short-set @x1 result 43 consume 3 -> "revive" level 1
+node 107 "" class c12 result 27 consume 1 -> "." next 108
+node 108 " " none result 8 consume 1 -> "la" next 109
+node 109 "" classes c01 c00 result 8 consume 1 -> "la" next 110
+node 110 "" short-set @x2 result 52 consume 1 -> "re" next 111
+node 111 "" none result 9 consume 1 -> "." end
+node 112 "!m" short-set @x1 result 43 consume 2 -> "ch\x8are" next 114
+node 113 "" short-set @x1 result 43 consume 2 -> "ch\x8are" level 1
+node 114 "4" short-set @x0 result 1 consume 2 -> "chien" next 115
+node 115 "=rif4" short-set @x0 result 6 consume 6 -> "ch\x82rifien" next 116
+node 116 "]:" short-set @x1 result 43 consume 2 -> "chagrin" next 119
+node 117 "e" short-set @x1 result 43 consume 2 -> "chagrin" next 118
+node 118 "" short-set @x1 result 43 consume 2 -> "chagrin" level 1
+node 119 "_0" short-set @x0 result 6 consume 3 -> "\x85 travers" next 125
+node 120 "6" short-set @x0 result 6 consume 3 -> "\x85 pr\x82sent" next 121
+node 121 "c" short-set @x0 result 6 consume 3 -> "\x85 cause" next 122
+node 122 "m" short-set @x0 result 6 consume 3 -> "\x85 mesure" next 123
+node 123 "p_6" short-set @x0 result 6 consume 5 -> "\x85 peu pr\x8as" level 3
+node 124 "" short-set @x0 result 6 consume 3 -> "\x85 peine" level 1
+node 125 "ald=5" short-set @x0 result 6 consume 6 -> "chald\x82en" next 127
+node 126 "nan=5" short-set @x0 result 6 consume 7 -> "chanan\x82en" level 1
+node 127 "c" short-set @x0 result 6 consume 2 -> "chacun" next 128
+node 128 "dm" short-set @x1 result 43 consume 2 -> "chaude" next 132
+node 129 ":" short-set @x1 result 43 consume 2 -> "chaud" next 130
+node 130 "e" short-set @x1 result 43 consume 2 -> "chaud" next 131
+node 131 "" short-set @x1 result 43 consume 2 -> "chaud" level 1
+node 132 "e_=5" short-set @x0 result 6 consume 5 -> "chell\x82en" next 133
+node 133 "fg" short-set @x1 result 43 consume 3 -> "chiffrage" next 135
+node 134 "" short-set @x1 result 43 consume 2 -> "chiffre" level 1
+node 135 "gm" short-set @x1 result 43 consume 2 -> "change" next 137
+node 136 "" short-set @x1 result 43 consume 2 -> "change" level 1
+node 137 "il4" short-set @x0 result 6 consume 4 -> "chilien" next 138
+node 138 "ls" short-set @x4 result 43 consume 3 -> "chaleureus" next 142
+node 139 "sm" short-set @x1 result 43 consume 3 -> "chaleureuse" next 140
+node 140 "x" short-set @x1 result 43 consume 3 -> "chaleureux" next 141
+node 141 "" short-set @x1 result 43 consume 2 -> "chaleur" level 1
+node 142 "m:" short-set @x1 result 43 consume 2 -> "chemin" next 145
+node 143 "e" short-set @x1 result 43 consume 2 -> "chemin" next 144
+node 144 "" short-set @x1 result 43 consume 2 -> "chemin" level 1
+node 145 "n" short-set @x0 result 6 consume 2 -> "chacune" next 146
+node 146 "p" short-set @x1 result 43 consume 2 -> "champ" next 147
+node 147 "q" short-set @x0 result 6 consume 2 -> "chaque" next 148
+node 148 "r" short-set @x1 result 43 consume 2 -> "choeur" next 149
+node 149 "s" short-set @x1 result 43 consume 2 -> "chose" next 150
+node 150 "t^m" short-set @x1 result 43 consume 3 -> "charitable" next 154
+node 151 "^" short-set @x1 result 43 consume 3 -> "charitable" next 152
+node 152 "hon4" short-set @x0 result 6 consume 6 -> "chthonien" next 153
+node 153 "" short-set @x1 result 43 consume 2 -> "charit\x82" level 1
+node 154 "x" short-set @x0 result 43 consume 2 -> "choix" next 155
+node 155 "z" short-set @x0 result 6 consume 2 -> "chez" next 156
+node 156 " .paris4" short-set @x0 result 6 consume 9 -> "\x85 \x02paris." next 157
+node 157 "" short-set @x0 result 6 consume 1 -> "\x85" next 158
+node 158 "" none result 1 consume 1 -> "ch" end
+node 159 "@4" none result 6 consume 1 -> "et" next 160
+node 160 "" short-set @x0 result 6 consume 1 -> "et" next 161
+node 161 "" none result 51 consume 1 -> "oi" end
+node 162 " " none result 6 consume 1 -> "tout" next 164
+node 163 "" none result 4 consume 1 -> "ation" level 1
+node 164 "\x22d4" short-set @x0 result 56 consume 4 -> "freudien" next 165
+node 165 "1c4" short-set @x0 result 56 consume 4 -> "francien" next 166
+node 166 "_(_c" short-set @x0 result 6 consume 5 -> "tout \x85 coup" next 168
+node 167 "(_f" short-set @x0 result 6 consume 5 -> "tout \x85 fait" level 1
+node 168 "elat#s" short-set @x0 result 6 consume 7 -> "frelations" next 169
+node 169 "s" short-set @x0 result 4 consume 1 -> "ation" next 171
+node 170 "" short-set @x0 result 6 consume 2 -> "touts" level 1
+node 171 "" short-set @x0 result 4 consume 1 -> "ation" next 172
+node 172 "" short-set @x0 result 6 consume 1 -> "tout" next 173
+node 173 "" none result 44 consume 1 -> "ation" next 174
+node 174 "(" none result 1 consume 1 -> "\x83" next 175
+node 175 "^" short-set @x3 result 1 consume 1 -> "\x83" next 176
+node 176 "" short-set @x3 result 1 consume 1 -> "fr" end
+node 177 "" none result 1 consume 1 -> "on" end
+node 178 "-" none result 20 consume 2 -> "--" next 179
+node 179 "8" none result 10 consume 2 -> "`" next 180
+node 180 "" none result 54 consume 1 -> "ieu" next 181
+node 181 "" none result 68 consume 1 -> "" end
+node 182 "$mr" short-set @x1 result 43 consume 4 -> "compl\x82mentaire" next 185
+node 183 "m" short-set @x1 result 43 consume 3 -> "compl\x82ment" next 184
+node 184 "" short-set @x1 result 43 consume 2 -> "complet" level 1
+node 185 "m!" short-set @x1 result 43 consume 3 -> "comm\x8are" next 191
+node 186 "#r" short-set @x1 result 43 consume 4 -> "commissionnaire" next 188
+node 187 "" short-set @x1 result 43 consume 3 -> "commission" level 2
+node 188 "0" short-set @x1 result 43 consume 3 -> "commettre" next 189
+node 189 "1dit#s" short-set @x0 result 6 consume 8 -> "commanditions" next 190
+node 190 "" short-set @x1 result 43 consume 2 -> "commencement" level 1
+node 191 "n#" short-set @x1 result 43 consume 3 -> "communion" next 202
+node 192 "l:" short-set @x1 result 43 consume 3 -> "communal" next 195
+node 193 "e" short-set @x1 result 43 consume 3 -> "communal" next 194
+node 194 "" short-set @x1 result 43 consume 3 -> "communal" level 2
+node 195 "tr" short-set @x1 result 43 consume 4 -> "communautaire" next 197
+node 196 "" short-set @x1 result 43 consume 3 -> "communaut\x82" level 2
+node 197 "x" short-set @x1 result 43 consume 3 -> "communaux" next 198
+node 198 ":" short-set @x1 result 43 consume 2 -> "commun" next 199
+node 199 "e" short-set @x1 result 43 consume 2 -> "commun" next 200
+node 200 "" short-set @x1 result 43 consume 2 -> "commun" next 201
+node 201 "m" short-set @x1 result 43 consume 2 -> "commun\x82" level 1
+node 202 "p!" short-set @x1 result 6 consume 3 -> "comp\x8are" next 204
+node 203 "t" short-set @x4 result 45 consume 3 -> "compt" level 1
+node 204 "tm" short-set @x1 result 43 consume 2 -> "compl\x8ate" next 206
+node 205 "" short-set @x1 result 43 consume 2 -> "compl\x8ate" level 1
+node 206 "'" short-set @x0 result 22 consume 2 -> "--\x0f" next 208
+node 207 "" short-set @x0 result 21 consume 2 -> "--" level 1
+node 208 " " none result 8 consume 1 -> "celui" next 209
+node 209 "" classes c01 c00 result 8 consume 1 -> "celui" next 210
+node 210 "" short-set @x2 result 45 consume 1 -> "com" next 211
+node 211 "" class c04 result 23 consume 1 -> "-\x0f" next 212
+node 212 "" class c12 result 27 consume 1 -> "-" end
+node 213 "." none result 76 consume 2 -> "\x0e" next 215
+node 214 "" none result 36 consume 2 -> "\x0e" level 1
+node 215 "al-" none result 6 consume 2 -> "\x02a" next 216
+node 216 "mds ." none result 6 consume 4 -> "\x02mmes" next 222
+node 217 "d ." none result 6 consume 3 -> "\x02mme" next 218
+node 218 "ms ." none result 6 consume 4 -> "\x02mlles" next 220
+node 219 " ." none result 6 consume 3 -> "\x02mlle" level 2
+node 220 "rs ." none result 6 consume 4 -> "\x02mrs" level 3
+node 221 " ." none result 6 consume 3 -> "\x02mr" level 1
+node 222 "" none result 4 consume 1 -> "eur" next 223
+node 223 "" none result 76 consume 1 -> "" next 224
+node 224 "" none result 37 consume 1 -> "\x02" end
+node 225 "u" short-set @x0 result 6 consume 2 -> "ailleurs" next 226
+node 226 "" none result 51 consume 1 -> "ai" end
+node 227 "-" class c04 result 8 consume 1 -> "sous" next 228
+node 228 " " none result 8 consume 1 -> "sous" next 230
+node 229 "" none result 11 consume 1 -> ")" level 1
+node 230 "" classes c01 c00 result 8 consume 1 -> "sous" next 231
+node 231 "1sa#" short-set @x1 result 43 consume 5 -> "transaction" next 233
+node 232 "suran4" short-set @x0 result 6 consume 8 -> "transuranien" level 1
+node 233 "=mat#s" short-set @x0 result 6 consume 7 -> "tr\x82mations" next 234
+node 234 "_b" short-set @x0 result 6 consume 3 -> "tr\x8as bien" next 235
+node 235 "a(=5" short-set @x0 result 6 consume 5 -> "trach\x82en" next 237
+node 236 "g=d4" short-set @x0 result 6 consume 6 -> "trag\x82dien" level 1
+node 237 "ckcas4" short-set @x0 result 6 consume 7 -> "transcaucasien" next 238
+node 238 "fg" short-set @x1 result 43 consume 3 -> "transfigure" next 240
+node 239 "g*" short-set @x1 result 43 consume 3 -> "transfigur" level 1
+node 240 "gm" short-set @x1 result 43 consume 2 -> "tragique" next 242
+node 241 "" short-set @x1 result 43 consume 2 -> "tragique" level 1
+node 242 "i5nal:" short-set @x1 result 43 consume 6 -> "triennal" next 247
+node 243 "5nale" short-set @x1 result 43 consume 6 -> "triennal" next 246
+node 244 "nal" short-set @x1 result 43 consume 6 -> "triennal" level 4
+node 245 "kx" short-set @x1 result 43 consume 6 -> "triennaux" level 2
+node 246 "c4" short-set @x0 result 1 consume 4 -> "tricien" level 1
+node 247 "j" short-set @x1 result 43 consume 2 -> "trajet" next 248
+node 248 "l." short-set @x1 result 43 consume 2 -> "travaill" next 254
+node 249 "s:" short-set @x1 result 43 consume 2 -> "travaill" next 252
+node 250 "e" short-set @x1 result 43 consume 2 -> "travaill" next 251
+node 251 "m" short-set @x1 result 43 consume 2 -> "travaill" level 2
+node 252 "x" short-set @x1 result 43 consume 2 -> "travaill" next 253
+node 253 "" short-set @x1 result 43 consume 2 -> "travail" level 1
+node 254 "m#" short-set @x1 result 43 consume 3 -> "transmission" next 256
+node 255 "0" short-set @x1 result 43 consume 3 -> "transmettre" level 1
+node 256 "pyr=n=5" short-set @x0 result 6 consume 8 -> "transpyr\x82n\x82en" next 258
+node 257 "" short-set @x1 result 43 consume 2 -> "trop" level 1
+node 258 "qt" short-set @x1 result 43 consume 3 -> "tranquillit\x82" next 261
+node 259 "m" short-set @x1 result 43 consume 2 -> "tranquille" next 260
+node 260 "" short-set @x1 result 43 consume 2 -> "tranquille" level 1
+node 261 "sahar4" short-set @x0 result 6 consume 7 -> "transsaharien" next 263
+node 262 "" short-set @x0 result 6 consume 2 -> "tr\x8as" level 1
+node 263 "v:" short-set @x1 result 43 consume 2 -> "travers" next 266
+node 264 "e" short-set @x1 result 43 consume 2 -> "travers" next 265
+node 265 "" short-set @x1 result 43 consume 2 -> "travers" level 1
+node 266 "x" short-set @x1 result 43 consume 2 -> "travaux" next 267
+node 267 "'" none result 36 consume 2 -> "`" next 268
+node 268 "" short-set @x0 result 11 consume 1 -> ")" next 269
+node 269 "," none result 1 consume 1 -> "tr" next 270
+node 270 "" short-set @x3 result 1 consume 1 -> "tr" next 271
+node 271 "" short-set @x2 result 45 consume 1 -> "trans" end
+node 272 "" none result 27 consume 1 -> "," next 273
+node 273 "" short-set @x0 result 11 consume 1 -> "," next 274
+node 274 "c4" short-set @x0 result 6 consume 3 -> "ancien" next 275
+node 275 "tidat#s" short-set @x0 result 6 consume 8 -> "antidations" next 278
+node 276 "idl" short-set @x0 result 6 consume 5 -> "antidouleur" level 3
+node 277 "parasit#s" short-set @x0 result 6 consume 12 -> "antiparasitions" level 1
+node 278 "" none result 1 consume 1 -> "an" end
+node 279 " " none result 15 consume 1 -> "\x1e;" next 281
+node 280 "" none result 36 consume 1 -> "\x1e;" level 1
+node 281 "" none result 15 consume 1 -> ";" next 282
+node 282 "" class c02 result 11 consume 1 -> ";" next 283
+node 283 "4" short-set @x0 result 4 consume 2 -> "brien" next 284
+node 284 "" short-set @x0 result 11 consume 1 -> ";" next 285
+node 285 "(m" short-set @x1 result 43 consume 2 -> "branche" next 287
+node 286 "" short-set @x1 result 43 consume 2 -> "branche" level 1
+node 287 "=sil4" short-set @x0 result 56 consume 6 -> "br\x82silien" next 288
+node 288 "l" short-set @x1 result 43 consume 2 -> "braille" next 289
+node 289 "own4" short-set @x0 result 56 consume 5 -> "brownien" next 291
+node 290 "wn" short-set @x0 result 6 consume 4 -> "brown" level 1
+node 291 "qm" short-set @x1 result 43 consume 2 -> "brusque" next 293
+node 292 "" short-set @x1 result 43 consume 2 -> "brusque" level 1
+node 293 "t:" short-set @x1 result 43 consume 2 -> "bruit" next 296
+node 294 "e" short-set @x1 result 43 consume 2 -> "bruit" next 295
+node 295 "" short-set @x1 result 43 consume 2 -> "bruit" level 1
+node 296 "vm" short-set @x1 result 43 consume 2 -> "brave" next 298
+node 297 "" short-set @x1 result 43 consume 2 -> "brave" level 1
+node 298 "" short-set @x2 result 51 consume 1 -> "ui" next 299
+node 299 "" short-set @x3 result 1 consume 1 -> "br" end
+node 300 "" class c12 result 27 consume 1 -> ":" next 301
+node 301 " " none result 15 consume 1 -> "\x1e:" next 303
+node 302 "" none result 36 consume 1 -> "\x1e:" level 1
+node 303 "" none result 15 consume 1 -> ":" next 304
+node 304 "" short-set @x0 result 11 consume 1 -> ":" next 305
+node 305 "." none result 74 consume 2 -> "\x0e" next 306
+node 306 "0e(p" short-set @x1 result 43 consume 5 -> "contrechamp" next 317
+node 307 "e6j" short-set @x1 result 43 consume 5 -> "contreprojet" level 3
+node 308 "6[" short-set @x1 result 43 consume 4 -> "contrepropos" next 309
+node 309 "cr" short-set @x1 result 43 consume 5 -> "contrecoeur" next 310
+node 310 "pt" short-set @x1 result 43 consume 5 -> "contrepoint" next 311
+node 311 "ty" short-set @x1 result 43 consume 5 -> "contretype" next 312
+node 312 "v4t" short-set @x0 result 6 consume 6 -> "contrevient" next 316
+node 313 "n:" short-set @x1 result 43 consume 5 -> "contrevenir" level 5
+node 314 "e" short-set @x1 result 43 consume 5 -> "contrevenir" next 315
+node 315 "" short-set @x1 result 43 consume 5 -> "contrevenir" level 3
+node 316 "" none result 46 consume 3 -> "contre" level 1
+node 317 "(yl4" short-set @x0 result 6 consume 5 -> "conchylien" next 318
+node 318 "*n4" short-set @x0 result 1 consume 4 -> "cr\x83nien" next 319
+node 319 "=dit#s" short-set @x0 result 6 consume 7 -> "cr\x82ditions" next 321
+node 320 "pit#s" short-set @x0 result 6 consume 7 -> "cr\x82pitions" level 1
+node 321 "]" short-set @x1 result 43 consume 2 -> "congr\x8as" next 322
+node 322 "_" none result 36 consume 2 -> "__" next 323
+node 323 "an" short-set @x0 result 6 consume 3 -> "cran" next 325
+node 324 "vat#s" short-set @x0 result 6 consume 7 -> "cravations" level 1
+node 325 "c" short-set @x1 result 43 consume 2 -> "conclusion" next 326
+node 326 "d" short-set @x1 result 43 consume 2 -> "condition" next 330
+node 327 "ll" short-set @x1 result 43 consume 2 -> "conditionn" level 3
+node 328 "m" short-set @x1 result 43 consume 2 -> "conditionn" next 329
+node 329 "" short-set @x1 result 43 consume 2 -> "conditionn" level 1
+node 330 "fc" short-set @x1 result 43 consume 3 -> "confiance" next 341
+node 331 "g*" short-set @x1 result 43 consume 4 -> "configuration" next 333
+node 332 "" short-set @x1 result 43 consume 3 -> "configure" level 2
+node 333 "rt" short-set @x1 result 43 consume 4 -> "confraternit\x82" next 338
+node 334 "ll" short-set @x1 result 43 consume 3 -> "confratern" next 337
+node 335 "m" short-set @x1 result 43 consume 3 -> "confratern" next 336
+node 336 "" short-set @x1 result 43 consume 3 -> "confratern" level 3
+node 337 "" short-set @x1 result 43 consume 3 -> "confr\x8are" level 2
+node 338 ":" short-set @x1 result 43 consume 2 -> "confiant" next 339
+node 339 "e" short-set @x1 result 43 consume 2 -> "confiant" next 340
+node 340 "" short-set @x1 result 43 consume 2 -> "confiant" level 1
+node 341 "nc" short-set @x1 result 43 consume 3 -> "connaissance" next 343
+node 342 "" short-set @x1 result 43 consume 2 -> "conna\x8ctre" level 1
+node 343 "scs" short-set @x4 result 43 consume 4 -> "consciencieus" next 352
+node 344 "csm" short-set @x1 result 43 consume 4 -> "consciencieuse" next 347
+node 345 "x" short-set @x1 result 43 consume 4 -> "consciencieux" next 346
+node 346 "" short-set @x1 result 43 consume 3 -> "conscience" level 2
+node 347 "m" short-set @x1 result 43 consume 3 -> "consciemment" next 348
+node 348 "r" short-set @x1 result 43 consume 3 -> "consoeur" next 349
+node 349 ":" short-set @x1 result 43 consume 2 -> "conscient" next 350
+node 350 "e" short-set @x1 result 43 consume 2 -> "conscient" next 351
+node 351 "" short-set @x1 result 43 consume 2 -> "conscient" level 1
+node 352 "t4t" short-set @x0 result 6 consume 4 -> "contient" next 356
+node 353 "n:" short-set @x1 result 43 consume 3 -> "contenir" level 3
+node 354 "e" short-set @x1 result 43 consume 3 -> "contenir" next 355
+node 355 "" short-set @x1 result 43 consume 3 -> "contenir" level 1
+node 356 "v4t" short-set @x0 result 6 consume 4 -> "convient" next 362
+node 357 "n:" short-set @x1 result 43 consume 3 -> "convenir" next 360
+node 358 "e" short-set @x1 result 43 consume 3 -> "convenir" next 359
+node 359 "" short-set @x1 result 43 consume 3 -> "convenir" level 2
+node 360 "v" short-set @x1 result 43 consume 3 -> "convive" next 361
+node 361 "" short-set @x1 result 43 consume 2 -> "conversation" level 1
+node 362 "" short-set @x2 result 42 consume 1 -> "con" next 363
+node 363 "" short-set @x2 result 1 consume 1 -> "con" next 364
+node 364 "" short-set @x3 result 1 consume 1 -> "cr" end
+node 365 "" none result 15 consume 1 -> "." next 366
+node 366 " " none result 4 consume 1 -> "." next 367
+node 367 "" class c02 result 8 consume 1 -> "d\x8as" next 368
+node 368 "" short-set @x0 result 11 consume 1 -> "." next 369
+node 369 "-" class c04 result 8 consume 1 -> "d\x8as" next 370
+node 370 "" classes c01 c00 result 8 consume 1 -> "d\x8as" next 371
+node 371 "3=dit#s" short-set @x0 result 6 consume 8 -> "discr\x82ditions" next 373
+node 372 "v4t" short-set @x0 result 6 consume 5 -> "disconvient" level 1
+node 373 "6p" short-set @x1 result 43 consume 3 -> "disproportion" next 374
+node 374 "]c" class c05 result 1 consume 3 -> "disgracieu" next 376
+node 375 "c" short-set @x1 result 43 consume 3 -> "disgr\x83ce" level 1
+node 376 "c" short-set @x0 result 6 consume 2 -> "discours" next 377
+node 377 "pf" short-set @x1 result 43 consume 3 -> "dispositif" next 379
+node 378 "" short-set @x1 result 43 consume 2 -> "disposition" level 1
+node 379 "sb" short-set @x1 result 43 consume 3 -> "dissemblable" next 381
+node 380 "tm" short-set @x1 result 43 consume 3 -> "dissenti" level 1
+node 381 "tc" short-set @x1 result 43 consume 3 -> "distance" next 385
+node 382 ":" short-set @x1 result 43 consume 2 -> "distant" next 383
+node 383 "e" short-set @x1 result 43 consume 2 -> "distant" next 384
+node 384 "" short-set @x1 result 43 consume 2 -> "distant" level 1
+node 385 "" short-set @x2 result 45 consume 1 -> "dis" next 386
+node 386 "" short-set @x0 result 1 consume 1 -> "." next 387
+node 387 "" short-set @x2 result 1 consume 1 -> "ien" end
+node 388 " " none result 15 consume 1 -> "\x1e?" next 391
+node 389 "" none result 8 consume 1 -> "en" next 390
+node 390 "" none result 36 consume 1 -> "\x1e?" level 1
+node 391 "" none result 15 consume 1 -> "?" next 392
+node 392 "" class c02 result 8 consume 1 -> "en" next 393
+node 393 "-" class c04 result 6 consume 1 -> "en" next 394
+node 394 "" short-set @x0 result 11 consume 1 -> "?" next 395
+node 395 "(!" short-set @x1 result 43 consume 3 -> "ench\x8are" next 396
+node 396 "0em0" short-set @x1 result 43 consume 5 -> "entremettre" next 402
+node 397 "et4t" short-set @x0 result 6 consume 6 -> "entretient" level 3
+node 398 "t4" short-set @x0 result 6 consume 5 -> "entretien" level 4
+node 399 "n:" short-set @x1 result 43 consume 5 -> "entretenir" level 5
+node 400 "e" short-set @x1 result 43 consume 5 -> "entretenir" next 401
+node 401 "" short-set @x1 result 43 consume 5 -> "entretenir" level 1
+node 402 ";gueil" none result 43 consume 7 -> "enorgueill" next 403
+node 403 ">" short-set @x1 result 43 consume 2 -> "ensemble" next 404
+node 404 "_m" short-set @x0 result 6 consume 3 -> "en mesure" next 406
+node 405 "r" short-set @x0 result 6 consume 3 -> "en r\x82alit\x82" level 1
+node 406 "am" none result 43 consume 3 -> "enamour" next 407
+node 407 "c0" short-set @x1 result 43 consume 3 -> "encontre" next 410
+node 408 "g" short-set @x1 result 43 consume 3 -> "encourage" next 409
+node 409 "" short-set @x0 result 6 consume 2 -> "encore" level 1
+node 410 "do3in4" short-set @x0 result 6 consume 7 -> "endocrinien" next 412
+node 411 "" short-set @x1 result 43 consume 2 -> "endroit" level 1
+node 412 "f" short-set @x0 result 6 consume 2 -> "enfin" next 413
+node 413 "ns" short-set @x4 result 43 consume 3 -> "ennuyeus" next 418
+node 414 "x" short-set @x1 result 43 consume 3 -> "ennuyeux" next 415
+node 415 ":" short-set @x1 result 43 consume 2 -> "ennui" next 416
+node 416 "e" short-set @x1 result 43 consume 2 -> "ennui" next 417
+node 417 "" short-set @x1 result 43 consume 2 -> "ennui" level 1
+node 418 "q." short-set @x1 result 43 consume 3 -> "enqu\x88teur" next 421
+node 419 "s" short-set @x4 result 43 consume 3 -> "enqu\x88teus" next 420
+node 420 "" short-set @x1 result 43 consume 2 -> "enqu\x88te" level 1
+node 421 "r?" short-set @x1 result 43 consume 3 -> "enr\x93le" next 424
+node 422 "m" short-set @x1 result 43 consume 2 -> "enti\x8are" next 423
+node 423 "" short-set @x1 result 43 consume 2 -> "enti\x8are" level 1
+node 424 "s" short-set @x0 result 6 consume 2 -> "ensuite" next 425
+node 425 "tr" short-set @x1 result 43 consume 3 -> "enterre" next 428
+node 426 "" short-set @x1 result 43 consume 2 -> "entier" next 427
+node 427 "" none result 6 consume 2 -> "ent" level 1
+node 428 "v" short-set @x1 result 43 consume 2 -> "environ" next 429
+node 429 "" none result 42 consume 1 -> "en" next 430
+node 430 "" none result 1 consume 1 -> "en" end
+node 431 " " none result 15 consume 1 -> "\x1e!" next 434
+node 432 "" none result 8 consume 1 -> "puis" next 433
+node 433 "" none result 36 consume 1 -> "\x1e!" level 1
+node 434 "" none result 15 consume 1 -> "!" next 435
+node 435 "" class c02 result 8 consume 1 -> "puis" next 436
+node 436 "" short-set @x0 result 11 consume 1 -> "!" next 437
+node 437 "-" class c04 result 8 consume 1 -> "puis" next 438
+node 438 "" classes c01 c00 result 8 consume 1 -> "puis" next 439
+node 439 "(" short-set @x1 result 43 consume 2 -> "prochain" next 440
+node 440 "+" none result 1 consume 2 -> "pron" next 441
+node 441 "9tp" short-set @x1 result 43 consume 4 -> "printemps" next 442
+node 442 "=4p" short-set @x1 result 43 consume 4 -> "pr\x82disposition" next 454
+node 443 "cipit#s" short-set @x0 result 6 consume 9 -> "pr\x82cipitions" next 445
+node 444 "olwb4" short-set @x0 result 6 consume 8 -> "pr\x82colombien" level 2
+node 445 "d9*" short-set @x1 result 43 consume 5 -> "pr\x82destination" next 446
+node 446 "fg" short-set @x1 result 43 consume 4 -> "pr\x82figure" next 447
+node 447 "m=dit#s" short-set @x0 result 6 consume 9 -> "pr\x82m\x82ditions" next 448
+node 448 "tor4" short-set @x0 result 6 consume 6 -> "pr\x82torien" next 449
+node 449 "v4t" short-set @x0 result 6 consume 5 -> "pr\x82vient" next 453
+node 450 "n:" short-set @x1 result 43 consume 4 -> "pr\x82venir" level 4
+node 451 "e" short-set @x1 result 43 consume 4 -> "pr\x82venir" next 452
+node 452 "" short-set @x1 result 43 consume 4 -> "pr\x82venir" level 2
+node 453 "" none result 42 consume 2 -> "pr\x82" level 1
+node 454 "[" short-set @x1 result 43 consume 2 -> "proposition" next 455
+node 455 "]#" short-set @x1 result 43 consume 3 -> "progression" next 460
+node 456 "f" short-set @x1 result 43 consume 3 -> "progressif" next 457
+node 457 "vm" short-set @x1 result 43 consume 3 -> "progressive" next 459
+node 458 "" short-set @x1 result 43 consume 3 -> "progressive" level 2
+node 459 "" short-set @x1 result 43 consume 2 -> "progr\x8as" level 1
+node 460 "\x5cdhon4" short-set @x0 result 6 consume 7 -> "proudhonien" next 461
+node 461 "bt" short-set @x1 result 43 consume 3 -> "probabilit\x82" next 464
+node 462 "m" short-set @x1 result 43 consume 2 -> "probable" next 463
+node 463 "" short-set @x1 result 43 consume 2 -> "probable" level 1
+node 464 "clm" short-set @x1 result 43 consume 3 -> "principale" next 470
+node 465 "l:" short-set @x1 result 43 consume 3 -> "principal" next 468
+node 466 "e" short-set @x1 result 43 consume 3 -> "principal" next 467
+node 467 "" short-set @x1 result 43 consume 3 -> "principal" level 2
+node 468 "x" short-set @x1 result 43 consume 3 -> "principaux" next 469
+node 469 "" short-set @x1 result 43 consume 2 -> "principe" level 1
+node 470 "d#" short-set @x1 result 43 consume 3 -> "production" next 479
+node 471 "." short-set @x1 result 43 consume 3 -> "producteur" next 472
+node 472 "f" short-set @x1 result 43 consume 3 -> "productif" next 473
+node 473 "vt" short-set @x1 result 43 consume 4 -> "productivit\x82" next 476
+node 474 "m" short-set @x1 result 43 consume 3 -> "productive" next 475
+node 475 "" short-set @x1 result 43 consume 3 -> "productive" level 2
+node 476 ":" short-set @x1 result 43 consume 2 -> "produit" next 477
+node 477 "e" short-set @x1 result 43 consume 2 -> "produit" next 478
+node 478 "" short-set @x1 result 43 consume 2 -> "produit" level 1
+node 479 "esstm" short-set @x1 result 43 consume 6 -> "pressentiment" next 480
+node 480 "f." short-set @x1 result 43 consume 3 -> "profiteur" next 488
+node 481 "^m" short-set @x1 result 43 consume 3 -> "profitable" next 483
+node 482 "" short-set @x1 result 43 consume 3 -> "profitable" level 2
+node 483 "it#s" short-set @x0 result 6 consume 6 -> "profitions" next 484
+node 484 "s" short-set @x4 result 43 consume 3 -> "profiteus" next 485
+node 485 ":" short-set @x1 result 43 consume 2 -> "profit" next 486
+node 486 "e" short-set @x1 result 43 consume 2 -> "profit" next 487
+node 487 "" short-set @x1 result 43 consume 2 -> "profit" level 1
+node 488 "j#" short-set @x1 result 43 consume 3 -> "projection" next 491
+node 489 "." short-set @x1 result 43 consume 3 -> "projecteur" next 490
+node 490 "" short-set @x1 result 43 consume 2 -> "projet" level 1
+node 491 "m0" short-set @x1 result 43 consume 3 -> "promettre" next 496
+node 492 "f" short-set @x1 result 43 consume 3 -> "primitif" next 493
+node 493 "vm" short-set @x1 result 43 consume 3 -> "primitive" next 495
+node 494 "" short-set @x1 result 43 consume 3 -> "primitive" level 2
+node 495 "" short-set @x1 result 43 consume 2 -> "premier" level 1
+node 496 "nm" short-set @x1 result 43 consume 2 -> "prochaine" next 498
+node 497 "" short-set @x1 result 43 consume 2 -> "prochaine" level 1
+node 498 "pe" short-set @x1 result 43 consume 2 -> "proportionn" next 504
+node 499 "ll" short-set @x1 result 43 consume 2 -> "proportionn" next 503
+node 500 "m" short-set @x1 result 43 consume 2 -> "proportionn" next 501
+node 501 "t" short-set @x1 result 43 consume 2 -> "proportionn" next 502
+node 502 "" short-set @x1 result 43 consume 2 -> "proportionn" level 2
+node 503 "" short-set @x1 result 43 consume 2 -> "proportion" level 1
+node 504 "q'" none result 6 consume 1 -> "pres" next 506
+node 505 "" short-set @x0 result 6 consume 2 -> "presque" level 1
+node 506 "rm" short-set @x1 result 43 consume 2 -> "premi\x8are" next 508
+node 507 "" short-set @x1 result 43 consume 2 -> "premi\x8are" level 1
+node 508 "s" short-set @x0 result 6 consume 2 -> "pr\x8as" next 509
+node 509 "t^m" short-set @x1 result 43 consume 3 -> "praticable" next 514
+node 510 "^" short-set @x1 result 43 consume 3 -> "praticable" next 511
+node 511 "oty" short-set @x1 result 43 consume 5 -> "prototype" next 512
+node 512 "m" short-set @x1 result 43 consume 2 -> "pratique" next 513
+node 513 "" short-set @x1 result 43 consume 2 -> "pratique" level 1
+node 514 "u!4" short-set @x0 result 6 consume 4 -> "prussien" next 515
+node 515 "v4t" short-set @x0 result 6 consume 4 -> "provient" next 520
+node 516 "n:" short-set @x1 result 43 consume 3 -> "provenir" next 519
+node 517 "e" short-set @x1 result 43 consume 3 -> "provenir" next 518
+node 518 "" short-set @x1 result 43 consume 3 -> "provenir" level 2
+node 519 "" short-set @x1 result 43 consume 2 -> "preuve" level 1
+node 520 "w" short-set @x2 result 1 consume 2 -> "prom" next 522
+node 521 "" short-set @x0 result 4 consume 2 -> "prom" level 1
+node 522 "x" short-set @x1 result 43 consume 2 -> "prix" next 523
+node 523 "" short-set @x2 result 51 consume 1 -> "pro" next 524
+node 524 "" short-set @x2 result 46 consume 1 -> "pro" next 525
+node 525 "," none result 1 consume 1 -> "pr" next 526
+node 526 "" short-set @x3 result 1 consume 1 -> "pr" end
+node 527 "#a" classes c12 c11 result 15 consume 1 -> "\x22" next 538
+node 528 "b" classes c12 c11 result 15 consume 1 -> "\x22" next 529
+node 529 "c" classes c12 c11 result 15 consume 1 -> "\x22" next 530
+node 530 "d" classes c12 c11 result 15 consume 1 -> "\x22" next 531
+node 531 "e" classes c12 c11 result 15 consume 1 -> "\x22" next 532
+node 532 "f" classes c12 c11 result 15 consume 1 -> "\x22" next 533
+node 533 "g" classes c12 c11 result 15 consume 1 -> "\x22" next 534
+node 534 "h" classes c12 c11 result 15 consume 1 -> "\x22" next 535
+node 535 "i" classes c12 c11 result 15 consume 1 -> "\x22" next 536
+node 536 "j" classes c12 c11 result 15 consume 1 -> "\x22" next 537
+node 537 "" classes c12 c11 result 15 consume 1 -> "\x22" level 1
+node 538 "" none result 15 consume 1 -> "\x22" next 539
+node 539 " " none result 4 consume 1 -> "\x22" next 542
+node 540 "" none result 8 consume 1 -> "\x82t\x82" next 541
+node 541 "" none result 11 consume 1 -> "\x22" level 1
+node 542 "7" none result 11 consume 2 -> "\x22\x22" next 543
+node 543 "" short-set @x0 result 11 consume 1 -> "\x22" next 544
+node 544 ",s7" none result 9 consume 1 -> "\x22" next 545
+node 545 "" none result 4 consume 1 -> "gn" next 546
+node 546 "-" short-set @x2 result 45 consume 2 -> "\x22com" next 548
+node 547 "" class c04 result 8 consume 1 -> "\x82t\x82" level 1
+node 548 "" class c01 result 8 consume 1 -> "\x82t\x82" next 549
+node 549 "" none result 10 consume 1 -> "\x22" end
+node 550 "-" short-set @x2 result 45 consume 2 -> "(com" next 552
+node 551 "" class c04 result 8 consume 1 -> "du" level 1
+node 552 " " none result 8 consume 1 -> "du" next 553
+node 553 "k0" short-set @x0 result 6 consume 3 -> "(au)" next 554
+node 554 "" classes c01 c00 result 8 consume 1 -> "du" next 555
+node 555 "" none result 4 consume 1 -> "er" next 556
+node 556 "" none result 10 consume 1 -> "(" end
+node 557 "-$" short-set @x1 result 43 consume 3 -> "incomplet" next 562
+node 558 "tm" short-set @x1 result 43 consume 3 -> "incompl\x8ate" next 560
+node 559 "" short-set @x1 result 43 consume 3 -> "incompl\x8ate" level 2
+node 560 "" short-set @x2 result 45 consume 2 -> "incom" next 561
+node 561 "" class c04 result 8 consume 1 -> "si" level 1
+node 562 " " none result 8 consume 1 -> "si" next 563
+node 563 "" classes c01 c00 result 8 consume 1 -> "si" next 564
+node 564 "!" short-set @x1 result 43 consume 2 -> "inqui\x8ate" next 566
+node 565 "" short-set @x3 result 1 consume 2 -> "inss" level 1
+node 566 "0" short-set @x2 result 45 consume 2 -> "intrans" next 567
+node 567 "3sc" short-set @x1 result 43 consume 4 -> "inconscience" next 573
+node 568 "sm" short-set @x1 result 43 consume 4 -> "inconsciemment" next 572
+node 569 ":" short-set @x1 result 43 consume 3 -> "inconscient" next 570
+node 570 "e" short-set @x1 result 43 consume 3 -> "inconscient" next 571
+node 571 "" short-set @x1 result 43 consume 3 -> "inconscient" level 2
+node 572 "v=n4t" short-set @x0 result 6 consume 7 -> "inconv\x82nient" level 1
+node 573 "4ps" short-set @x0 result 43 consume 3 -> "indisposition" next 576
+node 574 "p" short-set @x0 result 43 consume 3 -> "indisposition" next 575
+node 575 "" short-set @x2 result 45 consume 2 -> "indis" level 1
+node 576 ":" none result 45 consume 2 -> "ines" next 577
+node 577 "=gtr" short-set @x1 result 43 consume 5 -> "in\x82galitaire" next 584
+node 578 "gt" short-set @x1 result 43 consume 4 -> "in\x82galit\x82" level 3
+node 579 "x" short-set @x1 result 43 consume 4 -> "in\x82gaux" next 580
+node 580 "m" short-set @x1 result 43 consume 3 -> "in\x82gale" next 581
+node 581 ":" short-set @x1 result 43 consume 3 -> "in\x82gal" next 582
+node 582 "e" short-set @x1 result 43 consume 3 -> "in\x82gal" next 583
+node 583 "" short-set @x1 result 43 consume 3 -> "in\x82gal" level 1
+node 584 "]=d4t" short-set @x0 result 6 consume 6 -> "ingr\x82dient" next 585
+node 585 "a#" short-set @x1 result 43 consume 3 -> "inaction" next 589
+node 586 "tf" short-set @x1 result 43 consume 4 -> "inattentif" level 3
+node 587 "v" short-set @x1 result 43 consume 4 -> "inattentive" next 588
+node 588 "" short-set @x1 result 43 consume 3 -> "inattention" level 1
+node 589 "c8d" short-set @x1 result 43 consume 4 -> "incertitude" next 600
+node 590 "d*" short-set @x1 result 43 consume 4 -> "inconsid\x82ration" next 591
+node 591 "it#s" short-set @x0 result 6 consume 6 -> "incitions" next 592
+node 592 "9" short-set @x1 result 43 consume 3 -> "incertain" next 593
+node 593 "n" short-set @x1 result 43 consume 3 -> "incertaine" next 594
+node 594 "qc" short-set @x1 result 43 consume 4 -> "incons\x82quence" next 598
+node 595 ":" short-set @x1 result 43 consume 3 -> "incons\x82quent" next 596
+node 596 "e" short-set @x1 result 43 consume 3 -> "incons\x82quent" next 597
+node 597 "" short-set @x1 result 43 consume 3 -> "incons\x82quent" level 2
+node 598 "vt" short-set @x1 result 43 consume 4 -> "incivilit\x82" level 3
+node 599 "" short-set @x1 result 43 consume 3 -> "incivil" level 1
+node 600 "d4" short-set @x0 result 6 consume 3 -> "indien" next 613
+node 601 "5c" short-set @x1 result 43 consume 4 -> "indiff\x82rence" next 605
+node 602 ":" short-set @x1 result 43 consume 3 -> "indiff\x82rent" next 603
+node 603 "e" short-set @x1 result 43 consume 3 -> "indiff\x82rent" next 604
+node 604 "" short-set @x1 result 43 consume 3 -> "indiff\x82rent" level 2
+node 605 "7t" short-set @x1 result 43 consume 4 -> "indignit\x82" next 608
+node 606 "m" short-set @x1 result 43 consume 3 -> "indigne" next 607
+node 607 "" short-set @x1 result 43 consume 3 -> "indigne" level 2
+node 608 "=pd:" short-set @x1 result 43 consume 5 -> "ind\x82pendant" next 611
+node 609 "pde" short-set @x1 result 43 consume 5 -> "ind\x82pendant" level 4
+node 610 "d" short-set @x1 result 43 consume 5 -> "ind\x82pendant" level 2
+node 611 ">m" short-set @x1 result 43 consume 4 -> "indiff\x82remment" next 612
+node 612 "on=s4" short-set @x0 result 6 consume 7 -> "indon\x82sien" level 1
+node 613 "fdt" short-set @x1 result 43 consume 4 -> "infid\x82lit\x82" next 621
+node 614 "d" short-set @x1 result 43 consume 3 -> "infid\x8ale" next 615
+node 615 "n" short-set @x1 result 43 consume 3 -> "infortune" next 616
+node 616 "t" short-set @x1 result 43 consume 3 -> "inf\x82riorit\x82" next 617
+node 617 "m" short-set @x1 result 43 consume 2 -> "inf\x82rieure" next 618
+node 618 ":" short-set @x1 result 43 consume 2 -> "inf\x82rieur" next 619
+node 619 "e" short-set @x1 result 43 consume 2 -> "inf\x82rieur" next 620
+node 620 "" short-set @x1 result 43 consume 2 -> "inf\x82rieur" level 1
+node 621 "gc" short-set @x1 result 43 consume 3 -> "intelligence" next 627
+node 622 "m" short-set @x1 result 43 consume 3 -> "intelligemment" next 623
+node 623 "urgit#s" short-set @x0 result 6 consume 9 -> "ingurgitions" next 624
+node 624 ":" short-set @x1 result 43 consume 2 -> "intelligent" next 625
+node 625 "e" short-set @x1 result 43 consume 2 -> "intelligent" next 626
+node 626 "" short-set @x1 result 43 consume 2 -> "intelligent" level 1
+node 627 "hbll" short-set @x1 result 43 consume 3 -> "inhabitu" next 634
+node 628 "blm" short-set @x1 result 43 consume 3 -> "inhabitu" next 630
+node 629 "l" short-set @x1 result 43 consume 3 -> "inhabitu" level 2
+node 630 "m9" short-set @x1 result 43 consume 4 -> "inhumain" level 3
+node 631 "nt" short-set @x1 result 43 consume 5 -> "inhumanit\x82" level 4
+node 632 "m" short-set @x1 result 43 consume 4 -> "inhumaine" next 633
+node 633 "" short-set @x1 result 43 consume 4 -> "inhumaine" level 1
+node 634 "ig^m" short-set @x1 result 43 consume 4 -> "inimaginable" next 638
+node 635 "g^" short-set @x1 result 43 consume 4 -> "inimaginable" next 636
+node 636 "t#s" short-set @x0 result 6 consume 5 -> "initions" level 3
+node 637 "i<" short-set @x0 result 6 consume 5 -> "initient" level 1
+node 638 "jc" short-set @x1 result 43 consume 3 -> "injustice" next 641
+node 639 "tm" short-set @x1 result 43 consume 3 -> "injuste" level 3
+node 640 "" short-set @x1 result 43 consume 3 -> "injuste" level 1
+node 641 "ob" short-set @x1 result 43 consume 3 -> "inobservation" next 644
+node 642 "fl" short-set @x1 result 43 consume 4 -> "inofficiel" level 3
+node 643 "x" short-set @x1 result 43 consume 4 -> "inoficieux" level 1
+node 644 "qd" short-set @x1 result 43 consume 3 -> "inqui\x82tude" next 646
+node 645 "" short-set @x1 result 43 consume 2 -> "inquiet" level 1
+node 646 "t8a#" short-set @x1 result 43 consume 5 -> "interaction" next 666
+node 647 "8l7" short-set @x1 result 43 consume 5 -> "interligne" next 658
+node 648 "n*l:" short-set @x1 result 43 consume 6 -> "international" next 652
+node 649 "*le" short-set @x1 result 43 consume 6 -> "international" level 5
+node 650 "l" short-set @x1 result 43 consume 6 -> "international" next 651
+node 651 "x" short-set @x1 result 43 consume 6 -> "internationaux" level 3
+node 652 "pt" short-set @x1 result 43 consume 5 -> "interpoint" next 653
+node 653 "v4t" short-set @x0 result 6 consume 6 -> "intervient" next 657
+node 654 "n:" short-set @x1 result 43 consume 5 -> "intervenir" level 5
+node 655 "e" short-set @x1 result 43 consume 5 -> "intervenir" next 656
+node 656 "" short-set @x1 result 43 consume 5 -> "intervenir" level 3
+node 657 "" none result 42 consume 3 -> "inter" level 2
+node 658 "pll" short-set @x1 result 43 consume 5 -> "intemporelle" next 660
+node 659 "l" short-set @x1 result 43 consume 4 -> "intemporel" level 2
+node 660 "m" short-set @x1 result 43 consume 2 -> "int\x82rieure" next 661
+node 661 ":" short-set @x1 result 43 consume 2 -> "int\x82rieur" next 662
+node 662 "e" short-set @x1 result 43 consume 2 -> "int\x82rieur" next 663
+node 663 "s" short-set @x0 result 43 consume 2 -> "int\x82rieur" next 664
+node 664 "" short-set @x0 result 43 consume 2 -> "int\x82rieur" next 665
+node 665 "" none result 6 consume 2 -> "int" level 1
+node 666 "ul^m" short-set @x1 result 43 consume 4 -> "inutilisable" next 671
+node 667 "l^" short-set @x1 result 43 consume 4 -> "inutilisable" level 3
+node 668 "t" short-set @x1 result 43 consume 4 -> "inutilit\x82" next 669
+node 669 "m" short-set @x1 result 43 consume 3 -> "inutile" next 670
+node 670 "" short-set @x1 result 43 consume 3 -> "inutile" level 1
+node 671 "vit#s" short-set @x0 result 6 consume 6 -> "invitions" next 673
+node 672 "r/sb" short-set @x1 result 43 consume 6 -> "invraisemblable" level 1
+node 673 "x6f" short-set @x1 result 43 consume 4 -> "inexpressif" next 678
+node 674 "6v" short-set @x1 result 43 consume 4 -> "inexpressive" next 675
+node 675 "plm" short-set @x1 result 43 consume 4 -> "inexp\x82rimentale" level 3
+node 676 "l" short-set @x1 result 43 consume 4 -> "inexp\x82rimental" next 677
+node 677 "" short-set @x1 result 43 consume 3 -> "inexp\x82rience" level 1
+node 678 "" none result 42 consume 1 -> "in" next 679
+node 679 "" none result 1 consume 1 -> "in" next 680
+node 680 "" none result 10 consume 1 -> "*" end
+node 681 " " none result 6 consume 1 -> "est" next 683
+node 682 "" none result 4 consume 1 -> "es" level 1
+node 683 "-i" short-set @x1 result 43 consume 3 -> "est-il" next 685
+node 684 "" none result 6 consume 1 -> "est" level 1
+node 685 "c4t" short-set @x0 result 6 consume 4 -> "escient" next 686
+node 686 "p" short-set @x1 result 43 consume 2 -> "esp\x8ace" next 687
+node 687 "rc" short-set @x1 result 6 consume 3 -> "esp\x82rance" next 689
+node 688 "" short-set @x1 result 43 consume 2 -> "espoir" level 1
+node 689 "ll" short-set @x1 result 43 consume 1 -> "essenti" next 692
+node 690 "m" short-set @x1 result 43 consume 1 -> "essenti" next 691
+node 691 "" short-set @x1 result 43 consume 1 -> "essenti" level 1
+node 692 "ton4" short-set @x0 result 6 consume 5 -> "estonien" next 693
+node 693 "" short-set @x0 result 6 consume 1 -> "est" next 694
+node 694 "" short-set @x0 result 4 consume 1 -> "es" next 695
+node 695 "" none result 45 consume 1 -> "es" end
+node 696 "dm" short-set @x1 result 43 consume 2 -> "ordinaire" next 698
+node 697 "" short-set @x1 result 43 consume 2 -> "ordinaire" level 1
+node 698 "" none result 1 consume 1 -> "or" end
+node 699 " " none result 6 consume 1 -> "m\x88me" next 701
+node 700 "" none result 4 consume 1 -> "ent" level 1
+node 701 "0" short-set @x1 result 43 consume 2 -> "\x88tre" next 702
+node 702 "" short-set @x1 result 4 consume 1 -> "ent" next 703
+node 703 "" short-set @x1 result 6 consume 1 -> "m\x88me" next 704
+node 704 "" short-set @x3 result 1 consume 1 -> "fl" end
+node 705 "'" none result 1 consume 1 -> "\x82" next 706
+node 706 "%at#s" short-set @x0 result 6 consume 6 -> "\x82clations" next 707
+node 707 "(d:" short-set @x1 result 43 consume 3 -> "\x82chaud" next 710
+node 708 "de" short-set @x1 result 43 consume 3 -> "\x82chaud" next 709
+node 709 "g" short-set @x1 result 43 consume 3 -> "\x82change" level 1
+node 710 "2(m" short-set @x1 result 43 consume 3 -> "\x82branche" next 715
+node 711 "(" short-set @x1 result 43 consume 3 -> "\x82branche" next 712
+node 712 "o]c4" short-set @x0 result 6 consume 6 -> "\x82bro\x8bcien" next 713
+node 713 "t:" short-set @x1 result 43 consume 3 -> "\x82bruit" level 3
+node 714 "e" short-set @x1 result 43 consume 3 -> "\x82bruit" level 1
+node 715 "6v" short-set @x1 result 43 consume 3 -> "\x82preuve" next 716
+node 716 "burn=5" short-set @x0 result 6 consume 7 -> "\x82burn\x82en" next 717
+node 717 "cosy" short-set @x1 result 43 consume 5 -> "\x82cosyst\x8ame" next 718
+node 718 "d5" short-set @x0 result 6 consume 3 -> "\x82den" next 719
+node 719 "g=5" short-set @x0 result 6 consume 4 -> "\x82g\x82en" next 728
+node 720 "m" short-set @x1 result 43 consume 3 -> "\x82galement" next 721
+node 721 "tr" short-set @x1 result 43 consume 4 -> "\x82galitaire" next 723
+node 722 "" short-set @x1 result 43 consume 3 -> "\x82galit\x82" level 2
+node 723 "x" short-set @x0 result 6 consume 3 -> "\x82gaux" next 724
+node 724 ":" short-set @x1 result 43 consume 2 -> "\x82gal" next 725
+node 725 "e" short-set @x1 result 43 consume 2 -> "\x82gal" next 726
+node 726 "ypt4" short-set @x0 result 56 consume 6 -> "\x82gyptien" next 727
+node 727 "" short-set @x1 result 43 consume 2 -> "\x82gal" level 1
+node 728 "l4" short-set @x0 result 1 consume 3 -> "\x82lien" next 732
+node 729 "r" short-set @x1 result 43 consume 3 -> "\x82l\x82mentaire" next 730
+node 730 "ys=5" short-set @x0 result 6 consume 6 -> "\x82lys\x82en" next 731
+node 731 "" short-set @x1 result 43 consume 2 -> "\x82l\x82ment" level 1
+node 732 "mo_4t" short-set @x0 result 6 consume 6 -> "\x82mollient" next 733
+node 733 "n4" short-set @x0 result 4 consume 3 -> "\x82nien" next 737
+node 734 "qm" short-set @x1 result 43 consume 3 -> "\x82nergique" next 736
+node 735 "" short-set @x1 result 43 consume 3 -> "\x82nergique" level 2
+node 736 "" short-set @x1 result 43 consume 2 -> "\x82nergie" level 1
+node 737 "ol4" short-set @x0 result 6 consume 4 -> "\x82olien" next 738
+node 738 "picur4" short-set @x0 result 6 consume 7 -> "\x82picurien" next 740
+node 739 "te" short-set @x1 result 43 consume 4 -> "\x82pointe" level 1
+node 740 "qator4" short-set @x0 result 6 consume 7 -> "\x82quatorien" next 746
+node 741 "i4tc" short-set @x1 result 43 consume 6 -> "\x82quidistance" level 3
+node 742 "4t:" short-set @x1 result 43 consume 5 -> "\x82quidistant" next 745
+node 743 "te" short-set @x1 result 43 consume 5 -> "\x82quidistant" level 5
+node 744 "" short-set @x1 result 43 consume 5 -> "\x82quidistant" level 3
+node 745 "lb" short-set @x1 result 43 consume 5 -> "\x82quilibre" level 1
+node 746 "r4" short-set @x0 result 4 consume 3 -> "\x82rien" next 747
+node 747 "t=s4" short-set @x0 result 6 consume 5 -> "\x82t\x82sien" next 754
+node 748 "=" short-set @x0 result 6 consume 3 -> "\x82t\x82" next 749
+node 749 " " none result 6 consume 2 -> "\x82tant" next 750
+node 750 "4" short-set @x0 result 4 consume 3 -> "\x82tien" next 751
+node 751 "hiop4" short-set @x0 result 6 consume 7 -> "\x82thiopien" next 752
+node 752 "ol4" short-set @x0 result 6 consume 5 -> "\x82tolien" next 753
+node 753 "" short-set @x0 result 6 consume 2 -> "\x82tant" level 1
+node 754 "vit#s" short-set @x0 result 6 consume 6 -> "\x82vitions" next 760
+node 755 "ll" short-set @x1 result 43 consume 4 -> "\x82ventuelle" next 759
+node 756 "t" short-set @x1 result 43 consume 4 -> "\x82ventualit\x82" next 757
+node 757 "m" short-set @x1 result 43 consume 3 -> "\x82ventuelle" next 758
+node 758 "" short-set @x1 result 43 consume 3 -> "\x82ventuel" level 2
+node 759 "" short-set @x1 result 43 consume 2 -> "\x82v\x82nement" level 1
+node 760 " " none result 6 consume 1 -> "quoi" next 761
+node 761 "01" none result 6 consume 1 -> "\x82" next 762
+node 762 "" short-set @x0 result 6 consume 1 -> "quoi" end
+node 763 " " none result 6 consume 1 -> "les" next 764
+node 764 "$cm" short-set @x1 result 43 consume 3 -> "emplace" next 765
+node 765 "2(m" short-set @x1 result 43 consume 3 -> "embranche" next 767
+node 766 "(" short-set @x1 result 43 consume 3 -> "embranche" level 1
+node 767 "b+pt" short-set @x1 result 43 consume 5 -> "embonpoint" next 770
+node 768 "<m" short-set @x1 result 43 consume 3 -> "emb\x88te" level 3
+node 769 "" short-set @x1 result 43 consume 3 -> "emb\x88te" level 1
+node 770 "ut5" short-set @x0 result 6 consume 4 -> "gluten" next 771
+node 771 "ycon4" short-set @x0 result 6 consume 6 -> "glyconien" next 772
+node 772 "" short-set @x0 result 6 consume 1 -> "les" next 773
+node 773 "" short-set @x2 result 42 consume 1 -> "em" next 774
+node 774 "" short-set @x2 result 1 consume 1 -> "em" next 775
+node 775 "" short-set @x3 result 1 consume 1 -> "gl" end
+node 776 " .paris4" short-set @x0 result 6 consume 9 -> "dans \x02paris." next 779
+node 777 "" none result 6 consume 1 -> "dans" next 778
+node 778 "" none result 4 consume 1 -> "ant" level 1
+node 779 "acon4" short-set @x0 result 6 consume 6 -> "draconien" next 780
+node 780 "" short-set @x0 result 6 consume 1 -> "dans" next 781
+node 781 "" short-set @x1 result 4 consume 1 -> "ant" next 782
+node 782 "" short-set @x3 result 1 consume 1 -> "dr" end
+node 783 "4" none result 27 consume 2 -> "/" next 785
+node 784 "" none result 9 consume 2 -> "/" level 1
+node 785 "(=5" short-set @x0 result 6 consume 4 -> "arch\x82en" next 787
+node 786 "=ty" short-set @x1 result 43 consume 5 -> "arch\x82type" level 1
+node 787 "l=s4" short-set @x0 result 6 consume 5 -> "arl\x82sien" next 788
+node 788 "min4" short-set @x0 result 6 consume 5 -> "arminien" next 789
+node 789 "t=s4" short-set @x0 result 6 consume 5 -> "art\x82sien" next 790
+node 790 "" none result 1 consume 1 -> "ar" end
+node 791 " " none result 6 consume 1 -> "son" next 793
+node 792 "" none result 4 consume 1 -> "ition" level 1
+node 793 "^" short-set @x3 result 6 consume 1 -> "im" next 794
+node 794 "$" short-set @x3 result 6 consume 1 -> "im" next 795
+node 795 "2" short-set @x3 result 6 consume 1 -> "im" next 796
+node 796 "6^m" short-set @x1 result 43 consume 3 -> "impressionnable" next 807
+node 797 "^" short-set @x1 result 43 consume 3 -> "impressionnable" next 798
+node 798 "bt" short-set @x1 result 43 consume 4 -> "improbabilit\x82" next 800
+node 799 "" short-set @x1 result 43 consume 3 -> "improbable" level 2
+node 800 "df" short-set @x1 result 43 consume 4 -> "improductif" next 803
+node 801 "vt" short-set @x1 result 43 consume 5 -> "improductivit\x82" level 4
+node 802 "" short-set @x1 result 43 consume 4 -> "improductive" level 2
+node 803 "t^m" short-set @x1 result 43 consume 4 -> "impraticable" next 805
+node 804 "^" short-set @x1 result 43 consume 4 -> "impraticable" level 2
+node 805 "" short-set @x1 result 43 consume 2 -> "impression" next 806
+node 806 "" none result 6 consume 1 -> "im" level 1
+node 807 "b" none result 6 consume 1 -> "im" next 808
+node 808 "mbt" short-set @x1 result 43 consume 4 -> "immobilit\x82" next 812
+node 809 "b" short-set @x1 result 43 consume 3 -> "immobile" next 811
+node 810 "*" short-set @x1 result 43 consume 3 -> "immobilis" level 2
+node 811 "" none result 6 consume 1 -> "im" level 1
+node 812 "pat4t" short-set @x0 result 6 consume 6 -> "impatient" next 821
+node 813 "bt" short-set @x1 result 43 consume 4 -> "impossibilit\x82" next 815
+node 814 "" short-set @x1 result 43 consume 3 -> "impossible" level 2
+node 815 "c" short-set @x1 result 43 consume 3 -> "impuissance" next 816
+node 816 "nll" short-set @x1 result 43 consume 5 -> "impersonnelle" next 818
+node 817 "l" short-set @x1 result 43 consume 4 -> "impersonnel" level 2
+node 818 "prt" short-set @x1 result 43 consume 5 -> "impopularit\x82" next 820
+node 819 "r" short-set @x1 result 43 consume 4 -> "impopulaire" level 2
+node 820 "" none result 6 consume 1 -> "im" level 1
+node 821 "t" short-set @x1 result 43 consume 2 -> "sont" next 822
+node 822 "v" short-set @x1 result 43 consume 2 -> "oeuvre" next 823
+node 823 "sophag" none result 1 consume 1 -> "oe" next 824
+node 824 "" short-set @x1 result 6 consume 1 -> "son" next 825
+node 825 "" short-set @x1 result 4 consume 1 -> "ition" next 826
+node 826 "" none result 40 consume 1 -> "oe" end
+node 827 "!" short-set @x1 result 43 consume 2 -> "ouvri\x8are" next 828
+node 828 "]4" short-set @x0 result 6 consume 3 -> "ougrien" next 829
+node 829 "0gs" short-set @x4 result 43 consume 4 -> "outrageus" next 834
+node 830 "gsm" short-set @x1 result 43 consume 4 -> "outrageuse" next 833
+node 831 "x" short-set @x1 result 43 consume 4 -> "outrageux" next 832
+node 832 "" short-set @x1 result 43 consume 3 -> "outrage" level 2
+node 833 "" short-set @x1 result 43 consume 2 -> "outre" level 1
+node 834 "^i<" none result 1 consume 4 -> "oublient" next 835
+node 835 "at#s" short-set @x0 result 6 consume 5 -> "ouations" next 836
+node 836 "g" short-set @x1 result 43 consume 2 -> "ouvrage" next 837
+node 837 "ou" none result 1 consume 2 -> "\x81o" next 838
+node 838 "ral4" short-set @x0 result 6 consume 5 -> "ouralien" next 839
+node 839 "v" short-set @x1 result 43 consume 2 -> "ouvrier" next 840
+node 840 "" none result 51 consume 1 -> "ou" end
+node 841 " " none result 6 consume 1 -> "grand" next 842
+node 842 "." short-set @x1 result 43 consume 2 -> "grandeur" next 843
+node 843 "=gor4" short-set @x0 result 6 consume 6 -> "gr\x82gorien" next 844
+node 844 "am5" short-set @x0 result 6 consume 4 -> "gramen" next 848
+node 845 "mm/r4" short-set @x0 result 6 consume 7 -> "grammairien" next 846
+node 846 "nit#s" short-set @x0 result 6 consume 7 -> "granitions" next 847
+node 847 "vit#s" short-set @x0 result 6 consume 7 -> "gravitions" level 1
+node 848 "cs" short-set @x4 result 43 consume 3 -> "gracieus" next 852
+node 849 "sm" short-set @x1 result 43 consume 3 -> "gracieuse" next 850
+node 850 "x" short-set @x1 result 43 consume 3 -> "gracieux" next 851
+node 851 "" short-set @x1 result 43 consume 2 -> "gr\x83ce" level 1
+node 852 "dm" short-set @x1 result 43 consume 2 -> "grande" next 854
+node 853 "" short-set @x1 result 43 consume 2 -> "grande" level 1
+node 854 "e5" short-set @x0 result 6 consume 3 -> "green" next 855
+node 855 "gr" none result 1 consume 2 -> "\x8bg" next 856
+node 856 "k" none result 1 consume 1 -> "gr" next 857
+node 857 "os(5" short-set @x0 result 6 consume 5 -> "groschen" next 858
+node 858 "pm" short-set @x1 result 43 consume 2 -> "groupe" next 860
+node 859 "" short-set @x1 result 43 consume 2 -> "groupe" level 1
+node 860 "vt" short-set @x1 result 43 consume 3 -> "gravit\x82" next 863
+node 861 "m" short-set @x1 result 43 consume 2 -> "grave" next 862
+node 862 "" short-set @x1 result 43 consume 2 -> "grave" level 1
+node 863 "" short-set @x1 result 6 consume 1 -> "grand" next 864
+node 864 "" short-set @x3 result 1 consume 1 -> "gr" end
+node 865 " " none result 4 consume 1 -> "able" next 866
+node 866 "\x22s" short-set @x0 result 6 consume 3 -> "bleus" next 869
+node 867 ":" short-set @x1 result 43 consume 2 -> "bleu" next 868
+node 868 "e" short-set @x1 result 43 consume 2 -> "bleu" level 1
+node 869 "eu" short-set @x0 result 6 consume 3 -> "bleu" next 870
+node 870 "ms" short-set @x0 result 4 consume 2 -> "ablement" next 872
+node 871 "" short-set @x0 result 4 consume 2 -> "ablement" level 1
+node 872 "" short-set @x1 result 4 consume 1 -> "able" next 873
+node 873 "" none result 44 consume 1 -> "able" next 874
+node 874 "" short-set @x3 result 1 consume 1 -> "bl" end
+node 875 " " none result 4 consume 1 -> "elle" next 876
+node 876 "4" short-set @x0 result 1 consume 2 -> "llien" next 877
+node 877 "s" short-set @x0 result 4 consume 1 -> "elle" next 878
+node 878 "ms" short-set @x0 result 4 consume 2 -> "ellement" next 880
+node 879 "" short-set @x0 result 4 consume 2 -> "ellement" level 1
+node 880 "z" short-set @x0 result 7 consume 1 -> "ll" next 881
+node 881 "" short-set @x0 result 4 consume 1 -> "elle" next 882
+node 882 "" short-set @x3 result 7 consume 1 -> "ll" next 883
+node 883 "" none result 36 consume 1 -> "_" end
+node 884 " " none result 14 consume 2 -> " " end
+node 885 "" none result 27 consume 1 -> "1" next 886
+node 886 "'" none result 1 consume 1 -> "a" next 887
+node 887 "#r" short-set @x1 result 43 consume 3 -> "actionnaire" next 889
+node 888 "" short-set @x1 result 43 consume 2 -> "action" level 1
+node 889 "(\x22l=5" short-set @x0 result 6 consume 6 -> "acheul\x82en" next 893
+node 890 "m:" short-set @x1 result 43 consume 3 -> "achemin" level 3
+node 891 "e" short-set @x1 result 43 consume 3 -> "achemin" next 892
+node 892 "m" short-set @x1 result 43 consume 4 -> "acheminement" level 1
+node 893 "]ar4" short-set @x0 result 6 consume 5 -> "agrarien" next 894
+node 894 "2it#s" short-set @x0 result 6 consume 6 -> "abritions" next 895
+node 895 "6" short-set @x0 result 6 consume 2 -> "apr\x8as" next 896
+node 896 "_iz" short-set @x0 result 6 consume 4 -> "alliez" next 897
+node 897 "bdom5" short-set @x0 result 6 consume 6 -> "abdomen" next 907
+node 898 "st4t" short-set @x0 result 6 consume 6 -> "abstient" next 902
+node 899 "tn:" short-set @x1 result 43 consume 5 -> "abstenir" level 4
+node 900 "ne" short-set @x1 result 43 consume 5 -> "abstenir" level 5
+node 901 "" short-set @x1 result 43 consume 5 -> "abstenir" level 2
+node 902 "" short-set @x0 result 43 consume 2 -> "absolu" next 903
+node 903 ":" short-set @x1 result 43 consume 2 -> "absolu" next 904
+node 904 "e" short-set @x1 result 43 consume 2 -> "absolu" next 905
+node 905 "m" short-set @x1 result 43 consume 2 -> "absolu" next 906
+node 906 "y!in4" short-set @x0 result 6 consume 7 -> "abyssinien" level 1
+node 907 "c%imat#s" short-set @x0 result 6 consume 9 -> "acclimations" next 912
+node 908 "3=dit#s" short-set @x0 result 6 consume 9 -> "accr\x82ditions" next 909
+node 909 "ad=mic4" short-set @x0 result 6 consume 9 -> "acad\x82micien" next 910
+node 910 "c$" short-set @x1 result 43 consume 4 -> "accouple" next 911
+node 911 "" short-set @x1 result 6 consume 2 -> "avec" level 1
+node 912 "dam4" short-set @x0 result 56 consume 5 -> "adamien" next 920
+node 913 "m#" short-set @x1 result 43 consume 4 -> "admission" next 915
+node 914 "0" short-set @x1 result 43 consume 4 -> "admettre" level 2
+node 915 "v4t" short-set @x0 result 6 consume 5 -> "advient" next 919
+node 916 "n:" short-set @x1 result 43 consume 4 -> "advenir" level 4
+node 917 "e" short-set @x1 result 43 consume 4 -> "advenir" next 918
+node 918 "" short-set @x1 result 43 consume 4 -> "advenir" level 2
+node 919 "" class c04 result 42 consume 2 -> "ad" level 1
+node 920 "ff" short-set @x1 result 43 consume 3 -> "affaire" next 922
+node 921 "" short-set @x0 result 6 consume 2 -> "afin" level 1
+node 922 "g]v" short-set @x1 result 43 consume 4 -> "aggrave" next 924
+node 923 "it#s" short-set @x0 result 6 consume 6 -> "agitions" level 1
+node 924 "i" short-set @x0 result 6 consume 2 -> "ainsi" next 925
+node 925 "jr" short-set @x1 result 43 consume 3 -> "ajour" next 928
+node 926 "tm" short-set @x1 result 43 consume 4 -> "ajustement" level 3
+node 927 "" short-set @x1 result 43 consume 3 -> "ajuste" level 1
+node 928 "kkad4" short-set @x0 result 6 consume 6 -> "akkadien" next 929
+node 929 "l7" short-set @x1 result 43 consume 3 -> "aligne" next 934
+node 930 "cyon4" short-set @x0 result 6 consume 7 -> "alcyonien" next 931
+node 931 "it#s" short-set @x0 result 6 consume 6 -> "alitions" next 932
+node 932 "sac4" short-set @x0 result 6 consume 6 -> "alsacien" next 933
+node 933 "" short-set @x0 result 6 consume 2 -> "alors" level 1
+node 934 "m2)s4" short-set @x0 result 6 consume 6 -> "ambroisien" next 943
+node 935 "2os4" short-set @x0 result 6 consume 6 -> "ambrosien" next 936
+node 936 "5" short-set @x0 result 6 consume 3 -> "amen" next 937
+node 937 "=r9d4" short-set @x0 result 6 consume 7 -> "am\x82rindien" next 938
+node 938 "ib4" short-set @x0 result 6 consume 5 -> "amibien" next 939
+node 939 "s" short-set @x4 result 43 consume 3 -> "amoureus" next 941
+node 940 "m" short-set @x1 result 43 consume 3 -> "amoureuse" level 2
+node 941 "x" short-set @x1 result 43 consume 3 -> "amoureux" next 942
+node 942 "" short-set @x1 result 43 consume 2 -> "amour" level 1
+node 943 "n38" short-set @x0 result 6 consume 4 -> "ancrer" next 944
+node 944 "pc" short-set @x1 result 43 consume 3 -> "apparence" next 956
+node 945 "m" short-set @x0 result 43 consume 3 -> "apparemment" next 946
+node 946 "p@t4t" short-set @x0 result 6 consume 7 -> "appartient" next 953
+node 947 "@tn:" short-set @x1 result 43 consume 6 -> "appartenir" next 950
+node 948 "tne" short-set @x1 result 43 consume 6 -> "appartenir" level 5
+node 949 "n" short-set @x1 result 43 consume 6 -> "appartenir" level 3
+node 950 "t:" short-set @x1 result 43 consume 4 -> "appoint" level 4
+node 951 "e" short-set @x1 result 43 consume 4 -> "appoint" next 952
+node 952 "" short-set @x1 result 43 consume 4 -> "appoint" level 2
+node 953 ":" short-set @x1 result 43 consume 2 -> "apparent" next 954
+node 954 "e" short-set @x1 result 43 consume 2 -> "apparent" next 955
+node 955 "" short-set @x1 result 43 consume 2 -> "apparent" level 1
+node 956 "r4" short-set @x0 result 6 consume 3 -> "arien" next 962
+node 957 "a(n=5" short-set @x0 result 6 consume 7 -> "arachn\x82en" next 959
+node 958 "m=5" short-set @x0 result 6 consume 6 -> "aram\x82en" level 2
+node 959 "istot=lic4" short-set @x0 result 6 consume 12 -> "aristot\x82licien" next 960
+node 960 "yq" short-set @x1 result 43 consume 4 -> "arythmique" next 961
+node 961 "" short-set @x1 result 43 consume 2 -> "avoir" level 1
+node 962 "sin4" short-set @x0 result 6 consume 5 -> "asinien" next 964
+node 963 "stm" short-set @x1 result 43 consume 5 -> "assentiment" level 1
+node 964 "tf" short-set @x1 result 43 consume 3 -> "attentif" next 969
+node 965 "vm" short-set @x1 result 43 consume 3 -> "attentive" next 967
+node 966 "" short-set @x1 result 43 consume 3 -> "attentive" level 2
+node 967 "yq" short-set @x1 result 43 consume 4 -> "atypique" next 968
+node 968 "" short-set @x1 result 43 consume 2 -> "attention" level 1
+node 969 "v5" short-set @x0 result 6 consume 3 -> "aven" next 982
+node 970 "cm" short-set @x1 result 43 consume 3 -> "avance" next 972
+node 971 "" short-set @x1 result 43 consume 3 -> "avance" level 2
+node 972 "gs" short-set @x4 result 43 consume 4 -> "avantageus" next 976
+node 973 "sm" short-set @x1 result 43 consume 4 -> "avantageuse" next 974
+node 974 "x" short-set @x1 result 43 consume 4 -> "avantageux" next 975
+node 975 "" short-set @x1 result 43 consume 3 -> "avantage" level 2
+node 976 "n:" short-set @x1 result 43 consume 3 -> "avenir" next 979
+node 977 "e" short-set @x1 result 43 consume 3 -> "avenir" next 978
+node 978 "" short-set @x1 result 43 consume 3 -> "avenir" level 2
+node 979 "v" short-set @x1 result 43 consume 3 -> "avive" next 980
+node 980 "'" none result 6 consume 2 -> "av" next 981
+node 981 "" short-set @x1 result 6 consume 2 -> "avant" level 1
+node 982 "x" none result 1 consume 2 -> "ax" next 983
+node 983 "y" short-set @x1 result 43 consume 2 -> "ayant" next 984
+node 984 "z" short-set @x0 result 6 consume 2 -> "assez" level 2
+node 985 "" none result 1 consume 2 -> "az" end
+node 986 "" none result 27 consume 1 -> "2" next 987
+node 987 "'" none result 1 consume 1 -> "b" next 988
+node 988 "+hm" short-set @x1 result 43 consume 4 -> "bonhomme" next 990
+node 989 "shms" short-set @x0 result 6 consume 6 -> "bonshommes" level 1
+node 990 "1qer\x5c" short-set @x1 result 43 consume 6 -> "banqueroute" next 991
+node 991 "4h" class c05 result 1 consume 3 -> "bienheureu" next 992
+node 992 "5" short-set @x0 result 6 consume 2 -> "ben" next 993
+node 993 "7se" short-set @x0 result 1 consume 2 -> "besogneu" next 996
+node 994 "x" short-set @x0 result 1 consume 2 -> "besogneu" next 995
+node 995 "" short-set @x1 result 43 consume 2 -> "besogne" level 1
+node 996 "8gson4" short-set @x0 result 56 consume 7 -> "bergsonien" next 997
+node 997 "9" short-set @x1 result 43 consume 2 -> "besoin" next 998
+node 998 "<m" short-set @x1 result 43 consume 2 -> "b\x88te" next 1000
+node 999 "" short-set @x1 result 43 consume 2 -> "b\x88te" level 1
+node 1000 "=b<" short-set @x1 result 43 consume 4 -> "b\x82b\x88te" next 1002
+node 1001 "ot4" short-set @x0 result 6 consume 5 -> "b\x82otien" level 1
+node 1002 "&bon4" short-set @x0 result 56 consume 6 -> "bourbonien" next 1003
+node 1003 "*i_" none result 1 consume 4 -> "b\x83ill" next 1004
+node 1004 "abylon4" short-set @x0 result 56 consume 8 -> "babylonien" next 1012
+node 1005 "con4" short-set @x0 result 56 consume 6 -> "baconien" next 1006
+node 1006 "joc4" short-set @x0 result 56 consume 6 -> "bajocien" next 1007
+node 1007 "ld:" short-set @x1 result 43 consume 4 -> "balourd" next 1011
+node 1008 "de" short-set @x1 result 43 consume 4 -> "balourd" next 1010
+node 1009 "" short-set @x1 result 43 consume 4 -> "balourd" level 3
+node 1010 "zac4" short-set @x0 result 56 consume 7 -> "balzacien" level 2
+node 1011 "z9n5" short-set @x0 result 6 consume 6 -> "bazinnen" level 1
+node 1012 "c" short-set @x0 result 6 consume 2 -> "beaucoup" next 1013
+node 1013 "d" short-set @x1 result 43 consume 2 -> "boulevard" next 1014
+node 1014 "f." short-set @x1 result 43 consume 3 -> "bienfaiteur" next 1017
+node 1015 "c" short-set @x1 result 43 consume 3 -> "bienfaisance" next 1016
+node 1016 "" short-set @x1 result 43 consume 2 -> "bienfait" level 1
+node 1017 "gr" short-set @x1 result 43 consume 3 -> "budg\x82taire" next 1019
+node 1018 "" short-set @x1 result 43 consume 2 -> "budget" level 1
+node 1019 "h" short-set @x1 result 43 consume 2 -> "bonheur" next 1020
+node 1020 "ig4" short-set @x0 result 6 consume 4 -> "big." next 1025
+node 1021 "$c" short-set @x1 result 43 consume 4 -> "biplace" next 1022
+node 1022 "5nale" short-set @x1 result 1 consume 6 -> "biennal" level 3
+node 1023 "nal" short-set @x1 result 43 consume 6 -> "biennal" level 4
+node 1024 "kx" short-set @x1 result 43 consume 6 -> "biennaux" level 1
+node 1025 "j" short-set @x1 result 43 consume 2 -> "bonjour" next 1026
+node 1026 "kdel/r4" short-set @x0 result 6 consume 8 -> "baudelairien" next 1027
+node 1027 "lts" short-set @x0 result 4 consume 3 -> "bilit\x82" next 1029
+node 1028 "t" short-set @x0 result 4 consume 3 -> "bilit\x82" level 1
+node 1029 "nm" short-set @x1 result 43 consume 3 -> "bonnement" next 1031
+node 1030 "" short-set @x1 result 43 consume 2 -> "bonne" level 1
+node 1031 "oh=m4" short-set @x0 result 6 consume 6 -> "boh\x82mien" next 1034
+node 1032 "sn4" short-set @x0 result 6 consume 5 -> "bosnien" next 1033
+node 1033 "" short-set @x1 result 43 consume 2 -> "bont\x82" level 1
+node 1034 "r9" short-set @x0 result 6 consume 3 -> "brin" next 1035
+node 1035 "s" short-set @x0 result 6 consume 2 -> "biens" next 1036
+node 1036 "t" short-set @x0 result 6 consume 2 -> "bient\x93t" next 1037
+node 1037 "ug4" short-set @x0 result 6 consume 4 -> "bug." next 1039
+node 1038 "ns5" short-set @x0 result 6 consume 5 -> "bunsen" level 1
+node 1039 "vc" short-set @x1 result 43 consume 3 -> "bienveillance" next 1043
+node 1040 ":" short-set @x1 result 43 consume 2 -> "bienveillant" next 1041
+node 1041 "e" short-set @x1 result 43 consume 2 -> "bienveillant" next 1042
+node 1042 "" short-set @x1 result 43 consume 2 -> "bienveillant" level 1
+node 1043 "zm" short-set @x1 result 43 consume 2 -> "bizarre" next 1045
+node 1044 "" short-set @x1 result 43 consume 2 -> "bizarre" level 1
+node 1045 "" short-set @x0 result 6 consume 1 -> "bien" end
+node 1046 "" none result 27 consume 1 -> "3" next 1047
+node 1047 ";n=5" short-set @x0 result 6 consume 5 -> "corn\x82en" next 1048
+node 1048 "=q" short-set @x1 result 43 consume 2 -> "caract\x82risti" next 1051
+node 1049 "rul=5" short-set @x0 result 6 consume 7 -> "c\x82rul\x82en" next 1050
+node 1050 "sar4" short-set @x0 result 56 consume 6 -> "c\x82sarien" level 1
+node 1051 "!" short-set @x1 result 43 consume 2 -> "caract\x8are" next 1052
+node 1052 "$" short-set @x1 result 43 consume 2 -> "couple" next 1053
+node 1053 "&tepte" short-set @x1 result 43 consume 7 -> "courtepointe" next 1054
+node 1054 "'e-(-d" short-set @x0 result 6 consume 7 -> "c'est-\x85-dire" next 1057
+node 1055 "" short-set @x0 result 9 consume 1 -> "c" next 1056
+node 1056 "" none result 9 consume 2 -> "c'" level 1
+node 1057 "+s" short-set @x0 result 6 consume 3 -> "cons" next 1059
+node 1058 "" short-set @x0 result 43 consume 2 -> "con" level 1
+node 1059 "0rm" short-set @x1 result 43 consume 3 -> "contraire" next 1062
+node 1060 "r" short-set @x1 result 43 consume 3 -> "contraire" next 1061
+node 1061 "" short-set @x1 result 43 consume 2 -> "contre" level 1
+node 1062 "3c" short-set @x1 result 43 consume 3 -> "circonstance" next 1066
+node 1063 "cll" short-set @x1 result 43 consume 3 -> "circonstanci" level 3
+node 1064 "lm" short-set @x1 result 43 consume 3 -> "circonstanci" level 4
+node 1065 "" short-set @x1 result 43 consume 3 -> "circonstanci" level 1
+node 1066 "4-(-d4" none result 10 consume 7 -> "c.-\x85-d." next 1067
+node 1067 "5r" short-set @x1 result 43 consume 3 -> "commentaire" next 1073
+node 1068 ":" short-set @x1 result 43 consume 2 -> "comment" next 1069
+node 1069 "e" short-set @x1 result 43 consume 2 -> "comment" next 1070
+node 1070 " " none result 43 consume 2 -> "comment" next 1071
+node 1071 "0" none result 6 consume 1 -> "c" next 1072
+node 1072 "" short-set @x1 result 43 consume 2 -> "comment" level 1
+node 1073 "8d" short-set @x1 result 43 consume 3 -> "certitude" next 1075
+node 1074 "" short-set @x1 result 43 consume 2 -> "certes" level 1
+node 1075 "9q" short-set @x0 result 6 consume 3 -> "cinq" next 1077
+node 1076 "" short-set @x1 result 43 consume 2 -> "certain" level 1
+node 1077 "?" short-set @x1 result 43 consume 2 -> "c\x93t\x82" next 1078
+node 1078 "@bonat#s" short-set @x0 result 6 consume 9 -> "carbonations" next 1081
+node 1079 "p4" short-set @x0 result 1 consume 4 -> "carpien" next 1080
+node 1080 "t=s4" short-set @x0 result 6 consume 6 -> "cart\x82sien" level 1
+node 1081 "adurc4" short-set @x0 result 6 consume 7 -> "cadurcien" next 1093
+node 1082 "l=don4" short-set @x0 result 6 consume 8 -> "cal\x82donien" next 1085
+node 1083 "fat#s" short-set @x0 result 6 consume 8 -> "calfations" next 1084
+node 1084 "if;n4" short-set @x0 result 6 consume 8 -> "californien" level 2
+node 1085 "mpan4" short-set @x0 result 6 consume 7 -> "campanien" next 1087
+node 1086 "pi74" short-set @x0 result 6 consume 7 -> "campignien" level 2
+node 1087 "nad4" short-set @x0 result 6 consume 6 -> "canadien" next 1089
+node 1088 "an=5" short-set @x0 result 6 consume 7 -> "canan\x82en" level 2
+node 1089 "rapat#s" short-set @x0 result 6 consume 9 -> "carapations" next 1090
+node 1090 "semat#s" short-set @x0 result 6 consume 9 -> "casemations" next 1092
+node 1091 "p4" short-set @x0 result 1 consume 5 -> "caspien" level 2
+node 1092 "" short-set @x0 result 6 consume 2 -> "cela" level 1
+node 1093 "b" short-set @x0 result 6 consume 2 -> "combien" next 1094
+node 1094 "c" short-set @x0 result 6 consume 2 -> "ceci" next 1095
+node 1095 "d*" short-set @x1 result 43 consume 3 -> "consid\x82ration" next 1098
+node 1096 "m" short-set @x1 result 43 consume 2 -> "consid\x82rable" next 1097
+node 1097 "" short-set @x1 result 43 consume 2 -> "consid\x82rable" level 1
+node 1098 "gs" short-set @x4 result 43 consume 3 -> "courageus" next 1102
+node 1099 "sm" short-set @x1 result 43 consume 3 -> "courageuse" next 1100
+node 1100 "x" short-set @x1 result 43 consume 3 -> "courageux" next 1101
+node 1101 "" short-set @x1 result 43 consume 2 -> "courage" level 1
+node 1102 "ic=ron4" short-set @x0 result 6 consume 8 -> "cic\x82ronien" next 1110
+node 1103 "r3v4t" short-set @x0 result 6 consume 7 -> "circonvient" next 1108
+node 1104 "3vn:" short-set @x1 result 43 consume 6 -> "circonvenir" next 1107
+node 1105 "vne" short-set @x1 result 43 consume 6 -> "circonvenir" level 5
+node 1106 "n" short-set @x1 result 43 consume 6 -> "circonvenir" level 3
+node 1107 "ca!4" short-set @x0 result 6 consume 7 -> "circassien" level 2
+node 1108 "st8c4" short-set @x0 result 6 consume 7 -> "cistercien" next 1109
+node 1109 "t#s" short-set @x0 result 6 consume 5 -> "citions" level 1
+node 1110 "kcas4" short-set @x0 result 6 consume 6 -> "caucasien" next 1111
+node 1111 "ls" short-set @x0 result 6 consume 3 -> "celles" next 1113
+node 1112 "" short-set @x0 result 6 consume 2 -> "celle" level 1
+node 1113 "m" short-set @x0 result 6 consume 2 -> "comme" next 1114
+node 1114 "nm" short-set @x1 result 43 consume 2 -> "certaine" next 1116
+node 1115 "" short-set @x1 result 43 consume 2 -> "certaine" level 1
+node 1116 "o6d#" short-set @x1 result 43 consume 5 -> "coproduction" next 1124
+node 1117 "effic4t" short-set @x1 result 6 consume 9 -> "coefficient" next 1118
+node 1118 "git#s" short-set @x0 result 6 consume 7 -> "cogitions" next 1119
+node 1119 "h=rit#s" short-set @x0 result 6 consume 9 -> "coh\x82ritions" next 1121
+node 1120 "abit#s" short-set @x0 result 6 consume 9 -> "cohabitions" level 2
+node 1121 "lmat#s" short-set @x0 result 6 consume 8 -> "colmations" next 1122
+node 1122 "m=d4" short-set @x0 result 6 consume 6 -> "com\x82dien" next 1123
+node 1123 "r=5" short-set @x0 result 6 consume 5 -> "cor\x82en" level 1
+node 1124 "p" short-set @x0 result 6 consume 2 -> "cependant" next 1125
+node 1125 "qc" short-set @x1 result 43 consume 3 -> "cons\x82quence" next 1130
+node 1126 "m" short-set @x1 result 43 consume 3 -> "cons\x82quemment" next 1127
+node 1127 ":" short-set @x1 result 43 consume 2 -> "cons\x82quent" next 1128
+node 1128 "e" short-set @x1 result 43 consume 2 -> "cons\x82quent" next 1129
+node 1129 "" short-set @x1 result 43 consume 2 -> "cons\x82quent" level 1
+node 1130 "r9" short-set @x0 result 6 consume 3 -> "crin" next 1132
+node 1131 "" short-set @x1 result 43 consume 2 -> "coeur" level 1
+node 1132 "s" short-set @x0 result 6 consume 2 -> "ces" next 1133
+node 1133 "t" short-set @x0 result 6 consume 2 -> "cette" next 1134
+node 1134 "v*" short-set @x1 result 43 consume 3 -> "civilisation" next 1140
+node 1135 "t" short-set @x1 result 43 consume 3 -> "civilit\x82" next 1136
+node 1136 "m" short-set @x1 result 43 consume 2 -> "civile" next 1137
+node 1137 ":" short-set @x1 result 43 consume 2 -> "civil" next 1138
+node 1138 "e" short-set @x1 result 43 consume 2 -> "civil" next 1139
+node 1139 "" short-set @x1 result 43 consume 2 -> "civil" level 1
+node 1140 "x" short-set @x0 result 6 consume 2 -> "ceux" next 1141
+node 1141 "y%am5" short-set @x0 result 6 consume 6 -> "cyclamen" next 1143
+node 1142 "%op=5" short-set @x0 result 6 consume 7 -> "cyclop\x82en" level 1
+node 1143 "" short-set @x0 result 6 consume 1 -> "ce" end
+node 1144 "" none result 27 consume 1 -> "4" next 1145
+node 1145 "';" short-set @x0 result 6 consume 3 -> "d'or" next 1150
+node 1146 "a" short-set @x0 result 6 consume 3 -> "d'abord" next 1147
+node 1147 "k_p" short-set @x0 result 6 consume 5 -> "d'autre part" next 1148
+node 1148 "" short-set @x0 result 9 consume 1 -> "d" next 1149
+node 1149 "" none result 9 consume 2 -> "d'" level 1
+node 1150 "," none result 6 consume 1 -> "d" next 1151
+node 1151 "/" short-set @x0 result 6 consume 2 -> "d\x82sormais" next 1152
+node 1152 "5c" short-set @x1 result 43 consume 3 -> "diff\x82rence" next 1156
+node 1153 ":" short-set @x1 result 43 consume 2 -> "diff\x82rent" next 1154
+node 1154 "e" short-set @x1 result 43 consume 2 -> "diff\x82rent" next 1155
+node 1155 "" short-set @x1 result 43 consume 2 -> "diff\x82rent" level 1
+node 1156 "7tr" short-set @x1 result 43 consume 4 -> "dignitaire" next 1160
+node 1157 "t" short-set @x1 result 43 consume 3 -> "dignit\x82" next 1158
+node 1158 "m" short-set @x1 result 43 consume 2 -> "digne" next 1159
+node 1159 "" short-set @x1 result 43 consume 2 -> "digne" level 1
+node 1160 "8" short-set @x1 result 43 consume 2 -> "derri\x8are" next 1161
+node 1161 "9*" short-set @x1 result 43 consume 3 -> "destination" next 1166
+node 1162 "r" short-set @x1 result 43 consume 3 -> "destinataire" next 1163
+node 1163 ":" short-set @x1 result 43 consume 2 -> "destin" next 1164
+node 1164 "e" short-set @x1 result 43 consume 2 -> "destin" next 1165
+node 1165 "" short-set @x1 result 43 consume 2 -> "destin" level 1
+node 1166 "=$cm" short-set @x1 result 43 consume 4 -> "d\x82place" next 1234
+node 1167 "$c" short-set @x1 result 43 consume 4 -> "d\x82place" next 1171
+node 1168 "r:" short-set @x1 result 43 consume 4 -> "d\x82plaisir" level 4
+node 1169 "e" short-set @x1 result 43 consume 4 -> "d\x82plaisir" next 1170
+node 1170 "" short-set @x1 result 43 consume 4 -> "d\x82plaisir" level 2
+node 1171 "(fg" short-set @x1 result 43 consume 5 -> "d\x82chiffrage" next 1173
+node 1172 "f" short-set @x1 result 43 consume 4 -> "d\x82chiffre" level 2
+node 1173 "2(m" short-set @x1 result 43 consume 4 -> "d\x82branche" next 1175
+node 1174 "(" short-set @x1 result 43 consume 4 -> "d\x82branche" level 2
+node 1175 "3=pit#s" short-set @x0 result 6 consume 9 -> "d\x82cr\x82pitions" next 1176
+node 1176 "bilit#s" short-set @x0 result 6 consume 9 -> "d\x82bilitions" next 1178
+node 1177 "it#s" short-set @x0 result 6 consume 7 -> "d\x82bitions" level 2
+node 1178 "c$" short-set @x1 result 43 consume 4 -> "d\x82couple" next 1183
+node 1179 "@bonat#s" short-set @x0 result 6 consume 11 -> "d\x82carbonations" next 1180
+node 1180 "apit#s" short-set @x0 result 6 consume 9 -> "d\x82capitions" next 1181
+node 1181 "d*" short-set @x1 result 43 consume 4 -> "d\x82consid\x82r" next 1182
+node 1182 "g" short-set @x1 result 43 consume 4 -> "d\x82courage" level 2
+node 1183 "dal=5" short-set @x0 result 6 consume 7 -> "d\x82dal\x82en" next 1184
+node 1184 "fg*" short-set @x1 result 43 consume 5 -> "d\x82figuration" next 1190
+node 1185 "g" short-set @x1 result 43 consume 4 -> "d\x82figure" next 1186
+node 1186 "ic4t" short-set @x0 result 6 consume 7 -> "d\x82ficient" next 1187
+node 1187 "v^m" short-set @x1 result 43 consume 4 -> "d\x82favor" level 4
+node 1188 "^" short-set @x1 result 43 consume 4 -> "d\x82favor" next 1189
+node 1189 "" short-set @x1 result 43 consume 4 -> "d\x82faveur" level 2
+node 1190 "jg" short-set @x1 result 43 consume 4 -> "d\x82juge" next 1191
+node 1191 "l4" short-set @x0 result 6 consume 4 -> "d\x82lien" next 1195
+node 1192 "b*" short-set @x1 result 43 consume 5 -> "d\x82lib\x82ration" next 1193
+node 1193 "imit#s" short-set @x0 result 6 consume 9 -> "d\x82limitions" level 4
+node 1194 "t#s" short-set @x0 result 6 consume 7 -> "d\x82litions" level 2
+node 1195 "m#r" short-set @x1 result 43 consume 5 -> "d\x82missionnaire" next 1202
+node 1196 "#" short-set @x1 result 43 consume 4 -> "d\x82mission" next 1197
+node 1197 "$." short-set @x1 result 43 consume 4 -> "d\x82multiplicat" next 1199
+node 1198 "*" short-set @x1 result 43 consume 4 -> "d\x82multiplic" level 3
+node 1199 "0" short-set @x1 result 43 consume 4 -> "d\x82mettre" next 1200
+node 1200 "=rit#s" short-set @x0 result 6 consume 9 -> "d\x82m\x82ritions" next 1201
+node 1201 "b*" short-set @x1 result 43 consume 5 -> "d\x82mobilisation" level 2
+node 1202 "nb" short-set @x1 result 43 consume 4 -> "d\x82nombre" next 1204
+node 1203 "t" short-set @x1 result 43 consume 4 -> "d\x82nature" level 2
+node 1204 "p$m" short-set @x1 result 43 consume 4 -> "d\x82peuple" next 1211
+node 1205 "$" short-set @x1 result 43 consume 4 -> "d\x82peuple" next 1206
+node 1206 "d:" short-set @x1 result 43 consume 4 -> "d\x82pendant" next 1209
+node 1207 "e" short-set @x1 result 43 consume 4 -> "d\x82pendant" next 1208
+node 1208 "" short-set @x1 result 43 consume 4 -> "d\x82pendant" level 3
+node 1209 "it#s" short-set @x0 result 6 consume 7 -> "d\x82pitions" next 1210
+node 1210 "p" short-set @x1 result 43 consume 4 -> "d\x82population" level 2
+node 1211 "r\x5c" short-set @x1 result 43 consume 4 -> "d\x82route" next 1213
+node 1212 "at#s" short-set @x0 result 6 consume 7 -> "d\x82rations" level 2
+node 1213 "s9vit#s" short-set @x0 result 6 consume 9 -> "d\x82sinvitions" next 1227
+node 1214 ":r:" short-set @x1 result 43 consume 5 -> "d\x82sespoir" next 1217
+node 1215 "re" short-set @x1 result 43 consume 5 -> "d\x82sespoir" level 5
+node 1216 "" short-set @x1 result 43 consume 5 -> "d\x82sespoir" level 3
+node 1217 "=qilb" short-set @x1 result 43 consume 8 -> "d\x82s\x82quilibre" next 1218
+node 1218 "avgs" short-set @x4 result 43 consume 7 -> "d\x82savantageus" next 1222
+node 1219 "vgsm" short-set @x1 result 43 consume 7 -> "d\x82savantageuse" level 5
+node 1220 "gx" short-set @x1 result 43 consume 7 -> "d\x82savantageux" level 6
+node 1221 "" short-set @x1 result 43 consume 6 -> "d\x82savantage" level 3
+node 1222 "h<" short-set @x1 result 43 consume 5 -> "d\x82shonn\x88te" next 1226
+node 1223 "=rit#s" short-set @x0 result 6 consume 10 -> "d\x82sh\x82ritions" next 1224
+node 1224 "n" short-set @x1 result 43 consume 5 -> "d\x82shonneur" next 1225
+node 1225 "y?at#s" short-set @x0 result 6 consume 10 -> "d\x82shydrations" level 3
+node 1226 "ulfit#s" short-set @x0 result 6 consume 10 -> "d\x82sulfitions" level 2
+node 1227 "t4t" short-set @x0 result 6 consume 5 -> "d\x82tient" next 1232
+node 1228 "n:" short-set @x1 result 43 consume 4 -> "d\x82tenir" next 1231
+node 1229 "e" short-set @x1 result 43 consume 4 -> "d\x82tenir" next 1230
+node 1230 "" short-set @x1 result 43 consume 4 -> "d\x82tenir" level 3
+node 1231 "r" short-set @x1 result 43 consume 4 -> "d\x82terre" level 2
+node 1232 "von4" short-set @x0 result 6 consume 6 -> "d\x82vonien" next 1233
+node 1233 "" class c04 result 46 consume 2 -> "d\x82" level 1
+node 1234 ">m" short-set @x1 result 43 consume 3 -> "diff\x82remment" next 1235
+node 1235 "\x5c" short-set @x1 result 43 consume 2 -> "doute" next 1236
+node 1236 "]" short-set @x1 result 43 consume 2 -> "degr\x82" next 1237
+node 1237 "_s" short-set @x0 result 6 consume 3 -> "de suite" next 1238
+node 1238 ":" short-set @x0 result 6 consume 2 -> "d\x96" next 1239
+node 1239 "@win4" short-set @x0 result 56 consume 6 -> "darwinien" next 1241
+node 1240 "w9" short-set @x0 result 6 consume 4 -> "darwin" level 1
+node 1241 "actyloty" short-set @x1 result 43 consume 9 -> "dactylotype" next 1247
+node 1242 "hom=5" short-set @x0 result 6 consume 7 -> "dahom\x82en" next 1243
+node 1243 "lmat4" short-set @x0 result 6 consume 7 -> "dalmatien" next 1245
+node 1244 "ton4" short-set @x0 result 56 consume 7 -> "daltonien" level 2
+node 1245 "nub4" short-set @x0 result 6 consume 6 -> "danubien" next 1246
+node 1246 "" short-set @x0 result 6 consume 2 -> "davantage" level 1
+node 1247 "b" short-set @x0 result 6 consume 2 -> "debout" next 1248
+node 1248 "c" short-set @x1 result 43 consume 2 -> "donc" next 1249
+node 1249 "d" short-set @x0 result 6 consume 2 -> "dedans" next 1250
+node 1250 "ev4t" short-set @x0 result 6 consume 5 -> "devient" next 1254
+node 1251 "vn:" short-set @x1 result 43 consume 4 -> "devenir" level 3
+node 1252 "ne" short-set @x1 result 43 consume 4 -> "devenir" level 4
+node 1253 "" short-set @x1 result 43 consume 4 -> "devenir" level 1
+node 1254 "ft" short-set @x1 result 43 consume 3 -> "difficult\x82" next 1257
+node 1255 "m" short-set @x1 result 43 consume 2 -> "difficile" next 1256
+node 1256 "" short-set @x1 result 43 consume 2 -> "difficile" level 1
+node 1257 "gs" short-set @x4 result 43 consume 3 -> "dangereus" next 1261
+node 1258 "sm" short-set @x1 result 43 consume 3 -> "dangeureuse" next 1259
+node 1259 "x" short-set @x1 result 43 consume 3 -> "dangereux" next 1260
+node 1260 "" short-set @x1 result 43 consume 2 -> "danger" level 1
+node 1261 "h" short-set @x0 result 6 consume 2 -> "dehors" next 1262
+node 1262 "j" short-set @x0 result 6 consume 2 -> "d\x82j\x85" next 1263
+node 1263 "ls" short-set @x4 result 43 consume 3 -> "douloureus" next 1267
+node 1264 "sm" short-set @x1 result 43 consume 3 -> "douloureuse" next 1265
+node 1265 "x" short-set @x1 result 43 consume 3 -> "douloureux" next 1266
+node 1266 "" short-set @x1 result 43 consume 2 -> "douleur" level 1
+node 1267 "m" short-set @x1 result 43 consume 2 -> "demain" next 1268
+node 1268 "n" short-set @x1 result 43 consume 2 -> "dernier" next 1269
+node 1269 "or4" short-set @x0 result 6 consume 4 -> "dorien" next 1270
+node 1270 "p" short-set @x0 result 6 consume 2 -> "depuis" next 1271
+node 1271 "rm" short-set @x1 result 43 consume 2 -> "derni\x8are" next 1273
+node 1272 "" short-set @x1 result 43 consume 2 -> "derni\x8are" level 1
+node 1273 "sqll" short-set @x1 result 43 consume 3 -> "desqu" next 1277
+node 1274 "qlm" short-set @x1 result 43 consume 3 -> "desqu" next 1276
+node 1275 "l" short-set @x1 result 43 consume 3 -> "desqu" level 2
+node 1276 "" short-set @x0 result 6 consume 2 -> "des" level 1
+node 1277 "t" short-set @x0 result 6 consume 2 -> "dont" next 1278
+node 1278 "uql" short-set @x1 result 43 consume 4 -> "duquel" next 1280
+node 1279 "ram5" short-set @x0 result 6 consume 6 -> "duramen" level 1
+node 1280 "v" short-set @x1 result 43 consume 2 -> "devant" next 1281
+node 1281 "ynamit#s" short-set @x0 result 6 consume 9 -> "dynamitions" next 1282
+node 1282 "" short-set @x0 result 6 consume 1 -> "de" end
+node 1283 "" none result 27 consume 1 -> "5" next 1284
+node 1284 "'" none result 1 consume 1 -> "e" next 1285
+node 1285 "6" short-set @x1 result 43 consume 2 -> "esprit" next 1286
+node 1286 "_c'" none result 6 consume 4 -> "etc." next 1289
+node 1287 "c4" none result 6 consume 4 -> "etc." level 3
+node 1288 "" short-set @x0 result 6 consume 3 -> "etc." level 1
+node 1289 "d5" short-set @x0 result 6 consume 3 -> "eden" next 1290
+node 1290 "f*it#s" short-set @x0 result 6 consume 7 -> "effritions" next 1297
+node 1291 "fic4t" short-set @x0 result 6 consume 7 -> "efficient" next 1294
+node 1292 "o" short-set @x1 result 43 consume 4 -> "efforce" next 1293
+node 1293 "" short-set @x1 result 43 consume 3 -> "effectif" level 2
+node 1294 "vm" short-set @x1 result 43 consume 3 -> "effective" next 1296
+node 1295 "" short-set @x1 result 43 consume 3 -> "effective" level 2
+node 1296 "" short-set @x1 result 43 consume 2 -> "effet" level 1
+node 1297 "lz=vir4" short-set @x0 result 56 consume 8 -> "elz\x82virien" next 1298
+node 1298 "m0" short-set @x0 result 1 consume 2 -> "em" next 1299
+node 1299 "n38" short-set @x0 result 6 consume 4 -> "encrer" next 1300
+node 1300 "xam5" short-set @x0 result 1 consume 5 -> "examen" next 1303
+node 1301 "a#" short-set @x1 result 43 consume 4 -> "exaction" next 1302
+node 1302 "" none result 1 consume 2 -> "ex" level 1
+node 1303 "z" none result 1 consume 2 -> "ez" end
+node 1304 "" none result 27 consume 1 -> "6" next 1305
+node 1305 "'" none result 1 consume 1 -> "f" next 1306
+node 1306 "+r" short-set @x1 result 43 consume 3 -> "fonctionnaire" next 1312
+node 1307 "" short-set @x1 result 43 consume 2 -> "fonction" next 1308
+node 1308 "ll" short-set @x1 result 43 consume 2 -> "fonctionn" next 1311
+node 1309 "m" short-set @x1 result 43 consume 2 -> "fonctionn" next 1310
+node 1310 "" short-set @x1 result 43 consume 2 -> "fonctionn" level 2
+node 1311 "m" short-set @x1 result 43 consume 3 -> "fonctionnement" level 1
+node 1312 "<" short-set @x1 result 43 consume 2 -> "f\x88te" next 1313
+node 1313 "=licit#s" short-set @x0 result 6 consume 9 -> "f\x82licitions" next 1314
+node 1314 "9" none result 1 consume 2 -> "fin" next 1315
+node 1315 "a2ic4" short-set @x0 result 6 consume 6 -> "fabricien" next 1317
+node 1316 "cilit#s" short-set @x0 result 6 consume 9 -> "facilitions" level 1
+node 1317 "ct:" short-set @x1 result 43 consume 3 -> "facilit\x82" next 1322
+node 1318 "te" short-set @x1 result 43 consume 3 -> "facilit\x82" next 1320
+node 1319 "" short-set @x1 result 43 consume 3 -> "facilit\x82" level 2
+node 1320 "m" short-set @x1 result 43 consume 2 -> "facile" next 1321
+node 1321 "" short-set @x1 result 43 consume 2 -> "facile" level 1
+node 1322 "dm" short-set @x1 result 43 consume 2 -> "fid\x8ale" next 1325
+node 1323 "" short-set @x1 result 43 consume 2 -> "fid\x8ale" next 1324
+node 1324 "t" short-set @x1 result 43 consume 3 -> "fid\x82lit\x82" level 1
+node 1325 "g*" short-set @x1 result 43 consume 3 -> "figuration" next 1327
+node 1326 "" short-set @x1 result 43 consume 2 -> "figure" level 1
+node 1327 "kb\x5cr4" short-set @x0 result 6 consume 6 -> "faubourien" next 1328
+node 1328 "l" short-set @x1 result 43 consume 2 -> "fille" next 1329
+node 1329 "m9" short-set @x1 result 43 consume 3 -> "f\x82minin" next 1332
+node 1330 "n" short-set @x1 result 43 consume 3 -> "f\x82minine" next 1331
+node 1331 "" short-set @x1 result 43 consume 2 -> "femme" level 1
+node 1332 "n" short-set @x1 result 43 consume 2 -> "fortune" next 1333
+node 1333 "o" short-set @x1 result 43 consume 2 -> "force" next 1335
+node 1334 "m" short-set @x1 result 43 consume 2 -> "forc\x82" level 1
+node 1335 "qc" short-set @x1 result 43 consume 3 -> "fr\x82quence" next 1341
+node 1336 "m" short-set @x1 result 43 consume 3 -> "fr\x82quemment" next 1337
+node 1337 ":" short-set @x1 result 43 consume 2 -> "fr\x82quent" next 1338
+node 1338 "e" short-set @x1 result 43 consume 2 -> "fr\x82quent" next 1339
+node 1339 "" short-set @x1 result 43 consume 2 -> "fr\x82quent" next 1340
+node 1340 "*" short-set @x1 result 43 consume 2 -> "fr\x82quent" level 1
+node 1341 "rt" short-set @x1 result 43 consume 3 -> "fraternit\x82" next 1346
+node 1342 "ll" short-set @x1 result 43 consume 2 -> "fratern" next 1345
+node 1343 "m" short-set @x1 result 43 consume 2 -> "fratern" next 1344
+node 1344 "" short-set @x1 result 43 consume 2 -> "fratern" level 2
+node 1345 "" short-set @x1 result 43 consume 2 -> "fr\x8are" level 1
+node 1346 "s" short-set @x0 result 6 consume 2 -> "fils" next 1347
+node 1347 "t" short-set @x4 result 43 consume 2 -> "faut" next 1349
+node 1348 "" short-set @x1 result 43 consume 2 -> "faut" level 1
+node 1349 "u(s4" short-set @x0 result 56 consume 5 -> "fuchsien" next 1350
+node 1350 "v^m" short-set @x1 result 43 consume 2 -> "favor" next 1353
+node 1351 "^" short-set @x1 result 43 consume 2 -> "favor" next 1352
+node 1352 "" short-set @x1 result 43 consume 2 -> "faveur" level 1
+node 1353 "" short-set @x1 result 6 consume 1 -> "faire" end
+node 1354 "" none result 27 consume 1 -> "7" next 1355
+node 1355 "'" none result 1 consume 1 -> "g" next 1356
+node 1356 "!" short-set @x1 result 43 consume 2 -> "gu\x8are" next 1357
+node 1357 "4" short-set @x0 result 4 consume 2 -> "gien" next 1358
+node 1358 "5tilhm" short-set @x1 result 43 consume 7 -> "gentilhomme" next 1360
+node 1359 "tilshms" short-set @x0 result 6 consume 9 -> "gentilshommes" level 1
+node 1360 "8m5" short-set @x0 result 6 consume 4 -> "germen" next 1362
+node 1361 "" short-set @x1 result 43 consume 2 -> "guerre" level 1
+node 1362 ";d4" short-set @x0 result 6 consume 4 -> "gordien" next 1363
+node 1363 "=noty" short-set @x1 result 43 consume 6 -> "g\x82notype" next 1364
+node 1364 "@d4" short-set @x0 result 6 consume 4 -> "gardien" next 1365
+node 1365 "ag4" short-set @x0 result 6 consume 4 -> "gag." next 1369
+node 1366 "lic4" short-set @x0 result 6 consume 6 -> "galicien" next 1368
+node 1367 "il=5" short-set @x0 result 6 consume 7 -> "galil\x82en" level 2
+node 1368 "ribald4" short-set @x0 result 6 consume 9 -> "garibaldien" level 1
+node 1369 "d" short-set @x1 result 43 consume 2 -> "garde" next 1370
+node 1370 "han=5" short-set @x0 result 6 consume 6 -> "ghan\x82en" next 1371
+node 1371 "isc@d4" short-set @x0 result 56 consume 7 -> "giscardien" next 1372
+node 1372 "n*" short-set @x1 result 43 consume 3 -> "g\x82n\x82ralisation" next 1379
+node 1373 "t" short-set @x1 result 43 consume 3 -> "g\x82n\x82ralit\x82" next 1374
+node 1374 "x" short-set @x1 result 43 consume 3 -> "g\x82n\x82raux" next 1375
+node 1375 "m" short-set @x1 result 43 consume 2 -> "g\x82n\x82rale" next 1376
+node 1376 ":" short-set @x1 result 43 consume 2 -> "g\x82n\x82ral" next 1377
+node 1377 "e" short-set @x1 result 43 consume 2 -> "g\x82n\x82ral" next 1378
+node 1378 "" short-set @x1 result 43 consume 2 -> "g\x82n\x82ral" level 1
+node 1379 "rs" short-set @x4 result 43 consume 3 -> "glorieus" next 1383
+node 1380 "sm" short-set @x1 result 43 consume 3 -> "glorieuse" next 1381
+node 1381 "x" short-set @x1 result 43 consume 3 -> "glorieux" next 1382
+node 1382 "" short-set @x1 result 43 consume 2 -> "gloire" level 1
+node 1383 "s" short-set @x4 result 43 consume 2 -> "g\x82n\x82reus" next 1386
+node 1384 "t" short-set @x1 result 43 consume 3 -> "g\x82n\x82rosit\x82" next 1385
+node 1385 "m" short-set @x1 result 43 consume 2 -> "g\x82n\x82reuse" level 1
+node 1386 "uld5" short-set @x0 result 6 consume 5 -> "gulden" next 1387
+node 1387 "v." short-set @x1 result 43 consume 3 -> "gouverneur" next 1393
+node 1388 "l:" short-set @x1 result 43 consume 3 -> "gouvernemental" next 1391
+node 1389 "e" short-set @x1 result 43 consume 3 -> "gouvernemental" next 1390
+node 1390 "" short-set @x1 result 43 consume 3 -> "gouvernemental" level 2
+node 1391 "x" short-set @x1 result 43 consume 3 -> "gouvernementaux" next 1392
+node 1392 "" short-set @x1 result 43 consume 2 -> "gouvernement" level 1
+node 1393 "x" short-set @x1 result 43 consume 2 -> "g\x82n\x82reux" next 1394
+node 1394 "" short-set @x0 result 6 consume 1 -> "qui" end
+node 1395 "" none result 27 consume 1 -> "8" next 1396
+node 1396 "'" none result 1 consume 1 -> "h" next 1397
+node 1397 "8cul=5" short-set @x0 result 6 consume 7 -> "hercul\x82en" next 1401
+node 1398 "cyn4" short-set @x0 result 6 consume 6 -> "hercynien" next 1399
+node 1399 "tz4" short-set @x0 result 56 consume 5 -> "hertzien" next 1400
+node 1400 "" short-set @x1 result 43 consume 2 -> "hier" level 1
+node 1401 "<t" short-set @x1 result 43 consume 3 -> "honn\x88tet\x82" next 1404
+node 1402 "m" short-set @x1 result 43 consume 2 -> "honn\x88te" next 1403
+node 1403 "" short-set @x1 result 43 consume 2 -> "honn\x88te" level 1
+node 1404 "a]t4" short-set @x0 result 6 consume 5 -> "ha\x8btien" next 1410
+node 1405 "\x5cy" short-set @x0 result 6 consume 3 -> "ha\x81" next 1406
+node 1406 "llstaw4" short-set @x0 result 6 consume 9 -> "hallstattien" next 1407
+node 1407 "novr4" short-set @x0 result 6 consume 7 -> "hanovrien" next 1408
+node 1408 "v8s4" short-set @x0 result 6 consume 6 -> "haversien" next 1409
+node 1409 "w/4" short-set @x0 result 6 consume 5 -> "hawaiien" level 1
+node 1410 "b" short-set @x1 result 43 consume 2 -> "habitude" next 1414
+node 1411 "ll" short-set @x1 result 43 consume 2 -> "habitu" level 3
+node 1412 "m" short-set @x1 result 43 consume 2 -> "habitu" next 1413
+node 1413 "" short-set @x1 result 43 consume 2 -> "habitu" level 1
+node 1414 "ds" short-set @x4 result 43 consume 3 -> "hasardeus" next 1419
+node 1415 "x" short-set @x1 result 43 consume 3 -> "hasardeux" next 1416
+node 1416 ":" short-set @x1 result 43 consume 2 -> "hasard" next 1417
+node 1417 "e" short-set @x1 result 43 consume 2 -> "hasard" next 1418
+node 1418 "" short-set @x1 result 43 consume 2 -> "hasard" level 1
+node 1419 "g" short-set @x1 result 43 consume 2 -> "hommage" next 1420
+node 1420 "ippomb" short-set @x1 result 43 consume 7 -> "hippomobile" next 1422
+node 1421 "stor4" short-set @x0 result 1 consume 7 -> "historien" level 1
+node 1422 "l" short-set @x0 result 6 consume 2 -> "h\x82las" next 1423
+node 1423 "m9" short-set @x1 result 43 consume 3 -> "humain" next 1428
+node 1424 "ntr" short-set @x1 result 43 consume 5 -> "humanitaire" next 1427
+node 1425 "t" short-set @x1 result 43 consume 4 -> "humanit\x82" next 1426
+node 1426 "" short-set @x1 result 43 consume 3 -> "humaine" level 2
+node 1427 "" short-set @x1 result 43 consume 2 -> "homme" level 1
+node 1428 "n^m" short-set @x1 result 43 consume 3 -> "honorable" next 1432
+node 1429 "^" short-set @x1 result 43 consume 3 -> "honorable" next 1430
+node 1430 "r" short-set @x1 result 43 consume 3 -> "honoraire" next 1431
+node 1431 "" short-set @x1 result 43 consume 2 -> "honneur" level 1
+node 1432 "pqm" short-set @x1 result 43 consume 3 -> "hypoth\x82tique" next 1435
+node 1433 "q" short-set @x1 result 43 consume 3 -> "hypoth\x82tique" next 1434
+node 1434 "" short-set @x1 result 43 consume 2 -> "hypoth\x8ase" level 1
+node 1435 "rr" short-set @x1 result 6 consume 3 -> "horaire" next 1437
+node 1436 "" short-set @x1 result 43 consume 2 -> "heure" level 1
+node 1437 "s" short-set @x4 result 43 consume 2 -> "heureus" next 1439
+node 1438 "m" short-set @x1 result 43 consume 2 -> "heureuse" level 1
+node 1439 "tqm" short-set @x1 result 43 consume 3 -> "historique" next 1442
+node 1440 "q" short-set @x1 result 43 consume 3 -> "historique" next 1441
+node 1441 "" short-set @x1 result 43 consume 2 -> "histoire" level 1
+node 1442 "uron4" short-set @x0 result 56 consume 6 -> "huronien" next 1443
+node 1443 "v" short-set @x1 result 43 consume 2 -> "hiver" next 1444
+node 1444 "x" short-set @x1 result 43 consume 2 -> "heureux" next 1445
+node 1445 "y?at#s" short-set @x0 result 6 consume 7 -> "hydrations" next 1449
+node 1446 "?klic4" short-set @x0 result 6 consume 8 -> "hydraulicien" next 1447
+node 1447 "m5" short-set @x0 result 6 consume 4 -> "hymen" next 1448
+node 1448 "p8bor=5" short-set @x0 result 6 consume 9 -> "hyperbor\x82en" level 1
+node 1449 "zlt" short-set @x1 result 43 consume 4 -> "horizontalit\x82" next 1456
+node 1450 "lm" short-set @x1 result 43 consume 3 -> "horizontale" next 1454
+node 1451 ":" short-set @x1 result 43 consume 3 -> "horizontal" next 1452
+node 1452 "e" short-set @x1 result 43 consume 3 -> "horizontal" next 1453
+node 1453 "" short-set @x1 result 43 consume 3 -> "horizontal" level 2
+node 1454 "x" short-set @x1 result 43 consume 3 -> "horizontaux" next 1455
+node 1455 "" short-set @x1 result 43 consume 2 -> "horizon" level 1
+node 1456 " .paris4" short-set @x0 result 6 consume 9 -> "sur \x02paris." next 1457
+node 1457 "" short-set @x0 result 6 consume 1 -> "sur" end
+node 1458 "" none result 27 consume 1 -> "9" next 1459
+node 1459 "'" short-set @x0 result 9 consume 1 -> "i" next 1461
+node 1460 "" none result 9 consume 2 -> "i'" level 1
+node 1461 "+" short-set @x1 result 43 consume 2 -> "ion" next 1462
+node 1462 "bm-pc" none result 1 consume 6 -> "ibm-\x0epc" next 1466
+node 1463 "m-.pc" none result 1 consume 7 -> "ibm-\x0epc" level 3
+node 1464 " .pc" none result 1 consume 7 -> "ibm \x0epc" level 4
+node 1465 "..pc" none result 1 consume 8 -> "ibm \x0epc" level 1
+node 1466 "car4" short-set @x0 result 6 consume 5 -> "icarien" next 1467
+node 1467 "d4" short-set @x0 result 1 consume 3 -> "idien" next 1474
+node 1468 "lm" short-set @x1 result 43 consume 3 -> "id\x82ale" next 1472
+node 1469 ":" short-set @x1 result 43 consume 3 -> "id\x82al" next 1470
+node 1470 "e" short-set @x1 result 43 consume 3 -> "id\x82al" next 1471
+node 1471 "" short-set @x1 result 43 consume 3 -> "id\x82al" level 2
+node 1472 "x" short-set @x1 result 43 consume 3 -> "id\x82aux" next 1473
+node 1473 "" short-set @x1 result 43 consume 2 -> "id\x82e" level 1
+node 1474 "g*" short-set @x1 result 43 consume 3 -> "imagination" next 1479
+node 1475 "^m" short-set @x1 result 43 consume 3 -> "imaginable" next 1477
+node 1476 "" short-set @x1 result 43 consume 3 -> "imaginable" level 2
+node 1477 "r" short-set @x1 result 43 consume 3 -> "imaginaire" next 1478
+node 1478 "" short-set @x1 result 43 consume 2 -> "image" level 1
+node 1479 "llgqm" short-set @x1 result 43 consume 5 -> "illogique" next 1481
+node 1480 "lgq" short-set @x1 result 43 consume 5 -> "illogique" level 1
+node 1481 "mit#s" short-set @x0 result 6 consume 6 -> "imitions" next 1486
+node 1482 "m" short-set @x1 result 43 consume 2 -> "imm\x82diate" next 1483
+node 1483 ":" short-set @x1 result 43 consume 2 -> "imm\x82diat" next 1484
+node 1484 "e" short-set @x1 result 43 consume 2 -> "imm\x82diat" next 1485
+node 1485 "" short-set @x1 result 43 consume 2 -> "imm\x82diat" level 1
+node 1486 "n4" short-set @x0 result 4 consume 3 -> "inien" next 1491
+node 1487 "9gc" short-set @x1 result 43 consume 5 -> "inintelligence" level 3
+node 1488 "g:" short-set @x1 result 43 consume 4 -> "inintelligent" level 4
+node 1489 "e" short-set @x1 result 43 consume 4 -> "inintelligent" next 1490
+node 1490 "" short-set @x1 result 43 consume 4 -> "inintelligent" level 1
+node 1491 "on4" short-set @x0 result 6 consume 4 -> "ionien" next 1492
+node 1492 "ran4" short-set @x0 result 56 consume 5 -> "iranien" next 1500
+node 1493 "rf" short-set @x1 result 43 consume 4 -> "irr\x82flexion" level 3
+node 1494 "it#s" short-set @x0 result 6 consume 7 -> "irritions" next 1495
+node 1495 "l^m" short-set @x1 result 43 consume 5 -> "irr\x82alisable" level 4
+node 1496 "^" short-set @x1 result 43 consume 5 -> "irr\x82alisable" next 1497
+node 1497 "l" short-set @x1 result 43 consume 5 -> "irr\x82elle" next 1498
+node 1498 "t" short-set @x1 result 43 consume 5 -> "irr\x82alit\x82" next 1499
+node 1499 "" short-set @x1 result 43 consume 4 -> "irr\x82el" level 1
+node 1500 "s" short-set @x0 result 6 consume 2 -> "ils" next 1501
+node 1501 "tal4" short-set @x0 result 6 consume 5 -> "italien" next 1502
+node 1502 "v)r4" short-set @x0 result 6 consume 5 -> "ivoirien" next 1503
+node 1503 "x" none result 1 consume 2 -> "ix" next 1504
+node 1504 "z" none result 1 consume 2 -> "iz" next 1505
+node 1505 "" short-set @x0 result 6 consume 1 -> "il" next 1506
+node 1506 "5" short-set @x0 result 1 consume 2 -> "ien" end
+node 1507 "" none result 27 consume 1 -> "0" next 1508
+node 1508 "'" short-set @x0 result 9 consume 1 -> "j" next 1510
+node 1509 "" none result 9 consume 2 -> "j'" level 1
+node 1510 ";dan4" short-set @x0 result 56 consume 6 -> "jordanien" next 1511
+node 1511 "c" short-set @x1 result 43 consume 2 -> "justice" next 1512
+node 1512 "d" short-set @x0 result 6 consume 2 -> "jadis" next 1513
+node 1513 "gm" short-set @x1 result 43 consume 2 -> "juge" next 1515
+node 1514 "" short-set @x1 result 43 consume 2 -> "juge" level 1
+node 1515 "m" short-set @x0 result 6 consume 2 -> "jamais" next 1516
+node 1516 "ns" short-set @x0 result 43 consume 2 -> "jeune" next 1518
+node 1517 "" short-set @x0 result 43 consume 2 -> "jeune" level 1
+node 1518 "q'" none result 6 consume 1 -> "jus" next 1520
+node 1519 "" short-set @x0 result 6 consume 2 -> "jusque" level 1
+node 1520 "r" short-set @x1 result 43 consume 2 -> "jour" next 1521
+node 1521 "s" short-set @x4 result 43 consume 2 -> "joyeus" next 1523
+node 1522 "m" short-set @x1 result 43 consume 2 -> "joyeuse" level 1
+node 1523 "tm" short-set @x1 result 43 consume 2 -> "juste" next 1525
+node 1524 "" short-set @x1 result 43 consume 2 -> "juste" level 1
+node 1525 "ul4" short-set @x0 result 6 consume 4 -> "julien" next 1528
+node 1526 "non4" short-set @x0 result 6 consume 6 -> "junonien" next 1527
+node 1527 "ra!4" short-set @x0 result 6 consume 6 -> "jurassien" level 1
+node 1528 "x" short-set @x1 result 43 consume 2 -> "joyeux" next 1529
+node 1529 "" short-set @x0 result 6 consume 1 -> "je" end
+node 1530 "'h" short-set @x0 result 6 consume 3 -> "aujourd'hui" next 1532
+node 1531 "" none result 1 consume 1 -> "k" level 1
+node 1532 "-\x5c" short-set @x0 result 6 consume 3 -> "au-dessous" next 1534
+node 1533 "d" short-set @x0 result 6 consume 3 -> "au-dessus" level 1
+node 1534 "0m" short-set @x1 result 43 consume 3 -> "autrement" next 1536
+node 1535 "" short-set @x1 result 43 consume 2 -> "autre" level 1
+node 1536 "1t4" short-set @x0 result 56 consume 4 -> "kantien" next 1537
+node 1537 "6" short-set @x0 result 6 consume 2 -> "aupr\x8as" next 1538
+node 1538 "_(" short-set @x0 result 6 consume 3 -> "autre chose" next 1543
+node 1539 "c" short-set @x0 result 6 consume 3 -> "au contraire" next 1540
+node 1540 "p" short-set @x0 result 6 consume 3 -> "autre part" next 1541
+node 1541 "q'" none result 6 consume 2 -> "autant " level 3
+node 1542 "" short-set @x0 result 6 consume 3 -> "autant que" level 1
+node 1543 "c" short-set @x1 result 43 consume 2 -> "aucun" next 1544
+node 1544 "e" none result 6 consume 2 -> "ke" next 1545
+node 1545 "f" short-set @x0 result 6 consume 2 -> "autrefois" next 1546
+node 1546 "gustin4" short-set @x0 result 6 consume 8 -> "augustinien" next 1548
+node 1547 "" short-set @x0 result 6 consume 2 -> "kg" level 1
+node 1548 "ilo" none result 1 consume 4 -> "kilo" next 1549
+node 1549 "nm" short-set @x1 result 43 consume 2 -> "aucune" next 1551
+node 1550 "" short-set @x1 result 43 consume 2 -> "aucune" level 1
+node 1551 "olkhoz4" short-set @x0 result 56 consume 8 -> "kolkhozien" next 1552
+node 1552 "p" short-set @x0 result 6 consume 2 -> "auparavant" next 1553
+node 1553 "ql" short-set @x1 result 43 consume 3 -> "auquel" next 1554
+node 1554 "rak5" short-set @x0 result 6 consume 5 -> "kraken" next 1557
+node 1555 "i7ac4" short-set @x0 result 6 consume 7 -> "aurignacien" next 1556
+node 1556 "" short-set @x1 result 43 consume 2 -> "autour" level 1
+node 1557 "s0al4" short-set @x0 result 6 consume 6 -> "australien" next 1560
+node 1558 "0as4" short-set @x0 result 6 consume 6 -> "austrasien" next 1559
+node 1559 "" short-set @x0 result 6 consume 2 -> "aussi" level 1
+node 1560 "tomb" short-set @x1 result 43 consume 5 -> "automobile" next 1563
+node 1561 "or\x5c" short-set @x1 result 43 consume 5 -> "autoroute" next 1562
+node 1562 "" short-set @x0 result 6 consume 2 -> "aussit\x93t" level 1
+node 1563 "xqlls" short-set @x1 result 43 consume 6 -> "auxquelles" next 1566
+node 1564 "qls" short-set @x1 result 43 consume 5 -> "auxquels" next 1565
+node 1565 "" short-set @x0 result 6 consume 2 -> "aux" level 1
+node 1566 "" short-set @x0 result 51 consume 1 -> "au" next 1567
+node 1567 "" short-set @x2 result 51 consume 1 -> "au" next 1568
+node 1568 "" short-set @x3 result 1 consume 1 -> "k" next 1569
+node 1569 "" none result 51 consume 1 -> "au" end
+node 1570 "'" short-set @x0 result 9 consume 1 -> "l" next 1572
+node 1571 "" none result 9 consume 2 -> "l'" level 1
+node 1572 "+don4" short-set @x0 result 56 consume 6 -> "londonien" next 1573
+node 1573 "0" short-set @x1 result 43 consume 2 -> "lettre" next 1574
+node 1574 "2s" short-set @x0 result 6 consume 3 -> "luis" next 1575
+node 1575 "4" short-set @x0 result 6 consume 2 -> "lien" next 1576
+node 1576 "5dm" short-set @x1 result 43 consume 4 -> "lendemain" next 1577
+node 1577 "7" short-set @x1 result 43 consume 2 -> "ligne" next 1578
+node 1578 "9n=5" short-set @x0 result 6 consume 5 -> "linn\x82en" next 1579
+node 1579 "=pidosir5" short-set @x0 result 6 consume 10 -> "l\x82pidosiren" next 1580
+node 1580 "_$" short-set @x0 result 6 consume 3 -> "la plupart" next 1581
+node 1581 "ac=d=mon4" short-set @x0 result 6 consume 10 -> "lac\x82d\x82monien" next 1585
+node 1582 "m@tin4" short-set @x0 result 6 consume 8 -> "lamartinien" next 1583
+node 1583 "ot4" short-set @x0 result 6 consume 5 -> "laotien" next 1584
+node 1584 "s" short-set @x0 result 6 consume 3 -> "las" level 1
+node 1585 "b*" short-set @x1 result 43 consume 3 -> "lib\x82ration" next 1594
+node 1586 "lt" short-set @x1 result 43 consume 4 -> "lib\x82ralit\x82" next 1590
+node 1587 ":" short-set @x1 result 43 consume 3 -> "lib\x82ral" next 1588
+node 1588 "e" short-set @x1 result 43 consume 3 -> "lib\x82ral" next 1589
+node 1589 "" short-set @x1 result 43 consume 3 -> "lib\x82ral" level 2
+node 1590 "t" short-set @x1 result 43 consume 3 -> "libert\x82" next 1591
+node 1591 "x" short-set @x1 result 43 consume 3 -> "lib\x82raux" next 1592
+node 1592 "m" short-set @x1 result 43 consume 2 -> "libre" next 1593
+node 1593 "" short-set @x1 result 43 consume 2 -> "libre" level 1
+node 1594 "d." short-set @x1 result 43 consume 3 -> "lourdeur" next 1599
+node 1595 "m" short-set @x1 result 43 consume 2 -> "lourde" next 1596
+node 1596 ":" short-set @x1 result 43 consume 2 -> "lourd" next 1597
+node 1597 "e" short-set @x1 result 43 consume 2 -> "lourd" next 1598
+node 1598 "" short-set @x1 result 43 consume 2 -> "lourd" level 1
+node 1599 "esb4" short-set @x0 result 6 consume 5 -> "lesbien" next 1600
+node 1600 "gqms" short-set @x0 result 4 consume 4 -> "logiquement" next 1607
+node 1601 "qm" short-set @x0 result 4 consume 4 -> "logiquement" next 1605
+node 1602 "m" short-set @x1 result 43 consume 3 -> "logique" next 1603
+node 1603 "" short-set @x1 result 4 consume 3 -> "logique" next 1604
+node 1604 "" short-set @x1 result 43 consume 3 -> "logique" level 2
+node 1605 "" short-set @x0 result 4 consume 2 -> "logie" next 1606
+node 1606 "s" short-set @x0 result 4 consume 2 -> "logie" level 1
+node 1607 "i(5" short-set @x0 result 6 consume 4 -> "lichen" next 1615
+node 1608 "_iput4" short-set @x0 result 56 consume 8 -> "lilliputien" next 1609
+node 1609 "cit#s" short-set @x0 result 6 consume 7 -> "licitions" next 1610
+node 1610 "gur4" short-set @x0 result 6 consume 6 -> "ligurien" next 1611
+node 1611 "mit#s" short-set @x0 result 6 consume 7 -> "limitions" next 1612
+node 1612 "noty" short-set @x1 result 43 consume 6 -> "linotype" next 1613
+node 1613 "t#s" short-set @x0 result 6 consume 5 -> "litions" level 3
+node 1614 "uan4" short-set @x0 result 6 consume 7 -> "lituanien" level 1
+node 1615 "lls" short-set @x0 result 6 consume 4 -> "lesquelles" next 1620
+node 1616 "l" short-set @x0 result 6 consume 3 -> "laquelle" next 1617
+node 1617 "s" short-set @x0 result 6 consume 3 -> "lesquels" next 1618
+node 1618 "" short-set @x0 result 6 consume 2 -> "lequel" next 1619
+node 1619 "" none result 44 consume 2 -> "elle" level 1
+node 1620 "m5" short-set @x0 result 1 consume 3 -> "lmen" next 1627
+node 1621 "s" short-set @x4 result 43 consume 3 -> "lumineus" next 1624
+node 1622 "t" short-set @x1 result 43 consume 4 -> "luminosit\x82" next 1623
+node 1623 "m" short-set @x1 result 43 consume 3 -> "lumineuse" level 2
+node 1624 "x" short-set @x1 result 43 consume 3 -> "lumineux" next 1625
+node 1625 "" short-set @x1 result 43 consume 2 -> "lumi\x8are" next 1626
+node 1626 "" none result 44 consume 2 -> "ellement" level 1
+node 1627 "n9" short-set @x1 result 43 consume 3 -> "lointain" next 1630
+node 1628 "n" short-set @x1 result 43 consume 3 -> "lointaine" next 1629
+node 1629 "" short-set @x1 result 43 consume 2 -> "loin" level 1
+node 1630 "ocomb" short-set @x1 result 43 consume 6 -> "locomobile" next 1633
+node 1631 "d5" short-set @x0 result 6 consume 4 -> "loden" next 1632
+node 1632 "gic4" short-set @x0 result 6 consume 6 -> "logicien" level 1
+node 1633 "q'" none result 6 consume 1 -> "lors" next 1635
+node 1634 "" short-set @x0 result 6 consume 2 -> "lorsque" level 1
+node 1635 "r" short-set @x1 result 43 consume 2 -> "lecture" next 1636
+node 1636 "t" short-set @x0 result 6 consume 2 -> "longtemps" next 1638
+node 1637 "" none result 44 consume 2 -> "alit\x82" level 1
+node 1638 "ucan4" short-set @x0 result 6 consume 6 -> "lucanien" next 1641
+node 1639 "mity" short-set @x1 result 43 consume 6 -> "lumitype" next 1640
+node 1640 "sitan4" short-set @x0 result 6 consume 8 -> "lusitanien" level 1
+node 1641 "v" short-set @x1 result 43 consume 2 -> "livre" next 1642
+node 1642 "yc=5" short-set @x0 result 6 consume 5 -> "lyc\x82en" next 1644
+node 1643 "d4" short-set @x0 result 6 consume 4 -> "lydien" level 1
+node 1644 "(" none result 1 consume 2 -> "l\x85" next 1645
+node 1645 "" none result 44 consume 1 -> "el" next 1646
+node 1646 " " none result 6 consume 1 -> "le" next 1647
+node 1647 "," none result 6 consume 1 -> "l" next 1648
+node 1648 "" short-set @x0 result 6 consume 1 -> "le" end
+node 1649 "'" short-set @x0 result 9 consume 1 -> "m" next 1651
+node 1650 "" none result 9 consume 2 -> "m'" level 1
+node 1651 "!" short-set @x1 result 43 consume 2 -> "m\x8are" next 1652
+node 1652 "#rs" short-set @x0 result 1 consume 3 -> "missionnaire" next 1656
+node 1653 "r" short-set @x0 result 1 consume 3 -> "missionnaire" next 1654
+node 1654 "s" short-set @x0 result 1 consume 2 -> "mission" next 1655
+node 1655 "" short-set @x0 result 1 consume 2 -> "mission" level 1
+node 1656 "$*" short-set @x1 result 43 consume 3 -> "multiplication" next 1660
+node 1657 "." short-set @x1 result 43 consume 3 -> "multiplicateur" next 1658
+node 1658 "t" short-set @x1 result 43 consume 3 -> "multiplicit\x82" next 1659
+node 1659 "" short-set @x1 result 43 consume 2 -> "multiple" level 1
+node 1660 "+gol4" short-set @x0 result 6 consume 6 -> "mongolien" next 1662
+node 1661 "s7" short-set @x1 result 43 consume 4 -> "monseigneur" level 1
+node 1662 "0" short-set @x0 result 1 consume 2 -> "mettre" next 1663
+node 1663 "1c4" short-set @x0 result 1 consume 4 -> "mancien" next 1666
+node 1664 "d=5" short-set @x0 result 6 consume 5 -> "mand\x82en" level 3
+node 1665 "at#s" short-set @x0 result 6 consume 7 -> "mandations" level 1
+node 1666 "4" short-set @x0 result 6 consume 2 -> "mien" next 1667
+node 1667 "5m" short-set @x1 result 43 consume 3 -> "momentan\x82ment" next 1669
+node 1668 "" short-set @x1 result 43 consume 2 -> "moment" level 1
+node 1669 "7c" short-set @x1 result 43 consume 3 -> "magnificence" next 1672
+node 1670 "m" short-set @x1 result 43 consume 2 -> "magnifique" next 1671
+node 1671 "" short-set @x1 result 43 consume 2 -> "magnifique" level 1
+node 1672 "8guz" short-set @x0 result 6 consume 5 -> "merguez" next 1673
+node 1673 "9" short-set @x0 result 6 consume 2 -> "moins" next 1674
+node 1674 "=3nc" short-set @x1 result 43 consume 5 -> "m\x82connaissance" next 1685
+node 1675 "3n" short-set @x1 result 43 consume 4 -> "m\x82conna\x8ctre" next 1676
+node 1676 "dit8ran=5" short-set @x0 result 6 consume 11 -> "m\x82diterran\x82en" next 1678
+node 1677 "it#s" short-set @x0 result 6 consume 7 -> "m\x82ditions" level 2
+node 1678 "gd" short-set @x1 result 43 consume 4 -> "m\x82garde" next 1679
+node 1679 "lan=s4" short-set @x0 result 6 consume 8 -> "m\x82lan\x82sien" next 1680
+node 1680 "m!" short-set @x1 result 43 consume 4 -> "m\x82m\x8are" next 1681
+node 1681 "rit#s" short-set @x0 result 6 consume 7 -> "m\x82ritions" next 1682
+node 1682 "sopotam4" short-set @x0 result 6 consume 10 -> "m\x82sopotamien" next 1684
+node 1683 "" short-set @x3 result 42 consume 3 -> "m\x82s" level 2
+node 1684 "ton4" short-set @x0 result 6 consume 6 -> "m\x82tonien" level 1
+node 1685 "@mit#s" short-set @x0 result 6 consume 7 -> "marmitions" next 1688
+node 1686 "mor=5" short-set @x0 result 6 consume 7 -> "marmor\x82en" next 1687
+node 1687 "t4" short-set @x0 result 6 consume 4 -> "martien" level 1
+node 1688 "]" short-set @x0 result 6 consume 2 -> "malgr\x82" next 1689
+node 1689 "a7=s4" short-set @x0 result 6 consume 6 -> "magn\x82sien" next 1706
+node 1690 "9t4t" short-set @x0 result 6 consume 6 -> "maintient" next 1695
+node 1691 "t4" short-set @x0 result 6 consume 5 -> "maintien" level 4
+node 1692 "n:" short-set @x1 result 43 consume 5 -> "maintenir" level 5
+node 1693 "e" short-set @x1 result 43 consume 5 -> "maintenir" next 1694
+node 1694 "" short-set @x1 result 43 consume 5 -> "maintenir" level 2
+node 1695 "?=por4" short-set @x0 result 6 consume 8 -> "madr\x82porien" next 1696
+node 1696 "c=don4" short-set @x0 result 6 consume 8 -> "mac\x82donien" next 1697
+node 1697 "ghz5" short-set @x0 result 6 consume 6 -> "maghzen" next 1699
+node 1698 "ic4" short-set @x0 result 6 consume 6 -> "magicien" level 2
+node 1699 "l4" short-set @x0 result 6 consume 4 -> "mal." next 1704
+node 1700 "thus4" short-set @x0 result 56 consume 8 -> "malthusien" next 1701
+node 1701 "h<t" short-set @x1 result 43 consume 6 -> "malhonn\x88tet\x82" level 4
+node 1702 "<m" short-set @x1 result 43 consume 5 -> "malhonn\x88te" level 5
+node 1703 "" short-set @x1 result 43 consume 5 -> "malhonn\x88te" level 2
+node 1704 "n[v" short-set @x1 result 43 consume 5 -> "manoeuvre" level 3
+node 1705 "i(=5" short-set @x0 result 6 consume 7 -> "manich\x82en" level 1
+node 1706 "b*" short-set @x1 result 43 consume 3 -> "mobilisation" next 1709
+node 1707 "t" short-set @x1 result 43 consume 3 -> "mobilit\x82" next 1708
+node 1708 "" short-set @x1 result 43 consume 2 -> "mobile" level 1
+node 1709 "c" short-set @x0 result 6 consume 2 -> "merci" next 1710
+node 1710 "ds'" short-set @x0 result 6 consume 4 -> "\x02mmes." next 1714
+node 1711 "s" short-set @x0 result 6 consume 3 -> "mesdames" next 1712
+node 1712 "'" short-set @x0 result 6 consume 3 -> "\x02mme." next 1713
+node 1713 "" short-set @x0 result 6 consume 2 -> "madame" level 1
+node 1714 "hs" short-set @x4 result 43 consume 3 -> "malheureus" next 1718
+node 1715 "sm" short-set @x1 result 43 consume 3 -> "malheureuse" next 1716
+node 1716 "x" short-set @x1 result 43 consume 3 -> "malheureux" next 1717
+node 1717 "" short-set @x1 result 43 consume 2 -> "malheur" level 1
+node 1718 "i3ob4" short-set @x0 result 6 consume 6 -> "microbien" next 1722
+node 1719 "l=s4" short-set @x0 result 6 consume 6 -> "mil\x82sien" level 3
+node 1720 "ic4" short-set @x0 result 6 consume 6 -> "milicien" level 4
+node 1721 "t#s" short-set @x0 result 6 consume 7 -> "militions" level 1
+node 1722 "l:" short-set @x1 result 43 consume 2 -> "meilleur" next 1725
+node 1723 "e" short-set @x1 result 43 consume 2 -> "meilleur" next 1724
+node 1724 "" short-set @x1 result 43 consume 2 -> "meilleur" level 1
+node 1725 "ms'" short-set @x0 result 6 consume 4 -> "\x02mlles." next 1729
+node 1726 "s" short-set @x0 result 6 consume 3 -> "mesdemoiselles" next 1727
+node 1727 "'" short-set @x0 result 6 consume 3 -> "\x02mlle." next 1728
+node 1728 "" short-set @x0 result 6 consume 2 -> "mademoiselle" level 1
+node 1729 "n" short-set @x1 result 43 consume 2 -> "mani\x8are" next 1730
+node 1730 "onoty" short-set @x1 result 43 consume 6 -> "monotype" next 1731
+node 1731 "q" short-set @x1 result 43 consume 2 -> "musique" next 1732
+node 1732 "rs'" short-set @x0 result 6 consume 4 -> "\x02mrs." next 1736
+node 1733 "s" short-set @x0 result 6 consume 3 -> "messieurs" next 1734
+node 1734 "'" short-set @x0 result 6 consume 3 -> "\x02mr." next 1735
+node 1735 "" short-set @x0 result 6 consume 2 -> "monsieur" level 1
+node 1736 "ss7s" short-set @x0 result 6 consume 5 -> "messeigneurs" next 1738
+node 1737 "" short-set @x0 result 6 consume 2 -> "mes" level 1
+node 1738 "t" short-set @x0 result 6 consume 2 -> "maintenant" next 1739
+node 1739 "ulti" short-set @x2 result 42 consume 5 -> "multi" next 1741
+node 1740 "sic4" short-set @x0 result 6 consume 6 -> "musicien" level 1
+node 1741 "v:" short-set @x1 result 43 consume 2 -> "mauvais" next 1744
+node 1742 "e" short-set @x1 result 43 consume 2 -> "mauvais" next 1743
+node 1743 "" short-set @x1 result 43 consume 2 -> "mauvais" level 1
+node 1744 "x" short-set @x0 result 6 consume 2 -> "mieux" next 1745
+node 1745 "ys" short-set @x4 result 43 consume 3 -> "myst\x82rieus" next 1749
+node 1746 "sm" short-set @x1 result 43 consume 3 -> "myst\x82rieuse" next 1747
+node 1747 "x" short-set @x1 result 43 consume 3 -> "myst\x82rieux" next 1748
+node 1748 "" short-set @x1 result 43 consume 2 -> "myst\x8are" level 1
+node 1749 "" none result 44 consume 1 -> "ment" next 1750
+node 1750 "" short-set @x0 result 6 consume 1 -> "me" end
+node 1751 "'o" short-set @x0 result 6 consume 3 -> "n\xf8" next 1754
+node 1752 "" short-set @x0 result 9 consume 1 -> "n" next 1753
+node 1753 "" none result 9 consume 2 -> "n'" level 1
+node 1754 "*lt" short-set @x1 result 43 consume 4 -> "nationalit\x82" next 1760
+node 1755 "l:" short-set @x1 result 43 consume 3 -> "national" next 1758
+node 1756 "e" short-set @x1 result 43 consume 3 -> "national" next 1757
+node 1757 "" short-set @x1 result 43 consume 3 -> "national" level 2
+node 1758 "x" short-set @x1 result 43 consume 3 -> "nationaux" next 1759
+node 1759 "" short-set @x1 result 43 consume 2 -> "nation" level 1
+node 1760 "0" short-set @x0 result 6 consume 2 -> "notre" next 1761
+node 1761 "?" short-set @x1 result 43 consume 2 -> "n\x93tre" next 1762
+node 1762 "_s" short-set @x0 result 6 consume 3 -> "non seulement" next 1763
+node 1763 ";mal4" short-set @x0 result 6 consume 6 -> "normalien" next 1764
+node 1764 "=ocom4" short-set @x0 result 6 consume 7 -> "n\x82ocomien" next 1766
+node 1765 "ron4" short-set @x0 result 6 consume 6 -> "n\x82ronien" level 1
+node 1766 "\x22s04" short-set @x0 result 6 consume 5 -> "neustrien" next 1767
+node 1767 "apol=on4" short-set @x0 result 56 consume 9 -> "napol\x82onien" next 1769
+node 1768 "zar=5" short-set @x0 result 6 consume 7 -> "nazar\x82en" level 1
+node 1769 "bse" short-set @x1 result 43 consume 2 -> "nombr" next 1773
+node 1770 "s:" short-set @x1 result 43 consume 2 -> "nombr" next 1771
+node 1771 "x" short-set @x1 result 43 consume 2 -> "nombr" next 1772
+node 1772 "" short-set @x1 result 43 consume 2 -> "nombre" level 1
+node 1773 "cts" short-set @x4 result 43 consume 4 -> "n\x82cessiteus" next 1780
+node 1774 "tx" short-set @x1 result 43 consume 4 -> "n\x82cessiteux" next 1778
+node 1775 ":" short-set @x1 result 43 consume 3 -> "n\x82cessit\x82" next 1776
+node 1776 "e" short-set @x1 result 43 consume 3 -> "n\x82cessit\x82" next 1777
+node 1777 "" short-set @x1 result 43 consume 3 -> "n\x82cessit\x82" level 2
+node 1778 "m" short-set @x1 result 43 consume 2 -> "n\x82cessaire" next 1779
+node 1779 "" short-set @x1 result 43 consume 2 -> "n\x82cessaire" level 1
+node 1780 "estor4" short-set @x0 result 56 consume 7 -> "nestorien" next 1784
+node 1781 "ws" short-set @x0 result 6 consume 4 -> "news" level 3
+node 1782 "ton4" short-set @x0 result 56 consume 7 -> "newtonien" level 4
+node 1783 "+" short-set @x0 result 6 consume 5 -> "newton" level 1
+node 1784 "g" short-set @x1 result 43 consume 2 -> "nagu\x8are" next 1785
+node 1785 "i0at#s" short-set @x0 result 6 consume 7 -> "nitrations" next 1789
+node 1786 "c4" short-set @x0 result 1 consume 4 -> "nicien" next 1787
+node 1787 "etzs(=5" short-set @x0 result 6 consume 9 -> "nietzsch\x82en" next 1788
+node 1788 "z" short-set @x0 result 6 consume 3 -> "niez" level 1
+node 1789 "ll" short-set @x1 result 43 consume 3 -> "nouvelle" next 1792
+node 1790 "m" short-set @x1 result 43 consume 2 -> "nouvelle" next 1791
+node 1791 "" short-set @x1 result 43 consume 2 -> "nouvel" level 1
+node 1792 "m" short-set @x0 result 6 consume 2 -> "n\x82anmoins" next 1793
+node 1793 "s" short-set @x0 result 6 consume 2 -> "nos" next 1794
+node 1794 "t" short-set @x1 result 43 consume 2 -> "nature" next 1798
+node 1795 "ll" short-set @x1 result 43 consume 2 -> "natur" level 3
+node 1796 "m" short-set @x1 result 43 consume 2 -> "natur" next 1797
+node 1797 "" short-set @x1 result 43 consume 2 -> "natur" level 1
+node 1798 "vt" short-set @x1 result 6 consume 3 -> "nouveaut\x82" next 1801
+node 1799 "x" short-set @x0 result 6 consume 3 -> "nouveaux" next 1800
+node 1800 "" short-set @x0 result 6 consume 2 -> "nouveau" level 1
+node 1801 "" short-set @x0 result 6 consume 1 -> "ne" end
+node 1802 "" none result 15 consume 1 -> "\xf8" next 1803
+node 1803 "'" none result 1 consume 1 -> "o" next 1804
+node 1804 "]d4" short-set @x0 result 1 consume 4 -> "o\x8bdien" next 1805
+node 1805 "as4" short-set @x0 result 6 consume 4 -> "oasien" next 1806
+node 1806 "b." short-set @x1 result 43 consume 3 -> "observateur" next 1813
+node 1807 "t4t" short-set @x0 result 6 consume 5 -> "obtient" next 1811
+node 1808 "n:" short-set @x1 result 43 consume 4 -> "obtenir" level 4
+node 1809 "e" short-set @x1 result 43 consume 4 -> "obtenir" next 1810
+node 1810 "" short-set @x1 result 43 consume 4 -> "obtenir" level 2
+node 1811 "s" short-set @x0 result 43 consume 2 -> "observation" next 1812
+node 1812 "" short-set @x0 result 43 consume 2 -> "observation" level 1
+node 1813 "c=an4" short-set @x0 result 6 consume 6 -> "oc\x82anien" next 1818
+node 1814 "" short-set @x1 result 43 consume 2 -> "occasion" next 1815
+node 1815 "ll" short-set @x1 result 43 consume 2 -> "occasionn" level 3
+node 1816 "m" short-set @x1 result 43 consume 2 -> "occasionn" next 1817
+node 1817 "" short-set @x1 result 43 consume 2 -> "occasionn" level 1
+node 1818 "fs" short-set @x4 result 43 consume 3 -> "officieus" next 1825
+node 1819 "sm" short-set @x1 result 43 consume 3 -> "officieuse" next 1820
+node 1820 "x" short-set @x1 result 43 consume 3 -> "officieux" next 1821
+node 1821 "" short-set @x1 result 43 consume 2 -> "office" next 1822
+node 1822 "ll" short-set @x1 result 43 consume 2 -> "offici" level 3
+node 1823 "m" short-set @x1 result 43 consume 2 -> "offici" next 1824
+node 1824 "" short-set @x1 result 43 consume 2 -> "offici" level 1
+node 1825 "glt" short-set @x1 result 43 consume 4 -> "originalit\x82" next 1834
+node 1826 "lm" short-set @x1 result 43 consume 3 -> "originale" next 1830
+node 1827 ":" short-set @x1 result 43 consume 3 -> "original" next 1828
+node 1828 "e" short-set @x1 result 43 consume 3 -> "original" next 1829
+node 1829 "" short-set @x1 result 43 consume 3 -> "original" level 2
+node 1830 "rm" short-set @x1 result 43 consume 3 -> "originaire" next 1832
+node 1831 "" short-set @x1 result 43 consume 3 -> "originaire" level 2
+node 1832 "x" short-set @x1 result 43 consume 3 -> "originaux" next 1833
+node 1833 "" short-set @x1 result 43 consume 2 -> "origine" level 1
+node 1834 "j#" short-set @x1 result 43 consume 3 -> "objection" next 1840
+node 1835 "f" short-set @x1 result 43 consume 3 -> "objectif" next 1836
+node 1836 "vt" short-set @x1 result 43 consume 4 -> "objectivit\x82" next 1839
+node 1837 "m" short-set @x1 result 43 consume 3 -> "objective" next 1838
+node 1838 "" short-set @x1 result 43 consume 3 -> "objective" level 2
+node 1839 "" short-set @x1 result 43 consume 2 -> "objet" level 1
+node 1840 "lymp4" short-set @x0 result 6 consume 6 -> "olympien" next 1841
+node 1841 "m#" short-set @x1 result 43 consume 3 -> "omission" next 1843
+node 1842 "0" short-set @x1 result 43 consume 3 -> "omettre" level 1
+node 1843 "n4" short-set @x0 result 4 consume 3 -> "onien" next 1844
+node 1844 "p" short-set @x1 result 43 consume 2 -> "opinion" next 1845
+node 1845 "rator4" short-set @x0 result 6 consume 7 -> "oratorien" next 1847
+node 1846 "ic4" short-set @x0 result 1 consume 5 -> "oricien" level 1
+node 1847 "var4" short-set @x0 result 6 consume 5 -> "ovarien" next 1848
+node 1848 "x" none result 1 consume 2 -> "ox" next 1849
+node 1849 "z" none result 1 consume 2 -> "oz" next 1850
+node 1850 ")" short-set @x0 result 6 consume 2 -> "o\x97" next 1851
+node 1851 "" short-set @x0 result 6 consume 1 -> "nous" end
+node 1852 "'" none result 1 consume 1 -> "p" next 1853
+node 1853 "!" short-set @x1 result 6 consume 2 -> "p\x8are" next 1854
+node 1854 "$m" short-set @x1 result 43 consume 2 -> "peuple" next 1856
+node 1855 "" short-set @x1 result 43 consume 2 -> "peuple" level 1
+node 1856 ")" short-set @x1 result 43 consume 2 -> "pourquoi" next 1857
+node 1857 "-<" short-set @x0 result 6 consume 3 -> "peut-\x88tre" next 1860
+node 1858 "\x5c" short-set @x0 result 6 consume 3 -> "par-dessous" next 1859
+node 1859 "d" short-set @x0 result 6 consume 3 -> "par-dessus" level 1
+node 1860 "2se" short-set @x1 result 43 consume 4 -> "puise" next 1861
+node 1861 "5f" short-set @x1 result 43 consume 3 -> "pensif" next 1866
+node 1862 "nsylvan4" short-set @x0 result 6 consume 10 -> "pennsylvanien" next 1863
+node 1863 "vm" short-set @x1 result 43 consume 3 -> "pensive" next 1865
+node 1864 "" short-set @x1 result 43 consume 3 -> "pensive" level 2
+node 1865 "" short-set @x1 result 6 consume 2 -> "pens\x82e" level 1
+node 1866 "8m#r" short-set @x1 result 43 consume 5 -> "permissionnaire" next 1870
+node 1867 "m#" short-set @x1 result 43 consume 4 -> "permission" level 3
+node 1868 "0" short-set @x1 result 43 consume 4 -> "permettre" next 1869
+node 1869 "4" short-set @x0 result 6 consume 4 -> "permien" level 1
+node 1870 "=l=5" short-set @x0 result 6 consume 5 -> "p\x82l\x82en" next 1874
+node 1871 "lop+n=s4" short-set @x0 result 6 consume 10 -> "p\x82loponn\x82sien" next 1872
+node 1872 "p!" short-set @x1 result 43 consume 4 -> "p\x82p\x8are" next 1873
+node 1873 "ri%it#s" short-set @x0 result 6 consume 9 -> "p\x82riclitions" level 1
+node 1874 "@na!4" short-set @x0 result 6 consume 6 -> "parnassien" next 1881
+node 1875 "s" short-set @x0 result 6 consume 3 -> "pars" next 1876
+node 1876 "tr" short-set @x1 result 43 consume 4 -> "parterre" next 1877
+node 1877 "v4t" short-set @x0 result 6 consume 5 -> "parvient" level 3
+node 1878 "n:" short-set @x1 result 43 consume 4 -> "parvenir" level 4
+node 1879 "e" short-set @x1 result 43 consume 4 -> "parvenir" next 1880
+node 1880 "" short-set @x1 result 43 consume 4 -> "parvenir" level 1
+node 1881 "_(_p" short-set @x0 result 6 consume 5 -> "peu \x85 peu" next 1888
+node 1882 "a_d" short-set @x0 result 6 consume 5 -> "pour ainsi dire" next 1883
+node 1883 "c" short-set @x0 result 6 consume 3 -> "par cons\x82quent" next 1884
+node 1884 "e" short-set @x0 result 6 consume 3 -> "par exemple" next 1885
+node 1885 "q'" none result 6 consume 2 -> "parce " next 1887
+node 1886 "" short-set @x0 result 6 consume 3 -> "parce que" level 2
+node 1887 "s" short-set @x0 result 6 consume 3 -> "par suite" level 1
+node 1888 ">n" short-set @x0 result 6 consume 3 -> "paen" next 1889
+node 1889 "alestin4" short-set @x0 result 6 consume 9 -> "palestinien" next 1902
+node 1890 "lpit#s" short-set @x0 result 6 consume 8 -> "palpitions" next 1892
+node 1891 "ud=5" short-set @x0 result 6 consume 7 -> "palud\x82en" level 2
+node 1892 "r)!4" short-set @x0 result 6 consume 6 -> "paroissien" next 1896
+node 1893 "asit#s" short-set @x0 result 6 consume 9 -> "parasitions" next 1894
+node 1894 "e" short-set @x0 result 6 consume 4 -> "pare" next 1895
+node 1895 "is4" short-set @x0 result 56 consume 6 -> "parisien" level 2
+node 1896 "scal4" short-set @x0 result 56 consume 7 -> "pascalien" next 1899
+node 1897 "t\x22r4" short-set @x0 result 56 consume 7 -> "pasteurien" level 4
+node 1898 "or4" short-set @x0 result 6 consume 7 -> "pastorien" level 2
+node 1899 "t4t" short-set @x0 result 6 consume 5 -> "patient" next 1901
+node 1900 "rick" none result 1 consume 7 -> "patrick" level 2
+node 1901 "" short-set @x0 result 6 consume 2 -> "partout" level 1
+node 1902 "bt" short-set @x1 result 43 consume 3 -> "possibilit\x82" next 1904
+node 1903 "" short-set @x1 result 43 consume 2 -> "possible" level 1
+node 1904 "c" short-set @x1 result 43 consume 2 -> "puissance" next 1905
+node 1905 "d:" short-set @x1 result 43 consume 2 -> "pendant" next 1908
+node 1906 "e" short-set @x1 result 43 consume 2 -> "pendant" next 1907
+node 1907 "" short-set @x1 result 43 consume 2 -> "pendant" level 1
+node 1908 "e:" short-set @x1 result 43 consume 2 -> "petit" next 1912
+node 1909 "ct5" short-set @x0 result 6 consume 5 -> "pecten" next 1910
+node 1910 "e" short-set @x1 result 43 consume 2 -> "petit" next 1911
+node 1911 "" short-set @x1 result 43 consume 2 -> "petit" level 1
+node 1912 "f" short-set @x0 result 6 consume 2 -> "parfois" next 1913
+node 1913 "h@mac4" short-set @x0 result 1 consume 7 -> "pharmacien" next 1918
+node 1914 "araon4" short-set @x0 result 6 consume 8 -> "pharaonien" next 1916
+node 1915 "ris4" short-set @x0 result 6 consume 7 -> "pharisien" level 2
+node 1916 "oc=5" short-set @x0 result 6 consume 6 -> "phoc\x82en" next 1917
+node 1917 "ysic4" short-set @x0 result 1 consume 7 -> "physicien" level 1
+node 1918 "kl4" short-set @x0 result 56 consume 4 -> "paulien" next 1920
+node 1919 "lic4" short-set @x0 result 6 consume 6 -> "paulicien" level 1
+node 1920 "lrt" short-set @x1 result 43 consume 4 -> "particularit\x82" next 1924
+node 1921 "rm" short-set @x1 result 43 consume 3 -> "particuli\x8are" next 1923
+node 1922 "" short-set @x1 result 43 consume 3 -> "particuli\x8are" level 2
+node 1923 "" short-set @x1 result 43 consume 2 -> "particulier" level 1
+node 1924 "m" short-set @x0 result 6 consume 2 -> "parmi" next 1925
+node 1925 "ng" short-set @x1 result 43 consume 3 -> "personnage" next 1931
+node 1926 "ll" short-set @x1 result 43 consume 4 -> "personnelle" next 1930
+node 1927 "t" short-set @x1 result 43 consume 4 -> "personnalit\x82" next 1928
+node 1928 "m" short-set @x1 result 43 consume 3 -> "personnelle" next 1929
+node 1929 "" short-set @x1 result 43 consume 3 -> "personnel" level 2
+node 1930 "" short-set @x1 result 43 consume 2 -> "personne" level 1
+node 1931 "o_5" short-set @x0 result 6 consume 4 -> "pollen" next 1935
+node 1932 "lyn=s4" short-set @x0 result 6 consume 8 -> "polyn\x82sien" next 1933
+node 1933 "stdat#s" short-set @x0 result 6 consume 9 -> "postdations" next 1934
+node 1934 "" short-set @x0 result 6 consume 2 -> "pourtant" level 1
+node 1935 "prt" short-set @x1 result 43 consume 4 -> "popularit\x82" next 1941
+node 1936 "rm" short-set @x1 result 43 consume 3 -> "populaire" next 1938
+node 1937 "" short-set @x1 result 43 consume 3 -> "populaire" level 2
+node 1938 "s" short-set @x4 result 43 consume 3 -> "populeus" next 1939
+node 1939 "x" short-set @x1 result 43 consume 3 -> "populeux" next 1940
+node 1940 "" short-set @x1 result 43 consume 2 -> "population" level 1
+node 1941 "q'" none result 6 consume 1 -> "puis" next 1943
+node 1942 "" short-set @x0 result 6 consume 2 -> "puisque" level 1
+node 1943 "r" short-set @x1 result 43 consume 2 -> "parole" next 1944
+node 1944 "s" short-set @x0 result 6 consume 2 -> "pas" next 1945
+node 1945 "t" short-set @x4 result 43 consume 2 -> "point" next 1947
+node 1946 "" short-set @x1 result 43 consume 2 -> "point" level 1
+node 1947 "ub4" short-set @x0 result 6 consume 4 -> "pubien" next 1948
+node 1948 "vt" short-set @x1 result 43 consume 3 -> "pauvret\x82" next 1951
+node 1949 "m" short-set @x1 result 43 consume 2 -> "pauvre" next 1950
+node 1950 "" short-set @x1 result 43 consume 2 -> "pauvre" level 1
+node 1951 "wp=4" short-set @x0 result 6 consume 5 -> "pomp\x82ien" next 1952
+node 1952 "ygm=5" short-set @x0 result 6 consume 6 -> "pygm\x82en" next 1955
+node 1953 "r=n=5" short-set @x0 result 6 consume 7 -> "pyr\x82n\x82en" level 3
+node 1954 "rhon4" short-set @x0 result 6 consume 8 -> "pyrrhonien" level 1
+node 1955 "" short-set @x0 result 6 consume 1 -> "par" end
+node 1956 "'" none result 18 consume 2 -> "qu'" next 1957
+node 1957 "#r" short-set @x1 result 43 consume 3 -> "questionnaire" next 1964
+node 1958 "" short-set @x1 result 43 consume 2 -> "question" next 1959
+node 1959 "." short-set @x1 result 43 consume 2 -> "questionn" next 1960
+node 1960 "s:" short-set @x1 result 43 consume 2 -> "questionn" next 1963
+node 1961 "e" short-set @x1 result 43 consume 2 -> "questionn" next 1962
+node 1962 "m" short-set @x1 result 43 consume 2 -> "questionn" level 2
+node 1963 "x" short-set @x1 result 43 consume 2 -> "questionn" level 1
+node 1964 ")q'" none result 6 consume 2 -> "quoi" next 1965
+node 1965 "+" short-set @x1 result 43 consume 2 -> "quiconque" next 1966
+node 1966 "_(" short-set @x0 result 6 consume 3 -> "quelque chose" next 1969
+node 1967 "p" short-set @x0 result 6 consume 3 -> "quelque part" next 1968
+node 1968 "t" short-set @x0 result 6 consume 3 -> "quelque temps" level 1
+node 1969 "a?i5nal:" short-set @x1 result 43 consume 8 -> "quadriennal" next 1974
+node 1970 "?i5nale" short-set @x1 result 43 consume 8 -> "quadriennal" next 1973
+node 1971 "i5nal" short-set @x1 result 43 consume 8 -> "quadriennal" level 4
+node 1972 "5nkx" short-set @x1 result 43 consume 8 -> "quadriennaux" level 2
+node 1973 "t;z4" short-set @x0 result 6 consume 6 -> "quatorzien" level 1
+node 1974 "c" short-set @x1 result 43 consume 2 -> "quelconque" next 1975
+node 1975 "d" short-set @x0 result 6 consume 2 -> "quand" next 1976
+node 1976 "e" short-set @x0 result 6 consume 2 -> "quoique" next 1977
+node 1977 "f" short-set @x0 result 6 consume 2 -> "quelquefois" next 1978
+node 1978 "ll" short-set @x1 result 6 consume 3 -> "quelle" next 1981
+node 1979 "t" short-set @x1 result 43 consume 3 -> "qualit\x82" next 1980
+node 1980 "" short-set @x1 result 6 consume 2 -> "quel" level 1
+node 1981 "ms" short-set @x0 result 4 consume 2 -> "quement" next 1983
+node 1982 "" short-set @x0 result 4 consume 2 -> "quement" level 1
+node 1983 "q'" none result 6 consume 1 -> "quel" next 1985
+node 1984 "" short-set @x1 result 6 consume 2 -> "quelque" level 1
+node 1985 "s" short-set @x0 result 4 consume 1 -> "que" next 1986
+node 1986 "tt" short-set @x1 result 43 consume 3 -> "quantit\x82" next 1988
+node 1987 "" short-set @x1 result 43 consume 2 -> "quant" level 1
+node 1988 "u'" none result 9 consume 3 -> "qu'" next 1990
+node 1989 "" none result 1 consume 1 -> "q" level 1
+node 1990 "" short-set @x0 result 1 consume 1 -> "que" next 1991
+node 1991 "" short-set @x3 result 51 consume 1 -> "qu" end
+node 1992 "'" none result 1 consume 1 -> "r" next 1993
+node 1993 "+^m" short-set @x1 result 43 consume 2 -> "raisonn" next 1997
+node 1994 "^" short-set @x1 result 43 consume 2 -> "raisonn" next 1995
+node 1995 "m" short-set @x1 result 43 consume 3 -> "raisonnement" next 1996
+node 1996 "" short-set @x1 result 43 consume 2 -> "raison" level 1
+node 1997 "5c0" short-set @x1 result 43 consume 4 -> "rencontre" next 2003
+node 1998 "fo" short-set @x1 result 43 consume 4 -> "renforce" next 1999
+node 1999 " " none result 43 consume 2 -> "renseignement" next 2000
+node 2000 "0" class c04 result 43 consume 2 -> "ren" next 2001
+node 2001 "30" class c04 result 43 consume 2 -> "ren" next 2002
+node 2002 "" short-set @x1 result 43 consume 2 -> "renseignement" level 1
+node 2003 "<." short-set @x1 result 43 consume 2 -> "r\x88v" next 2009
+node 2004 "s:" short-set @x1 result 43 consume 2 -> "r\x88v" next 2007
+node 2005 "e" short-set @x1 result 43 consume 2 -> "r\x88v" next 2006
+node 2006 "m" short-set @x1 result 43 consume 2 -> "r\x88v" level 2
+node 2007 "x" short-set @x1 result 43 consume 2 -> "r\x88v" next 2008
+node 2008 "" short-set @x1 result 43 consume 2 -> "r\x88ve" level 1
+node 2009 "=(d" short-set @x1 result 43 consume 4 -> "r\x82chaud" next 2022
+node 2010 "=m#" short-set @x1 result 43 consume 5 -> "r\x82\x82mission" next 2012
+node 2011 "m0" short-set @x1 result 43 consume 5 -> "r\x82\x82mettre" level 2
+node 2012 "[6" short-set @x1 result 43 consume 4 -> "r\x82impression" next 2013
+node 2013 "a#r" short-set @x1 result 43 consume 5 -> "r\x82actionnaire" next 2017
+node 2014 "#" short-set @x1 result 43 consume 4 -> "r\x82action" next 2015
+node 2015 "jtm" short-set @x1 result 43 consume 5 -> "r\x82ajuste" level 4
+node 2016 "t" short-set @x1 result 43 consume 5 -> "r\x82ajuste" level 2
+node 2017 "cit#s" short-set @x0 result 6 consume 7 -> "r\x82citions" next 2018
+node 2018 "exam5" short-set @x0 result 6 consume 7 -> "r\x82examen" next 2019
+node 2019 "gal4" short-set @x0 result 6 consume 6 -> "r\x82galien" next 2020
+node 2020 "m#" short-set @x1 result 43 consume 4 -> "r\x82mission" next 2021
+node 2021 "tin4" short-set @x0 result 6 consume 6 -> "r\x82tinien" level 1
+node 2022 ">$cm" short-set @x1 result 43 consume 4 -> "remplace" next 2024
+node 2023 "$c" short-set @x1 result 43 consume 4 -> "remplace" level 1
+node 2024 "?" short-set @x1 result 43 consume 2 -> "r\x93le" next 2025
+node 2025 "[ntg5" short-set @x0 result 6 consume 6 -> "r\x94ntgen" next 2026
+node 2026 "\x5c" short-set @x1 result 43 consume 2 -> "route" next 2027
+node 2027 "]^m" short-set @x1 result 43 consume 3 -> "regrettable" next 2030
+node 2028 "^" short-set @x1 result 43 consume 3 -> "regrettable" next 2029
+node 2029 "" short-set @x1 result 43 consume 2 -> "regret" level 1
+node 2030 "abel/s4" short-set @x0 result 56 consume 8 -> "rabelaisien" next 2033
+node 2031 "cin4" short-set @x0 result 6 consume 6 -> "racinien" next 2032
+node 2032 "g4" short-set @x0 result 6 consume 4 -> "rag." level 1
+node 2033 "f" short-set @x1 result 43 consume 2 -> "r\x82flexion" next 2034
+node 2034 "g:" short-set @x1 result 43 consume 2 -> "regard" next 2037
+node 2035 "e" short-set @x1 result 43 consume 2 -> "regard" next 2036
+node 2036 "" short-set @x1 result 43 consume 2 -> "regard" level 1
+node 2037 "hodan4" short-set @x0 result 6 consume 7 -> "rhodanien" next 2038
+node 2038 "i5 " none result 6 consume 3 -> "ri\x1e?" next 2041
+node 2039 "5" short-set @x0 result 6 consume 3 -> "ri?" next 2040
+node 2040 "z" short-set @x0 result 6 consume 3 -> "riez" level 1
+node 2041 "l*" short-set @x1 result 43 consume 3 -> "r\x82alisation" next 2049
+node 2042 "^m" short-set @x1 result 43 consume 3 -> "r\x82alisable" next 2044
+node 2043 "" short-set @x1 result 43 consume 3 -> "r\x82alisable" level 2
+node 2044 "." short-set @x1 result 43 consume 2 -> "r\x82alisat" next 2045
+node 2045 "l" short-set @x1 result 43 consume 1 -> "r\x82" next 2046
+node 2046 "m" short-set @x1 result 43 consume 1 -> "r\x82" next 2047
+node 2047 "t" short-set @x1 result 43 consume 3 -> "r\x82alit\x82" next 2048
+node 2048 "" short-set @x1 result 43 consume 1 -> "r\x82" level 1
+node 2049 "m" short-set @x1 result 43 consume 2 -> "remerciement" next 2050
+node 2050 "oc@d4" short-set @x0 result 56 consume 6 -> "rocardien" next 2052
+node 2051 "tul4" short-set @x0 result 6 consume 6 -> "rotulien" level 1
+node 2052 "p:" short-set @x1 result 43 consume 2 -> "rapport" next 2056
+node 2053 "e" short-set @x1 result 43 consume 2 -> "rapport" next 2054
+node 2054 "" short-set @x1 result 43 consume 2 -> "rapport" next 2055
+node 2055 "." short-set @x1 result 43 consume 2 -> "rapport" level 1
+node 2056 "q^m" short-set @x1 result 43 consume 2 -> "remarqu" next 2059
+node 2057 "^" short-set @x1 result 43 consume 2 -> "remarqu" next 2058
+node 2058 "" short-set @x1 result 43 consume 2 -> "remarque" level 1
+node 2059 "rt" short-set @x1 result 43 consume 3 -> "raret\x82" next 2062
+node 2060 "m" short-set @x1 result 43 consume 2 -> "rare" next 2061
+node 2061 "" short-set @x1 result 43 consume 2 -> "rare" level 1
+node 2062 "t" short-set @x1 result 43 consume 2 -> "relation" next 2067
+node 2063 "f" short-set @x1 result 43 consume 3 -> "relatif" next 2064
+node 2064 "vm" short-set @x1 result 43 consume 3 -> "relative" level 3
+node 2065 "t" short-set @x1 result 43 consume 4 -> "relativit\x82" next 2066
+node 2066 "" short-set @x1 result 43 consume 3 -> "relative" level 1
+node 2067 "uz" short-set @x0 result 6 consume 3 -> "ruez" next 2068
+node 2068 "yq" short-set @x1 result 6 consume 3 -> "rythmique" next 2070
+node 2069 "" short-set @x1 result 43 consume 2 -> "rythme" level 1
+node 2070 "" short-set @x1 result 6 consume 1 -> "rien" end
+node 2071 "'" short-set @x0 result 9 consume 1 -> "s" next 2073
+node 2072 "" none result 9 consume 2 -> "s'" level 1
+node 2073 "$*" short-set @x1 result 43 consume 3 -> "simplification" next 2078
+node 2074 "e5" short-set @x0 result 6 consume 4 -> "spleen" next 2075
+node 2075 "t" short-set @x1 result 43 consume 3 -> "simplicit\x82" next 2076
+node 2076 "m" short-set @x1 result 43 consume 2 -> "simple" next 2077
+node 2077 "" short-set @x1 result 43 consume 2 -> "simple" level 1
+node 2078 "0wbol4" short-set @x0 result 6 consume 7 -> "strombolien" next 2079
+node 2079 "4" short-set @x0 result 6 consume 2 -> "sien" next 2080
+node 2080 "5" short-set @x0 result 6 consume 2 -> "sen" next 2081
+node 2081 "7" short-set @x1 result 43 consume 2 -> "seigneur" next 2082
+node 2082 "9" short-set @x1 result 43 consume 2 -> "soin" next 2083
+node 2083 ":" none result 44 consume 2 -> "euses" next 2084
+node 2084 "=jr" short-set @x1 result 43 consume 4 -> "s\x82jour" next 2086
+node 2085 "nator4" short-set @x0 result 6 consume 8 -> "s\x82natorien" level 1
+node 2086 "\x5cdan4" short-set @x0 result 56 consume 6 -> "soudanien" next 2099
+node 2087 "l7" short-set @x1 result 43 consume 4 -> "souligne" next 2088
+node 2088 "m#" short-set @x1 result 43 consume 4 -> "soumission" next 2090
+node 2089 "0" short-set @x1 result 43 consume 4 -> "soumettre" level 2
+node 2090 "t4t" short-set @x0 result 6 consume 5 -> "soutient" next 2095
+node 2091 "4" short-set @x0 result 6 consume 4 -> "soutien" next 2092
+node 2092 "n:" short-set @x1 result 43 consume 4 -> "soutenir" level 4
+node 2093 "e" short-set @x1 result 43 consume 4 -> "soutenir" next 2094
+node 2094 "" short-set @x1 result 43 consume 4 -> "soutenir" level 2
+node 2095 "v4t" short-set @x0 result 6 consume 5 -> "souvient" level 3
+node 2096 "n:" short-set @x1 result 43 consume 4 -> "souvenir" level 4
+node 2097 "e" short-set @x1 result 43 consume 4 -> "souvenir" next 2098
+node 2098 "" short-set @x1 result 43 consume 4 -> "souvenir" level 1
+node 2099 "_c" short-set @x0 result 6 consume 3 -> "sans cesse" next 2101
+node 2100 "d" short-set @x0 result 6 consume 3 -> "sans doute" level 1
+node 2101 "ab=5" short-set @x0 result 6 consume 5 -> "sab\x82en" next 2109
+node 2102 "dduc=5" short-set @x0 result 6 consume 8 -> "sadduc\x82en" next 2104
+node 2103 "uc=5" short-set @x0 result 6 consume 7 -> "saduc\x82en" level 2
+node 2104 "har4" short-set @x0 result 6 consume 6 -> "saharien" next 2105
+node 2105 "l4" short-set @x0 result 6 consume 4 -> "salien" next 2107
+node 2106 "=s4" short-set @x0 result 6 consume 6 -> "sal\x82sien" level 2
+node 2107 "turn4" short-set @x0 result 56 consume 7 -> "saturnien" next 2108
+node 2108 "v)s4" short-set @x0 result 6 consume 6 -> "savoisien" level 1
+node 2109 "bm" short-set @x1 result 43 consume 2 -> "semblable" next 2111
+node 2110 "" short-set @x1 result 43 consume 2 -> "semblable" level 1
+node 2111 "crm" short-set @x1 result 43 consume 3 -> "s\x82culaire" next 2115
+node 2112 "r" short-set @x1 result 43 consume 3 -> "s\x82culaire" next 2113
+node 2113 "s" short-set @x0 result 43 consume 2 -> "si\x8acle" next 2114
+node 2114 "" short-set @x0 result 43 consume 2 -> "si\x8acle" level 1
+node 2115 "d" short-set @x1 result 43 consume 2 -> "soudain" next 2116
+node 2116 "e" none result 44 consume 2 -> "euse" next 2117
+node 2117 "fc" short-set @x1 result 43 consume 3 -> "souffrance" next 2121
+node 2118 ":" short-set @x1 result 43 consume 2 -> "souffrant" next 2119
+node 2119 "e" short-set @x1 result 43 consume 2 -> "souffrant" next 2120
+node 2120 "" short-set @x1 result 43 consume 2 -> "souffrant" level 1
+node 2121 "hakespear4" short-set @x0 result 6 consume 11 -> "shakespearien" next 2122
+node 2122 "icil4" short-set @x0 result 6 consume 6 -> "sicilien" next 2126
+node 2123 "lur4" short-set @x0 result 6 consume 6 -> "silurien" next 2124
+node 2124 "m4" short-set @x0 result 6 consume 4 -> "simien" next 2125
+node 2125 "s" short-set @x0 result 6 consume 3 -> "sis" level 1
+node 2126 "j#" short-set @x1 result 43 consume 3 -> "suj\x82tion" next 2132
+node 2127 "f" short-set @x1 result 43 consume 3 -> "subjectif" next 2128
+node 2128 "vt" short-set @x1 result 43 consume 4 -> "subjectivit\x82" next 2131
+node 2129 "m" short-set @x1 result 43 consume 3 -> "subjective" next 2130
+node 2130 "" short-set @x1 result 43 consume 3 -> "subjective" level 2
+node 2131 "" short-set @x1 result 43 consume 2 -> "sujet" level 1
+node 2132 "kvegd" short-set @x1 result 43 consume 6 -> "sauvegarde" next 2133
+node 2133 "ld" short-set @x1 result 43 consume 3 -> "solitude" next 2140
+node 2134 "rm" short-set @x1 result 43 consume 3 -> "solitaire" next 2136
+node 2135 "" short-set @x1 result 43 consume 3 -> "solitaire" level 2
+node 2136 "m" short-set @x1 result 43 consume 2 -> "seule" next 2137
+node 2137 ":" short-set @x1 result 43 consume 2 -> "seul" next 2138
+node 2138 "e" short-set @x1 result 43 consume 2 -> "seul" next 2139
+node 2139 "" short-set @x1 result 43 consume 2 -> "seul" level 1
+node 2140 "m" none result 44 consume 2 -> "eusement" next 2141
+node 2141 "nt" short-set @x1 result 43 consume 3 -> "soudainet\x82" next 2144
+node 2142 "m" short-set @x1 result 43 consume 2 -> "soudaine" next 2143
+node 2143 "" short-set @x1 result 43 consume 2 -> "soudaine" level 1
+node 2144 "ol5" short-set @x0 result 6 consume 4 -> "solen" next 2147
+node 2145 "lu0=5" short-set @x0 result 6 consume 7 -> "solutr\x82en" next 2146
+node 2146 "" short-set @x1 result 43 consume 2 -> "sorte" level 1
+node 2147 "p=cim5" short-set @x0 result 6 consume 7 -> "sp\x82cimen" next 2153
+node 2148 "t" short-set @x1 result 43 consume 3 -> "sup\x82riorit\x82" next 2149
+node 2149 "m" short-set @x1 result 43 consume 2 -> "sup\x82rieure" next 2150
+node 2150 ":" short-set @x1 result 43 consume 2 -> "sup\x82rieur" next 2151
+node 2151 "e" short-set @x1 result 43 consume 2 -> "sup\x82rieur" next 2152
+node 2152 "" short-set @x1 result 43 consume 2 -> "sup\x82rieur" level 1
+node 2153 "r" short-set @x1 result 43 consume 2 -> "soeur" next 2154
+node 2154 "s" short-set @x0 result 6 consume 2 -> "ses" next 2155
+node 2155 "t=no2l" short-set @x1 result 43 consume 7 -> "st\x82nobraille" next 2167
+node 2156 "=r=oty" short-set @x1 result 43 consume 8 -> "st\x82r\x82otype" next 2157
+node 2157 "5dhal4" short-set @x0 result 6 consume 8 -> "stendhalien" next 2158
+node 2158 "alin4" short-set @x0 result 56 consume 7 -> "stalinien" next 2159
+node 2159 "mlt" short-set @x1 result 43 consume 5 -> "sentimentalit\x82" next 2165
+node 2160 "l:" short-set @x1 result 43 consume 4 -> "sentimental" next 2163
+node 2161 "e" short-set @x1 result 43 consume 4 -> "sentimental" next 2162
+node 2162 "" short-set @x1 result 43 consume 4 -> "sentimental" level 3
+node 2163 "x" short-set @x1 result 43 consume 4 -> "sentimentaux" next 2164
+node 2164 "" short-set @x1 result 43 consume 3 -> "sentiment" level 2
+node 2165 "o]c4" short-set @x0 result 6 consume 6 -> "sto\x8bcien" next 2166
+node 2166 "" short-set @x1 result 43 consume 2 -> "surtout" level 1
+node 2167 "u6an*l:" short-set @x1 result 43 consume 7 -> "supranational" next 2204
+node 2168 "6an*le" short-set @x1 result 43 consume 7 -> "supranational" next 2171
+node 2169 "an*l" short-set @x1 result 43 consume 7 -> "supranational" level 4
+node 2170 "n*x" short-set @x1 result 43 consume 7 -> "supranationaux" level 2
+node 2171 "b3sc" short-set @x1 result 43 consume 6 -> "subconscience" next 2178
+node 2172 "3s:" short-set @x1 result 43 consume 5 -> "subconscient" next 2175
+node 2173 "se" short-set @x1 result 43 consume 5 -> "subconscient" level 5
+node 2174 "" short-set @x1 result 43 consume 5 -> "subconscient" level 3
+node 2175 "vn:" short-set @x1 result 43 consume 5 -> "subvenir" level 4
+node 2176 "ne" short-set @x1 result 43 consume 5 -> "subvenir" level 5
+node 2177 "" short-set @x1 result 43 consume 5 -> "subvenir" level 2
+node 2178 "r(x" short-set @x1 result 43 consume 5 -> "surchoix" next 2203
+node 2179 "5(!" short-set @x1 result 43 consume 6 -> "surench\x8are" next 2180
+node 2180 "6d#" short-set @x1 result 43 consume 6 -> "surproduction" next 2181
+node 2181 "9g:" short-set @x1 result 43 consume 5 -> "surintelligent" next 2184
+node 2182 "ge" short-set @x1 result 43 consume 5 -> "surintelligent" level 5
+node 2183 "" short-set @x1 result 43 consume 5 -> "surintelligent" level 3
+node 2184 "[6" short-set @x1 result 43 consume 5 -> "surimpression" next 2185
+node 2185 "c$" short-set @x1 result 43 consume 5 -> "surcouple" next 2186
+node 2186 "hmn" short-set @x1 result 43 consume 6 -> "surhumaine" next 2189
+node 2187 "m9" short-set @x1 result 43 consume 6 -> "surhumain" level 5
+node 2188 "" short-set @x1 result 43 consume 5 -> "surhomme" level 3
+node 2189 "l5dm" short-set @x1 result 43 consume 7 -> "surlendemain" next 2190
+node 2190 "nb" short-set @x1 result 43 consume 5 -> "surnombre" next 2194
+node 2191 "tll" short-set @x1 result 43 consume 5 -> "surnatur" level 5
+node 2192 "lm" short-set @x1 result 43 consume 5 -> "surnatur" level 6
+node 2193 "" short-set @x1 result 43 consume 5 -> "surnatur" level 3
+node 2194 "p$m" short-set @x1 result 43 consume 5 -> "surpeuple" next 2197
+node 2195 "$" short-set @x1 result 43 consume 5 -> "surpeuple" next 2196
+node 2196 "p" short-set @x1 result 43 consume 5 -> "surpopulation" level 3
+node 2197 "v4t" short-set @x0 result 6 consume 6 -> "survient" next 2202
+node 2198 "n:" short-set @x1 result 43 consume 5 -> "survenir" next 2201
+node 2199 "e" short-set @x1 result 43 consume 5 -> "survenir" next 2200
+node 2200 "" short-set @x1 result 43 consume 5 -> "survenir" level 4
+node 2201 "v" short-set @x1 result 43 consume 5 -> "survive" level 3
+node 2202 "xcit#s" short-set @x0 result 6 consume 9 -> "surexcitions" level 2
+node 2203 "scit#s" short-set @x0 result 6 consume 8 -> "suscitions" level 1
+node 2204 "v" short-set @x0 result 6 consume 2 -> "souvent" next 2205
+node 2205 "wrm" short-set @x1 result 43 consume 3 -> "sommaire" next 2208
+node 2206 "r" short-set @x1 result 43 consume 3 -> "sommaire" next 2207
+node 2207 "" short-set @x1 result 43 consume 2 -> "somme" level 1
+node 2208 "yqm" short-set @x1 result 43 consume 3 -> "syst\x82matique" next 2211
+node 2209 "q" short-set @x1 result 43 consume 3 -> "syst\x82matique" next 2210
+node 2210 "" short-set @x1 result 43 consume 2 -> "syst\x8ame" level 1
+node 2211 "" short-set @x0 result 6 consume 1 -> "se" end
+node 2212 "'" short-set @x0 result 9 consume 1 -> "t" next 2214
+node 2213 "" none result 9 consume 2 -> "t'" level 1
+node 2214 "0" short-set @x1 result 43 consume 2 -> "titre" next 2215
+node 2215 "4" short-set @x0 result 6 consume 2 -> "tien" next 2216
+node 2216 "8r4" short-set @x0 result 6 consume 4 -> "terrien" next 2217
+node 2217 "<" short-set @x0 result 6 consume 2 -> "t\x88te" next 2218
+node 2218 "=l=ojf" short-set @x1 result 43 consume 7 -> "t\x82l\x82objectif" next 2221
+node 2219 "l=ty" short-set @x1 result 43 consume 6 -> "t\x82l\x82type" level 3
+node 2220 "4" short-set @x0 result 6 consume 2 -> "t\x82" level 1
+node 2221 "_(_t" short-set @x0 result 6 consume 5 -> "tour \x85 tour" next 2224
+node 2222 "q'" none result 6 consume 2 -> "tandis " level 3
+node 2223 "" short-set @x0 result 6 consume 3 -> "tandis que" level 1
+node 2224 "\x5cran4" short-set @x0 result 6 consume 6 -> "touranien" next 2225
+node 2225 "@s4" short-set @x0 result 1 consume 4 -> "tarsien" next 2226
+node 2226 "ar4" short-set @x0 result 7 consume 4 -> "tarien" next 2227
+node 2227 "e_ur4" short-set @x0 result 6 consume 6 -> "tellurien" next 2228
+node 2228 "f" short-set @x0 result 6 consume 2 -> "toutefois" next 2229
+node 2229 "h4" short-set @x0 result 1 consume 3 -> "thien" next 2236
+node 2230 "8midor4" short-set @x0 result 6 consume 9 -> "thermidorien" next 2231
+node 2231 "=odos4" short-set @x0 result 6 consume 8 -> "th\x82odosien" next 2232
+node 2232 "e!al4" short-set @x0 result 6 consume 7 -> "thessalien" next 2233
+node 2233 "qm" short-set @x1 result 43 consume 3 -> "th\x82orique" next 2235
+node 2234 "" short-set @x1 result 43 consume 3 -> "th\x82orique" level 2
+node 2235 "" short-set @x1 result 43 consume 2 -> "th\x82orie" level 1
+node 2236 "ic4" short-set @x0 result 1 consume 4 -> "ticien" next 2237
+node 2237 "j" short-set @x0 result 6 consume 2 -> "toujours" next 2238
+node 2238 "ll" short-set @x1 result 43 consume 3 -> "telle" next 2242
+node 2239 "m" short-set @x1 result 43 consume 2 -> "telle" next 2240
+node 2240 "s" short-set @x0 result 6 consume 2 -> "tel" next 2241
+node 2241 "" short-set @x0 result 6 consume 2 -> "tel" level 1
+node 2242 "ms" short-set @x0 result 4 consume 3 -> "tements" next 2244
+node 2243 "" short-set @x0 result 4 consume 2 -> "tement" level 1
+node 2244 "n" short-set @x1 result 43 consume 2 -> "tenir" next 2245
+node 2245 "o@c4" short-set @x0 result 6 consume 5 -> "toarcien" next 2247
+node 2246 "khar4" short-set @x0 result 6 consume 7 -> "tokharien" level 1
+node 2247 "p" short-set @x0 result 43 consume 2 -> "temps" next 2253
+node 2248 "ll" short-set @x1 result 43 consume 2 -> "tempor" next 2251
+node 2249 "m" short-set @x1 result 43 consume 2 -> "tempor" next 2250
+node 2250 "" short-set @x1 result 43 consume 2 -> "tempor" level 2
+node 2251 "rm" short-set @x1 result 43 consume 3 -> "temporaire" level 3
+node 2252 "" short-set @x1 result 43 consume 3 -> "temporaire" level 1
+node 2253 "rs" short-set @x0 result 43 consume 2 -> "terre" next 2255
+node 2254 "" short-set @x0 result 43 consume 2 -> "terre" level 1
+node 2255 "s" short-set @x0 result 6 consume 2 -> "tes" next 2256
+node 2256 "t" short-set @x1 result 6 consume 2 -> "toute" next 2257
+node 2257 "unis4" short-set @x0 result 56 consume 6 -> "tunisien" next 2260
+node 2258 "ron4" short-set @x0 result 6 consume 6 -> "turonien" next 2259
+node 2259 "z" short-set @x0 result 6 consume 3 -> "tuez" level 1
+node 2260 "yqm" short-set @x1 result 43 consume 3 -> "typique" next 2264
+node 2261 "q" short-set @x1 result 43 consume 3 -> "typique" next 2262
+node 2262 "rol4" short-set @x0 result 56 consume 6 -> "tyrolien" next 2263
+node 2263 "" short-set @x1 result 43 consume 2 -> "type" level 1
+node 2264 " " none result 6 consume 1 -> "te" next 2265
+node 2265 "(" none result 1 consume 2 -> "tch" next 2266
+node 2266 "^" none result 1 consume 1 -> "t" next 2267
+node 2267 "" short-set @x0 result 6 consume 1 -> "te" end
+node 2268 "'" none result 1 consume 1 -> "u" next 2269
+node 2269 "_4" short-set @x0 result 1 consume 2 -> "uelle" next 2270
+node 2270 "g" short-set @x1 result 43 consume 2 -> "usage" next 2271
+node 2271 "kr/n4" short-set @x0 result 56 consume 6 -> "ukrainien" next 2272
+node 2272 "l." short-set @x1 result 43 consume 3 -> "utilisateur" next 2280
+node 2273 "tr" short-set @x1 result 43 consume 4 -> "utilitaire" next 2275
+node 2274 "" short-set @x1 result 43 consume 3 -> "utilit\x82" level 2
+node 2275 "m" short-set @x1 result 43 consume 2 -> "utile" next 2276
+node 2276 "^m" short-set @x1 result 43 consume 2 -> "utilis" next 2278
+node 2277 "" short-set @x1 result 43 consume 2 -> "utilis" level 2
+node 2278 "*" short-set @x1 result 43 consume 2 -> "utilis" next 2279
+node 2279 "" short-set @x1 result 43 consume 2 -> "utile" level 1
+node 2280 "m0" short-set @x0 result 1 consume 2 -> "um" next 2282
+node 2281 "5" short-set @x0 result 1 consume 3 -> "umen" level 1
+node 2282 "netll" short-set @x0 result 6 consume 6 -> "unetelle" next 2287
+node 2283 "s" short-set @x0 result 6 consume 3 -> "unes" next 2284
+node 2284 "tl" short-set @x0 result 6 consume 4 -> "untel" next 2286
+node 2285 "" short-set @x1 result 43 consume 3 -> "unit\x82" level 2
+node 2286 "" short-set @x0 result 6 consume 2 -> "une" level 1
+node 2287 "qm" short-set @x1 result 43 consume 2 -> "unique" next 2289
+node 2288 "" short-set @x1 result 43 consume 2 -> "unique" level 1
+node 2289 "rgon4" short-set @x0 result 6 consume 6 -> "urgonien" next 2290
+node 2290 "s" short-set @x0 result 6 consume 2 -> "uns" next 2291
+node 2291 "vll" short-set @x1 result 43 consume 4 -> "universelle" next 2298
+node 2292 "lt" short-set @x1 result 43 consume 4 -> "universalit\x82" next 2295
+node 2293 "m" short-set @x1 result 43 consume 3 -> "universelle" next 2294
+node 2294 "" short-set @x1 result 43 consume 3 -> "universel" level 2
+node 2295 "tr" short-set @x1 result 43 consume 4 -> "universitaire" next 2297
+node 2296 "" short-set @x1 result 43 consume 3 -> "universit\x82" level 2
+node 2297 "" short-set @x1 result 43 consume 2 -> "univers" level 1
+node 2298 "x" none result 1 consume 2 -> "ux" next 2299
+node 2299 "z" none result 1 consume 2 -> "uz" next 2300
+node 2300 "" short-set @x0 result 6 consume 1 -> "un" end
+node 2301 "'" none result 1 consume 1 -> "v" next 2302
+node 2302 "+" short-set @x1 result 43 consume 2 -> "volontiers" next 2303
+node 2303 "-(-v" short-set @x0 result 6 consume 5 -> "vis-\x85-vis" next 2304
+node 2304 "." short-set @x1 result 43 consume 2 -> "valeur" next 2305
+node 2305 "0" short-set @x0 result 6 consume 2 -> "votre" next 2306
+node 2306 "4" short-set @x0 result 4 consume 2 -> "vien" next 2307
+node 2307 "5d=5" short-set @x0 result 6 consume 5 -> "vend\x82en" next 2308
+node 2308 "9!#s" short-set @x1 result 43 consume 5 -> "vinssions" next 2310
+node 2309 "!iz" short-set @x1 result 43 consume 5 -> "vinssiez" level 1
+node 2310 "=nit4" short-set @x0 result 6 consume 6 -> "v\x82nitien" next 2312
+node 2311 "" short-set @x1 result 43 consume 2 -> "v\x82rit\x82" level 1
+node 2312 "?" short-set @x1 result 43 consume 2 -> "v\x93tre" next 2313
+node 2313 "c" short-set @x0 result 6 consume 2 -> "voici" next 2314
+node 2314 "eniz" short-set @x0 result 6 consume 5 -> "veniez" next 2315
+node 2315 "f" short-set @x0 result 6 consume 2 -> "vif" next 2316
+node 2316 "g." short-set @x1 result 43 consume 2 -> "voyag" next 2322
+node 2317 "s:" short-set @x1 result 43 consume 2 -> "voyag" next 2320
+node 2318 "e" short-set @x1 result 43 consume 2 -> "voyag" next 2319
+node 2319 "m" short-set @x1 result 43 consume 2 -> "voyag" level 2
+node 2320 "x" short-set @x1 result 43 consume 2 -> "voyag" next 2321
+node 2321 "" short-set @x1 result 43 consume 2 -> "voyage" level 1
+node 2322 "ictor4" short-set @x0 result 56 consume 7 -> "victorien" next 2324
+node 2323 "etnam4" short-set @x0 result 56 consume 8 -> "vietnamien" level 1
+node 2324 "k%us4" short-set @x0 result 6 consume 6 -> "vauclusien" next 2326
+node 2325 "r4" short-set @x0 result 6 consume 4 -> "vaurien" level 1
+node 2326 "l" short-set @x0 result 6 consume 2 -> "voil\x85" next 2327
+node 2327 "ms" short-set @x0 result 4 consume 2 -> "vement" next 2330
+node 2328 "" short-set @x0 result 4 consume 2 -> "vement" next 2329
+node 2329 "" short-set @x1 result 43 consume 2 -> "vraiment" level 1
+node 2330 "n" short-set @x1 result 43 consume 2 -> "venir" next 2331
+node 2331 "olt/r4" short-set @x0 result 6 consume 7 -> "voltairien" next 2336
+node 2332 "rm" short-set @x1 result 43 consume 3 -> "volontaire" next 2334
+node 2333 "" short-set @x1 result 43 consume 3 -> "volontaire" level 2
+node 2334 "sg" none result 1 consume 1 -> "v" next 2335
+node 2335 "" short-set @x1 result 43 consume 2 -> "volont\x82" level 1
+node 2336 "r/sbm" short-set @x1 result 43 consume 5 -> "vraisemblable" next 2340
+node 2337 "/sb" short-set @x1 result 43 consume 5 -> "vraisemblable" next 2338
+node 2338 "m" short-set @x1 result 43 consume 2 -> "v\x82ritable" next 2339
+node 2339 "" short-set @x1 result 43 consume 2 -> "v\x82ritable" level 1
+node 2340 "s" short-set @x0 result 6 consume 2 -> "vos" next 2341
+node 2341 "ulcan4" short-set @x0 result 56 consume 7 -> "vulcanien" next 2342
+node 2342 "vm" short-set @x1 result 43 consume 2 -> "vive" next 2344
+node 2343 "" short-set @x1 result 43 consume 2 -> "vive" level 1
+node 2344 "x" short-set @x1 result 43 consume 2 -> "vieux" next 2345
+node 2345 "" short-set @x0 result 6 consume 1 -> "vous" end
+node 2346 "'" none result 1 consume 1 -> "w" next 2347
+node 2347 ";m4" short-set @x0 result 56 consume 4 -> "wormien" next 2348
+node 2348 "eek" none result 1 consume 4 -> "week" next 2349
+node 2349 "h" none result 1 consume 1 -> "w" next 2350
+node 2350 "nisc4t" short-set @x0 result 6 consume 7 -> "omniscient" next 2351
+node 2351 "st" none result 1 consume 1 -> "w" next 2352
+node 2352 "24" short-set @x0 result 6 consume 1 -> "om" next 2353
+node 2353 "9t8]e5" short-set @x0 result 6 consume 7 -> "wintergreen" next 2354
+node 2354 "" short-set @x0 result 6 consume 1 -> "tous" next 2355
+node 2355 "" short-set @x1 result 4 consume 1 -> "om" next 2356
+node 2356 "" short-set @x3 result 7 consume 1 -> "tt" next 2357
+node 2357 "" short-set @x2 result 1 consume 1 -> "om" end
+node 2358 "'" none result 1 consume 1 -> "x" next 2359
+node 2359 "$f" short-set @x1 result 43 consume 3 -> "explicatif" next 2362
+node 2360 "v" short-set @x1 result 43 consume 3 -> "explicative" next 2361
+node 2361 "" short-set @x1 result 43 consume 2 -> "explication" level 1
+node 2362 "0a;dm" short-set @x1 result 43 consume 5 -> "extraordinaire" next 2367
+node 2363 "a;d" short-set @x1 result 43 consume 5 -> "extraordinaire" next 2364
+node 2364 "t" short-set @x1 result 43 consume 3 -> "extr\x82mit\x82" next 2365
+node 2365 "m" short-set @x1 result 43 consume 2 -> "extr\x88me" next 2366
+node 2366 "" short-set @x1 result 43 consume 2 -> "extr\x88me" level 1
+node 2367 "6f" short-set @x1 result 43 consume 3 -> "expressif" next 2371
+node 2368 "vm" short-set @x1 result 43 consume 3 -> "expressive" next 2370
+node 2369 "" short-set @x1 result 43 consume 3 -> "expressive" level 2
+node 2370 "" short-set @x1 result 43 consume 2 -> "expression" level 1
+node 2371 "8" short-set @x1 result 43 consume 2 -> "exercice" next 2372
+node 2372 "bury" none result 1 consume 1 -> "x" next 2373
+node 2373 "cf" short-set @x1 result 43 consume 3 -> "excessif" next 2378
+node 2374 "it#s" short-set @x0 result 6 consume 6 -> "excitions" next 2375
+node 2375 "vm" short-set @x1 result 43 consume 3 -> "excessive" next 2377
+node 2376 "" short-set @x1 result 43 consume 3 -> "excessive" level 2
+node 2377 "" short-set @x1 result 43 consume 2 -> "exc\x8as" level 1
+node 2378 "lc" short-set @x1 result 43 consume 3 -> "excellence" next 2382
+node 2379 ":" short-set @x1 result 43 consume 2 -> "excellent" next 2380
+node 2380 "e" short-set @x1 result 43 consume 2 -> "excellent" next 2381
+node 2381 "" short-set @x1 result 43 consume 2 -> "excellent" level 1
+node 2382 "p*" short-set @x1 result 43 consume 3 -> "exp\x82rimentation" next 2391
+node 2383 "." short-set @x1 result 43 consume 3 -> "exp\x82rimentateur" next 2384
+node 2384 "=d4t" short-set @x0 result 6 consume 6 -> "exp\x82dient" next 2385
+node 2385 "lm" short-set @x1 result 43 consume 3 -> "exp\x82rimentale" next 2389
+node 2386 ":" short-set @x1 result 43 consume 3 -> "exp\x82rimental" next 2387
+node 2387 "e" short-set @x1 result 43 consume 3 -> "exp\x82rimental" next 2388
+node 2388 "" short-set @x1 result 43 consume 3 -> "exp\x82rimental" level 2
+node 2389 "x" short-set @x1 result 43 consume 3 -> "exp\x82rimentaux" next 2390
+node 2390 "" short-set @x1 result 43 consume 2 -> "exp\x82rience" level 1
+node 2391 "tm" short-set @x1 result 43 consume 2 -> "ext\x82rieure" next 2395
+node 2392 ":" short-set @x1 result 43 consume 2 -> "ext\x82rieur" next 2393
+node 2393 "e" short-set @x1 result 43 consume 2 -> "ext\x82rieur" next 2394
+node 2394 "" short-set @x1 result 43 consume 2 -> "ext\x82rieur" level 1
+node 2395 "v" none result 1 consume 1 -> "x" next 2396
+node 2396 "x" none result 1 consume 1 -> "x" next 2397
+node 2397 "" short-set @x0 result 6 consume 1 -> "mais" next 2398
+node 2398 "" short-set @x2 result 6 consume 1 -> "ex" next 2399
+node 2399 "" short-set @x3 result 1 consume 1 -> "x" next 2400
+node 2400 "" short-set @x0 result 44 consume 1 -> "eux" next 2401
+node 2401 "" short-set @x0 result 1 consume 1 -> "x" next 2402
+node 2402 "" short-set @x2 result 1 consume 1 -> "ex" next 2403
+node 2403 "" none result 44 consume 1 -> "eux" end
+node 2404 "5" short-set @x0 result 1 consume 2 -> "yen" next 2405
+node 2405 "r4" short-set @x0 result 4 consume 3 -> "yrien" end
+node 2406 "'" none result 1 consume 1 -> "z" next 2407
+node 2407 " " none result 6 consume 1 -> "elle" next 2409
+node 2408 "" none result 4 consume 1 -> "ez" level 1
+node 2409 "-" none result 4 consume 1 -> "ez" next 2410
+node 2410 "ag4" short-set @x0 result 1 consume 4 -> "zag." next 2411
+node 2411 "oroas04" short-set @x0 result 6 consume 8 -> "zoroastrien" next 2412
+node 2412 "w9>4" short-set @x0 result 56 consume 5 -> "zwinglien" next 2413
+node 2413 "" short-set @x1 result 6 consume 1 -> "elle" next 2414
+node 2414 "" short-set @x0 result 4 consume 1 -> "ez" end
+node 2415 "" none result 3 consume 1 -> "" end
+node 2416 "" none result 3 consume 1 -> "" end
+node 2417 "/" none result 5 consume 1 -> "\x1c" {copy} next 2418
+node 2418 "-" none result 5 consume 1 -> "\x1c" {copy} next 2419
+node 2419 "" none result 14 consume 1 -> "\x1c" {copy} end
+node 2420 "ab" class c03 result 30 consume 1 -> "\x1c" {word} {copy} next 2421
+node 2421 "g1" class c03 result 29 consume 1 -> "\x1c" {word} {copy} next 2423
+node 2422 "2" class c03 result 30 consume 1 -> "\x1c" {word} {copy} level 1
+node 2423 "fl-span" class c03 result 14 consume 1 -> "\x1c" {word} {copy} next 2425
+node 2424 "l-lifg" class c03 result 14 consume 1 -> "\x1c" {word} {copy} level 1
+node 2425 "lnb" none result 5 consume 1 -> {style 2} {cmd c} {style 3} "\x1c" {word} {copy} {switch} next 2427
+node 2426 "ng" none result 5 consume 1 -> "\x1c" {word} {copy} level 1
+node 2427 "in" class c03 result 29 consume 1 -> "\x1c" {word} {copy} next 2429
+node 2428 "" class c03 result 68 consume 2 -> {drop-space} level 1
+node 2429 "cz" class c03 result 5 consume 1 -> "\x1c" {word} {copy} next 2430
+node 2430 "tx" class c03 result 5 consume 1 -> "\x1c" {word} {copy} next 2431
+node 2431 "es" none result 14 consume 1 -> "\x1c" {word} {copy} {style 0} next 2433
+node 2432 "e" none result 14 consume 1 -> {cmd a} "\x1c" {word} "\x1f" {cmd b} {style 1} level 1
+node 2433 "" none result 14 consume 1 -> "\x1c" {word} {copy} end
+node 2434 "" none result 5 consume 1 -> "\x1d" end
+node 2435 "" none result 14 consume 1 -> "\x1e" end
+node 2436 "" none result 5 consume 1 -> {cmd c} end
+
+scan input-mode 0
+scan trailing-blanks 1
+scan flag 28
+scan full-stop 46
+scan newline 1
+scan form-feed "\x15"
+scan paragraph "p"
+scan new-paragraphs 0
+scan rejoin-hyphens 0
+scan spaces 0
+scan tab-width 1
+scan ninmod 0
+scan fold-codes 1
+scan fold-words 1
+scan capital-cessation 0
+scan map-braces 0
+scan spare 0
+scan passage-ends 0
+scan nxsls 0
+scan format-word 28
+scan format-word2 27
+scan capital-sign 0
+scan capital-end 0
+scan address-switching 0
+scan mode-words "running" "spacing" "marking" "as-is" "compress" "sentence" "auto-tab" "par" "no-par" "par-skp" "par-ind"
+scan passage-words 0
+scan doubled-adjectives 0

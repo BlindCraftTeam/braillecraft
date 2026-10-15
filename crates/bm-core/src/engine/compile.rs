@@ -210,6 +210,9 @@ struct Builder {
     /// Node mode: the results (conditions and state changes) by number, and the nodes in order.
     results: Vec<(Vec<(usize, bool)>, Vec<(usize, Change)>)>,
     nodes: Vec<NodeDef>,
+    /// A record no character maps to, written last: the engine reads a character with no class through the
+    /// default character, and when that one has no class either, through the last record.
+    unknown_record: Option<CharDef>,
     scan: ScanTable,
 }
 
@@ -506,14 +509,18 @@ impl Builder {
                 }
                 self.sets.push(alts);
             }
-            "char" => {
-                let b = string(line, rest.first())?;
-                if b.len() != 1 {
-                    return Err(err(line, "char takes one character"));
-                }
-                let mut def = self.chars[b[0] as usize].clone();
+            "char" | "unknown-record" => {
+                let unknown = head == "unknown-record";
+                let (mut def, mut i) = if unknown {
+                    (CharDef::default(), 0)
+                } else {
+                    let b = string(line, rest.first())?;
+                    if b.len() != 1 {
+                        return Err(err(line, "char takes one character"));
+                    }
+                    (self.chars[b[0] as usize].clone(), 1)
+                };
                 def.defined = true;
-                let mut i = 1;
                 while i < rest.len() {
                     match &rest[i] {
                         Tok::Word(w) if w == "default" => {
@@ -538,7 +545,12 @@ impl Builder {
                         _ => return Err(err(line, "char is followed by default, rules and then")),
                     }
                 }
-                self.chars[b[0] as usize] = def;
+                if unknown {
+                    self.unknown_record = Some(def);
+                } else {
+                    let b = string(line, rest.first())?;
+                    self.chars[b[0] as usize] = def;
+                }
             }
             "rule" => self.rule(line, rest)?,
             "result" => {
@@ -818,6 +830,7 @@ pub fn compile(source: &str) -> Result<Compiled, EngineError> {
         rules: Vec::new(),
         results: Vec::new(),
         nodes: Vec::new(),
+        unknown_record: None,
         scan: default_scan(),
     };
     // First pass: every set gets its id in the order the sets are written.
@@ -860,7 +873,7 @@ pub fn compile(source: &str) -> Result<Compiled, EngineError> {
             }
         }
     }
-    if !b.chars[b.default_char as usize].defined {
+    if !b.chars[b.default_char as usize].defined && b.unknown_record.is_none() {
         return Err(err(0, format!("the default character {:?} has no class", b.default_char as char)));
     }
 
@@ -1029,6 +1042,10 @@ pub fn compile(source: &str) -> Result<Compiled, EngineError> {
         let trans = shared(&mut transitions, transition_masks(width, &d.then));
         records.push((c as u8, d.classes, trans, d.default_out.unwrap_or(c as u8), d.rules.unwrap_or(first_rule[c])));
         class_of[c] = records.len() as i64;
+    }
+    if let Some(d) = &b.unknown_record {
+        let trans = shared(&mut transitions, transition_masks(width, &d.then));
+        records.push((0, 0, trans, d.default_out.unwrap_or(0), d.rules.unwrap_or(0)));
     }
 
     let mut o = Out(Vec::new());
