@@ -1,0 +1,271 @@
+| Notes on particular styles:
+|   LineNum wraps a single line number. LineNums wraps multiple
+| paragraphs, clearing room on the left margin for the line
+| numbering. See RNIB Braillist's Manual UEB Edition section 33.
+| Note that [svlma:4] is really appropriate for two-digit line
+| numbers, which we simply presume to be most common. Linear
+| styles used within LineNums must use commands such as [hi]
+| that honor left margin adjustment (parameter to [svlma]).
+|   The TranscriberNote character style simply adds indicators
+| before/after note text. When used to contain an explanatory
+| note for a diagram, e.g., it should be used within a para.
+| linear style to get the proper format. (See RNIB Braillists'
+| Manual, UEB Edition, section 23.8.1.)
+-braillemaker-template 1
+TranslationTables: ENUNCP+ENUDXP/ENUNCB+GENDXB
+BraillePageNumbersEvenPages: UpperRight
+BraillePageNumbersOddPages: UpperRight
+PrintPageNumbersEvenPages: UpperLeft
+PrintPageNumbersOddPages: UpperLeft
+FirstPageNumberDisplayed: 1
+Hyphenation: DashAndHyphen
+ContentsStyle: UK Basic
+ContentsSuspendRefPageNums: False
+ContentsRemoveInternalNewlines: False
+ContentsCenterTopLevel: False
+ContentsNumberTopLevel: True
+ContentsRunoverIfOneLevel: 4
+ContentsRunoverIfMultiLevel: 2
+ContentsInitialIndentIfOneLevel: 1
+ContentsInitialIndentIfMultiLevel: 1
+ContentsIncrementalIndent: 2
+ContentsIncrementalRightMarginIfOneLevel: 6
+ContentsIncrementalRightMarginIfMultiLevel: 6
+ContentsGuideDotBraille: Dots_36
+ContentsAddMaxIndentToRunover: False
+ContentsPageNumStyle: Braille
+ContentsLowestLevelIncluded: 9
+Styles:
+acronym
+  [i]
+
+AlphabeticDivision
+  [rm6][kps][hds0]
+  [hde][kpe1:2]
+attribution.
+  [skn1][kbs1][kbe][ind10:2:r]
+  [ind1:0:l]
+BlockProtect
+  [kps]
+  [kpe]
+BlockProtectLevel
+  [kps][ki1]
+  [ki0][kpe]
+bold
+  [fts~b]
+  [fte~b]
+BoxBegin.
+  [l][hds1:0][q~"363333333333333333334][hde]
+
+BoxEnd.
+  [kbs1][hds0:0][q~"3h333333333333333333j][hde][kbe]
+
+BrlInline
+  [cz]
+  [tx]
+CapBreak
+  [xcs]
+  
+CapTgr
+  [ucs]
+  [uce]
+centered.
+  [rm10][hds0]
+  [hde][rm0]
+CenteredFullLine.
+  [hds0]
+  [hde]
+chemistry
+  [ucsngs]
+  [ucsnge]
+colons.
+  [kbs1][hds0:0][kbe][q~"33333333333][hde]
+
+CompDisplay.
+  [sc1:0][hi1:5:0:2:2:0][cb]
+  [hi][tx][sc1:0:0]
+CompInline
+  [cbi]
+  [txi]
+contents.
+  [mfcs~contents][ypr0]
+  [mfce]
+continuation
+  [q~"][l][run]
+
+DisplayedMaterial.
+  [hi5:7]
+  [hi]
+dot-2-line.
+  [kbs1][l][q="3][fr;f~1][q~1][l]
+  [kbe]
+Dot2s.
+  [kbs1][hds0:0][q~"31111111111][hde]
+  [kbe]
+EndnoteEmbed
+  [kdtxs~endnote][hi1:3:0:4:0]
+  [hi][kdtxe]
+footnote.
+  [hi1:3:0:4:0]
+  [hi]
+FootnoteEmbed
+  [kdtxs~footnote][hi1:3:0:4:0]
+  [hi][kdtxe]
+French
+  [lng~fr]
+  [lng]
+G1Passage
+  [q~;;;][g1]
+  [q~;'][g2]
+German
+  [lng~de]
+  [lng]
+glossary.
+  [hi1:3:0:4:0]
+  [hi]
+group
+  [:]
+  [;]
+GuideDots
+  [fr;p~".]
+
+GuideDotsVol
+  [fr;p~-.]
+
+h1.
+  [l][kps][rm10][hds][rps1]
+  [rpe1][hde][rm0][kpe2:2]
+h2.
+  [l][kps][hi1:5][sk1][rps2]
+  [rpe2][hi][kpe2:2]
+h3.
+  [l][kps][hi3:1][rps3][fts~i]
+  [fte~i][rpe3][hi][kpe2:2]
+h4.
+  [l][kps][hi3:1][rps4]
+  [rpe4][hi][kpe2:2]
+h5.
+  [l][kps][hi3:1][rps5]
+  [rpe5][hi][kpe2:2]
+h6.
+  [l][kps][hi3:1][rps6]
+  [rpe6][hi][kpe2:2]
+h7.
+  [l][kps][hi3:1][rps7]
+  [rpe7][hi][kpe2:2]
+h8.
+  [l][kps][hi3:1][rps8]
+  [rpe8][hi][kpe2:2]
+h9.
+  [l][kps][hi3:1][rps9]
+  [rpe9][hi][kpe2:2]
+index.
+  [mfcs~index][ypr0]
+  [mfce]
+initial
+  [svant3][svdac~4][svles1:1:0:0][svrhs5:5][svpal1][svprg3:0:1][caplv3][svcbh2~"][svgrn~}][ypr0]
+
+IPA
+  [lnb~qip]
+  [lnb]
+Italian
+  [lng~it]
+  [lng]
+italic
+  [fts~i]
+  [fte~i]
+Latin
+  [lng~la]
+  [lng]
+LeftFlush.
+  [hi1:1:0:0:0:0:1:1:1]
+  [hi]
+LineNum
+  [linenum1:l][:][ons]
+  [one][;]
+LineNums
+  [svlma:4][ind1]
+  [svlma:0]
+list.
+  [hi3:1:0:2]
+  [hi]
+MainBody.
+  [svant2][tls][d~][tle][d~][l][svant3]
+
+math
+  [ts]
+  [te]
+math-TextInMath
+  [te]
+  [ts]
+NewPageEven.
+  [top]
+  [sd0]
+NewPageNext.
+  [top]
+
+NewPageOdd.
+  [top]
+  [sd1]
+NoNumberSign
+  [ons]
+  [one]
+para.
+  [p]
+  [l]
+para.continue.
+  [l]
+  [l]
+poem.
+  [ptys4][p]
+  [ptye]
+Portuguese
+  [lng~pt]
+  [lng]
+quote.
+  [hi7:5:0:0:0:0:1:3:1]
+  [hi]
+RefPageNumber
+  [lea]
+  [l][run]
+RightFlush.
+  [ind1:2:r]
+  [ind1:0:l]
+RunningHead
+  [tls][caplv0][skn]
+  [caplv3][tle]
+script
+  [fts~s]
+  [fte~s]
+SoftReturn
+  [l][run]
+
+Spanish
+  [lng~es]
+  [lng]
+TextBreak.
+  [hds0][d~"9][d~"9][q~"9][hde]
+
+TOC:left
+  Chapter
+  *apt\]
+TOC:right
+  Page
+  page
+TOC:title
+  Contents
+  ,3t5ts
+TranscriberNote
+  [tns]
+  [tne]
+uncontracted
+  [tx][g1]
+  [tx][g2]
+underline
+  [fts~u]
+  [fte~u]
+Welsh
+  [lnb~cym]
+  [lnb]
+word:mws
+  uk-basic

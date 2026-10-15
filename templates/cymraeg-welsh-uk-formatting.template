@@ -1,0 +1,354 @@
+-braillemaker-template 1
+TranslationTables: CYMRCP+ENUDXP/CYMRCB+GENDXB
+BraillePageNumbersEvenPages: UpperRight
+BraillePageNumbersOddPages: UpperRight
+PrintPageNumbersEvenPages: UpperLeft
+PrintPageNumbersOddPages: UpperLeft
+FirstPageNumberDisplayed: 1
+Hyphenation: None
+ContentsStyle: UK Basic
+ContentsSuspendRefPageNums: False
+ContentsRemoveInternalNewlines: False
+ContentsCenterTopLevel: False
+ContentsNumberTopLevel: True
+ContentsRunoverIfOneLevel: 4
+ContentsRunoverIfMultiLevel: 2
+ContentsInitialIndentIfOneLevel: 1
+ContentsInitialIndentIfMultiLevel: 1
+ContentsIncrementalIndent: 2
+ContentsIncrementalRightMarginIfOneLevel: 6
+ContentsIncrementalRightMarginIfMultiLevel: 6
+ContentsGuideDotBraille: Dots_36
+ContentsAddMaxIndentToRunover: False
+ContentsPageNumStyle: Braille
+ContentsLowestLevelIncluded: 9
+Styles: 
+acronym
+  [i]
+
+AlphabeticDivision.
+  [rm6][kps][hds0][ypr0]
+  [hde][kpe1:2]
+Attribution.
+  [skn1][kbs1][hi5:5:0:2:2]
+  [hi][kbe][sk1]
+B-BodyText.
+  [hi3:1:0:0:0:0:1:3:1]
+  [hi]
+BB-BoxBegin.
+  [ind1][ypr0]
+  [ind1][kps][fr;f~7][d~7][l]
+BD-BoxDouble.
+  [ind1][ypr0]
+  [fr;f~=][d~=][ind1][l]
+BE-BoxEnd.
+  [ind1][ypr0]
+  [ind1][fr;f~g][d~g][l][kpe]
+BH-BoxCenteredHead.
+  [ind1][kps][fr;f~7][q~7][<][sc0][rm6][hds0:0][ypr0]
+  [hde][sk1][kpe1:2]
+BL-BlockProtectLevel
+  [kps][ki1][ypr0]
+  [ki0][kpe]
+bold
+  [fts~b]
+  [fte~b]
+BP-BlockProtect
+  [kps][ypr0]
+  [kpe]
+br
+  [<]
+
+brldisplay.
+  [sc1:0][cz]
+  [tx][sc1:0]
+brlinline
+  [cz]
+  [tx]
+C-Caption.
+  [hi7:5:0:0:0:0:1:7:5]
+  [hi]
+C-Contents.
+  [mfcs~contents]
+  [mfce]
+CapBreak
+  [xcs]
+
+CapTgr
+  [ucs]
+  [uce]
+CD-CBCDisplay.
+  [sc1:0][hi1:2:0:2][cb][ypr0]
+  [hi][tx][sc1:0:0]
+Centered.
+  [rm6][hds0]
+  [hde][rm0]
+CF-CenteredFullLine.
+  [hds0][ypr0]
+  [hde]
+CG-CenteredWithGuideDots.
+  [tab-1c][:][ypr0]
+  [;][fr;p~'.]
+chemistry
+  [ucsngs]
+  [ucsnge]
+CI-CBCInline
+  [cbi][ypr0]
+  [txi]
+compdisplay.
+  [sc1:0][ptys1][cb]
+  [ptye][tx][sc1:0:0]
+compinline
+  [cbi]
+  [txi]
+Continuation
+  [q~"][l][run]
+
+CR-CrossReference.
+  [sc1:1:1][hi7:5:0:0:0:0:1:7:5][ypr0]
+  [hi][sk1]
+CT-Cartoon.
+  [hi1:3:0:0:0:0:1:1:3]
+  [hi]
+Directions.
+  [sc1:1:1][hi5:5:0:2:0:0:2:7:5]
+  [hi]
+DisplayedMaterial
+  [svlma:2][sc1:1:1]
+  [sc1:0:1][svlma:0]
+E-Exercise.
+  [mfcs~exercise]
+  [mfce]
+EndnoteEmbed
+  [kdtxs~endnote][hi1:3:0:4:0]
+  [hi][kdtxe]
+EP-ExerciseProtect.
+  [mfcs~exercise][kps]
+  [kpe][mfce]
+ExactTranslation
+  [cz]
+  [tx]
+Footnote.
+  [hi1:3:0:0:0:0:1:1:3]
+  [hi]
+FootnoteEmbed
+  [kdtxs~footnote][hi1:3:0:4:0]
+  [hi][kdtxe]
+french
+  [lng~fr]
+  [lng]
+G-Glossary.
+  [mfcs~glossary]
+  [mfce]
+G1Passage
+  [q~;;;][g1]
+  [q~;'][g2]
+german
+  [lng~de]
+  [lng]
+GO-GuideWordsOff
+  [rfd]
+
+Group
+  [:][ypr0]
+  [;]
+GuideDots
+  [fr;p~'.]
+
+GuideDotsVol
+  [fr;p~-.]
+
+GW-GuideWord
+  [mec][q~"<3t4">][svrfs6:6][meg][:]
+  [;]
+H1-HeadingCentered.
+  [kps][rm6][rps1][hds][sc1:1:1:0][ypr0]
+  [rpe1][hde][rm0][sk1][kpe1:2]
+h1.
+  [l][kps][sc1:0][rm6][hds][rps1]
+  [rpe1][hde][rm0][sk1][kpe1:2]
+H2-HeadingCell5.
+  [kps][ind5][rps2][sc1:1:1:0][ypr0]
+  [rpe2][ind1][kpe1:2][skn0:1]
+h2.
+  [l][kps][sc1:0][ind5][rps2]
+  [rpe2][ind1][kpe2:2]
+H3-HeadingCell7.
+  [kps][ind7][rps3][sc1:1:1:0][ypr0]
+  [rpe3][ind1][kpe1:2][skn0:1]
+h3.
+  [l][kps][sc1:0][ind5][rps3]
+  [rpe3][ind1][kpe2:2]
+h4.
+  [l][kps][sc1:0][ind5][rps3]
+  [rpe3][ind1][kpe2:2]
+h5.
+  [l][kps][sc1:0][ind5][rps3]
+  [rpe3][ind1][kpe2:2]
+h6.
+  [l][kps][sc1:0][ind5][rps3]
+  [rpe3][ind1][kpe2:2]
+Hyperlink
+  [cb]
+  [tx]
+I1-Index.
+  [mfcs~index]
+  [mfce]
+initial
+  [svant3][svdac~1][svles1:1:2:0][caplv3][svcbh2~"][svgrn~}]
+  
+IPA
+  [lnb~qip]
+  [lnb]
+italian
+  [lng~it]
+  [lng]
+italic
+  [fts~i]
+  [fte~i]
+L-List.
+  [sc1:1:1][mfcs~list][ypr0]
+  [mfce][sc1:0:0]
+latin
+  [lng~la]
+  [lng]
+LeftFlush.
+  [hi1:1:0:0:0:0:1:1:1]
+  [hi]
+LineNums
+  [linenum][:]
+  [;]
+list.
+  [sc1:0][hi1:3:0:2:2][kps][ki1][mfcs~list]
+  [mfce][ki0][kpe][hi][sc1:0]
+MainBody.
+  [tld][top][sd1][pv1~]
+  [l]
+math
+  [ts]
+  [te]
+math-TextInMath
+  [te]
+  [ts]
+NB-NoBold
+  [ypr0]
+
+NE-NewPageEven.
+  [top]
+  [sd0]
+NN-NewPageNext.
+  [kdtxp~footnote][top][lea]
+
+NO-NewPageOdd.
+  [top]
+  [sd1]
+note.
+  [ind5][tab7]
+  [ind1]
+NoteRef
+  [cz][ypr0]
+  [tx]
+NoteSeparationLine.
+  [ind1][kps][ypr0]
+  [q~"333333][kpe1:2][ind1][l]
+NS-NoNumberSign
+  [ons]
+  [one]
+outline.
+  [sc1:0][hi1:5:0:2:2][kps][kil]
+  [ki0][kpe][hi][sc1:0]
+P-Poetry.
+  [mfcs~poetry][kps][ki1][ypr0]
+  [ki0][kpe][mfce]
+para.
+  [p]
+  [l]
+para.continue.
+  [l]
+  [l]
+poem.
+  [mfcs~poetry][kps][ki1]
+  [ki0][kpe][mfce]
+Portuguese
+  [lng~pt]
+  [lng]
+PP-ProsePlay.
+  [hi1:3:0:0:0:0:1:1:3]
+  [hi]
+PrelimPageNumber.
+  [top][sd1][pv1][ypr0]
+  [l]
+PS-ProseStage.
+  [hi5:5:0:2:0:0:2:7:5]
+  [hi]
+Quote.
+  [sc1:1:1][hi3:1:0:0:0:0:1:3:1]
+  [hi][sk1]
+RefPageNumber.
+  [kdtxp~footnote][kps][lea]
+  [kpe1:1][l]
+RefPageNumberEmbed
+  [kdtxp~footnote][lea]
+  [l][run]
+RF-RightFlush.
+  [fr][:]
+  [;]
+RunningHead.
+  [tls][skn]
+  [tle]
+script
+  [fts~s][ypr0]
+  [fte~s]
+SoftReturn
+  [l][run]
+
+spanish
+  [lng~es]
+  [lng]
+StairstepTable.
+  [hi1:1:0:2:2][kps][ypr0]
+  [kpe][hi]
+TG-Key.
+  [hi6:8:0:0:0:0:1:6:8][ypr0]
+  [hi]
+TN-Embed
+  [tns]
+  [tne]
+TOC:left
+  Chapter
+  ,*apt\]
+TOC:right
+  Page
+  ,page
+TOC:title
+  Contents
+  ,3t5ts
+tp.author.
+  [sc1:0][hds]
+  [hde]
+tp.general.
+  [sc1:0][hds]
+  [hde]
+tp.title.
+  [sc1:0][hds]
+  [hde]
+TranscriberGeneratedPageNumber.
+  [pv1~t][ypr0]
+  [l]
+TranscriberNote.
+  [hi7:5:0:0:0:0:1:7:5][tns]
+  [tne][hi]
+Uncontracted
+  [tx][g1]
+  [tx][g2]
+underline
+  [fts~u]
+  [fte~u]
+VP-VersePlay.
+  [hi1:5:0:2:0:0:2:3:5]
+  [hi]
+VS-VerseStage.
+  [hi7:7:0:2:0:0:2:9:7]
+  [hi]
+word:mws
+  bana

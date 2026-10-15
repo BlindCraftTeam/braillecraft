@@ -1,0 +1,133 @@
+-braillemaker-template 1
+TranslationTables: ENBRCP+ENBDXP/ENBRCB+ENGDXB
+BraillePageNumbersEvenPages: UpperRight
+BraillePageNumbersOddPages: UpperRight
+PrintPageNumbersEvenPages: UpperLeft
+PrintPageNumbersOddPages: UpperLeft
+FirstPageNumberDisplayed: 1
+Hyphenation: DashAndHyphen
+ContentsStyle: BANA Textbook
+ContentsSuspendRefPageNums: False
+ContentsRemoveInternalNewlines: False
+ContentsCenterTopLevel: False
+ContentsNumberTopLevel: True
+ContentsRunoverIfOneLevel: 4
+ContentsRunoverIfMultiLevel: 2
+ContentsInitialIndentIfOneLevel: 1
+ContentsInitialIndentIfMultiLevel: 1
+ContentsIncrementalIndent: 2
+ContentsIncrementalRightMarginIfOneLevel: 6
+ContentsIncrementalRightMarginIfMultiLevel: 6
+ContentsGuideDotBraille: Dot_3
+ContentsAddMaxIndentToRunover: False
+ContentsPageNumStyle: Braille
+ContentsLowestLevelIncluded: 99
+Styles: 
+acronym
+  [ii]
+  
+box
+  [ind1][kps][fr;f~7][d~7][l]
+  [ind1][fr;f~g][d~g][l][kpe]
+br
+  [<]
+  
+brldisplay.
+  [sc1:0][cz]
+  [tx][sc1:0]
+brlinline
+  [cz]
+  [tx]
+compdisplay.
+  [sc1:0][ptys1][cb][wb-cb]
+  [wb][ptye][tx][sc1:0]
+compinline
+  [cbi][wb-cb]
+  [wb][txi]
+french
+  [lng~fr]
+  [lng]
+german
+  [lng~de]
+  [lng]
+h1.
+  [l][kps][sc1:0][rm6][hds][rps1]
+  [rpe1][hde][rm0][sk1][kpe2:2]
+h2.
+  [l][kps][sc1:0][ind5][rps2]
+  [rpe2][ind1][kpe2:2]
+h3.
+  [l][kps][sc1:0][ind5][rps3]
+  [rpe3][ind1][kpe2:2]
+h4.
+  [l][kps]
+  [kpe2:2][l]
+h5.
+  [l][kps]
+  [kpe2:2][l]
+h6.
+  [l][kps]
+  [kpe2:2][l]
+initial
+  [svant3][svdac~1][svles1:1:0][caplv1][svcbh~"]
+  
+IPA
+  [lnb~qip]
+  [lnb]
+italian
+  [lng~it]
+  [lng]
+latin
+  [lng~la]
+  [lng]
+list.
+  [sc1:0][hi1:3:0:2:2][kps][ki1]
+  [ki0][kpe][hi][sc1:0]
+math
+  [ts]
+  [te]
+math-TextInMath
+  [te]
+  [ts]
+note.
+  [ind5][tab7]
+  [ind1]
+outline.
+  [sc1:0][hi1:5:0:2:2][kps][ki1]
+  [ki0][kpe][hi][sc1:0]
+para.
+  [p]
+  [l]
+para.continue.
+  [l]
+  [l]
+poem.
+  [sc1:0][hi1:3:0:2:2][kps][ki1]
+  [ki0][kpe][hi][sc1:0]
+poem.2level.
+  [sc1:0][hi1:4:0:2:0][kps][ki1]
+  [ki0][kpe][hi][sc1:0]
+ref.pg.no
+  [lea]
+  [l]
+spanish
+  [lng~es]
+  [lng]
+TOC:left
+  Chapter
+  ,*apt\]
+TOC:right
+  Page
+  ,page
+TOC:title
+  Contents
+  ,3t5ts
+tp.author.
+  [sc1:0][hds]
+  [hde]
+tp.general.
+  [sc1:0][hds]
+  [hde]
+tp.title.
+  [sc1:0][hds]
+  [hde]

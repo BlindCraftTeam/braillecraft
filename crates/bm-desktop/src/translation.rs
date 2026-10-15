@@ -8,10 +8,13 @@
 //! 0x1C code 0x1F.
 
 use std::cell::{Cell, RefCell};
+use std::collections::HashMap;
 use std::path::Path;
+use std::rc::Rc;
 
-use bm_core::engine::TableSet;
+use bm_core::engine::{LanguageSource, Languages, StyleTable, TableSet};
 use bm_core::table_list::TableList;
+use bm_core::templates::{self, Templates};
 
 use crate::encodings::{self, Encoding};
 
@@ -19,8 +22,13 @@ use crate::encodings::{self, Encoding};
 pub const DEFAULT_TABLES: [&str; 4] = ["enuncp", "enudxp", "enuncb", "gendxb"];
 
 thread_local! {
-    static TABLES: RefCell<Option<TableSet>> = const { RefCell::new(None) };
+    static TABLES: RefCell<Option<Rc<TableSet>>> = const { RefCell::new(None) };
     static LIST: RefCell<TableList> = RefCell::new(TableList::default());
+    /// Language codes switching tables: for print documents and for braille documents.
+    static LANGUAGES: RefCell<Option<(Languages, Languages)>> = const { RefCell::new(None) };
+    static TEMPLATES: RefCell<Option<Templates>> = const { RefCell::new(None) };
+    /// Each template's styles, read the first time a document with that template is translated.
+    static STYLES: RefCell<HashMap<String, Rc<StyleTable>>> = RefCell::new(HashMap::new());
     /// The region Document, Translation Tables lists (a region bit, or all); Western Hemisphere at first.
     static REGION: Cell<u32> = const { Cell::new(1) };
 }
@@ -28,12 +36,68 @@ thread_local! {
 /// Reads the table index and the list of table sets by language from `folder`; translation reports an error until
 /// this has run.
 pub fn load(folder: &Path) -> Result<usize, String> {
-    let set = TableSet::open(folder).map_err(|e| e.to_string())?;
+    let set = Rc::new(TableSet::open(folder).map_err(|e| e.to_string())?);
     let n = set.entries().len();
-    TABLES.with(|t| *t.borrow_mut() = Some(set));
     let list = TableList::read(folder.join("languages.tsv"))?;
+    let print = Languages::from_list(&list, LanguageSource::Shipped(set.clone()));
+    let mut braille = print.clone();
+    braille.print_document = false;
+    TABLES.with(|t| *t.borrow_mut() = Some(set));
+    LANGUAGES.with(|l| *l.borrow_mut() = Some((print, braille)));
     LIST.with(|l| *l.borrow_mut() = list);
     Ok(n)
+}
+
+/// Reads the document templates from `folder` (File, New lists them; documents take their styles).
+pub fn load_templates(folder: &Path) -> Result<usize, String> {
+    let t = Templates::open(folder)?;
+    let n = t.entries.len();
+    TEMPLATES.with(|s| *s.borrow_mut() = Some(t));
+    Ok(n)
+}
+
+/// Runs `f` with the document templates (none when they were not found).
+pub fn with_templates<R>(f: impl FnOnce(Option<&Templates>) -> R) -> R {
+    TEMPLATES.with(|t| f(t.borrow().as_ref()))
+}
+
+/// The template File, New selects: the one marked as default when it is still there, otherwise the built-in
+/// default.
+pub fn default_template() -> String {
+    crate::settings_store::load_default_template()
+        .filter(|n| with_templates(|t| t.is_some_and(|t| t.by_name(n).is_some())))
+        .unwrap_or_else(|| templates::BUILT_IN_DEFAULT.to_string())
+}
+
+/// A template's four tables, by its name.
+pub fn template_tables(name: &str) -> Option<[String; 4]> {
+    with_templates(|t| {
+        let t = t?;
+        templates::tables(&t.text(t.by_name(name)?).ok()?)
+    })
+}
+
+/// A template's styles, by its name; none for an unknown template.
+fn template_styles(name: &str) -> Option<Rc<StyleTable>> {
+    if let Some(s) = STYLES.with(|s| s.borrow().get(name).cloned()) {
+        return Some(s);
+    }
+    let styles = with_templates(|t| {
+        let t = t?;
+        Some(Rc::new(templates::styles(&t.text(t.by_name(name)?).ok()?)))
+    })?;
+    STYLES.with(|s| s.borrow_mut().insert(name.to_string(), styles.clone()));
+    Some(styles)
+}
+
+/// Translates with the rules table `code`, the template's styles and the language switches of the table list.
+fn translate(code: &str, text: &str, template: &str, print_document: bool) -> Result<String, String> {
+    let styles = template_styles(template);
+    LANGUAGES.with(|l| {
+        let l = l.borrow();
+        let languages = l.as_ref().map(|(p, b)| if print_document { p } else { b });
+        with_table(code, |t| t.translate_with(text, styles.as_deref(), languages).map_err(|e| e.to_string()))
+    })
 }
 
 /// Runs `f` with the list of table sets by language.
@@ -78,19 +142,21 @@ fn shown_codes(s: &str) -> String {
     s.replace('\u{1c}', "[").replace('\u{1f}', "]")
 }
 
-/// Print text (codes as [code]) to braille in the display encoding `enc`, with the rules table `code`.
-pub fn forward(code: &str, text: &str, enc: &Encoding) -> Result<String, String> {
-    let ascii = with_table(code, |t| t.translate(text).map_err(|e| e.to_string()))?;
+/// Print text (codes as [code]) to braille in the display encoding `enc`, with the rules table `code` and the
+/// styles of the document's template.
+pub fn forward(code: &str, text: &str, enc: &Encoding, template: &str) -> Result<String, String> {
+    let ascii = translate(code, text, template, true)?;
     Ok(convert_braille(&shown_codes(&ascii), encodings::find(encodings::DEFAULT), enc))
 }
 
-/// Braille in the display encoding `enc` (codes as [code]) to print, with the rules table `code`.
-pub fn back(code: &str, text: &str, enc: &Encoding) -> Result<String, String> {
+/// Braille in the display encoding `enc` (codes as [code]) to print, with the rules table `code` and the styles of
+/// the document's template.
+pub fn back(code: &str, text: &str, enc: &Encoding, template: &str) -> Result<String, String> {
     let ascii = convert_braille(text, enc, encodings::find(encodings::DEFAULT));
     // In braille "[" and "]" are cells, so the engine is given the codes as 0x1C ... 0x1F, in the same places the
     // document shows them.
     let marked = marks(&ascii);
-    let print = with_table(code, |t| t.translate(&marked).map_err(|e| e.to_string()))?;
+    let print = translate(code, &marked, template, false)?;
     Ok(shown_codes(&print))
 }
 
@@ -146,27 +212,43 @@ pub fn convert_braille(text: &str, from: &Encoding, to: &Encoding) -> String {
 mod tests {
     use super::*;
 
+    const ENGLISH: &str = templates::BUILT_IN_DEFAULT;
+
     fn loaded() {
-        load(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tables")).unwrap();
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        load(&root.join("tables")).unwrap();
+        load_templates(&root.join("templates")).unwrap();
     }
 
     #[test]
     fn english_both_ways_with_the_shipped_tables() {
         loaded();
         let na = encodings::find(encodings::DEFAULT);
-        assert_eq!(forward("enuncp", "The cat sat.", na).unwrap(), ",! cat sat4");
-        assert_eq!(forward("enuncp", "[g1l]The cat sat.", na).unwrap(), "[g1l],the cat sat4");
-        assert_eq!(back("enuncb", ",! cat sat4", na).unwrap(), "The cat sat.");
-        assert!(forward("nosuch", "x", na).is_err());
+        assert_eq!(forward("enuncp", "The cat sat.", na, ENGLISH).unwrap(), ",! cat sat4");
+        assert_eq!(forward("enuncp", "[g1l]The cat sat.", na, ENGLISH).unwrap(), "[g1l],the cat sat4");
+        assert_eq!(back("enuncb", ",! cat sat4", na, ENGLISH).unwrap(), "The cat sat.");
+        assert!(forward("nosuch", "x", na, ENGLISH).is_err());
+        assert_eq!(template_tables(ENGLISH).unwrap(), DEFAULT_TABLES.map(String::from));
+    }
+
+    #[test]
+    fn template_styles_and_language_codes_take_effect() {
+        loaded();
+        let na = encodings::find(encodings::DEFAULT);
+        assert_eq!(
+            forward("enuncp", "the cat [es~G1Passage]the cat[ee~G1Passage] the cat", na, ENGLISH).unwrap(),
+            "! cat [es~g1passage]the cat[ee~g1passage] ! cat"
+        );
+        assert_eq!(forward("enuncp", "a cat [lnb~qip]ab[lnb] the cat", na, ENGLISH).unwrap(), "a cat [lnb~qip]\";2ab;;[lnb] ! cat");
     }
 
     #[test]
     fn braille_in_another_encoding_goes_through_the_engine_in_north_american() {
         loaded();
         let german = encodings::find("german");
-        let shown = forward("enuncp", "The cat sat.", german).unwrap();
+        let shown = forward("enuncp", "The cat sat.", german, ENGLISH).unwrap();
         assert_eq!(convert_braille(&shown, german, encodings::find(encodings::DEFAULT)), ",! cat sat4");
-        assert_eq!(back("enuncb", &shown, german).unwrap(), "The cat sat.");
+        assert_eq!(back("enuncb", &shown, german, ENGLISH).unwrap(), "The cat sat.");
     }
 
     #[test]

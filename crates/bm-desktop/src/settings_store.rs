@@ -341,6 +341,26 @@ pub fn save_region(region: u32) {
     set(ROOT, "TranslationRegion", &region.to_string());
 }
 
+/// The template File, New selects (Mark template as default); none when no default has been chosen.
+pub fn load_default_template() -> Option<String> {
+    get_text(ROOT, "DefaultTemplate")
+}
+
+pub fn save_default_template(name: &str) {
+    set(ROOT, "DefaultTemplate", name);
+}
+
+/// The templates hidden from File, New (Hide Template), kept as one value with the names separated by "|".
+pub fn load_hidden_templates() -> Vec<String> {
+    get(ROOT, "HiddenTemplates")
+        .map(|v| v.split('|').map(str::trim).filter(|n| !n.is_empty()).map(String::from).collect())
+        .unwrap_or_default()
+}
+
+pub fn save_hidden_templates(names: &[String]) {
+    set(ROOT, "HiddenTemplates", &names.join("|"));
+}
+
 /// Global, Default Views and Global, View Preferences (the six-key set).
 pub fn save_default_views(d: &DefaultViews) {
     set("Display", "dftrans", &view_font_number(d.translated_font).to_string());

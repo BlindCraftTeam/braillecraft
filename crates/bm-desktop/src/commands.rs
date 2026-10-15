@@ -321,18 +321,161 @@ pub fn run(id: i32, checked: bool) {
 
 // ------------------------------------------------------------------ File
 
+/// What File, New shows: the templates in alphabetical order, less the hidden ones (unless Show Hidden Templates is
+/// checked) and those of other regions (Select Region...); the default template is selected.
+struct NewDialogState {
+    hidden: Vec<String>,
+    default: String,
+    show_hidden: bool,
+    region: u32,
+    /// The names listed now, and the one the list cursor is on. The template list allows several selections, as
+    /// the reference has it; the widget gives no way to read a selection there, so the item is followed from the
+    /// list's selection events.
+    names: Vec<String>,
+    current: Option<String>,
+}
+
+const REGION_NAMES: [&str; 6] = ["Western Hemisphere", "Europe", "Asia", "Africa", "Pacific", "All Regions/All Languages"];
+
+fn region_of(i: usize) -> u32 {
+    if i >= 5 {
+        bm_core::table_list::ALL_REGIONS
+    } else {
+        TableList::region_bit(i)
+    }
+}
+
+/// The templates listed: a template whose tables are in the table list belongs to that language's regions; one
+/// whose tables are not listed is shown in every region.
+fn new_dialog_names(s: &NewDialogState) -> Vec<String> {
+    let names = translation::with_templates(|t| t.map(|t| t.names_sorted()).unwrap_or_default());
+    names
+        .into_iter()
+        .filter(|n| s.show_hidden || !s.hidden.contains(n))
+        .filter(|n| {
+            let Some(tables) = translation::template_tables(n) else { return true };
+            translation::with_list(|l| l.entry_for(&tables).map_or(true, |(i, _)| l.entries[i].regions & s.region != 0))
+        })
+        .collect()
+}
+
+fn fill_new_dialog(d: &Dlg, s: &mut NewDialogState, keep: Option<String>) {
+    let names = new_dialog_names(s);
+    let items: Vec<&str> = names.iter().map(String::as_str).collect();
+    let want = keep.unwrap_or_else(|| s.default.clone());
+    let sel = names.iter().position(|n| *n == want).or(if names.is_empty() { None } else { Some(0) });
+    d.set_items(10, &items, sel.map(|i| i as u32));
+    s.current = sel.map(|i| names[i].clone());
+    s.names = names;
+    update_hide_button(d, s);
+}
+
+/// Hide Template and Show Template Always share a place: the second shows for a hidden template.
+fn update_hide_button(d: &Dlg, s: &NewDialogState) {
+    let hidden = s.current.as_ref().is_some_and(|n| s.hidden.contains(n));
+    if let Some(w) = d.win(12) {
+        w.show(!hidden);
+    }
+    if let Some(w) = d.win(13) {
+        w.show(hidden);
+    }
+}
+
 fn file_new() {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+    let state = Rc::new(RefCell::new(NewDialogState {
+        hidden: settings_store::load_hidden_templates(),
+        default: translation::default_template(),
+        show_hidden: false,
+        region: bm_core::table_list::ALL_REGIONS,
+        names: Vec::new(),
+        current: None,
+    }));
     let d = open_dialog(1017, None);
     d.set_radio(&[7, 8], 0);
-    d.set_items(10, &["English (UEB) - Standard", "English (UEB) - Textbook Format"], Some(0));
-    for b in [11, 12, 13, 14] {
-        d.on_button(b, || message(PLANNED_TEMPLATES));
+    d.set_checked(15, false);
+    fill_new_dialog(&d, &mut state.borrow_mut(), None);
+    let copy = |d: &Dlg| Dlg { id: d.id, dialog: d.dialog };
+
+    let (dc, st) = (copy(&d), state.clone());
+    d.on_button(11, move || {
+        let Some(name) = st.borrow().current.clone() else { return };
+        if st.borrow().hidden.contains(&name) {
+            message("This template is normally hidden, so it cannot be made the default.  You must first use the \"Show Template Always\" button.");
+            return;
+        }
+        settings_store::save_default_template(&name);
+        st.borrow_mut().default = name.clone();
+        fill_new_dialog(&dc, &mut st.borrow_mut(), Some(name));
+    });
+    let (dc, st) = (copy(&d), state.clone());
+    d.on_button(12, move || {
+        let Some(name) = st.borrow().current.clone() else { return };
+        if st.borrow().default == name {
+            message("This is the default template.  It cannot be hidden unless you first choose another default.");
+            return;
+        }
+        st.borrow_mut().hidden.push(name.clone());
+        settings_store::save_hidden_templates(&st.borrow().hidden);
+        fill_new_dialog(&dc, &mut st.borrow_mut(), Some(name));
+    });
+    let (dc, st) = (copy(&d), state.clone());
+    d.on_button(13, move || {
+        let Some(name) = st.borrow().current.clone() else { return };
+        st.borrow_mut().hidden.retain(|n| *n != name);
+        settings_store::save_hidden_templates(&st.borrow().hidden);
+        fill_new_dialog(&dc, &mut st.borrow_mut(), Some(name));
+    });
+    let (dc, st) = (copy(&d), state.clone());
+    d.on_button(14, move || {
+        let current = (0..REGION_NAMES.len()).position(|i| region_of(i) == st.borrow().region);
+        let r = open_dialog(1018, None);
+        r.set_items(7, &REGION_NAMES, current.map(|i| i as u32));
+        let ok = r.show() == 1;
+        let chosen = r.selection(7);
+        r.destroy();
+        if let (true, Some(i)) = (ok, chosen) {
+            st.borrow_mut().region = region_of(i as usize);
+            let keep = st.borrow().current.clone();
+            fill_new_dialog(&dc, &mut st.borrow_mut(), keep);
+        }
+    });
+    if let Some(c) = d.win(15).and_then(|w| w.as_widget::<CheckBox>()) {
+        let (dc, st) = (copy(&d), state.clone());
+        c.on_toggled(move |e| {
+            st.borrow_mut().show_hidden = e.is_checked();
+            let keep = st.borrow().current.clone();
+            fill_new_dialog(&dc, &mut st.borrow_mut(), keep);
+        });
+    }
+    if let Some(l) = d.win(10).and_then(|w| w.as_widget::<ListBox>()) {
+        let (dc, st) = (copy(&d), state.clone());
+        l.on_selection_changed(move |e| {
+            let mut s = st.borrow_mut();
+            s.current = e.get_selection().and_then(|i| s.names.get(i as usize).cloned());
+            update_hide_button(&dc, &s);
+        });
     }
     let ok = d.show() == 1;
     let braille = d.radio(&[7, 8]) == Some(1);
+    let template = state.borrow().current.clone();
     d.destroy();
     if ok {
-        documents::new_document(if braille { DocKind::Braille } else { DocKind::Print }, None, "");
+        let key = documents::new_document(if braille { DocKind::Braille } else { DocKind::Print }, None, "");
+        if let Some(name) = template {
+            let tables = translation::template_tables(&name);
+            app::with(|a| {
+                if let Some(i) = a.index_of(key) {
+                    if let Some(t) = tables {
+                        a.docs[i].tables = t;
+                    }
+                    a.docs[i].template = name;
+                    a.docs[i].last_line_key.clear();
+                }
+                a.refresh_menus();
+            });
+        }
     }
 }
 
@@ -527,9 +670,10 @@ fn wrap_braille(line: &str, width: usize) -> Vec<String> {
 /// braille document (forward translation, lines wrapped to the cells per line); a braille document becomes a print
 /// document (back-translation). Page layout by codes and styles comes with the formatter.
 fn translate_document() {
-    let Some((text, kind, tables, initial, name, untitled, cells)) = app::with(|a| {
+    let Some((text, kind, tables, initial, template, name, untitled, cells)) = app::with(|a| {
         a.doc().map(|d| {
-            (d.text.get_value(), d.kind, d.tables.clone(), d.initial_codes.clone(), d.name.clone(), d.untitled, d.cells)
+            let (codes, template) = (d.initial_codes.clone(), d.template.clone());
+            (d.text.get_value(), d.kind, d.tables.clone(), codes, template, d.name.clone(), d.untitled, d.cells)
         })
     }) else {
         return;
@@ -547,9 +691,9 @@ fn translate_document() {
         // echo at the start of each translated line is left off.
         let with_codes = format!("{initial}{line}");
         let r = if to_braille {
-            translation::forward(&tables[0], &with_codes, enc).map(|s| s.trim_end().to_string())
+            translation::forward(&tables[0], &with_codes, enc, &template).map(|s| s.trim_end().to_string())
         } else {
-            translation::back(&tables[2], &with_codes, enc)
+            translation::back(&tables[2], &with_codes, enc, &template)
         }
         .map(|s| s.strip_prefix(initial.as_str()).map(str::to_string).unwrap_or(s));
         match r {
@@ -574,6 +718,7 @@ fn translate_document() {
         if let Some(i) = a.index_of(key) {
             a.docs[i].tables = tables.clone();
             a.docs[i].initial_codes = initial.clone();
+            a.docs[i].template = template.clone();
             a.docs[i].dirty = true;
             if to_braille {
                 a.docs[i].cells = 40;

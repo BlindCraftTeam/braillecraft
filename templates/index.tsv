@@ -1,0 +1,229 @@
+# Document templates: the short code of the template a document file names, the template file in this
+# folder (without .template) and the template's name as File, New lists it.
+# code	file	name
+afrucp	afrikaans-basic	Afrikaans - basic
+amhacp	amharic-basic	Amharic - basic
+araacp	arabic-pre-2002-basic	Arabic pre-2002 - basic
+arab	arabic-basic	Arabic - basic
+asmacp-n	assamese-basic-with-nemeth	Assamese - basic with Nemeth
+asmacp	assamese-basic	Assamese - basic
+aussie_ueb	english-ueb-australian-formatting	English (UEB) - Australian formatting
+awaacp-n	awadhi-basic-with-nemeth	Awadhi - basic with Nemeth
+awaacp	awadhi-basic	Awadhi - basic
+azeacp	azerbaijani-basic	Azerbaijani - basic
+bakacp	bashkir-basic	Bashkir - basic
+bana	english-bana-pre-ueb-textbook-de-bana	English (BANA Pre-UEB Textbook DE) - BANA
+bananem	english-bana-pre-ueb-textbook-de-bana-nemeth	English (BANA Pre-UEB Textbook DE) - BANA Nemeth
+belacp	belarusian-basic	Belarusian - basic
+benacp-n	bengali-indian-basic-with-nemeth	Bengali (Indian) - basic with Nemeth
+benacp	bengali-indian-basic	Bengali (Indian) - basic
+benbcp	bengali-bangladeshi-basic	Bengali (Bangladeshi) - basic
+bgaaup	bulgarian-basic	Bulgarian - basic
+bgcacp-n	haryanvi-basic-with-nemeth	Haryanvi - basic with Nemeth
+bgcacp	haryanvi-basic	Haryanvi - basic
+bhoacp-n	bhojpuri-basic-with-nemeth	Bhojpuri - basic with Nemeth
+bhoacp	bhojpuri-basic	Bhojpuri - basic
+boaacp	tibetan-basic	Tibetan - basic
+bosacp	bosnian-basic	Bosnian - basic
+britnc	english-british-pre-ueb-no-caps-in-literary	English (British Pre-UEB) - no caps in literary
+britwc	english-british-pre-ueb-with-capitals	English (British Pre-UEB) - with capitals
+catacp	catalan-basic	Catalan - basic
+cebucp	cebuano-basic	Cebuano - basic
+chracp	cherokee-basic	Cherokee - basic
+chvacp	chuvash-basic	Chuvash - basic
+csaacp	czech-basic	Czech - basic
+ctgacp	chittagonian-basic	Chittagonian - basic
+cymrcp	cymraeg-welsh-basic	Cymraeg (Welsh) - basic
+cymrnp	cymraeg-welsh-uk-formatting	Cymraeg (Welsh) - UK Formatting
+danocp	danish-pre-2022-basic	Danish (Pre-2022) - basic
+danscp	danish-basic	Danish - basic
+deutcp	german-basic	German - basic
+deutup	german-uncontracted-basic	German Uncontracted - basic
+deutvp	german-vollschrift-basic	German Vollschrift - basic
+dvaacp	dhivehi-basic	Dhivehi - basic
+dzaacp	dzongkha-basic	Dzongkha - basic
+elcacp	greek-classical-american-basic	Greek (Classical-American) - basic
+elmocp	greek-modern-basic	Greek (Modern) - basic
+enmocp	english-moon-basic	English Moon - basic
+enmonp	english-moon-basic-no-capitals	English Moon - basic no capitals
+enuncp	english-ueb-basic	English (UEB) - basic
+eoaacp	esperanto-basic	Esperanto - basic
+etaacp	estonian-basic	Estonian - basic
+eusacp	basque-basic	Basque - basic
+eweacp	ewe-basic	Ewe - basic
+faoacp	faroese-basic	Faroese - basic
+farscp	farsi-persian-basic	Farsi (Persian) - basic
+finnup	finnish-basic	Finnish - basic
+fr2006a	francais-2006-abrege	Francais 2006 - abrege
+fr2006ab	francais-2006-abrege-braille-de-base	Francais 2006 - abrege braille de base
+fr2006i	francais-2006-integral	Francais 2006 - integral
+fr2006ib	francais-2006-integral-braille-de-base	Francais 2006 - integral braille de base
+fulacp	fulah-fula-basic	Fulah (Fula) - basic
+glgacp	galician-basic	Galician - basic
+grnacp	guarani-basic	Guarani - basic
+gujacp-n	gujarati-basic-with-nemeth	Gujarati - basic with Nemeth
+gujacp	gujarati-basic	Gujarati - basic
+hauscp	hausa-basic	Hausa - basic
+heamup	hebrew-american-basic	Hebrew (American) - basic
+heisup	hebrew-israeli-basic	Hebrew (Israeli) - basic
+hilacp	hiligaynon-basic	Hiligaynon - basic
+hinacp-n	hindi-basic-with-nemeth	Hindi - basic with Nemeth
+hinacp	hindi-basic	Hindi - basic
+hraacp	croatian-basic	Croatian - basic
+htaacp	haitian-creole	Haitian Creole
+huaacp	hungarian-basic	Hungarian - basic
+hyaacp	armenian-eastern-basic	Armenian (Eastern) - basic
+ibaacp	igbo-basic	Igbo - basic
+idaacp	indonesian-basic	Indonesian - basic
+iloacp	iloko-ilokano-basic	Iloko (Ilokano) - basic
+inhacp	ingush-basic	Ingush - basic
+irish	irish	Irish
+isaacp	icelandic-basic	Icelandic - basic
+jakncp	japanese-kana-basic	Japanese (Kana) - basic
+javacp	javanese-basic	Javanese - basic
+kaaacp	georgian-basic	Georgian - basic
+kalacp	greenlandic-kalaallisut-basic	Greenlandic (Kalaallisut) - basic
+kanacp-n	kannada-basic-with-nemeth	Kannada - basic with Nemeth
+kanacp	kannada-basic	Kannada - basic
+kckacp	kalanga-basic	Kalanga - basic
+kinacp	kinyarwanda-basic	Kinyarwanda - basic
+kiracp	kirghiz-basic	Kirghiz - basic
+kjhacp	khakas-basic	Khakas - basic
+kkaacp	kazakh-basic	Kazakh - basic
+kmaacp	khmer-basic	Khmer - basic
+konacp	kongo-kikongo-basic	Kongo (Kikongo) - basic
+korecp	korean-basic	Korean - basic
+kruacp	kurukh-basic	Kurukh - basic
+ktuacp	kituba-basic	Kituba - basic
+kuracp	kurdish-basic	Kurdish - basic
+lajacp	lango-leb-lango-basic	Lango (Leb-Lango) - basic
+latiup	latin-basic	Latin - basic
+lisucp	lisu-basic	Lisu - basic
+loaacp-n	lao-basic-with-nemeth	Lao - basic with Nemeth
+loaacp	lao-basic	Lao - basic
+ltaacp	lithuanian-basic	Lithuanian - basic
+ltzacp	luxembourgish-basic	Luxembourgish - basic
+luaacp	luba-kasai-luba-lulua-basic	Luba-Kasai (Luba-Lulua) - basic
+lvaacp	latvian-basic	Latvian - basic
+madacp	madurese-basic	Madurese - basic
+magacp-n	magahi-basic-with-nemeth	Magahi - basic with Nemeth
+magacp	magahi-basic	Magahi - basic
+maiacp-n	maithili-basic-with-nemeth	Maithili - basic with Nemeth
+maiacp	maithili-basic	Maithili - basic
+malacp-n	malayalam-basic-with-nemeth	Malayalam - basic with Nemeth
+malacp	malayalam-basic	Malayalam - basic
+maracp-n	marathi-basic-with-nemeth	Marathi - basic with Nemeth
+maracp	marathi-basic	Marathi - basic
+mikmaw	mi-kmaq-basic	Mi'kmaq - basic
+mkdacp	macedonian-basic	Macedonian - basic
+mlgacp	malagasy-basic	Malagasy - basic
+mnaacp	mongolian-basic	Mongolian - basic
+mniacp-n	meitei-manipuri-basic-with-nemeth	Meitei (Manipuri) - basic with Nemeth
+mniacp	meitei-manipuri-basic	Meitei (Manipuri) - basic
+msaacp	malay-basic	Malay - basic
+mtaacp	maltese-basic	Maltese - basic
+myaacp	burmese-basic	Burmese - basic
+navacp	navajo-basic	Navajo - basic
+ndebele	ndebele-basic	Ndebele - basic
+nepacp	nepali-basic	Nepali - basic
+nguni	nguni-xhosa-or-zulu-basic	Nguni (Xhosa or Zulu) - basic
+niso	niso	niso
+nlaacp	dutch-basic	Dutch - basic
+norse	norse	Norse
+norseu	norse-uncontracted	Norse Uncontracted
+nsoacp	sotho-southern-and-northern-pedi-basic	Sotho (Southern and Northern (Pedi)) - basic
+nyaacp	nyanja-chewa-basic	Nyanja (Chewa) - basic
+nz_ueb	english-ueb-new-zealand-including-maori	English (UEB) - New Zealand (including Maori)
+oriacp-n	oriya-basic-with-nemeth	Oriya - basic with Nemeth
+oriacp	oriya-basic	Oriya - basic
+ormacp	oromo-basic	Oromo - basic
+panacp-n	panjabi-basic-with-nemeth	Panjabi - basic with Nemeth
+panacp	panjabi-basic	Panjabi - basic
+plaacp	polish-basic	Polish - basic
+plaucp	polish-uncontracted-basic	Polish Uncontracted - basic
+prsacp	dari-basic	Dari - basic
+ptbrcp	portuguese-uncontracted-basic	Portuguese Uncontracted - basic
+pusacp	pushto-basic	Pushto - basic
+qafwcp	west-african-languages-basic	West African Languages - basic
+qakkcp	semitic-language-transcription-basic	Semitic language transcription - basic
+qbibcp	biblical-original-language-studies-basic	Biblical original language studies - basic
+qhmacp	hmong-rpa-basic	Hmong (RPA) - basic
+qhyacp	armenian-western-basic	Armenian (Western) - basic
+qipacp	ipa-basic	IPA - basic
+qlaecp	latin-script-english-like-uncontracted-basic	Latin Script (English-like) Uncontracted - basic
+qmtncp	math-notation-nemeth-1972-math-mode-only-basic	Math notation (Nemeth 1972 math mode only) - Basic
+qqpecp	ueb-pharmaceutical	UEB Pharmaceutical
+qqphcp	ebu-pharmaceutical	EBU Pharmaceutical
+queacp	quechua-basic	Quechua - basic
+romacp	romanian-basic	Romanian - basic
+runacp	rundi-kurundi-basic	Rundi (Kurundi) - basic
+russup	russian-basic	Russian - basic
+sanacp-n	sanskrit-basic-with-nemeth	Sanskrit - basic with Nemeth
+sanacp	sanskrit-basic	Sanskrit - basic
+satacp-n	santali-basic-with-nemeth	Santali - basic with Nemeth
+satacp	santali-basic	Santali - basic
+sckacp-n	sadri-basic-with-nemeth	Sadri - basic with Nemeth
+sckacp	sadri-basic	Sadri - basic
+sinacp-n	sinhala-basic-with-nemeth	Sinhala - basic with Nemeth
+sinacp	sinhala-basic	Sinhala - basic
+skaacp	slovak-basic	Slovak - basic
+slvacp	slovenian-basic	Slovenian - basic
+slvaup	slovenian-uncontracted-basic	Slovenian Uncontracted - basic
+snaacp	shona-basic	Shona - basic
+sndacp-n	sindhi-basic-with-nemeth	Sindhi - basic with Nemeth
+sndacp	sindhi-basic	Sindhi - basic
+somacp	somali-basic	Somali - basic
+sotho	tswana-basic	Tswana - basic
+sqiacp	albanian-basic	Albanian - basic
+sraacp	serbian-basic	Serbian - basic
+srpmcp	montenegrin-basic	Montenegrin - basic
+sunacp	sundanese-basic	Sundanese - basic
+svennp	swedish-uncontracted-basic-no-capitals	Swedish Uncontracted - basic no capitals
+svenup	swedish-uncontracted-basic	Swedish Uncontracted - basic
+swahilg	swahili-general-basic	Swahili General - basic
+swakcp	swahili-kenya-2022-basic	Swahili Kenya 2022 - basic
+swati	swati-basic	Swati - basic
+sylacp-n	sylheti-basic-with-nemeth	Sylheti - basic with Nemeth
+sylacp	sylheti-basic	Sylheti - basic
+tamacp-n	tamil-basic-with-nemeth	Tamil - basic with Nemeth
+tamacp	tamil-basic	Tamil - basic
+telacp-n	telugu-basic-with-nemeth	Telugu - basic with Nemeth
+telacp	telugu-basic	Telugu - basic
+tgkacp	tajik-basic	Tajik - basic
+tglacp	tagalog-basic	Tagalog - basic
+thaicp-n	thai-basic-with-nemeth	Thai - basic with Nemeth
+thaicp	thai-basic	Thai - basic
+tiracp	tigrinya-basic	Tigrinya - basic
+tlaacp	filipino-basic	Filipino - basic
+tmpl0000	english-bana-pre-ueb-literary-format	English (BANA Pre-UEB) - Literary Format
+tmpl0001	english-bana-pre-ueb-textbook-de-textbook-fmt	English (BANA Pre-UEB Textbook DE) - Textbook Fmt
+tmpl00es	espanol-sin-contracciones	Espanol sin Contracciones
+tmpl00it	italiano	Italiano
+tmpl01es	espanol-con-contracciones	Espanol con Contracciones
+tmpl02es	espanol-reducida	Espanol Reducida
+toiacp	tonga-chitonga-or-zambezi-basic	Tonga (Chitonga or Zambezi) - basic
+traacp	turkish-basic	Turkish - basic
+tsonga	tsonga-basic	Tsonga - basic
+ttaacp	tatar-basic	Tatar - basic
+tukacp	turkmen-basic	Turkmen - basic
+udmacp	udmurt-basic	Udmurt - basic
+uebbana	english-ueb-bana	English (UEB) - BANA
+uebbanan	english-ueb-bana-with-nemeth	English (UEB) - BANA with Nemeth
+uebg1nem	english-ueb-uncontracted-bana-with-nemeth	English (UEB Uncontracted) - BANA with Nemeth
+uebuk	english-ueb-uk-formatting-legacy	English (UEB) - UK formatting (legacy)
+ukaaf	english-ueb-uk-formatting	English (UEB) - UK formatting
+ukracp	ukrainian-basic	Ukrainian - basic
+umbacp	umbundu-basic	Umbundu - basic
+urdacp-n	urdu-indian-basic-with-nemeth	Urdu (Indian) - basic with Nemeth
+urdacp	urdu-indian-basic	Urdu (Indian) - basic
+urdpcp	urdu-pakistani-basic	Urdu (Pakistani) - basic
+uzaacp	uzbek-basic	Uzbek - basic
+venda	venda-basic	Venda - basic
+vietcp	vietnamese-basic	Vietnamese - basic
+xhoacp	xhosa-basic	Xhosa - basic
+yorucp	yoruba-basic	Yoruba - basic
+zhmpcp	chinese-mandarin-basic	Chinese Mandarin - basic
+zhmpcpt	chinese-mandarin-with-tones-basic	Chinese Mandarin with tones - basic
+zhtwcp	chinese-for-taiwan-basic	Chinese for Taiwan - basic
+zhyjcp	chinese-yue-cantonese-basic	Chinese Yue (Cantonese) - basic
+zulacp	zulu-basic	Zulu - basic

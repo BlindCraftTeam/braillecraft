@@ -1,0 +1,188 @@
+-braillemaker-template 1
+TranslationTables: FRUNCP+FRUDXP/FRUNCB+GENDXB
+BraillePageNumbersEvenPages: UpperRight
+BraillePageNumbersOddPages: UpperRight
+PrintPageNumbersEvenPages: UpperLeft
+PrintPageNumbersOddPages: UpperLeft
+FirstPageNumberDisplayed: 2
+Hyphenation: French
+ContentsStyle: Francais standard
+ContentsCenterTopLevel: False
+ContentsNumberTopLevel: True
+ContentsRunoverIfOneLevel: 4
+ContentsRunoverIfMultiLevel: 2
+ContentsInitialIndentIfOneLevel: 1
+ContentsInitialIndentIfMultiLevel: 1
+ContentsIncrementalIndent: 2
+ContentsIncrementalRightMarginIfOneLevel: 6
+ContentsIncrementalRightMarginIfMultiLevel: 6
+ContentsGuideDotBraille: Dot_3
+ContentsAddMaxIndentToRunover: False
+ContentsPageNumStyle: Braille
+ContentsLowestLevelIncluded: 99
+Styles: 
+Abrege
+  [g2]
+  
+acronym
+  [wb-no][i]
+  [wb]
+adr-dest.
+  [l][kps][g1][ind5][ptys2]
+  [kpe2:2][g2][sk1][ptye][ind1]
+adr-exp.
+  [l][kps][g1]
+  [kpe2:2][g2][sk1]
+allemand
+  [lng~de]
+  [lng]
+Anglais
+  [lng~en]
+  [lng]
+appeldenote
+  [tas1][q~+]
+  
+bold
+  [fts~b]
+  [fte~b]
+box
+  [ind1][kps][fr;f~7][d~7][l]
+  [ind1][fr;f~g][d~g][l][kpe]
+brldisplay-fr.
+  [l][cz;f]
+  [tx][l]
+brldisplay.
+  [l][cz]
+  [tx][l]
+brlinline
+  [cz]
+  [tx]
+brlinline-fr
+  [cz;f]
+  [tx]
+centre.
+  [hds]
+  [hde]
+compdisplay.
+  [wb-cb][i]
+  [wb]
+compinline
+  [wb-cb][i]
+  [wb]
+couv.
+  [hds][g1][wb-no][vcs]
+  [hde][top][vce][g2][wb]
+Espagnol
+  [lng~es]
+  [lng]
+Francais
+  [lng~fr]
+  [lng]
+Guillemet-niveau2
+  [q~^]
+  [q~b]
+h1.
+  [l][kps][sc2:2:0][rm4][hds][rps1][wb-no]
+  [wb][rpe1][hde][rm0][sk2][kpe2:2]
+h2.
+  [l][kps][sc1:1:0][hds][rps2][wb-no]
+  [wb][rpe2][hde][kpe2:2][sk1]
+h3.
+  [l][kps][sc1:1:0][ind5][rps3]
+  [rpe3][ind1][kpe1:1]
+h4.
+  [l][kps][sc1:1:0][ind1][rps4]
+  [kpe1:1][rpe4]
+h5.
+  [l][kps][sc1:1:0][p][rps5]
+  [rpe5][kpe1:1][l]
+h6.
+  [l][kps][sc1:1:0][p][rps6]
+  [rpe6][kpe1:1][l]
+h7.
+  [l][kps][sc1:1:0][p][rps7]
+  [rpe7][kpe1:1][l]
+h8.
+  [l][kps][sc1:1:0][p][rps8]
+  [rpe8][kpe1:1][l]
+h9.
+  [l][kps][sc1:1:0][p][rps9]
+  [rpe9][kpe1:1][l]
+initial
+  [ifbrl][svgan~,#*<%?:$\]\\\[][svcbh~"][caplv2][ftlv1][g1l]
+  
+integral
+  [g1]
+  [g2]
+italic
+  [fts~i]
+  [fte~i]
+italien
+  [lng~it]
+  [lng]
+list.
+  [sc1:0][hi1:3:0:2:2]
+  [hi][sc1:0:0]
+mev1
+  [q~5]
+  [q~9]
+mev2
+  [q~55]
+  [q~99]
+mev3
+  [q~;2]
+  [q~;2]
+ndt
+  [q~,2]
+  [q~;']
+nll-pg-l2
+  [top][st2]
+  
+note.
+  [ind5][tab7]
+  [ind1]
+numeronote
+  
+  
+outline.
+  [sc1:0][hi1:5:0:2:2]
+  [hi][sc1:0:0]
+para.
+  [p]
+  [l]
+para.continue.
+  [l]
+  [l]
+poem.
+  [l][ptys2]
+  [ptye][l]
+poem.2level.
+  [sc1:0][hi1:5:0:2:0][kps][ki1]
+  [ki0][kpe][hi][sc1:0:0]
+portugais
+  [lng~pt]
+  [lng]
+Sans-cesure
+  [wb-no]
+  [wb]
+Signature.
+  [kbs1][ind7][wb-no]
+  [wb][ind1][kbe]
+TOC:left
+  Chapter
+  
+TOC:right
+  Page
+  
+TOC:title
+  Contents
+  .sommaire
+tp.general.
+  [sc2:0][hds][g1][wb-no]
+  [wb][hde][g2][sk2]
+underlined
+  [fts~u]
+  [fte~u]
+word:mws
+  francais
+  

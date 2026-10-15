@@ -1,0 +1,253 @@
+-braillemaker-template 1
+TranslationTables: ENUNCP+ENUDXP/ENUNCB+GENDXB
+BraillePageNumbersEvenPages: UpperRight
+BraillePageNumbersOddPages: UpperRight
+PrintPageNumbersEvenPages: UpperLeft
+PrintPageNumbersOddPages: UpperLeft
+FirstPageNumberDisplayed: 1
+Hyphenation: DashAndHyphen
+ContentsStyle: Custom
+ContentsSuspendRefPageNums: False
+ContentsRemoveInternalNewlines: False
+ContentsCenterTopLevel: False
+ContentsNumberTopLevel: True
+ContentsRunoverIfOneLevel: 2
+ContentsRunoverIfMultiLevel: 2
+ContentsInitialIndentIfOneLevel: 1
+ContentsInitialIndentIfMultiLevel: 1
+ContentsIncrementalIndent: 2
+ContentsIncrementalRightMarginIfOneLevel: 6
+ContentsIncrementalRightMarginIfMultiLevel: 6
+ContentsGuideDotBraille: Dot_5
+ContentsAddMaxIndentToRunover: False
+ContentsPageNumStyle: Braille
+ContentsLowestLevelIncluded: 99
+Styles: 
+Block.
+  [hi1:1:0:2:2]
+  [hi]
+Bold
+  [fts~b]
+  [fte~b]
+BoxBegin
+  [cp2][ind1][q~"3][fr;f~3][q~4][l]
+  
+BoxDouble
+  [cp2][ind1][q~"3][fr;f~7][q~4][l]
+  [ind1][q~"3][fr;f~7][q~j][l]
+BoxEnd
+  [ind1][q~"3][fr;f~3][q~j][l]
+  
+BoxLabelBegin
+  [ind1][d~"3====]
+  [fr;f~3][q~4][l]
+BoxLabelEnd
+  [ind1][q~"3][fr:f~3][q~====j][l]
+  
+BoxTriple
+  [cp2][ind1][q~"3][fr;f~=][q~4][l]
+  [ind1][q~"3][fr;f~=][q~j][l]
+BoxWithin
+  [cp2][ind1][q~"3][fr;f~3][q~4][l]
+  [ind1][q~"3][fr;f~3][q~j][l]
+BrlDisplay.
+  [cz]
+  [tx][l]
+Brlinline
+  [cz][as-is]
+  [tx][compress]
+CapBreak
+  [xcs]
+  
+CapTgr
+  [ucs]
+  [uce]
+CentredAsterisks
+  [hds0][d~"9][d~"9][d~"9]
+  [hde]
+CentredLine
+  [hds0][q~"33333333333]
+  [hde]
+CentredText.
+  [hds0:0]
+  [hde]
+Chemistry
+  [ucsngs]
+  [ucsnge]
+chemistry
+  [ucsngs][ypr0]
+  [ucsnge]
+Contents.
+  [ctb][stb9:r:9999:p~".][hi1:3:6:2:2]
+  [hi][ctb][l]
+Continuation
+  [q~"][l][run]
+  
+EnglishResume
+  [lng]
+  
+ExactTranslation
+  [cz]
+  [tx]
+French
+  [lng~fr]
+  [lng]
+FrenchBegin
+  [lng~fr]
+  
+G1Passage
+  [q~;;;][g1]
+  [q~;'][g2]
+G1TextBegin
+  [cp2][q~""=][ts]
+  [l]
+G1TextEnd
+  [l][q~""=][te]
+  [l]
+G1Word
+  [ii]
+  
+German
+  [lng~de]
+  [lng]
+GermanBegin
+  [lng~de]
+  
+H1.
+  [l][kps][rm12][rps1][hds3:1]
+  [rpe1][hde][rm0][kpe2]
+H2.
+  [kps][ind5][rps2][cp2:1]
+  [rpe2][ind][kpe1][l]
+H2lessline.
+  [kps][ind5][rps2][cp2]
+  [rpe2][ind][kpe1][l]
+H3.
+  [kps][ind3][rps3][cp2:1]
+  [rpe3][ind][kpe1][l]
+H3lessline.
+  [kps][ind3][rps3][cp2]
+  [rpe3][ind][kpe1][l]
+H4.
+  [kps][ind][cp2:1]
+  [kpe1][l]
+H4lessline.
+  [kps][ind][cp2]
+  [kpe1][l]
+HorizontalLine
+  [l][q~"][fr;f~3][q~3][l]
+  
+Initial
+  [svrhs6:6][svgrn~}][svles0:0:1:1][svdac~4][svpfd2][htbfmt0:cls][svcbh2~"]
+  
+Italian
+  [lng~it]
+  [lng]
+ItalianBegin
+  [lng~it]
+  
+Italics
+  [fts~i]
+  [fte~i]
+KeepTogether
+  [wb-no][:]
+  [;][wb]
+Lea
+  [lea]
+  
+List.
+  [hi1:3:0:2:2]
+  [hi]
+ListBegin
+  [hi1:3:0:2:2]
+  
+ListBullet.
+  [hi1:4:0:3:3]
+  [hi]
+ListDeep.
+  [hi1:5:0:2:2]
+  [hi]
+ListEnd
+  
+  [hi]
+ListRm6.
+  [hi1:3:6:2:2]
+  [hi]
+MarginNote.
+  [hi1:5][d~;\[]
+  [hi]
+math
+  [ts]
+  [te]
+math-TextInMath
+  [te]
+  [ts]
+Note.
+  [hi7:5]
+  [hi]
+Outline.
+  [hi1:1:0:2:2]
+  [hi]
+PageArabic
+  [svpnp2:2:1:1][pnta][pv1][svpfd1]
+  [l]
+PageNonums
+  [svpnp0:0:0:0]
+  
+PageRoman
+  [svpnp2:2:1:1][pntr][pv1]
+  [l]
+Para.
+  [hi3:1:0:2:2]
+  [hi][l]
+Poetry.
+  [mfcs~poetry]
+  [mfce]
+RefPage.
+  [lea]
+  [l]
+RightFlush.
+  [fr][:]
+  [;]
+RunningTitle.
+  [svrhp3][svrhs4:4][tls]
+  [tle]
+Script
+  [fts~s]
+  [fte~s]
+SoftReturn
+  [l][run]
+  
+Spanish
+  [lng~es]
+  [lng]
+SpanishBegin
+  [lng~es]
+  
+StopWordbreak
+  [wb-no]
+  [wb]
+TNote
+  [tns]
+  [tne]
+TOC:left
+  Chapter
+  ,*apt]
+TOC:right
+  Page
+  ,page
+TOC:title
+  Contents
+  ,3t5ts
+Typeform1
+  [fts~1]
+  [fte~1]
+Uncontract
+  [tx][g1]
+  [g2]
+Underline
+  [fts~u]
+  [fte~u]
+word:mws
+  aussie
+  

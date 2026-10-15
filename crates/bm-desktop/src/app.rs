@@ -82,6 +82,9 @@ pub struct Doc {
     pub tables: [String; 4],
     /// Codes in force from the start of the document (Document, Learning Tables sets the grade code here).
     pub initial_codes: String,
+    /// The template the document was made with (its name as File, New lists it): its styles are used when the
+    /// document is translated.
+    pub template: String,
     pub cells: u32,
     pub lines: u32,
     pub view: View,
@@ -547,7 +550,15 @@ impl App {
         }
         let line = line_at(value, pos);
         let d = &self.docs[i];
-        let key = format!("{}|{:?}|{}|{}|{}|{line}", d.key, d.kind, d.tables.join("+"), d.initial_codes, self.settings.encoding);
+        let key = format!(
+            "{}|{:?}|{}|{}|{}|{}|{line}",
+            d.key,
+            d.kind,
+            d.tables.join("+"),
+            d.initial_codes,
+            d.template,
+            self.settings.encoding
+        );
         if key == self.docs[i].last_line_key {
             return;
         }
@@ -571,8 +582,8 @@ impl App {
         }
         let text = format!("{}{line}", d.initial_codes);
         let r = match d.kind {
-            DocKind::Print => crate::translation::forward(&d.tables[0], &text, enc),
-            DocKind::Braille => crate::translation::back(&d.tables[2], &text, enc),
+            DocKind::Print => crate::translation::forward(&d.tables[0], &text, enc, &d.template),
+            DocKind::Braille => crate::translation::back(&d.tables[2], &text, enc, &d.template),
         };
         match r {
             Ok(s) => s.strip_prefix(d.initial_codes.as_str()).map(str::to_string).unwrap_or(s),

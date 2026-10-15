@@ -1,0 +1,133 @@
+-braillemaker-template 1
+TranslationTables: NORSCP+AMEDXP/NORSCB+GENDXB
+BraillePageNumbersEvenPages: UpperRight
+BraillePageNumbersOddPages: UpperRight
+PrintPageNumbersEvenPages: None
+PrintPageNumbersOddPages: None
+FirstPageNumberDisplayed: 1
+Hyphenation: DashAndHyphen
+ContentsStyle: BANA Textbook
+ContentsSuspendRefPageNums: False
+ContentsRemoveInternalNewlines: False
+ContentsCenterTopLevel: False
+ContentsNumberTopLevel: True
+ContentsRunoverIfOneLevel: 4
+ContentsRunoverIfMultiLevel: 2
+ContentsInitialIndentIfOneLevel: 1
+ContentsInitialIndentIfMultiLevel: 1
+ContentsIncrementalIndent: 2
+ContentsIncrementalRightMarginIfOneLevel: 6
+ContentsIncrementalRightMarginIfMultiLevel: 6
+ContentsGuideDotBraille: Dot_3
+ContentsAddMaxIndentToRunover: False
+ContentsPageNumStyle: Braille
+ContentsLowestLevelIncluded: 99
+Styles: 
+acronym
+  [i]
+  
+bold
+  [fts~b]
+  [fte~b]
+box
+  [ind1][kps][fr;f~7][d~7][l]
+  [ind1][fr;f~g][d~g][l][kpe]
+box-h1.
+  [l][kps][rm6][hds]
+  [hde][rm0][sk1][kpe2:2]
+br
+  [<]
+  
+brldisplay.
+  [sc1:0][cz]
+  [tx][sc1:0:0]
+brlinline
+  [cz]
+  [tx]
+compdisplay.
+  [sc1:0][ptys1][cb][wb-cb]
+  [wb][ptye][tx][sc1:0:0]
+compinline
+  [cbi][wb-cb]
+  [wb][txi]
+english
+  [lng~en]
+  [lng]
+h1.
+  [l][kps][sc1:0][ind6][rps1]
+  [rpe1][ind1][sk1][kpe2:2]
+h2.
+  [l][kps][sc1:0][ind6][rps2]
+  [rpe2][ind1][kpe2:2][skn0:1]
+h3.
+  [l][kps][sc1:0][rps3]
+  [rpe3][kpe2:2]
+h4.
+  [l][kps]
+  [kpe2:2][l]
+h5.
+  [l][kps]
+  [kpe2:2][l]
+h6.
+  [l][kps]
+  [kpe2:2][l]
+initial
+  [tls][d~][tle]
+  
+italic
+  [fts~i]
+  [fte~i]
+list.
+  [sc1:0][hi1:3:0:2:2][kps][ki1]
+  [ki0][kpe][hi][sc1:0:0]
+math
+  [lnb~qmt-dem][g1l]
+  [lnb]
+math-TextInMath
+  [lnb]
+  [lnb~qmt-dem][g1l]
+note.
+  [ind5][tab7]
+  [ind1]
+outline.
+  [sc1:0][hi1:5:0:2:2][kps][ki1]
+  [ki0][kpe][hi][sc1:0:0]
+para.
+  [p]
+  [l]
+para.continue.
+  [l]
+  [l]
+poem.
+  [sc1:0][hi1:3:0:2:2][kps][ki1]
+  [ki0][kpe][hi][sc1:0:0]
+poem.2level.
+  [sc1:0][hi1:5:0:2:0][kps][ki1]
+  [ki0][kpe][hi][sc1:0:0]
+ref.pg.no
+  [kps][lea]
+  [l][kpe2:2]
+ref.pg.no-in-math
+  [kps][tce][lea]
+  [tcs][l][kpe2:2]
+TOC:left
+  Chapter
+  ,*apt\]
+TOC:right
+  Page
+  ,page
+TOC:title
+  Contents
+  ,3t5ts
+tp.author.
+  [sc1:0][hds]
+  [hde]
+tp.general.
+  [sc1:0][hds]
+  [hde]
+tp.title.
+  [sc1:0][hds]
+  [hde]
+underlined
+  [fts~u]
+  [fte~u]

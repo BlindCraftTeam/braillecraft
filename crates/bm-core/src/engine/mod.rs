@@ -36,7 +36,7 @@ mod writer;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-pub use callbacks::{Languages, StyleTable};
+pub use callbacks::{LanguageSource, Languages, StyleTable};
 pub use scan_table::ScanTable;
 pub use table::RuleTable;
 pub use tableset::{TableEntry, TableSet};
@@ -169,7 +169,18 @@ impl Translator {
 
     /// Translates a text.
     pub fn translate(&self, text: &str) -> Result<String, EngineError> {
-        let out = self.engine_output(text)?;
+        self.translate_with(text, self.styles.as_ref(), self.languages.as_ref())
+    }
+
+    /// Translates a text with a document's styles and language table switches in place of the translator's own;
+    /// one compiled table serves every document that uses it.
+    pub fn translate_with(
+        &self,
+        text: &str,
+        styles: Option<&StyleTable>,
+        languages: Option<&Languages>,
+    ) -> Result<String, EngineError> {
+        let out = self.engine_output(text, styles, languages)?;
         let mut w = writer::Writer::new(
             &self.chitab,
             self.rules.tail[2],
@@ -186,12 +197,16 @@ impl Translator {
     }
 
     /// The scanner and the rule engine, with table switches: the codes handed to the writer.
-    fn engine_output(&self, text: &str) -> Result<Vec<i64>, EngineError> {
+    fn engine_output(
+        &self,
+        text: &str,
+        style: Option<&StyleTable>,
+        languages: Option<&Languages>,
+    ) -> Result<Vec<i64>, EngineError> {
         let brackets = self.bracket_codes.unwrap_or(self.rules.writer_mode() != 2);
         let text = if brackets { text.replace('[', "\u{1c}").replace(']', "\u{1f}") } else { text.to_string() };
         let codes = encode_cp437(&text).map_err(EngineError::NotEncodable)?;
         let codes: Vec<i64> = scanner::scan(&self.scan, codes)?.into_iter().filter(|&c| c != EOF).collect();
-        let style = self.styles.as_ref();
         let mut stack: Vec<Rc<RuleTable>> = vec![self.rules.clone()];
         let mut e = rules::Engine::new(self.rules.clone(), &codes, style, &self.chitab);
         let mut r = e.run();
@@ -203,12 +218,12 @@ impl Translator {
                 }
             } else {
                 let name = &e.name[..e.name_len as usize];
-                let pair = self.languages.as_ref().and_then(|l| l.lookup(name));
+                let found = match languages {
+                    Some(l) => l.rule_table(name)?,
+                    None => None,
+                };
                 if stack.len() < MAX_TABLE_DEPTH {
-                    let next = match pair {
-                        Some((rule_path, _)) => Rc::new(RuleTable::read(&read_file(&rule_path)?)?),
-                        None => stack.last().unwrap().clone(),
-                    };
+                    let next = found.unwrap_or_else(|| stack.last().unwrap().clone());
                     stack.push(next);
                 }
             }
@@ -340,6 +355,32 @@ mod tests {
 
     fn shipped_set() -> TableSet {
         TableSet::open(format!("{}/../../tables", env!("CARGO_MANIFEST_DIR"))).unwrap()
+    }
+
+    /// The shipped template's styles and the table list's language codes, with the shipped tables: the same
+    /// results as the binary tables give (styles_and_language_switch).
+    #[test]
+    fn shipped_template_styles_and_language_switches() {
+        let root = format!("{}/../..", env!("CARGO_MANIFEST_DIR"));
+        let set = Rc::new(shipped_set());
+        let list = crate::table_list::TableList::read(format!("{root}/tables/languages.tsv")).unwrap();
+        let templates = crate::templates::Templates::open(format!("{root}/templates")).unwrap();
+        let text = templates.text(templates.by_name(crate::templates::BUILT_IN_DEFAULT).unwrap()).unwrap();
+        let styles = crate::templates::styles(&text);
+        let languages = Languages::from_list(&list, LanguageSource::Shipped(set.clone()));
+        let t = set.translator("enuncp").unwrap();
+        let cases = [
+            (
+                "the cat [es~G1Passage]the cat[ee~G1Passage] the cat",
+                "! cat \u{1c}es~g1passage\u{1f}the cat\u{1c}ee~g1passage\u{1f} ! cat",
+            ),
+            ("a cat [lnb~qip]ab[lnb] the cat", "a cat \u{1c}lnb~qip\u{1f}\";2ab;;\u{1c}lnb\u{1f} ! cat"),
+        ];
+        for (text, braille) in cases {
+            assert_eq!(t.translate_with(text, Some(&styles), Some(&languages)).unwrap(), braille, "{text}");
+        }
+        // Without them the style and the switch do nothing.
+        assert_eq!(t.translate("a cat [lnb~qip]ab[lnb] the cat").unwrap(), "a cat \u{1c}lnb~qip\u{1f};ab\u{1c}lnb\u{1f} ! cat");
     }
 
     #[test]

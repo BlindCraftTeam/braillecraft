@@ -3,9 +3,11 @@
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 
 use super::chars::{latin1, split_lines, strip};
-use super::EngineError;
+use super::{EngineError, RuleTable, TableSet};
+use crate::table_list::TableList;
 
 /// Template code text ("[l][kps]") to engine codes: "[" is 0x1C and "]" is 0x1F.
 fn codes_from_text(text: &str) -> Vec<u8> {
@@ -105,18 +107,43 @@ impl StyleTable {
     }
 }
 
-/// Language codes to table pairs, from the templates in a folder: each template's TranslationTables line names
-/// the print-to-braille pair and the braille-to-print pair ("P2B_BTB+P2B_SCT/B2P_BTB+B2P_SCT"); a language code is
-/// found as the start of a template's file name, a print-to-braille template (name ending in "p") first.
-#[derive(Debug, Clone)]
+/// Where the rule table a language code names is taken from.
+#[derive(Clone)]
+pub enum LanguageSource {
+    /// Binary rule tables (.btb) in a folder.
+    Folder(PathBuf),
+    /// The tables shipped with BrailleMaker, compiled from their sources.
+    Shipped(Rc<TableSet>),
+}
+
+/// Language codes to table pairs. The program's own way (`from_list`): the code is looked up exactly in the
+/// translation table list; a print document takes the entry's print-to-braille rules table, a braille document its
+/// braille-to-print one; "code,TABLE" names the rules table for a print document. `from_folder` is the earlier
+/// reading from template file names, kept for comparisons.
+#[derive(Clone)]
 pub struct Languages {
-    folder: PathBuf,
+    source: LanguageSource,
     /// True for a print document: the print-to-braille pair is used.
     pub print_document: bool,
+    /// Codes are matched exactly (the table list) rather than as the start of a template file name.
+    exact: bool,
     entries: Vec<(String, (Vec<String>, Vec<String>))>,
 }
 
 impl Languages {
+    /// From the translation table list: each entry's language code with its two pairs.
+    pub fn from_list(list: &TableList, source: LanguageSource) -> Languages {
+        let entries = list
+            .entries
+            .iter()
+            .map(|e| {
+                let t = &e.tables;
+                (e.code.to_lowercase(), (vec![t[0].clone(), t[1].clone()], vec![t[2].clone(), t[3].clone()]))
+            })
+            .collect();
+        Languages { source, print_document: true, exact: true, entries }
+    }
+
     pub fn from_folder(folder: impl AsRef<Path>) -> Result<Languages, EngineError> {
         let folder = folder.as_ref().to_path_buf();
         let mut names: Vec<String> = std::fs::read_dir(&folder)
@@ -146,10 +173,14 @@ impl Languages {
                 }
             }
         }
-        Ok(Languages { folder, print_document: true, entries })
+        Ok(Languages { source: LanguageSource::Folder(folder), print_document: true, exact: false, entries })
     }
 
     fn find(&self, code: &str) -> Option<&(Vec<String>, Vec<String>)> {
+        if self.exact {
+            let code = code.to_lowercase();
+            return self.entries.iter().find(|e| e.0 == code).map(|e| &e.1);
+        }
         let code = code.to_lowercase().replace('-', "");
         let mut hits: Vec<&String> = self.entries.iter().map(|e| &e.0).filter(|k| k.starts_with(&code)).collect();
         hits.sort_by(|a, b| (!a.ends_with('p'), *a).cmp(&(!b.ends_with('p'), *b)));
@@ -157,8 +188,9 @@ impl Languages {
         self.entries.iter().find(|e| &e.0 == *first).map(|e| &e.1)
     }
 
-    /// The rule table and scan table for a language code ("qip", or "code,table" to name the rule table).
-    pub fn lookup(&self, name: &[u8]) -> Option<(PathBuf, PathBuf)> {
+    /// The rule table code and scan table code for a language code ("qip", or "code,table" to name the rule
+    /// table).
+    pub fn lookup(&self, name: &[u8]) -> Option<(String, String)> {
         let text: String = latin1(name).chars().take(30).collect();
         let (code, after) = text.split_once(',').unwrap_or((&text, ""));
         let entry = self.find(code)?;
@@ -167,10 +199,20 @@ impl Languages {
             return None;
         }
         let btb = if self.print_document && !after.is_empty() { after } else { &pair[0] };
-        Some((
-            super::find_file(&self.folder, &format!("{btb}.btb")),
-            super::find_file(&self.folder, &format!("{}.sct", pair[1])),
-        ))
+        Some((btb.to_string(), pair[1].clone()))
+    }
+
+    /// The rule table a language code switches to; None when the code is not known (the engine then stays on the
+    /// current table).
+    pub fn rule_table(&self, name: &[u8]) -> Result<Option<Rc<RuleTable>>, EngineError> {
+        let Some((btb, _)) = self.lookup(name) else { return Ok(None) };
+        match &self.source {
+            LanguageSource::Folder(folder) => {
+                let path = super::find_file(folder, &format!("{btb}.btb"));
+                Ok(Some(Rc::new(RuleTable::read(&super::read_file(&path)?)?)))
+            }
+            LanguageSource::Shipped(set) => Ok(Some(set.translator(&btb)?.rules.clone())),
+        }
     }
 }
 

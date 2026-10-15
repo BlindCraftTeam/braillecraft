@@ -110,6 +110,14 @@ fn main() {
             }
             None => eprintln!("BrailleMaker: translation tables not found; translation will fail"),
         }
+        match resource_dir("templates", "../../templates", "index.tsv") {
+            Some(dir) => {
+                if let Err(e) = translation::load_templates(&dir) {
+                    eprintln!("BrailleMaker: {e}");
+                }
+            }
+            None => eprintln!("BrailleMaker: document templates not found; styles will not be used"),
+        }
         if let Err(e) = dlg::load_resources() {
             eprintln!("BrailleMaker: {e}");
         }

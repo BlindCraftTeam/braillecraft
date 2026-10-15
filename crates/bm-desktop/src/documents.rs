@@ -76,8 +76,11 @@ pub fn new_document(kind: DocKind, name: Option<String>, text: &str) -> u64 {
         saved: false,
         dirty: false,
         path: None,
-        tables: crate::translation::DEFAULT_TABLES.map(str::to_string),
+        // A new document is made with the default template: its tables and its styles.
+        tables: crate::translation::template_tables(&crate::translation::default_template())
+            .unwrap_or_else(|| crate::translation::DEFAULT_TABLES.map(str::to_string)),
         initial_codes: String::new(),
+        template: crate::translation::default_template(),
         cells: if kind == DocKind::Braille { 40 } else { 80 },
         lines: if kind == DocKind::Braille { 25 } else { 50 },
         view,
