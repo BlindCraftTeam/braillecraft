@@ -901,20 +901,11 @@ fn brf_bytes(pages: &[bm_core::format::Page], shown_in: &encodings::Encoding, ch
     out
 }
 
-/// The bytes of a formatted text file from a print document's pages (spec 04d-B): bm_core::format::formatted_text
-/// in the code page the reference program chooses first, Western European (ISO-8859-1); a character it cannot hold is
-/// written '#', and a hard space is a space.
-/// INTERIM: the reference offers a list of code pages for formatted text; until that list is traced, the first is
-/// used.
-fn prf_bytes(pages: &[bm_core::format::Page]) -> Vec<u8> {
-    bm_core::format::formatted_text(pages)
-        .chars()
-        .map(|c| match c {
-            '\u{a0}' => b' ',
-            c if (c as u32) <= 0xFF => c as u32 as u8,
-            _ => b'#',
-        })
-        .collect()
+/// The bytes of a formatted text file from a print document's pages (spec 04d-B, 04d-F): bm_core::format::
+/// formatted_text in the chosen code page (bm_core::codepages); a character it cannot hold is written '#', and a hard
+/// space is a space.
+fn prf_bytes(pages: &[bm_core::format::Page], code_page: &str) -> Vec<u8> {
+    bm_core::codepages::encode(code_page, &bm_core::format::formatted_text(pages).replace('\u{a0}', " "))
 }
 
 /// Save As coded braille (.bru) for a braille document or coded text (.txt) for a print document: the body as the
@@ -980,7 +971,14 @@ fn write_formatted(key: u64, path: &Path, braille: bool) -> bool {
         }
         d.get_selection().max(0) as usize
     } else {
-        0
+        // The code pages for formatted text, the first chosen every time (spec 04d-E).
+        let f = app::frame();
+        let d = SingleChoiceDialog::builder(&f, "Code page of the file:", "Formatted text", &bm_core::codepages::NAMES).build();
+        d.set_selection(0);
+        if d.show_modal() != wxdragon::id::ID_OK {
+            return false;
+        }
+        d.get_selection().max(0) as usize
     };
     let Some((pages, shown_in)) = app::with(|a| {
         let i = a.index_of(key)?;
@@ -989,7 +987,11 @@ fn write_formatted(key: u64, path: &Path, braille: bool) -> bool {
     }) else {
         return false;
     };
-    let out = if braille { brf_bytes(&pages, shown_in, choice) } else { prf_bytes(&pages) };
+    let out = if braille {
+        brf_bytes(&pages, shown_in, choice)
+    } else {
+        prf_bytes(&pages, bm_core::codepages::NAMES.get(choice).copied().unwrap_or("ISO-8859-1"))
+    };
     if let Err(e) = std::fs::write(path, &out) {
         message(&format!("{}: {e}", path.display()));
         return false;
@@ -2092,7 +2094,8 @@ mod tests {
     #[test]
     fn formatted_text_is_western_european() {
         let pages = bm_core::format::format(&Shown::plain("Caf\u{e9} \u{3b1}"), &bm_core::format::Layout::print(20, 1), None);
-        assert_eq!(prf_bytes(&pages), b"Caf\xe9 #\r\n\x0c".to_vec());
+        assert_eq!(prf_bytes(&pages, "ISO-8859-1"), b"Caf\xe9 #\r\n\x0c".to_vec());
+        assert_eq!(prf_bytes(&pages, "WINDOWS-1253"), b"Caf# \xe1\r\n\x0c".to_vec());
     }
 
     #[test]

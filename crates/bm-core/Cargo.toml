@@ -7,3 +7,5 @@ rust-version.workspace = true
 authors.workspace = true
 
 [dependencies]
+# Multi-byte code pages for formatted text (Shift_JIS, GBK, EUC-KR, Big5, EUC-JP, ISO-2022-JP).
+encoding_rs = "=0.8.35"
