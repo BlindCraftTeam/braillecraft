@@ -655,27 +655,15 @@ fn emboss() {
     }
 }
 
-/// Words longer than the line are broken; otherwise a line breaks at the last blank cell that fits.
-fn wrap_braille(line: &str, width: usize) -> Vec<String> {
-    let mut out = Vec::new();
-    let mut rest: Vec<char> = line.chars().collect();
-    while rest.len() > width {
-        let cut = rest[..=width].iter().rposition(|c| *c == ' ').filter(|&i| i > 0).unwrap_or(width);
-        out.push(rest[..cut].iter().collect::<String>().trim_end().to_string());
-        rest = rest[cut..].iter().collect::<String>().trim_start().chars().collect();
-    }
-    out.push(rest.into_iter().collect());
-    out
-}
-
 /// File, Translate: a NEW document made from the open one, which is left untouched. A print document becomes a
-/// braille document (forward translation, lines wrapped to the cells per line); a braille document becomes a print
-/// document (back-translation). Page layout by codes and styles comes with the formatter.
+/// braille document (forward translation), a braille document a print document (back-translation). The whole
+/// document goes through the engine in one run, as in the reference program; the result keeps the codes, and its
+/// lines and pages are laid out from them.
 fn translate_document() {
-    let Some((text, kind, tables, initial, template, styles, name, untitled, cells)) = app::with(|a| {
+    let Some((text, kind, tables, initial, template, styles, name, untitled)) = app::with(|a| {
         a.doc().map(|d| {
             let (codes, template, styles) = (d.initial_codes.clone(), d.template.clone(), d.styles.clone());
-            (d.text.get_value(), d.kind, d.tables.clone(), codes, template, styles, d.name.clone(), d.untitled, d.cells)
+            (d.text.get_value(), d.kind, d.tables.clone(), codes, template, styles, d.name.clone(), d.untitled)
         })
     }) else {
         return;
@@ -687,27 +675,21 @@ fn translate_document() {
     }
     let enc = app::with(|a| a.encoding());
     let to_braille = kind == DocKind::Print;
-    let width = if to_braille { 40 } else { cells as usize };
-    let mut out: Vec<String> = Vec::new();
-    for line in text.split('\n') {
-        // The document's initial codes are in force on every line; the new document carries them too, so their
-        // echo at the start of each translated line is left off.
-        let with_codes = format!("{initial}{line}");
-        let r = if to_braille {
-            translation::forward(&tables[0], &with_codes, enc, &style_table).map(|s| s.trim_end().to_string())
-        } else {
-            translation::back(&tables[2], &with_codes, enc, &style_table)
+    // The document's initial codes are in force from the start; the new document carries them too, so their echo
+    // at the start of the result is left off.
+    let with_codes = format!("{initial}{text}");
+    let r = if to_braille {
+        translation::forward_document(&tables[0], &with_codes, enc, &style_table)
+    } else {
+        translation::back_document(&tables[2], &with_codes, enc, &style_table)
+    };
+    let out = match r {
+        Ok(s) => s.strip_prefix(initial.as_str()).map(str::to_string).unwrap_or(s),
+        Err(e) => {
+            message(&format!("Translation failed: {e}"));
+            return;
         }
-        .map(|s| s.strip_prefix(initial.as_str()).map(str::to_string).unwrap_or(s));
-        match r {
-            Ok(s) if to_braille => out.extend(wrap_braille(&s, width)),
-            Ok(s) => out.push(s),
-            Err(e) => {
-                message(&format!("Translation failed: {e}"));
-                return;
-            }
-        }
-    }
+    };
     let new_name = (!untitled).then(|| {
         let stem = ["dxp", "dxb", "txt", "brf", "brl", "bru", "prf"]
             .iter()
@@ -716,7 +698,7 @@ fn translate_document() {
             .to_string();
         format!("{stem}{}", if to_braille { ".brf" } else { ".txt" })
     });
-    let key = documents::new_document(if to_braille { DocKind::Braille } else { DocKind::Print }, new_name, &out.join("\n"));
+    let key = documents::new_document(if to_braille { DocKind::Braille } else { DocKind::Print }, new_name, &out);
     app::with(|a| {
         if let Some(i) = a.index_of(key) {
             a.docs[i].tables = tables.clone();
@@ -1641,12 +1623,6 @@ fn about() {
 mod tests {
     use super::*;
     use crate::app::open_styles;
-
-    #[test]
-    fn wraps_at_the_last_blank_that_fits() {
-        assert_eq!(wrap_braille("aaa bbb ccc", 7), vec!["aaa bbb", "ccc"]);
-        assert_eq!(wrap_braille("abcdefghij", 4), vec!["abcd", "efgh", "ij"]);
-    }
 
     #[test]
     fn finds_whole_words_both_ways() {

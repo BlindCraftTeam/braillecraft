@@ -82,11 +82,6 @@ fn cp437(b: u8) -> char {
     }
 }
 
-/// Codes after which the editor starts a new line.
-fn breaks_line(code: &str) -> bool {
-    matches!(code, "<" | "p" | "l")
-}
-
 /// Reads a .dxp or .dxb file.
 pub fn read(d: &[u8]) -> Result<DxDocument, DxError> {
     if d.len() < BODY {
@@ -124,12 +119,18 @@ pub fn read(d: &[u8]) -> Result<DxDocument, DxError> {
                 text.push('[');
                 open.push(text.len());
             }
+            // The editor's form (doctext): the new-line code is a line break; [p] and [l] are followed by one.
             0x1F => {
                 if let Some(start) = open.pop() {
-                    let line_break = open.is_empty() && breaks_line(&text[start..]);
-                    text.push(']');
-                    if line_break {
+                    if open.is_empty() && &text[start..] == "<" {
+                        text.truncate(start - 1);
                         text.push('\n');
+                    } else {
+                        let line_break = open.is_empty() && crate::doctext::breaks_line(&text[start..]);
+                        text.push(']');
+                        if line_break {
+                            text.push('\n');
+                        }
                     }
                 }
             }
@@ -170,9 +171,9 @@ mod tests {
 
     #[test]
     fn reads_codes_hard_spaces_and_code_page_437() {
-        let doc = read(&sample(1, b"\x1ces~h1.\x1fCaf\x82\x1cee~h1.\x1f\x1cp\x1fPage\x1eUp\x1chl4\x1ces~para.\x1f\x1f6")).unwrap();
+        let doc = read(&sample(1, b"\x1ces~h1.\x1fCaf\x82\x1cee~h1.\x1f\x1cp\x1fPage\x1eUp\x1chl4\x1ces~para.\x1f\x1f6\x1c<\x1fEnd")).unwrap();
         assert_eq!(doc.kind, DocumentKind::Print);
-        assert_eq!(doc.text, "[es~h1.]Café[ee~h1.][p]\nPage\u{a0}Up[hl4[es~para.]]6");
+        assert_eq!(doc.text, "[es~h1.]Café[ee~h1.][p]\nPage\u{a0}Up[hl4[es~para.]]6\nEnd");
         assert!(doc.translated_line);
         assert!(!doc.six_key);
         assert_eq!(doc.tables[0], "amerc");

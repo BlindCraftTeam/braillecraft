@@ -178,6 +178,53 @@ pub fn back(code: &str, text: &str, enc: &Encoding, styles: &StyleTable) -> Resu
     Ok(shown_codes(&print))
 }
 
+/// Engine output (codes as 0x1C ... 0x1F, which nest) in the editor's form (bm_core::doctext): codes in brackets,
+/// the new-line code a line break, the codes that start a new line of their own followed by one.
+fn display_codes(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + s.len() / 16);
+    let mut open: Vec<usize> = Vec::new();
+    for c in s.chars() {
+        match c {
+            '\u{1c}' => {
+                out.push('[');
+                open.push(out.len());
+            }
+            '\u{1f}' => match open.pop() {
+                Some(start) if open.is_empty() && &out[start..] == "<" => {
+                    out.truncate(start - 1);
+                    out.push('\n');
+                }
+                Some(start) => {
+                    let breaks = open.is_empty() && bm_core::doctext::breaks_line(&out[start..]);
+                    out.push(']');
+                    if breaks {
+                        out.push('\n');
+                    }
+                }
+                None => out.push(']'),
+            },
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+/// A whole print document (in the editor's form) to braille in the display encoding `enc`, in one run of the
+/// engine, as the reference program's translation run reads the whole document: the result is the running braille
+/// with the codes kept, in the editor's form; lines and pages are laid out from the codes.
+pub fn forward_document(code: &str, text: &str, enc: &Encoding, styles: &StyleTable) -> Result<String, String> {
+    let ascii = translate(code, &bm_core::doctext::to_running(text), styles, true)?;
+    Ok(convert_braille(&display_codes(&ascii), encodings::find(encodings::DEFAULT), enc))
+}
+
+/// A whole braille document (in the editor's form, in the display encoding `enc`) to print, in one run of the
+/// engine.
+pub fn back_document(code: &str, text: &str, enc: &Encoding, styles: &StyleTable) -> Result<String, String> {
+    let ascii = convert_braille(text, enc, encodings::find(encodings::DEFAULT));
+    let marked = marks(&bm_core::doctext::to_running(&ascii));
+    Ok(display_codes(&translate(code, &marked, styles, false)?))
+}
+
 /// Each [code] segment, as convert_braille finds them, written 0x1C code 0x1F.
 fn marks(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
@@ -291,6 +338,16 @@ mod tests {
         let shown = forward("enuncp", "The cat sat.", german, &english()).unwrap();
         assert_eq!(convert_braille(&shown, german, encodings::find(encodings::DEFAULT)), ",! cat sat4");
         assert_eq!(back("enuncb", &shown, german, &english()).unwrap(), "The cat sat.");
+    }
+
+    #[test]
+    fn a_whole_document_goes_through_the_engine_with_its_line_codes() {
+        loaded();
+        let na = encodings::find(encodings::DEFAULT);
+        let print = "[es~h1.]Chapter One[ee~h1.]\nThe cat sat.\nIt was warm.";
+        let braille = forward_document("enuncp", print, na, &english()).unwrap();
+        assert_eq!(braille, "[es~h1.],*apt] ,\"o[ee~h1.]\n,! cat sat4\n,x 0 w>m4");
+        assert_eq!(back_document("enuncb", &braille, na, &english()).unwrap(), "[es~h1.]Chapter One[ee~h1.]\nThe cat sat.\nIt was warm.");
     }
 
     #[test]
