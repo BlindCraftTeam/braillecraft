@@ -85,7 +85,7 @@ pub fn new_document(kind: DocKind, name: Option<String>, text: &str) -> u64 {
         lines: if kind == DocKind::Braille { 25 } else { 50 },
         view,
         hyphen: Hyphen::Dashes,
-        styles: Vec::new(),
+        styles: crate::translation::template_style_list(&crate::translation::default_template()),
         last_style: None,
         highlight_anchor: None,
         last_line_key: String::new(),

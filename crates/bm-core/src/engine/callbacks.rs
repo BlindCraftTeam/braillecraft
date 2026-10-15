@@ -21,6 +21,18 @@ fn codes_from_text(text: &str) -> Vec<u8> {
         .collect()
 }
 
+/// Engine codes back to template code text: 0x1C is "[" and 0x1F is "]".
+fn text_from_codes(codes: &[u8]) -> String {
+    codes
+        .iter()
+        .map(|&b| match b {
+            0x1c => '[',
+            0x1f => ']',
+            b => b as char,
+        })
+        .collect()
+}
+
 /// The styles of a document or template: per style name, the codes that begin it and the codes that end it.
 #[derive(Debug, Clone, Default)]
 pub struct StyleTable {
@@ -46,6 +58,21 @@ impl StyleTable {
             t.folded.insert(s.0.to_lowercase(), i);
         }
         t
+    }
+
+    /// Styles given as name, begin codes and end codes, the codes written as a template writes them ("[l][kps]").
+    pub fn from_text<'a>(styles: impl IntoIterator<Item = (&'a str, &'a str, &'a str)>) -> StyleTable {
+        StyleTable::new(
+            styles
+                .into_iter()
+                .map(|(name, begin, end)| (name.to_string(), codes_from_text(begin), codes_from_text(end)))
+                .collect(),
+        )
+    }
+
+    /// Each style in order: its name, begin codes and end codes, written as a template writes them.
+    pub fn entries(&self) -> impl Iterator<Item = (&str, String, String)> + '_ {
+        self.styles.iter().map(|(name, begin, end)| (name.as_str(), text_from_codes(begin), text_from_codes(end)))
     }
 
     /// The Styles section of a template file: after the line "Styles:", a name line and then two indented lines,

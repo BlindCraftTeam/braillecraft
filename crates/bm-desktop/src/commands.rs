@@ -465,11 +465,13 @@ fn file_new() {
         let key = documents::new_document(if braille { DocKind::Braille } else { DocKind::Print }, None, "");
         if let Some(name) = template {
             let tables = translation::template_tables(&name);
+            let styles = translation::template_style_list(&name);
             app::with(|a| {
                 if let Some(i) = a.index_of(key) {
                     if let Some(t) = tables {
                         a.docs[i].tables = t;
                     }
+                    a.docs[i].styles = styles;
                     a.docs[i].template = name;
                     a.docs[i].last_line_key.clear();
                 }
@@ -670,14 +672,15 @@ fn wrap_braille(line: &str, width: usize) -> Vec<String> {
 /// braille document (forward translation, lines wrapped to the cells per line); a braille document becomes a print
 /// document (back-translation). Page layout by codes and styles comes with the formatter.
 fn translate_document() {
-    let Some((text, kind, tables, initial, template, name, untitled, cells)) = app::with(|a| {
+    let Some((text, kind, tables, initial, template, styles, name, untitled, cells)) = app::with(|a| {
         a.doc().map(|d| {
-            let (codes, template) = (d.initial_codes.clone(), d.template.clone());
-            (d.text.get_value(), d.kind, d.tables.clone(), codes, template, d.name.clone(), d.untitled, d.cells)
+            let (codes, template, styles) = (d.initial_codes.clone(), d.template.clone(), d.styles.clone());
+            (d.text.get_value(), d.kind, d.tables.clone(), codes, template, styles, d.name.clone(), d.untitled, d.cells)
         })
     }) else {
         return;
     };
+    let style_table = translation::style_table(&styles);
     if text.trim().is_empty() {
         message("The file that you are trying to translate is empty.");
         return;
@@ -691,9 +694,9 @@ fn translate_document() {
         // echo at the start of each translated line is left off.
         let with_codes = format!("{initial}{line}");
         let r = if to_braille {
-            translation::forward(&tables[0], &with_codes, enc, &template).map(|s| s.trim_end().to_string())
+            translation::forward(&tables[0], &with_codes, enc, &style_table).map(|s| s.trim_end().to_string())
         } else {
-            translation::back(&tables[2], &with_codes, enc, &template)
+            translation::back(&tables[2], &with_codes, enc, &style_table)
         }
         .map(|s| s.strip_prefix(initial.as_str()).map(str::to_string).unwrap_or(s));
         match r {
@@ -719,6 +722,7 @@ fn translate_document() {
             a.docs[i].tables = tables.clone();
             a.docs[i].initial_codes = initial.clone();
             a.docs[i].template = template.clone();
+            a.docs[i].styles = styles.clone();
             a.docs[i].dirty = true;
             if to_braille {
                 a.docs[i].cells = 40;
@@ -1315,6 +1319,7 @@ fn add_style() {
                 begin: if begin.is_empty() { based.as_ref().map(|s| s.begin.clone()).unwrap_or_default() } else { begin },
                 end: if end.is_empty() { based.map(|s| s.end).unwrap_or_default() } else { end },
             });
+            doc.last_line_key.clear();
         }
     });
 }
@@ -1334,6 +1339,10 @@ fn modify_style() {
             if let Some(s) = app::with(|a| a.doc().and_then(|doc| doc.styles.iter().find(|s| s.name == name).cloned())) {
                 d.set_text(12, &s.begin);
                 d.set_text(14, &s.end);
+                // The code fields come disabled in the dialog resource; with a style chosen they can be edited.
+                for cid in 11..=14 {
+                    d.enable(cid, true);
+                }
             }
         }
     };
@@ -1360,6 +1369,7 @@ fn modify_style() {
                 if let Some(s) = doc.styles.iter_mut().find(|s| s.name == old) {
                     s.name = new.clone();
                 }
+                doc.last_line_key.clear();
                 if everywhere {
                     let v = doc.text.get_value()
                         .replace(&format!("[es~{old}]"), &format!("[es~{new}]"))
@@ -1381,9 +1391,12 @@ fn modify_style() {
     }
     if let Some(name) = name {
         app::with(|a| {
-            if let Some(s) = a.doc_mut().and_then(|doc| doc.styles.iter_mut().find(|s| s.name == name)) {
-                s.begin = begin;
-                s.end = end;
+            if let Some(doc) = a.doc_mut() {
+                if let Some(s) = doc.styles.iter_mut().find(|s| s.name == name) {
+                    s.begin = begin;
+                    s.end = end;
+                }
+                doc.last_line_key.clear();
             }
         });
     }
@@ -1394,6 +1407,7 @@ fn delete_style() {
         app::with(|a| {
             if let Some(d) = a.doc_mut() {
                 d.styles.retain(|x| x.name != s.name);
+                d.last_line_key.clear();
             }
         });
     }

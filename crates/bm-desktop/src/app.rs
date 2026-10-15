@@ -82,8 +82,8 @@ pub struct Doc {
     pub tables: [String; 4],
     /// Codes in force from the start of the document (Document, Learning Tables sets the grade code here).
     pub initial_codes: String,
-    /// The template the document was made with (its name as File, New lists it): its styles are used when the
-    /// document is translated.
+    /// The template the document was made with (its name as File, New lists it); its styles were copied into the
+    /// document's own style list.
     pub template: String,
     pub cells: u32,
     pub lines: u32,
@@ -581,9 +581,10 @@ impl App {
             return "Error message 0".to_string();
         }
         let text = format!("{}{line}", d.initial_codes);
+        let styles = crate::translation::style_table(&d.styles);
         let r = match d.kind {
-            DocKind::Print => crate::translation::forward(&d.tables[0], &text, enc, &d.template),
-            DocKind::Braille => crate::translation::back(&d.tables[2], &text, enc, &d.template),
+            DocKind::Print => crate::translation::forward(&d.tables[0], &text, enc, &styles),
+            DocKind::Braille => crate::translation::back(&d.tables[2], &text, enc, &styles),
         };
         match r {
             Ok(s) => s.strip_prefix(d.initial_codes.as_str()).map(str::to_string).unwrap_or(s),

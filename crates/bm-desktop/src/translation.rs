@@ -16,6 +16,7 @@ use bm_core::engine::{LanguageSource, Languages, StyleTable, TableSet};
 use bm_core::table_list::TableList;
 use bm_core::templates::{self, Templates};
 
+use crate::app::Style;
 use crate::encodings::{self, Encoding};
 
 /// The tables of a new document: English (Unified English Braille), contracted, both ways.
@@ -90,13 +91,30 @@ fn template_styles(name: &str) -> Option<Rc<StyleTable>> {
     Some(styles)
 }
 
-/// Translates with the rules table `code`, the template's styles and the language switches of the table list.
-fn translate(code: &str, text: &str, template: &str, print_document: bool) -> Result<String, String> {
-    let styles = template_styles(template);
+/// The styles a document made with this template starts with: the template's Styles section, in its order. A name
+/// ending in "." is a paragraph style (spec 05: inferred from the template names), so the others are the ones that
+/// can be nested within another style.
+pub fn template_style_list(name: &str) -> Vec<Style> {
+    template_styles(name)
+        .map(|t| {
+            t.entries()
+                .map(|(name, begin, end)| Style { name: name.to_string(), nested: !name.ends_with('.'), begin, end })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// A document's styles as the engine looks them up.
+pub fn style_table(styles: &[Style]) -> StyleTable {
+    StyleTable::from_text(styles.iter().map(|s| (s.name.as_str(), s.begin.as_str(), s.end.as_str())))
+}
+
+/// Translates with the rules table `code`, the document's styles and the language switches of the table list.
+fn translate(code: &str, text: &str, styles: &StyleTable, print_document: bool) -> Result<String, String> {
     LANGUAGES.with(|l| {
         let l = l.borrow();
         let languages = l.as_ref().map(|(p, b)| if print_document { p } else { b });
-        with_table(code, |t| t.translate_with(text, styles.as_deref(), languages).map_err(|e| e.to_string()))
+        with_table(code, |t| t.translate_with(text, Some(styles), languages).map_err(|e| e.to_string()))
     })
 }
 
@@ -143,20 +161,20 @@ fn shown_codes(s: &str) -> String {
 }
 
 /// Print text (codes as [code]) to braille in the display encoding `enc`, with the rules table `code` and the
-/// styles of the document's template.
-pub fn forward(code: &str, text: &str, enc: &Encoding, template: &str) -> Result<String, String> {
-    let ascii = translate(code, text, template, true)?;
+/// document's styles.
+pub fn forward(code: &str, text: &str, enc: &Encoding, styles: &StyleTable) -> Result<String, String> {
+    let ascii = translate(code, text, styles, true)?;
     Ok(convert_braille(&shown_codes(&ascii), encodings::find(encodings::DEFAULT), enc))
 }
 
-/// Braille in the display encoding `enc` (codes as [code]) to print, with the rules table `code` and the styles of
-/// the document's template.
-pub fn back(code: &str, text: &str, enc: &Encoding, template: &str) -> Result<String, String> {
+/// Braille in the display encoding `enc` (codes as [code]) to print, with the rules table `code` and the document's
+/// styles.
+pub fn back(code: &str, text: &str, enc: &Encoding, styles: &StyleTable) -> Result<String, String> {
     let ascii = convert_braille(text, enc, encodings::find(encodings::DEFAULT));
     // In braille "[" and "]" are cells, so the engine is given the codes as 0x1C ... 0x1F, in the same places the
     // document shows them.
     let marked = marks(&ascii);
-    let print = translate(code, &marked, template, false)?;
+    let print = translate(code, &marked, styles, false)?;
     Ok(shown_codes(&print))
 }
 
@@ -220,14 +238,19 @@ mod tests {
         load_templates(&root.join("templates")).unwrap();
     }
 
+    /// The styles a new English (UEB) document holds.
+    fn english() -> StyleTable {
+        style_table(&template_style_list(ENGLISH))
+    }
+
     #[test]
     fn english_both_ways_with_the_shipped_tables() {
         loaded();
         let na = encodings::find(encodings::DEFAULT);
-        assert_eq!(forward("enuncp", "The cat sat.", na, ENGLISH).unwrap(), ",! cat sat4");
-        assert_eq!(forward("enuncp", "[g1l]The cat sat.", na, ENGLISH).unwrap(), "[g1l],the cat sat4");
-        assert_eq!(back("enuncb", ",! cat sat4", na, ENGLISH).unwrap(), "The cat sat.");
-        assert!(forward("nosuch", "x", na, ENGLISH).is_err());
+        assert_eq!(forward("enuncp", "The cat sat.", na, &english()).unwrap(), ",! cat sat4");
+        assert_eq!(forward("enuncp", "[g1l]The cat sat.", na, &english()).unwrap(), "[g1l],the cat sat4");
+        assert_eq!(back("enuncb", ",! cat sat4", na, &english()).unwrap(), "The cat sat.");
+        assert!(forward("nosuch", "x", na, &english()).is_err());
         assert_eq!(template_tables(ENGLISH).unwrap(), DEFAULT_TABLES.map(String::from));
     }
 
@@ -236,19 +259,38 @@ mod tests {
         loaded();
         let na = encodings::find(encodings::DEFAULT);
         assert_eq!(
-            forward("enuncp", "the cat [es~G1Passage]the cat[ee~G1Passage] the cat", na, ENGLISH).unwrap(),
+            forward("enuncp", "the cat [es~G1Passage]the cat[ee~G1Passage] the cat", na, &english()).unwrap(),
             "! cat [es~g1passage]the cat[ee~g1passage] ! cat"
         );
-        assert_eq!(forward("enuncp", "a cat [lnb~qip]ab[lnb] the cat", na, ENGLISH).unwrap(), "a cat [lnb~qip]\";2ab;;[lnb] ! cat");
+        assert_eq!(
+            forward("enuncp", "a cat [lnb~qip]ab[lnb] the cat", na, &english()).unwrap(),
+            "a cat [lnb~qip]\";2ab;;[lnb] ! cat"
+        );
+    }
+
+    #[test]
+    fn a_document_starts_with_its_templates_styles_and_a_style_added_to_it_takes_effect() {
+        loaded();
+        let na = encodings::find(encodings::DEFAULT);
+        let mut styles = template_style_list(ENGLISH);
+        assert_eq!(styles.len(), 119);
+        let passage = styles.iter().find(|s| s.name == "G1Passage").cloned().unwrap();
+        assert!(passage.nested);
+        assert!(!styles.iter().find(|s| s.name == "h1.").unwrap().nested);
+        styles.push(Style { name: "Mine".to_string(), nested: true, begin: passage.begin, end: passage.end });
+        assert_eq!(
+            forward("enuncp", "the cat [es~Mine]the cat[ee~Mine] the cat", na, &style_table(&styles)).unwrap(),
+            "! cat [es~mine]the cat[ee~mine] ! cat"
+        );
     }
 
     #[test]
     fn braille_in_another_encoding_goes_through_the_engine_in_north_american() {
         loaded();
         let german = encodings::find("german");
-        let shown = forward("enuncp", "The cat sat.", german, ENGLISH).unwrap();
+        let shown = forward("enuncp", "The cat sat.", german, &english()).unwrap();
         assert_eq!(convert_braille(&shown, german, encodings::find(encodings::DEFAULT)), ",! cat sat4");
-        assert_eq!(back("enuncb", &shown, german, ENGLISH).unwrap(), "The cat sat.");
+        assert_eq!(back("enuncb", &shown, german, &english()).unwrap(), "The cat sat.");
     }
 
     #[test]
