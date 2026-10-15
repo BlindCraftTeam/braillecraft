@@ -147,21 +147,37 @@ pub const CODE_LIST: &[(&str, &str)] = &[
 
 /// Codes such as [pg] or [es~para] are layout instructions, not text; until the formatter carries them out they
 /// are left out of what is sent to the translator.
+/// Codes nest ([hl4[es~para.]]); a "[" with no matching "]" on its line is text.
 pub fn strip(text: &str) -> String {
+    let chars: Vec<char> = text.chars().collect();
     let mut out = String::with_capacity(text.len());
-    let mut chars = text.chars().peekable();
-    while let Some(c) = chars.next() {
-        if c == '[' {
-            let rest: String = chars.clone().take_while(|&d| d != ']' && d != '\n').collect();
-            let closed = chars.clone().nth(rest.chars().count()) == Some(']');
-            if closed {
-                for _ in 0..=rest.chars().count() {
-                    chars.next();
+    let mut i = 0;
+    while i < chars.len() {
+        if chars[i] == '[' {
+            // Find the matching "]" on this line, counting nested codes.
+            let mut depth = 0;
+            let mut end = None;
+            for (j, &c) in chars.iter().enumerate().skip(i) {
+                match c {
+                    '[' => depth += 1,
+                    ']' => {
+                        depth -= 1;
+                        if depth == 0 {
+                            end = Some(j);
+                            break;
+                        }
+                    }
+                    '\n' => break,
+                    _ => {}
                 }
+            }
+            if let Some(e) = end {
+                i = e + 1;
                 continue;
             }
         }
-        out.push(c);
+        out.push(chars[i]);
+        i += 1;
     }
     out
 }
@@ -171,5 +187,6 @@ mod tests {
     #[test]
     fn strip_removes_codes_only() {
         assert_eq!(super::strip("[es~h1]Title[ee~h1] [x"), "Title [x");
+        assert_eq!(super::strip("[hl4[es~para.]]6 entry"), "6 entry");
     }
 }

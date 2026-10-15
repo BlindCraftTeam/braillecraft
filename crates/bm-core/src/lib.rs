@@ -2,7 +2,9 @@
 //!
 //! Everything that is not user interface lives here: the document model, translation through liblouis,
 //! braille page formatting, import and export, and the embosser job layer. The desktop shell and the web
-//! build both call into this crate. Design: docs/spec (10-gap-list.md, 11-architecture.md).
+//! build both call into this crate.
+
+pub mod dxfile;
 
 /// The two kinds of document. A print document holds ink text; a braille document holds braille cells.
 /// The kind decides which translation direction applies and how some codes are written.

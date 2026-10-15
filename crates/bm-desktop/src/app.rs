@@ -334,7 +334,17 @@ impl App {
             size = by_height.min(by_width).max(4);
         }
         if let Some(f) = font(&face, size) {
+            // wxGTK applies a font to a multi-line control by setting its whole text again, which moves the caret
+            // to the end; the caret and selection are kept across the change.
+            let (from, to) = d.text.get_selection();
+            let caret = d.text.get_insertion_point();
             d.text.set_font(&f);
+            if from != to {
+                d.text.set_selection(from, to);
+            } else {
+                d.text.set_insertion_point(caret);
+            }
+            d.text.show_position(caret);
         }
         let (lface, lsize) = self.face(if d.kind == DocKind::Print { self.settings.default_views.translated_font } else { ViewFont::Print });
         if let Some(f) = font(&lface, lsize) {

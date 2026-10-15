@@ -35,6 +35,9 @@ pub fn new_document(kind: DocKind, name: Option<String>, text: &str) -> u64 {
     let style = if cfg!(windows) { TextCtrlStyle::MultiLine | TextCtrlStyle::Rich2 } else { TextCtrlStyle::MultiLine };
     let text_ctrl = TextCtrl::builder(&child).with_style(style).build();
     text_ctrl.set_value(text);
+    // A document opens at its start (GTK leaves the caret after the text).
+    text_ctrl.set_insertion_point(0);
+    text_ctrl.show_position(0);
     text_ctrl.set_modified(false);
     let line = TextCtrl::builder(&child).with_style(TextCtrlStyle::ReadOnly).build();
     line.set_background_color(Colour::new(255, 255, 0, 255));
@@ -80,6 +83,12 @@ pub fn new_document(kind: DocKind, name: Option<String>, text: &str) -> u64 {
     child.show(true);
     activate_key(key);
     text_ctrl.set_focus();
+    // A dialog that was open (File, Open) gives focus back to the control it came from when it finishes closing;
+    // the new document takes it once that is done.
+    wxdragon::call_after(Box::new(move || {
+        text_ctrl.set_focus();
+        activate_key(key);
+    }));
     key
 }
 
@@ -197,10 +206,14 @@ fn wire(key: u64, child: &MDIChildFrame, text: &TextCtrl) {
         caret_moved(key);
     });
 
+    let editor = *text;
     child.on_activate(move |e| {
         if let WindowEventData::Activate(a) = &e {
             if a.is_active() {
                 activate_key(key);
+                // The editing area takes the keyboard when its document becomes active. On Linux the documents are
+                // pages of a notebook, which takes focus as it switches pages; focus is given once that is done.
+                wxdragon::call_after(Box::new(move || editor.set_focus()));
             }
             a.event.skip(true);
         }

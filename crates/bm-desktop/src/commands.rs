@@ -345,7 +345,7 @@ fn pick_file(message_text: &str) -> Option<std::path::PathBuf> {
     let f = app::frame();
     let dialog = FileDialog::builder(&f)
         .with_message(message_text)
-        .with_wildcard("All supported files|*.txt;*.brf;*.brl;*.bru|Braille files (*.brf, *.brl, *.bru)|*.brf;*.brl;*.bru|Text files (*.txt)|*.txt|All files|*")
+        .with_wildcard("All supported files|*.txt;*.brf;*.brl;*.bru;*.dxp;*.dxb|Print and braille documents (*.dxp, *.dxb)|*.dxp;*.dxb|Braille files (*.brf, *.brl, *.bru)|*.brf;*.brl;*.bru|Text files (*.txt)|*.txt|All files|*")
         .with_style(FileDialogStyle::Open | FileDialogStyle::FileMustExist)
         .build();
     if dialog.show_modal() == wxdragon::id::ID_OK {
@@ -355,8 +355,69 @@ fn pick_file(message_text: &str) -> Option<std::path::PathBuf> {
     }
 }
 
+/// Rewrites braille characters from one encoding to another, leaving [codes] as they are.
+fn convert_braille(text: &str, from: &encodings::Encoding, to: &encodings::Encoding) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while !rest.is_empty() {
+        let (plain, tail) = match rest.find('[') {
+            Some(i) => rest.split_at(i),
+            None => (rest, ""),
+        };
+        out.push_str(&to.cells_to_text(&from.text_to_cells(plain)));
+        match tail.find(']') {
+            Some(j) if !tail.is_empty() => {
+                out.push_str(&tail[..=j]);
+                rest = &tail[j + 1..];
+            }
+            _ => {
+                out.push_str(&to.cells_to_text(&from.text_to_cells(tail)));
+                rest = "";
+            }
+        }
+    }
+    out
+}
+
+/// A .dxp (print) or .dxb (braille) document.
+fn open_dx_document(path: &Path) {
+    let bytes = match std::fs::read(path) {
+        Ok(b) => b,
+        Err(e) => return message(&format!("{}: {e}", path.display())),
+    };
+    let doc = match bm_core::dxfile::read(&bytes) {
+        Ok(d) => d,
+        Err(e) => return message(&e.to_string()),
+    };
+    let braille = doc.kind == bm_core::DocumentKind::Braille;
+    // Braille is stored in North American ASCII braille; it is shown in the encoding chosen in Internationalization.
+    let text = if braille {
+        let to = app::with(|a| a.encoding());
+        convert_braille(&doc.text, encodings::find(encodings::DEFAULT), to)
+    } else {
+        doc.text
+    };
+    let name = path.file_name().map(|n| n.to_string_lossy().into_owned());
+    let key = documents::new_document(if braille { DocKind::Braille } else { DocKind::Print }, name, &text);
+    app::with(|a| {
+        if let Some(i) = a.index_of(key) {
+            let d = &mut a.docs[i];
+            d.dirty = false;
+            d.path = Some(path.to_path_buf());
+            d.view.translated = doc.translated_line;
+            d.view.six_key = braille && doc.six_key;
+        }
+        a.apply_view();
+    });
+}
+
 fn open_file() {
     let Some(path) = pick_file("Open") else { return };
+    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase();
+    if ext == "dxp" || ext == "dxb" {
+        open_dx_document(&path);
+        return;
+    }
     match read_text_file(&path) {
         Ok(text) => {
             let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase();
@@ -502,7 +563,7 @@ fn translate_document() {
         }
     }
     let new_name = (!untitled).then(|| {
-        let stem = ["txt", "brf", "brl", "bru", "prf"]
+        let stem = ["dxp", "dxb", "txt", "brf", "brl", "bru", "prf"]
             .iter()
             .find_map(|ext| name.strip_suffix(&format!(".{ext}")).or_else(|| name.strip_suffix(&format!(".{}", ext.to_uppercase()))))
             .unwrap_or(&name)

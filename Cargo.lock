@@ -185,6 +185,7 @@ version = "0.1.0"
 name = "bm-desktop"
 version = "0.1.0"
 dependencies = [
+ "bm-core",
  "bm-louis",
  "serde",
  "serde_json",

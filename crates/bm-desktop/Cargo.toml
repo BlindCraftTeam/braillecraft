@@ -16,3 +16,4 @@ wxdragon-sys = { version = "=0.9.22", features = ["xrc"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 bm-louis = { path = "../bm-louis" }
+bm-core = { path = "../bm-core" }
