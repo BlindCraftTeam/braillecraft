@@ -345,10 +345,20 @@ function applyView() {
   showTranslatedLine();
 }
 
-// The View menu's check marks follow the document's view.
+// The menus' check marks follow the document: highlighting, its view, and its hyphenation.
 function refreshMenus() {
   const v = doc.view;
-  const marks = { 1301: v.full_page, 1303: v.font === "print", 1304: v.font === "braille", 1305: v.font === "simbraille", 1307: v.six_key, 1309: v.codes, 1310: v.translated };
+  const marks = {
+    1209: doc.highlight !== null && doc.highlight !== undefined,
+    1301: v.full_page,
+    1303: v.font === "print",
+    1304: v.font === "braille",
+    1305: v.font === "simbraille",
+    1307: v.six_key,
+    1309: v.codes,
+    1310: v.translated,
+  };
+  for (let id = 2901; id <= 2905; id++) marks[id] = (doc.hyphen ?? 2902) === id;
   for (const [id, on] of Object.entries(marks)) {
     menubar.querySelector(`[data-id="${id}"]`)?.setAttribute("aria-checked", String(on));
   }
@@ -433,8 +443,13 @@ editor.addEventListener("keyup", (e) => {
 });
 
 editor.addEventListener("input", () => {
+  doc.dirty = true;
   showStatus();
   showTranslatedLine();
+});
+// Leaving the page with changes not saved: the browser asks, as the desktop program does at Exit.
+window.addEventListener("beforeunload", (e) => {
+  if (doc.dirty) e.preventDefault();
 });
 editor.addEventListener("keyup", () => {
   followHighlight();
@@ -801,8 +816,9 @@ async function showDialog(rid, { title, setup, onOk, memory, after, closes = [] 
   return { result, d };
 }
 
-// A message box (the desktop program's message and yes_no): OK, or Yes and No; Escape answers No.
-async function messageBox(text, yesNo = false) {
+// A message box (the desktop program's message, yes_no and yes_no_cancel): OK, or Yes and No, or Yes, No and Cancel;
+// Escape answers No, or Cancel when there is one. Answers "ok", "no" or "cancel".
+async function messageBox(text, yesNo = false, cancel = false) {
   const { dialog, form } = newDialog("BrailleMaker", "message");
   dialog.setAttribute("role", "alertdialog");
   const p = document.createElement("p");
@@ -813,7 +829,8 @@ async function messageBox(text, yesNo = false) {
   form.append(p);
   const buttons = document.createElement("div");
   buttons.className = "buttons";
-  for (const [label, value] of yesNo ? [["Yes", "ok"], ["No", "cancel"]] : [["OK", "ok"]]) {
+  const choices = !yesNo ? [["OK", "ok"]] : cancel ? [["Yes", "ok"], ["No", "no"], ["Cancel", "cancel"]] : [["Yes", "ok"], ["No", "cancel"]];
+  for (const [label, value] of choices) {
     const b = document.createElement("button");
     b.type = "button";
     b.textContent = label;
@@ -826,10 +843,13 @@ async function messageBox(text, yesNo = false) {
   const closed = closedPromise(dialog);
   dialog.showModal();
   buttons.firstChild.focus();
-  return (await closed) === "ok";
+  const answer = await closed;
+  return cancel ? answer : answer === "ok";
 }
 const message = (text) => messageBox(text, false);
 const yesNo = (text) => messageBox(text, true);
+// Yes, No or Cancel: true, false, or null for Cancel.
+const yesNoCancel = async (text) => ({ ok: true, no: false })[await messageBox(text, true, true)] ?? null;
 
 // The dialog a menu command opens: the one titled "Menu: Item" (as the reference program titles them).
 function dialogFor(menuLabel, itemLabel) {
@@ -1524,6 +1544,8 @@ fileInput.addEventListener("change", async () => {
   const ext = file.name.split(".").pop().toLowerCase();
   embosserDefaults();
   doc.printer = null;
+  doc.hyphen = 2902;
+  doc.dirty = false;
   if ((ext === "dxp" || ext === "dxb") && core) {
     try {
       const d = core.read_document(bytes);
@@ -1573,6 +1595,7 @@ async function translateDocument() {
   doc.name = `${stem()}${doc.kind === "braille" ? ".dxb" : ".dxp"}`;
   doc.file = null;
   doc.saved = false;
+  doc.dirty = true;
   doc.view = newView(doc.kind === "braille");
   showTitle();
   applyView();
@@ -1654,9 +1677,11 @@ async function chooseFrom(title, prompt, items) {
   return ok && list.selectedIndex >= 0 ? list.selectedIndex : null;
 }
 
-// The document's file: the one it was read from or last saved as, else a new one from the default template.
+// The document's file: the one it was read from or last saved as, else a new one from the default template, kept
+// so the styles and page numbering changed in the Document menu stay with the document.
 async function documentFile() {
-  return doc.file ?? core.new_document(doc.kind === "braille", editor.value, await templateText());
+  doc.file ??= core.new_document(doc.kind === "braille", editor.value, await templateText());
+  return doc.file;
 }
 
 // Writes the document as a document file (.dxp or .dxb) in format `version` (1, or 0 for the older format), with
@@ -1668,6 +1693,7 @@ async function writeDocument(name, version) {
   doc.file = core.read_document(bytes);
   doc.name = name;
   doc.saved = true;
+  doc.dirty = false;
   showTitle();
 }
 
@@ -2213,6 +2239,188 @@ function applyNamedStyle(name) {
   doc.lastStyle = name;
 }
 
+// Document, Add Style (dialog 1025): a new style, its codes typed or taken from the style it is based on.
+async function addStyle() {
+  const file = await documentFile();
+  const names = file.style_names;
+  const { result, d } = await showDialog(1025, {
+    setup(d) {
+      d.setText(7, "New Style Name");
+      d.setItems(10, ["(No Style)", ...names], 0);
+      d.setItems(12, STYLE_SHOW, 0);
+    },
+  });
+  if (result !== "ok") return;
+  const problem = file.add_style(d.text(7).trim(), d.selected(10) ?? "", d.text(14), d.text(16));
+  if (problem) {
+    await message(problem);
+    return;
+  }
+  doc.dirty = true;
+  lastLine = null;
+  showTranslatedLine();
+}
+
+// Document, Modify Style (dialog 1026): a style's codes; Rename (dialog 1027) renames it, and its codes in the text
+// when "everywhere" is checked.
+async function modifyStyle() {
+  const file = await documentFile();
+  if (!file.style_names.length) {
+    await message("This document has no styles yet. Use Document, Add Style to create one.");
+    return;
+  }
+  let shownCodes = ["", ""];
+  const load = (d) => {
+    const codes = file.style_codes(d.selected(8) ?? "");
+    if (!codes) return;
+    shownCodes = JSON.parse(codes);
+    d.setText(12, shownCodes[0]);
+    d.setText(14, shownCodes[1]);
+    // The code fields come disabled in the dialog resource; with a style chosen they can be edited.
+    for (let c = 11; c <= 14; c++) d.enable(c, true);
+  };
+  const { result, d } = await showDialog(1026, {
+    setup(d) {
+      d.setItems(8, file.style_names, 0);
+      d.setItems(10, STYLE_SHOW, 0);
+      load(d);
+      d.get(8)?.addEventListener("change", () => load(d));
+      d.get(6)?.addEventListener("click", async () => {
+        const old = d.selected(8);
+        if (!old) return;
+        const r = await showDialog(1027, {
+          setup(r) {
+            r.setText(7, old);
+            r.setChecked(8, true);
+          },
+        });
+        const name = r.d.text(7).trim();
+        if (r.result !== "ok" || !name) return;
+        file.rename_style(old, name);
+        if (r.d.checked(8)) {
+          // The style's codes are renamed in the text.
+          const [from, to] = [editor.selectionStart, editor.selectionEnd];
+          editor.value = editor.value.replaceAll(`[es~${old}]`, `[es~${name}]`).replaceAll(`[ee~${old}]`, `[ee~${name}]`);
+          editor.setSelectionRange(Math.min(from, editor.value.length), Math.min(to, editor.value.length));
+        }
+        doc.dirty = true;
+        d.setItems(8, file.style_names, file.style_names.indexOf(name));
+        load(d);
+        d.get(8)?.focus();
+      });
+    },
+  });
+  if (result !== "ok" || !d.selected(8)) return;
+  file.set_style_codes(d.selected(8), d.text(12), d.text(14));
+  if (d.text(12) !== shownCodes[0] || d.text(14) !== shownCodes[1]) doc.dirty = true;
+  lastLine = null;
+  showTranslatedLine();
+}
+
+// Document, Delete Style (dialog 1047): the chosen style leaves the document.
+async function deleteStyle() {
+  const file = await documentFile();
+  if (!file.style_names.length) {
+    await message("This document has no styles yet. Use Document, Add Style to create one.");
+    return;
+  }
+  const { result, d } = await showDialog(1047, {
+    setup(d) {
+      d.setItems(7, file.style_names, 0);
+      d.setItems(9, STYLE_SHOW, 0);
+    },
+  });
+  if (result !== "ok" || !d.selected(7)) return;
+  file.remove_style(d.selected(7));
+  doc.dirty = true;
+  lastLine = null;
+  showTranslatedLine();
+}
+
+// Document, Page Numbering (dialog 1031): braille page numbers on even and on odd pages, print page numbers on even
+// and on odd pages, each none, upper left, upper right, lower left or lower right; then the first page number.
+async function pageNumbering() {
+  const GROUPS = [
+    [7, 8, 9, 10, 11],
+    [13, 14, 15, 16, 17],
+    [19, 20, 21, 22, 23],
+    [25, 26, 27, 28, 29],
+  ];
+  const file = await documentFile();
+  const numbers = [...file.page_numbers];
+  const { result, d } = await showDialog(1031, {
+    setup(d) {
+      GROUPS.forEach((g, k) => d.setRadio(g, numbers[k]));
+      d.setText(31, String(numbers[4]));
+    },
+  });
+  if (result !== "ok") return;
+  const chosen = GROUPS.map((g, k) => d.radio(g) ?? numbers[k]);
+  // A first page number that is not a number keeps the one the document had.
+  const first = d.number(31);
+  chosen.push(first !== null && first >= 1 && first <= 9999 ? first : numbers[4]);
+  if (chosen.some((n, k) => n !== numbers[k])) {
+    file.set_page_numbers(Uint16Array.from(chosen));
+    doc.dirty = true;
+  }
+  showStatus();
+}
+
+// Document, Create Template (dialog 1028): templates are built with the document format (as in the desktop program).
+async function createTemplate() {
+  const { result } = await showDialog(1028, {
+    setup(d) {
+      d.setItems(10, ["English (UEB) - Standard", "English (UEB) - Textbook Format"]);
+      d.setRadio([19, 20], 0);
+      d.get(18)?.addEventListener("click", () => message(PLANNED_TEMPLATES));
+    },
+  });
+  if (result === "ok") await message(PLANNED_TEMPLATES);
+}
+
+// Table, Create Table and Table Properties (dialog 1062): the table settings, kept as the dialog's memory; Create
+// Table puts the table codes around the selection.
+async function tableProperties(create) {
+  const { result } = await showDialog(1062, {
+    memory: "",
+    setup(d) {
+      d.setItems(7, ["Table: [Automatic]", "Table: Columnar", "Table: Stairstep", "Table: Listed", "Table: Linear", "Table: Two-Page"], 0);
+      d.setItems(9, ["Do Not Swap", "Force Swap", "Swap if More Compact"], 0);
+      d.setText(11, "2");
+      d.setText(13, "1");
+      d.setText(15, "2");
+      d.setText(17, "0");
+    },
+  });
+  if (result === "ok" && create) wrapSelection("[htbs]", "[htbe]");
+}
+
+// "Document "name" not saved!  Save changes?": Yes saves (Save), No goes on, Cancel stops. Answers whether to go on.
+async function confirmDiscard() {
+  if (!doc.dirty) return true;
+  const answer = await yesNoCancel(`Document "${doc.name}" not saved!  Save changes?`);
+  if (answer === null) return false;
+  if (answer) {
+    await save(false);
+    return !doc.dirty;
+  }
+  return true;
+}
+
+// File, Close: the web build holds one document, so a closed document gives way to a new empty one.
+async function closeDocument() {
+  if (await confirmDiscard()) await COMMANDS[1101]();
+}
+
+// File, Exit: after the save question, the page is closed where the browser allows it; else the browser's tab closes
+// BrailleMaker.
+async function exitProgram() {
+  if (!(await confirmDiscard())) return;
+  doc.dirty = false;
+  window.close();
+  await message("To leave BrailleMaker, close its browser tab or window.");
+}
+
 // Layout, Join Lines: the next line break becomes a space.
 function joinLines() {
   const at = editor.value.indexOf("\n", editor.selectionStart);
@@ -2268,6 +2476,12 @@ async function codeList() {
   if (chosen) insertText(`[${chosen[0]}${params}]`);
 }
 
+// Document, Hyphenation: the document's hyphenation, marked in the menu (the formatter that uses it is step 8).
+function setHyphen(id) {
+  doc.hyphen = id;
+  refreshMenus();
+}
+
 // A Layout menu code item: its codes put in, or put around the selection.
 function insertCode(id) {
   const code = core ? core.menu_code(id) : "";
@@ -2297,6 +2511,8 @@ const COMMANDS = {
     doc.file = null;
     doc.saved = false;
     doc.printer = null;
+    doc.hyphen = 2902;
+    doc.dirty = false;
     embosserDefaults();
     doc.view = newView(false);
     editor.value = "";
@@ -2350,8 +2566,33 @@ const COMMANDS = {
   },
   1309: () => setView((v) => (v.codes = !v.codes)),
   1310: () => setView((v) => (v.translated = !v.translated)),
+  1103: closeDocument,
+  1107: () => message(PLANNED_EBRAILLE),
+  1114: exitProgram,
+  1501: () => tableProperties(true),
+  1503: () => tableProperties(false),
   2601: () => embosserSetup(false),
   2602: () => printerSetup(false),
+  2604: pageNumbering,
+  2606: () => message(PLANNED_EBRAILLE),
+  2608: addStyle,
+  2609: modifyStyle,
+  2610: deleteStyle,
+  2612: createTemplate,
+  2613: () => message(PLANNED_TEMPLATES),
+  2901: () => setHyphen(2901),
+  2902: () => setHyphen(2902),
+  2903: () => setHyphen(2903),
+  2904: () => setHyphen(2904),
+  2905: () => setHyphen(2905),
+  3202: () => message(PLANNED_HELP),
+  3204: () => message(PLANNED_HELP),
+  3205: () => message(PLANNED_HELP),
+  3206: () =>
+    message(
+      "BrailleMaker 0.1: the main window, menus, dialogs, editing, find and replace, six-key entry, the code vocabulary, braille fonts for 18 encodings, and translation with the BrailleMaker engine and its tables. The file format, printing and embossing follow in the plan.",
+    ),
+  3210: () => message("Updates are published on the BrailleMaker GitHub page."),
   3101: () => embosserSetup(true),
   3102: () => printerSetup(true),
   3104: () => showDialog(1060, { memory: "", setup: (d) => (d.setChecked(10, true), d.setText(12, ""), d.setText(14, "05:00")) }),
@@ -2419,6 +2660,8 @@ async function run(id, menuLabel, itemLabel) {
       statusLine.textContent = `${plain(itemLabel)} is not in the web build yet.`;
     }
   }
+  // After every command the menus' marks follow the document, as in the desktop program.
+  refreshMenus();
   if (!document.querySelector("dialog[open]")) {
     editor.focus();
   }

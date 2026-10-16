@@ -131,6 +131,97 @@ impl Document {
     pub fn refreshable(&self, text: &str) -> Vec<u8> {
         bm_core::lbf::write(&Shown::marked(text).to_running(), &self.0.styles)
     }
+
+    /// A style's start and end codes as the style dialogs show them (each code in brackets), as JSON [begin, end];
+    /// empty when the document has no style of that name.
+    pub fn style_codes(&self, name: &str) -> String {
+        match self.0.styles.iter().find(|s| s.0 == name) {
+            Some(s) => serde_json::json!([codes_for_dialog(&s.1), codes_for_dialog(&s.2)]).to_string(),
+            None => String::new(),
+        }
+    }
+
+    /// Document, Add Style (dialog 1025): a style named `name`, its codes typed in the dialog, or those of the style
+    /// `base` it is based on where a field is left empty. The reference message when the name cannot be used, else
+    /// an empty string.
+    pub fn add_style(&mut self, name: &str, base: &str, begin: &str, end: &str) -> String {
+        if let Err(m) = check_style_name(name, &self.style_names()) {
+            return m;
+        }
+        let based = self.0.styles.iter().find(|s| s.0 == base).cloned();
+        let take = |typed: &str, kept: Option<&String>| if typed.is_empty() { kept.cloned().unwrap_or_default() } else { Shown::marked(typed).to_running() };
+        let style = (name.to_string(), take(begin, based.as_ref().map(|s| &s.1)), take(end, based.as_ref().map(|s| &s.2)));
+        self.0.styles.push(style);
+        String::new()
+    }
+
+    /// Document, Modify Style (dialog 1026): the style's codes from the dialog fields. A field is taken back only
+    /// when it was changed, so text in a style that reads like a bracket is not made into a code by showing it.
+    pub fn set_style_codes(&mut self, name: &str, begin: &str, end: &str) {
+        if let Some(s) = self.0.styles.iter_mut().find(|s| s.0 == name) {
+            if begin != codes_for_dialog(&s.1) {
+                s.1 = Shown::marked(begin).to_running();
+            }
+            if end != codes_for_dialog(&s.2) {
+                s.2 = Shown::marked(end).to_running();
+            }
+        }
+    }
+
+    /// Modify Style's Rename (dialog 1027): the style takes the name `new`.
+    pub fn rename_style(&mut self, old: &str, new: &str) {
+        if let Some(s) = self.0.styles.iter_mut().find(|s| s.0 == old) {
+            s.0 = new.to_string();
+        }
+    }
+
+    /// The document's page numbering (Document, Page Numbering): the position of braille page numbers on even and
+    /// odd pages and of print page numbers on even and odd pages (0 none, then upper left, upper right, lower left,
+    /// lower right), then the first page number.
+    #[wasm_bindgen(getter)]
+    pub fn page_numbers(&self) -> Vec<u16> {
+        self.0.page_numbering.to_vec()
+    }
+
+    pub fn set_page_numbers(&mut self, numbers: Vec<u16>) {
+        if let Ok(n) = <[u16; 5]>::try_from(numbers) {
+            self.0.page_numbering = n;
+        }
+    }
+
+    /// Document, Delete Style (dialog 1047): the style leaves the document.
+    pub fn remove_style(&mut self, name: &str) {
+        self.0.styles.retain(|s| s.0 != name);
+    }
+}
+
+/// Style codes in running text as a dialog shows them, each code in brackets (the desktop program's own).
+fn codes_for_dialog(running: &str) -> String {
+    running
+        .chars()
+        .map(|c| match c {
+            bm_core::doctext::OPEN => '[',
+            bm_core::doctext::CLOSE => ']',
+            c => c,
+        })
+        .collect()
+}
+
+/// The checks Add Style makes on a new style's name, with the reference messages.
+fn check_style_name(name: &str, names: &[String]) -> Result<(), String> {
+    if name.is_empty() {
+        return Err("The style name is empty.".into());
+    }
+    if name == "New Style Name" {
+        return Err("You must give the style a name other than \"New Style Name\".".into());
+    }
+    if !name.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-')) {
+        return Err("The style name contains invalid characters.  Style names may only contain letters (uppercase and lowercase), numbers, the period, the hyphen, and the underscore.".into());
+    }
+    if names.iter().any(|n| n == name) {
+        return Err(format!("A style named {name} already exists."));
+    }
+    Ok(())
 }
 
 /// A new document from a template's text, as File, New makes one in the desktop program: the template's four
@@ -712,6 +803,26 @@ mod tests {
         assert!(job.starts_with(b"\x1bD"), "{:?}", String::from_utf8_lossy(&job));
         assert!(String::from_utf8_lossy(&job).contains("ef"));
         assert!(!String::from_utf8_lossy(&job).contains("ab"));
+    }
+
+    #[test]
+    fn styles_are_added_changed_renamed_and_removed() {
+        let mut doc = new_document(false, "", "");
+        let n = doc.style_names().len();
+        assert_eq!(doc.add_style("New Style Name", "", "", ""), "You must give the style a name other than \"New Style Name\".");
+        assert!(doc.add_style("bad name", "", "", "").starts_with("The style name contains invalid characters."));
+        assert_eq!(doc.add_style("quote", "", "[ind4][rm4]", "[p]"), "");
+        assert_eq!(doc.add_style("quote", "", "", ""), "A style named quote already exists.");
+        assert_eq!(doc.add_style("quote2", "quote", "", "[l]"), "");
+        assert_eq!(doc.style_codes("quote2"), r#"["[ind4][rm4]","[l]"]"#);
+        doc.set_style_codes("quote2", "[ind4][rm4]", "[p]");
+        assert_eq!(doc.style_codes("quote2"), r#"["[ind4][rm4]","[p]"]"#);
+        doc.rename_style("quote2", "block");
+        doc.remove_style("quote");
+        assert_eq!(doc.style_names().len(), n + 1);
+        assert!(doc.style_names().contains(&"block".to_string()) && doc.style_codes("quote").is_empty());
+        doc.set_page_numbers(vec![0, 2, 0, 4, 7]);
+        assert_eq!(doc.page_numbers(), vec![0, 2, 0, 4, 7]);
     }
 
     #[test]
