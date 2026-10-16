@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- The BrailleMaker application bundle: the program, its icon, and the print (.dxp) and braille (.dxb) document
+     types it owns, each with its own icon. @VERSION@ is filled in by build-app.sh. -->
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key>
+  <string>BrailleMaker</string>
+  <key>CFBundleDisplayName</key>
+  <string>BrailleMaker</string>
+  <key>CFBundleIdentifier</key>
+  <string>net.jb11.braillemaker</string>
+  <key>CFBundleExecutable</key>
+  <string>braillemaker-desktop</string>
+  <key>CFBundleIconFile</key>
+  <string>braillemaker</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>@VERSION@</string>
+  <key>CFBundleVersion</key>
+  <string>@VERSION@</string>
+  <key>CFBundleInfoDictionaryVersion</key>
+  <string>6.0</string>
+  <key>LSMinimumSystemVersion</key>
+  <string>11.0</string>
+  <key>LSApplicationCategoryType</key>
+  <string>public.app-category.productivity</string>
+  <key>NSHighResolutionCapable</key>
+  <true/>
+  <key>NSPrincipalClass</key>
+  <string>NSApplication</string>
+  <key>CFBundleDocumentTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleTypeName</key>
+      <string>BrailleMaker Print Document</string>
+      <key>CFBundleTypeRole</key>
+      <string>Editor</string>
+      <key>LSHandlerRank</key>
+      <string>Owner</string>
+      <key>CFBundleTypeIconFile</key>
+      <string>print-document</string>
+      <key>LSItemContentTypes</key>
+      <array>
+        <string>net.jb11.braillemaker.print-document</string>
+      </array>
+    </dict>
+    <dict>
+      <key>CFBundleTypeName</key>
+      <string>BrailleMaker Braille Document</string>
+      <key>CFBundleTypeRole</key>
+      <string>Editor</string>
+      <key>LSHandlerRank</key>
+      <string>Owner</string>
+      <key>CFBundleTypeIconFile</key>
+      <string>braille-document</string>
+      <key>LSItemContentTypes</key>
+      <array>
+        <string>net.jb11.braillemaker.braille-document</string>
+      </array>
+    </dict>
+  </array>
+  <key>UTExportedTypeDeclarations</key>
+  <array>
+    <dict>
+      <key>UTTypeIdentifier</key>
+      <string>net.jb11.braillemaker.print-document</string>
+      <key>UTTypeDescription</key>
+      <string>BrailleMaker Print Document</string>
+      <key>UTTypeConformsTo</key>
+      <array>
+        <string>public.data</string>
+      </array>
+      <key>UTTypeIconFile</key>
+      <string>print-document</string>
+      <key>UTTypeTagSpecification</key>
+      <dict>
+        <key>public.filename-extension</key>
+        <array>
+          <string>dxp</string>
+        </array>
+      </dict>
+    </dict>
+    <dict>
+      <key>UTTypeIdentifier</key>
+      <string>net.jb11.braillemaker.braille-document</string>
+      <key>UTTypeDescription</key>
+      <string>BrailleMaker Braille Document</string>
+      <key>UTTypeConformsTo</key>
+      <array>
+        <string>public.data</string>
+      </array>
+      <key>UTTypeIconFile</key>
+      <string>braille-document</string>
+      <key>UTTypeTagSpecification</key>
+      <dict>
+        <key>public.filename-extension</key>
+        <array>
+          <string>dxb</string>
+        </array>
+      </dict>
+    </dict>
+  </array>
+</dict>
+</plist>

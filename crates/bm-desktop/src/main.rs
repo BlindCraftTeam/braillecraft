@@ -103,7 +103,7 @@ pub fn set_status_font(a: &app::App) {
 fn main() {
     // Linux: before GTK starts (see add_font). Elsewhere: once wxWidgets is running.
     let early = if cfg!(target_os = "linux") { Some(load_fonts()) } else { None };
-    let _ = wxdragon::main(move |_| {
+    let _ = wxdragon::main(move |wx_app| {
         let fonts = early.unwrap_or_else(load_fonts);
         match resource_dir("tables", "../../tables", "index.tsv") {
             Some(dir) => {
@@ -186,6 +186,17 @@ fn main() {
                 a.event.skip(true);
             }
         });
+
+        // macOS: documents opened from the Finder (double-click, Open With, a drop on the program icon) come as an
+        // Apple event, not on the command line; each is opened in the editor.
+        #[cfg(target_os = "macos")]
+        wx_app.on_open_files(|files| {
+            for f in files {
+                commands::open_path(Path::new(&f));
+            }
+        });
+        #[cfg(not(target_os = "macos"))]
+        let _ = wx_app;
 
         // The command line (spec 26 section 26.5): files given are opened, and printed, embossed or saved when an
         // option says so. When every file came with an option, the work is done without the editor and the program

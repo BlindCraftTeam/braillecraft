@@ -1,5 +1,6 @@
 # Builds BrailleMaker for Linux, Windows and macOS on every push to main and keeps the installers as
-# downloads on the run page (Actions, the run, Artifacts). The macOS build is universal (Apple Silicon and Intel).
+# downloads on the run page (Actions, the run, Artifacts). The macOS build is for the runner's processor (Apple
+# Silicon).
 # Builds are unsigned: Windows SmartScreen and macOS Gatekeeper ask before the first launch.
 name: Build
 
@@ -107,6 +108,20 @@ jobs:
           path: |
             installers/*.deb
             installers/*.rpm
+
+      # The macOS application bundle and disk image of the native program (packaging/macos).
+      - name: macOS disk image
+        if: runner.os == 'macOS'
+        run: |
+          version=$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)
+          bash packaging/macos/build-app.sh dist/BrailleMaker $version installers
+
+      - uses: actions/upload-artifact@v7
+        if: runner.os == 'macOS'
+        with:
+          name: braillemaker-macos-installer
+          if-no-files-found: error
+          path: installers/*.dmg
 
   # The web build: the core as WebAssembly with its browser glue (wasm-bindgen at the version the workspace locks),
   # the web interface's menus and dialogs regenerated from the desktop program's tables (the run fails when the
