@@ -37,5 +37,6 @@ unchanged.
 
 Everything else
 
-Any use not expressly permitted here needs prior written permission from the BlindCraft Team. The
+Any use not expressly permitted here needs prior written permission from the BlindCraft Team
+(info@blindcraft.dev). The
 permission ends automatically for anyone who breaks these terms. All other rights are reserved.

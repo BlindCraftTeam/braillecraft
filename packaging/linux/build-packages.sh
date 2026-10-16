@@ -48,7 +48,7 @@ Priority: optional
 Architecture: amd64
 Installed-Size: $size_kb
 Depends: $depends
-Maintainer: Jeremiah Beasley <jbeasley@jb11.net>
+Maintainer: BlindCraft <info@blindcraft.dev>
 Description: Braille translation, formatting and embossing
  BrailleCraft translates print to braille and back, lays out braille pages,
  and prints and embosses documents.
@@ -65,6 +65,7 @@ Release: 1
 Summary: Braille translation, formatting and embossing
 License: MIT OR Apache-2.0
 Vendor: BlindCraft Team
+Packager: BlindCraft <info@blindcraft.dev>
 URL: https://github.com/jeremiahbeasley/braillecraft
 BuildArch: x86_64
 AutoReqProv: yes
