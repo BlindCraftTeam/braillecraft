@@ -677,7 +677,27 @@ function buildControls(rid, form) {
         }
         pendingLabel = null;
       } else {
-        // A field with no label before it is named by its group, as a screen reader would read it there.
+        // A field with no label before it that stands on the row of a radio button or check box to its left (as Send
+        // to Printer: and its printer list do) is named by that control and placed beside it, as the reference draws
+        // it; any other is named by its group, as a screen reader would read it there.
+        const beside = spec.controls.find((r) => ["radio", "check"].includes(r.kind) && r.x < c.x && Math.abs(r.y - c.y) <= 3 && controls.has(r.id));
+        if (beside) {
+          field.setAttribute("aria-label", plain(beside.label));
+          const label = controls.get(beside.id).closest("label");
+          let pair = label.parentElement;
+          if (!pair.classList.contains("pair")) {
+            pair = document.createElement("div");
+            pair.className = "pair";
+            label.replaceWith(pair);
+            pair.append(label);
+          }
+          row.append(field);
+          pair.append(row);
+          controls.set(c.id, field);
+          if (c.hidden) row.hidden = true;
+          if (!c.enabled) field.setAttribute("disabled", "");
+          continue;
+        }
         field.setAttribute("aria-label", where.querySelector("legend")?.textContent ?? plain(spec.title));
       }
       row.append(field);

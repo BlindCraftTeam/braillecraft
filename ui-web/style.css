@@ -179,6 +179,10 @@ dialog form > .buttons { align-self: stretch; }
 dialog legend { padding: 0 0.25rem; }
 .row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; max-width: 100%; }
 .row > label { min-width: 10rem; }
+/* A radio button or check box with the field that stands beside it in the reference. */
+.pair { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; max-width: 100%; }
+.pair > label.row { min-width: 10rem; }
+.pair select { min-width: 12rem; }
 dialog input[type="text"], dialog select, dialog textarea {
   min-height: 24px;
   padding: 0.15rem 0.3rem;
