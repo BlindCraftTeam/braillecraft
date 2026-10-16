@@ -184,6 +184,13 @@ jobs:
             sleep 1
           done
           ls layout/pictures | wc -l
+          # Every start that opens the main window prints a GTK critical (gtk_distribute_natural_allocation) and
+          # notebook warnings (run 38943408956 logs); where it comes from: one start stopped at the first critical,
+          # with a backtrace.
+          if [ "$RUNNER_OS" = Linux ]; then
+            mkdir -p layout/waits
+            G_DEBUG=fatal-criticals BC_LAYOUT_RUN=1101 timeout 120 gdb -batch -ex run -ex bt --args $exe > layout/waits/critical-bt.txt 2>&1 || true
+          fi
 
       - uses: actions/upload-artifact@v7
         if: always()
