@@ -218,8 +218,22 @@ impl TranSendPrinters {
     }
 }
 
-/// The ports Write to Port lists.
-pub const PORTS: &[&str] = &["com1", "com2", "com3", "com4", "lpt1", "lpt2", "lpt3", "lpt4", "usb"];
+/// The ports Write to Port lists for `model`, as the reference builds the list (spec 25 16.1): lpt1 to lpt3 unless
+/// the model has NoParallel, com1 to com9 unless it has NoSerial. YesUSB adds the reference's USB list, which is
+/// always empty, so it adds nothing. YesFTDI adds the reference's list of FTDI devices, which comes from the FTDI
+/// library (ftd2xx) and is empty without it; BrailleCraft does not load that library, so nothing is added. The names
+/// are lower case as the reference stores them, in the order the list shows them (it sorts). No model, no ports.
+pub fn ports(model: Option<&Model>) -> Vec<String> {
+    let Some(m) = model else { return Vec::new() };
+    let mut out = Vec::new();
+    if !m.flag("NoSerial") {
+        out.extend((1..=9).map(|n| format!("com{n}")));
+    }
+    if !m.flag("NoParallel") {
+        out.extend((1..=3).map(|n| format!("lpt{n}")));
+    }
+    out
+}
 pub const BAUDS: &[&str] = &["110", "300", "600", "1200", "2400", "4800", "9600", "14400", "19200", "38400", "57600", "115200"];
 pub const PARITIES: &[&str] = &["No parity", "Even parity", "Odd parity", "Mark parity"];
 pub const HANDSHAKING: &[&str] = &["Hardware", "Software (XON/XOFF)", "None"];
@@ -606,6 +620,23 @@ mod tests {
         assert_eq!(check(model, &layout, 60, 25), Check::DoesNotFit);
         layout.form = "zz".into();
         assert_eq!(check(model, &layout, 40, 25), Check::FormNotDefined);
+    }
+
+    #[test]
+    fn the_port_list_follows_the_models_port_keywords() {
+        let cat = catalog();
+        let all: Vec<String> = (1..=9).map(|n| format!("com{n}")).chain((1..=3).map(|n| format!("lpt{n}"))).collect();
+        let plain = cat
+            .names()
+            .into_iter()
+            .find(|n| find_model(&cat, n).is_some_and(|m| !m.flag("NoSerial") && !m.flag("NoParallel")))
+            .unwrap();
+        assert_eq!(ports(find_model(&cat, &plain)), all, "{plain}");
+        // NoParallel only: the com ports.
+        assert_eq!(ports(find_model(&cat, "JTR Corporation ESA-2000")), all[..9].to_vec());
+        // NoSerial and NoParallel: none, as with no model.
+        assert!(ports(find_model(&cat, "Enabling Trident")).is_empty());
+        assert!(ports(None).is_empty());
     }
 
     #[test]

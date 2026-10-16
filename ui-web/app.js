@@ -975,18 +975,17 @@ function dialogFor(menuLabel, itemLabel) {
 // ------------------------------------------------------------------ the embosser setup sheet
 
 // The setup sheet (dialogs 10000 to 10004, spec 25 2d): `setup` shown, a changed copy answered on OK (null when
-// cancelled). Choosing a model fills the pages with that model's own values. The TranSend SE page shows only for
-// models with TranSend (INFERENCE, as in the desktop program).
+// cancelled). As in the reference (spec 25 15 and 16), all four pages are made; a change of model fills the forms and
+// the Device Settings and Advanced pages from the new model, makes the port list follow its ports, shows or hides the
+// TranSend SE tab (only for a model with TranSend), and keeps the output, serial and TranSend SE values.
 async function editSetup(setup, cat) {
   const lists = JSON.parse(core.setup_lists());
   const pages = [
     [10001, "General"],
     [10002, "Device Settings"],
+    [10003, "TranSend SE"],
+    [10004, "Advanced"],
   ];
-  if (cat.flag(setup.model, "TranSend")) {
-    pages.push([10003, "TranSend SE"]);
-  }
-  pages.push([10004, "Advanced"]);
   const title = `Embosser Setup - ${shownName(setup) || "Untitled Configuration"}`;
   const { dialog, form } = newDialog(title, "dlg10000");
   const tablist = document.createElement("div");
@@ -1025,37 +1024,67 @@ async function editSetup(setup, cat) {
     if (focus) tabs[i].focus();
   }
   // The tabs pattern: arrows, Home and End move between pages; Ctrl+PageDown and Ctrl+PageUp anywhere in the sheet.
+  // A tab taken away (TranSend SE for a model without it) is passed over.
+  const shownTabs = () => tabs.map((t, k) => k).filter((k) => !tabs[k].hidden);
+  const step = (by) => {
+    const shown = shownTabs();
+    const at = Math.max(0, shown.indexOf(current));
+    showPage(shown[(at + by + shown.length) % shown.length]);
+  };
   tablist.addEventListener("keydown", (e) => {
-    const n = tabs.length;
-    const to = { ArrowRight: current + 1, ArrowLeft: current - 1, Home: 0, End: n - 1 }[e.key];
-    if (to !== undefined) {
+    const shown = shownTabs();
+    const moves = { ArrowRight: () => step(1), ArrowLeft: () => step(-1), Home: () => showPage(shown[0]), End: () => showPage(shown.at(-1)) };
+    if (moves[e.key]) {
       e.preventDefault();
-      showPage((to + n) % n);
+      moves[e.key]();
     }
   });
   dialog.addEventListener("keydown", (e) => {
     if (e.ctrlKey && (e.key === "PageDown" || e.key === "PageUp")) {
       e.preventDefault();
-      showPage((current + (e.key === "PageDown" ? 1 : tabs.length - 1)) % tabs.length);
+      step(e.key === "PageDown" ? 1 : -1);
     }
   });
+  // Shows or takes away the TranSend SE tab; its page keeps its values either way (spec 25 15.1 and 15.4).
+  const setTranSendTab = (on) => {
+    tabs[2].hidden = !on;
+    if (!on && current === 2) showPage(0, false);
+  };
   const sheetControls = new Map();
   const general = built[0].d;
   const device = built[1].d;
-  const advanced = built.at(-1).d;
+  const advanced = built[3].d;
+  const transend = built[2].d;
   const fill = (s, models) => fillSheet(general, device, advanced, s, cat, lists, models);
   // The reference places Configuration location (8, 9) and Default Form (10, 11) at the same spot and shows one:
   // Default Form (INFERENCE, as in the desktop program).
   general.hide(8);
   general.hide(9);
   fill(setup, true);
-  const transend = pages.some(([rid]) => rid === 10003) ? built[2].d : null;
-  if (transend) fillTranSend(transend, setup, lists);
+  fillTranSend(transend, setup, lists);
+  const hasModel = () => !(general.selected(5) ?? "(").startsWith("(");
+  setTranSendTab(cat.flag(setup.model, "TranSend"));
+  showGeneral(general, hasModel());
+  showOutput(general, advanced, hasModel());
+  // The output controls follow the output and the port chosen and Initialize Serial Port.
+  for (const cid of [13, 14, 15, 17, 21]) {
+    general.get(cid)?.addEventListener("change", () => showOutput(general, advanced, hasModel()));
+  }
+  // The port list is made again only when the model's ports differ, and then nothing in it is chosen (spec 25 16.1).
+  let lastPorts = JSON.stringify(cat.ports(setup.model));
   general.get(5).addEventListener("change", () => {
-    const model = general.selected(5) ?? "";
-    if (!model.startsWith("(")) {
+    const model = hasModel() ? general.selected(5) : "";
+    if (model) {
       fill(JSON.parse(cat.new_setup(model, european())), false);
     }
+    const ports = cat.ports(model);
+    if (JSON.stringify(ports) !== lastPorts) {
+      general.setItems(17, ports, -1);
+      lastPorts = JSON.stringify(ports);
+    }
+    showGeneral(general, !!model);
+    showOutput(general, advanced, !!model);
+    setTranSendTab(!!model && cat.flag(model, "TranSend"));
   });
   let answer = null;
   addButtons(10000, dialog, form, sheetControls, async () => {
@@ -1080,7 +1109,8 @@ async function editSetup(setup, cat) {
         ? { Printer: general.selected(16) ?? "" }
         : out === 2
           ? { File: general.text(18).trim() }
-          : { Port: general.selected(17) ?? "lpt1" };
+          : // With no port chosen (the list made again for a new model) the port stored before is kept (spec 25 16.3).
+            { Port: general.selected(17) ?? setup.output.Port ?? cat.ports(model)[0] ?? "" };
     s.serial_init = general.checked(21);
     s.baud = Number(general.selected(23)) || s.baud;
     s.parity = general.chosenIn(25, lists.parities) ?? s.parity;
@@ -1109,7 +1139,8 @@ async function editSetup(setup, cat) {
     s.one_at_a_time = advanced.checked(20);
     s.text_delay = Math.max(0, advanced.number(22) ?? 0);
     s.control_delay = Math.max(0, advanced.number(24) ?? 0);
-    if (transend) readTranSend(transend, s, lists);
+    // Kept across a change of model (spec 25 15.4), so read whether the tab shows or not.
+    readTranSend(transend, s, lists);
     answer = s;
     return true;
   });
@@ -1120,6 +1151,33 @@ async function editSetup(setup, cat) {
   dialog.showModal();
   focusFirst(built[0].panel);
   return (await closed) === "ok" ? answer : null;
+}
+
+// Page 10001 with or without a model, as the desktop program sets it (spec 25 15.3): with none, every control below
+// the model choice is greyed; with one, the setup name, the form and the output choices are usable again
+// (INFERENCE for Write to Port and Write to File, as in the desktop program).
+function showGeneral(general, hasModel) {
+  if (!hasModel) {
+    for (let cid = 6; cid <= 31; cid++) general.enable(cid, false);
+    return;
+  }
+  for (const cid of [6, 7, 10, 12, 13, 14, 15]) general.enable(cid, true);
+}
+
+// The output controls for the output now chosen (spec 25 16.3), as in the desktop program: only the chosen output's
+// own field is usable; the Serial group and Initialize Serial Port only for a port beginning "com", the serial
+// settings only while it is checked; Advanced's Send one character at a time (20) only for a port or a file.
+function showOutput(general, advanced, hasModel) {
+  const kind = hasModel ? general.radio([13, 14, 15]) : null;
+  general.enable(16, kind === 0);
+  general.enable(17, kind === 1);
+  general.enable(18, kind === 2);
+  general.enable(19, kind === 2);
+  const serial = kind === 1 && (general.selected(17) ?? "").startsWith("com");
+  general.enable(20, serial);
+  general.enable(21, serial);
+  for (let cid = 22; cid <= 31; cid++) general.enable(cid, serial && general.checked(21));
+  advanced.enable(20, kind !== null && kind !== 0);
 }
 
 // The TranSend SE page (sheet page 10003) showing `s` (spec 25 section 14). A browser cannot list the system's
@@ -1145,37 +1203,36 @@ function readTranSend(d, s, lists) {
   s.ink_adjust_v = d.number(17) ?? 0;
 }
 
-// Shows setup `s` on the sheet's pages; the model list is filled only when `models` is set.
+// Shows setup `s` on the sheet's pages. `models` is set when the sheet opens: the model list, the setup name, the
+// output and the serial settings are filled only then, because a change of model in the reference leaves them as they
+// are (spec 25 15.3).
 function fillSheet(general, device, advanced, s, cat, lists, models) {
   if (models) {
     const names = ["(Please select a model)", ...cat.names()];
     general.setItems(5, names, Math.max(0, names.indexOf(s.model)));
     general.setText(7, s.name);
+    // A browser cannot list the system's printers, so the printer list holds the setup's own printer when it has
+    // one (web build); the reference adds no entry of its own to this list (spec 25 14.6).
+    const [kind, value] = Object.entries(s.output)[0];
+    general.setItems(16, kind === "Printer" && value ? [value] : [], 0);
+    general.setRadio([13, 14, 15], kind === "Printer" ? 0 : kind === "Port" ? 1 : 2);
+    if (kind === "File") general.setText(18, value);
+    // The model's ports (spec 25 16.1): with Write to Port the setup's port is chosen, else LPT1, either found without
+    // regard to case; one not listed gives the first port.
+    const ports = cat.ports(s.model);
+    const want = (kind === "Port" ? value : "LPT1").toLowerCase();
+    const at = ports.findIndex((p) => p.toLowerCase() === want);
+    general.setItems(17, ports, at >= 0 ? at : ports.length ? 0 : -1);
+    general.setChecked(21, s.serial_init);
+    general.setItems(23, lists.bauds, lists.bauds.indexOf(String(s.baud)));
+    general.setItems(25, lists.parities, Math.min(s.parity, 3));
+    general.setItems(27, ["7", "8"], s.data_bits === 8 ? 1 : 0);
+    general.setItems(29, ["1", "2"], s.stop_bits === 2 ? 1 : 0);
+    general.setItems(31, lists.handshaking, Math.min(s.handshaking, 2));
   }
   const forms = JSON.parse(cat.forms(s.model));
   general.setItems(11, forms.map((f) => f.name), forms.findIndex((f) => f.id === s.form));
   general.enable(11, forms.length > 0);
-  // A browser cannot list the system's printers, so the printer list holds the setup's own printer when it has one
-  // (web build); the reference adds no entry of its own to this list (spec 25 14.6).
-  const [kind, value] = Object.entries(s.output)[0];
-  general.setItems(16, kind === "Printer" && value ? [value] : [], 0);
-  general.setItems(17, lists.ports, 0);
-  if (kind === "Printer") {
-    general.setRadio([13, 14, 15], 0);
-  } else if (kind === "Port") {
-    general.setRadio([13, 14, 15], 1);
-    const i = lists.ports.indexOf(value);
-    if (i >= 0) general.setItems(17, lists.ports, i);
-  } else {
-    general.setRadio([13, 14, 15], 2);
-    general.setText(18, value);
-  }
-  general.setChecked(21, s.serial_init);
-  general.setItems(23, lists.bauds, lists.bauds.indexOf(String(s.baud)));
-  general.setItems(25, lists.parities, Math.min(s.parity, 3));
-  general.setItems(27, ["7", "8"], s.data_bits === 8 ? 1 : 0);
-  general.setItems(29, ["1", "2"], s.stop_bits === 2 ? 1 : 0);
-  general.setItems(31, lists.handshaking, Math.min(s.handshaking, 2));
   const has = (k) => cat.flag(s.model, k);
   const index = cat.driver(s.model).includes("Index");
   device.setItems(5, lists.versions, Math.min(s.version, lists.versions.length - 1));

@@ -56,7 +56,7 @@ pub fn with_catalog<R>(f: impl FnOnce(Result<&Catalog, &str>) -> R) -> R {
     })
 }
 
-pub use bc_core::emboss_setup::{find_model, form_name, form_name_with_prefix, Layout, Output, Setup, TranSendPrinters, BAUDS, CASES, HANDSHAKING, LINE_ENDS, PAGE_ENDS, PARITIES, PORTS, TRANSEND_FILTERS, VERSIONS};
+pub use bc_core::emboss_setup::{find_model, form_name, form_name_with_prefix, Layout, Output, Setup, TranSendPrinters, BAUDS, CASES, HANDSHAKING, LINE_ENDS, PAGE_ENDS, PARITIES, TRANSEND_FILTERS, VERSIONS};
 
 /// Whether new setups take the European order of default forms (spec 25 12.3): the reference tests the user locale's
 /// country code; here the region of the system's language (its canonical name, such as en_GB: the user locale on
@@ -198,54 +198,53 @@ fn handle(d: &Dlg) -> Dlg {
     Dlg { id: d.id, dialog: d.dialog, page: d.page }
 }
 
-/// Shows `s` on the sheet's pages. The model list itself is filled only when `models` is set (a change of model
-/// fills the other fields from the new model and leaves the list as the user chose it).
+/// Shows `s` on the sheet's pages. `models` is set when the sheet opens: the model list, the setup name, the output
+/// (printer list, port list, file name) and the serial settings are filled only then, because a change of model in
+/// the reference refills the forms and the other pages but leaves those as they are (spec 25 15.3).
 fn fill_sheet(general: &Dlg, device: &Dlg, advanced: &Dlg, s: &Setup, cat: &Catalog, models: bool) {
+    let model = find_model(cat, &s.model);
     if models {
         let mut names = vec!["(Please select a model)".to_string()];
         names.extend(cat.names());
         let refs: Vec<&str> = names.iter().map(String::as_str).collect();
         general.set_items(5, &refs, Some(names.iter().position(|n| *n == s.model).unwrap_or(0) as u32));
         general.set_text(7, &s.name);
+        // The system's printers, which the list sorts, with no entry of its own (spec 25 14.6): the stored printer
+        // is chosen, else the first; with no printer the list stays empty.
+        let printers: Vec<String> = bc_core::emboss_out::printers().into_iter().map(|p| p.name).collect();
+        let printer_refs: Vec<&str> = printers.iter().map(String::as_str).collect();
+        let stored = match &s.output {
+            Output::Printer(p) => printer_refs.iter().position(|x| x == p).map(|i| i as u32),
+            _ => None,
+        };
+        general.set_items(16, &printer_refs, stored);
+        if stored.is_none() && !printer_refs.is_empty() {
+            general.select(16, 0);
+        }
+        match &s.output {
+            Output::Printer(_) => general.set_radio(&[13, 14, 15], 0),
+            Output::Port(_) => general.set_radio(&[13, 14, 15], 1),
+            Output::File(f) => {
+                general.set_radio(&[13, 14, 15], 2);
+                general.set_text(18, f);
+            }
+        }
+        fill_ports(general, model, match &s.output {
+            Output::Port(p) => Some(p.as_str()),
+            _ => None,
+        });
+        general.set_checked(21, s.serial_init);
+        general.set_items(23, BAUDS, BAUDS.iter().position(|b| *b == s.baud.to_string()).map(|i| i as u32));
+        general.set_items(25, PARITIES, Some(s.parity.min(3) as u32));
+        general.set_items(27, &["7", "8"], Some(u32::from(s.data_bits == 8)));
+        general.set_items(29, &["1", "2"], Some(u32::from(s.stop_bits == 2)));
+        general.set_items(31, HANDSHAKING, Some(s.handshaking.min(2) as u32));
     }
-    let model = find_model(cat, &s.model);
     let forms: Vec<String> = model.map(|m| m.forms.iter().map(|f| form_name(&f.id)).collect()).unwrap_or_default();
     let form_refs: Vec<&str> = forms.iter().map(String::as_str).collect();
     let chosen = model.and_then(|m| m.forms.iter().position(|f| f.id == s.form)).map(|i| i as u32);
     general.set_items(11, &form_refs, chosen);
     general.enable(11, !form_refs.is_empty());
-    // The system's printers, which the list sorts, with no entry of its own (spec 25 14.6): the stored printer is
-    // chosen, else the first; with no printer the list stays empty.
-    let printers: Vec<String> = bc_core::emboss_out::printers().into_iter().map(|p| p.name).collect();
-    let printer_refs: Vec<&str> = printers.iter().map(String::as_str).collect();
-    let stored = match &s.output {
-        Output::Printer(p) => printer_refs.iter().position(|x| x == p).map(|i| i as u32),
-        _ => None,
-    };
-    general.set_items(16, &printer_refs, stored);
-    if stored.is_none() && !printer_refs.is_empty() {
-        general.select(16, 0);
-    }
-    general.set_items(17, PORTS, Some(0));
-    match &s.output {
-        Output::Printer(_) => general.set_radio(&[13, 14, 15], 0),
-        Output::Port(p) => {
-            general.set_radio(&[13, 14, 15], 1);
-            if let Some(i) = PORTS.iter().position(|x| x == p) {
-                general.set_items(17, PORTS, Some(i as u32));
-            }
-        }
-        Output::File(f) => {
-            general.set_radio(&[13, 14, 15], 2);
-            general.set_text(18, f);
-        }
-    }
-    general.set_checked(21, s.serial_init);
-    general.set_items(23, BAUDS, BAUDS.iter().position(|b| *b == s.baud.to_string()).map(|i| i as u32));
-    general.set_items(25, PARITIES, Some(s.parity.min(3) as u32));
-    general.set_items(27, &["7", "8"], Some(u32::from(s.data_bits == 8)));
-    general.set_items(29, &["1", "2"], Some(u32::from(s.stop_bits == 2)));
-    general.set_items(31, HANDSHAKING, Some(s.handshaking.min(2) as u32));
     // Device settings.
     device.set_items(5, VERSIONS, Some(s.version.min(VERSIONS.len() - 1) as u32));
     device.set_checked(6, s.escape_codes);
@@ -275,6 +274,53 @@ fn fill_sheet(general: &Dlg, device: &Dlg, advanced: &Dlg, s: &Setup, cat: &Cata
     advanced.set_checked(20, s.one_at_a_time);
     advanced.set_text(22, &s.text_delay.to_string());
     advanced.set_text(24, &s.control_delay.to_string());
+}
+
+/// The Write to Port list (17) for `model` when the sheet opens (spec 25 16.1 and 16.3): with Write to Port chosen the
+/// setup's `port` is chosen, else LPT1; either is found without regard to case, and one the list does not hold
+/// gives its first port.
+fn fill_ports(general: &Dlg, model: Option<&Model>, port: Option<&str>) {
+    let ports = bc_core::emboss_setup::ports(model);
+    let refs: Vec<&str> = ports.iter().map(String::as_str).collect();
+    let want = port.unwrap_or("LPT1");
+    let chosen = refs.iter().position(|p| p.eq_ignore_ascii_case(want)).or((!refs.is_empty()).then_some(0));
+    general.set_items(17, &refs, chosen.map(|i| i as u32));
+}
+
+/// Page 10001 with or without a model, as the reference sets it on a change of model (spec 25 15.3): with none,
+/// every control below the model choice is greyed; with one, the setup name (6, 7), the form (10, 12) and Send to
+/// Printer (13) are usable again. INFERENCE: Write to Port and Write to File (14, 15) are made usable with them; the
+/// reference's code for them on a change of model was not found.
+fn show_general(general: &Dlg, has_model: bool) {
+    if !has_model {
+        for cid in 6..=31 {
+            general.enable(cid, false);
+        }
+        return;
+    }
+    for cid in [6, 7, 10, 12, 13, 14, 15] {
+        general.enable(cid, true);
+    }
+}
+
+/// The output controls for the output now chosen, as the reference sets them (spec 25 16.3): only the chosen
+/// output's own field is usable (the printer list, the port list, or the file name and its note); the Serial group
+/// and Initialize Serial Port only for a port whose name begins with "com", and the serial settings below it only
+/// while it is checked; Advanced's Send one character at a time (20) only for a port or a file. With no model none
+/// of them is usable.
+fn show_output(general: &Dlg, advanced: &Dlg, has_model: bool) {
+    let kind = general.radio(&[13, 14, 15]).filter(|_| has_model);
+    general.enable(16, kind == Some(0));
+    general.enable(17, kind == Some(1));
+    general.enable(18, kind == Some(2));
+    general.enable(19, kind == Some(2));
+    let serial = kind == Some(1) && general.selected_text(17).is_some_and(|p| p.starts_with("com"));
+    general.enable(20, serial);
+    general.enable(21, serial);
+    for cid in 22..=31 {
+        general.enable(cid, serial && general.checked(21));
+    }
+    advanced.enable(20, kind.is_some_and(|k| k != 0));
 }
 
 /// The TranSend SE page (sheet page 10003) showing `s` (spec 25 section 14): the printer choice (5), the printers it
@@ -316,9 +362,6 @@ fn read_transend(page: &Dlg, s: &mut Setup) {
     s.ink_adjust_v = page.number(17).and_then(|n| i32::try_from(n).ok()).unwrap_or(0);
 }
 
-/// The setup sheet (dialogs 10000 to 10004): `setup` shown, changed on OK. Returns false when cancelled. Choosing a
-/// model fills the pages with that model's own values. The TranSend SE page shows only for models with TranSend
-/// (INFERENCE: which pages the reference shows per model was not traced).
 /// The Device Settings page as the reference sets it (re/spec/25-emboss.md, Device Settings page (resource
 /// 10002)): the page holds one group of controls per embosser driver at the same places, and only the group of the
 /// model's driver is shown; the margin rows, the interpoint check box and the encoding rows show by the driver and
@@ -407,14 +450,11 @@ pub fn layout_transend_page(page: &Dlg) {
     });
 }
 
-/// The setup sheet for `setup`, filled: its pages are General, Device Settings, TranSend SE (when `transend`) and
-/// Advanced.
-fn build_sheet(setup: &Setup, cat: &Catalog, transend: bool) -> (Dlg, Vec<Dlg>) {
-    let mut pages = vec![(10001, "General"), (10002, "Device Settings")];
-    if transend {
-        pages.push((10003, "TranSend SE"));
-    }
-    pages.push((10004, "Advanced"));
+/// The setup sheet for `setup`, filled. As in the reference (spec 25 15.1) all four pages are made: General, Device
+/// Settings, TranSend SE and Advanced, in that order; the caller takes the TranSend SE tab away for a model without
+/// TranSend.
+fn build_sheet(setup: &Setup, cat: &Catalog) -> (Dlg, Vec<Dlg>) {
+    let pages = [(10001, "General"), (10002, "Device Settings"), (10003, "TranSend SE"), (10004, "Advanced")];
     let title = format!("Embosser Setup - {}", if setup.shown_name().is_empty() { "Untitled Configuration".to_string() } else { setup.shown_name() });
     let (sheet, p) = Dlg::sheet(&crate::app::frame(), 10000, &title, &pages);
     // The reference places Configuration location (8, 9) and Default Form (10, 11) at the same spot and shows one.
@@ -422,10 +462,8 @@ fn build_sheet(setup: &Setup, cat: &Catalog, transend: bool) -> (Dlg, Vec<Dlg>) 
     // so a location for all users has no meaning here.
     p[0].hide(8);
     p[0].hide(9);
-    fill_sheet(&p[0], &p[1], p.last().expect("advanced page"), setup, cat, true);
-    if transend {
-        fill_transend(&p[2], setup);
-    }
+    fill_sheet(&p[0], &p[1], &p[3], setup, cat, true);
+    fill_transend(&p[2], setup);
     (sheet, p)
 }
 
@@ -464,38 +502,80 @@ pub fn layout_device_page(device: &Dlg) {
 pub fn layout_sheet(name: &str) -> Option<(Dlg, Vec<Dlg>)> {
     with_catalog(|cat| {
         let cat = cat.ok()?;
-        Some(build_sheet(&new_setup(cat, name), cat, true))
+        Some(build_sheet(&new_setup(cat, name), cat))
     })
 }
 
+/// Whether the TranSend SE tab shows for `model` (spec 25 15.3): only for a model with the TranSend keyword, never
+/// with no model.
+fn has_transend(model: Option<&Model>) -> bool {
+    model.is_some_and(|m| m.flag("TranSend"))
+}
+
+/// The setup sheet (dialogs 10000 to 10004): `setup` shown, changed on OK. Returns false when cancelled. A change of
+/// model works as in the reference (spec 25 15.2 to 15.4 and 16): the forms and the Device Settings and Advanced
+/// pages take the new model's values, the port list follows the model's ports, the TranSend SE tab is added or taken
+/// away, and the output, the serial settings and the TranSend SE values stay as they were.
 pub fn edit(setup: &mut Setup, cat: &Catalog) -> bool {
-    let transend = find_model(cat, &setup.model).is_some_and(|m| m.flag("TranSend"));
-    let (sheet, p) = build_sheet(setup, cat, transend);
+    let (sheet, p) = build_sheet(setup, cat);
     let general = &p[0];
     let device = &p[1];
-    let advanced = p.last().expect("advanced page");
-    let transend_page = if transend { p.get(2) } else { None };
+    let transend_page = &p[2];
+    let advanced = &p[3];
+    let opened = find_model(cat, &setup.model);
+    Dlg::set_sheet_page(&p, 2, "TranSend SE", has_transend(opened));
+    show_general(general, opened.is_some());
+    show_output(general, advanced, opened.is_some());
     // A new printer choice shows the printers it allows, keeping the printer chosen when it is still among them.
-    if let Some(page) = transend_page {
-        if let Some(filter) = page.win(5).and_then(|w| w.as_widget::<Choice>()) {
-            let tp = handle(page);
-            filter.on_selection_changed(move |_| {
-                let chosen = tp.selected_text(6).unwrap_or_default();
-                fill_ink_printers(&tp, tp.chosen_in(5, TRANSEND_FILTERS).unwrap_or(0), &chosen);
-            });
-        }
+    if let Some(filter) = transend_page.win(5).and_then(|w| w.as_widget::<Choice>()) {
+        let tp = handle(transend_page);
+        filter.on_selection_changed(move |_| {
+            let chosen = tp.selected_text(6).unwrap_or_default();
+            fill_ink_printers(&tp, tp.chosen_in(5, TRANSEND_FILTERS).unwrap_or(0), &chosen);
+        });
     }
-    let (g, dv, adv) = (handle(general), handle(device), handle(advanced));
+    // The output controls follow the output and the port chosen and Initialize Serial Port.
+    let output_changed = || {
+        let (g, adv) = (handle(general), handle(advanced));
+        move || {
+            let has_model = !g.selected_text(5).unwrap_or_default().starts_with('(');
+            show_output(&g, &adv, has_model);
+        }
+    };
+    for cid in [13, 14, 15] {
+        general.on_radio(cid, output_changed());
+    }
+    if let Some(ports) = general.win(17).and_then(|w| w.as_widget::<Choice>()) {
+        let changed = output_changed();
+        ports.on_selection_changed(move |_| changed());
+    }
+    if let Some(init) = general.win(21).and_then(|w| w.as_widget::<CheckBox>()) {
+        let changed = output_changed();
+        init.on_toggled(move |_| changed());
+    }
+    // The ports the list was last made from: the reference makes it again only when the model's kinds of port
+    // change, and then leaves nothing in it chosen (spec 25 16.1).
+    let last_ports = std::rc::Rc::new(std::cell::RefCell::new(bc_core::emboss_setup::ports(opened)));
+    let pages: Vec<Dlg> = p.iter().map(handle).collect();
     if let Some(models) = general.win(5).and_then(|w| w.as_widget::<Choice>()) {
         models.on_selection_changed(move |_| {
-            let model = g.selected_text(5).unwrap_or_default();
-            if model.starts_with('(') {
-                return;
-            }
+            let name = pages[0].selected_text(5).unwrap_or_default();
             with_catalog(|cat| {
-                if let Ok(cat) = cat {
-                    fill_sheet(&g, &dv, &adv, &new_setup(cat, &model), cat, false);
+                let Ok(cat) = cat else { return };
+                let model = if name.starts_with('(') { None } else { find_model(cat, &name) };
+                match model {
+                    Some(_) => fill_sheet(&pages[0], &pages[1], &pages[3], &new_setup(cat, &name), cat, false),
+                    None => show_device(&pages[1], None, 0, false),
                 }
+                let ports = bc_core::emboss_setup::ports(model);
+                if *last_ports.borrow() != ports {
+                    let refs: Vec<&str> = ports.iter().map(String::as_str).collect();
+                    pages[0].set_items(17, &refs, None);
+                    *last_ports.borrow_mut() = ports;
+                }
+                show_general(&pages[0], model.is_some());
+                show_output(&pages[0], &pages[3], model.is_some());
+                Dlg::set_sheet_page(&pages, 2, "TranSend SE", has_transend(model));
             });
         });
     }
@@ -533,7 +613,12 @@ pub fn edit(setup: &mut Setup, cat: &Catalog) -> bool {
         s.output = match general.radio(&[13, 14, 15]) {
             Some(0) => Output::Printer(general.selected_text(16).unwrap_or_default()),
             Some(2) => Output::File(general.text(18).trim().to_string()),
-            _ => Output::Port(general.selected_text(17).unwrap_or_else(|| "lpt1".into())),
+            // With no port chosen (the list made again for a new model), the port kept is the one stored before, as
+            // the reference stores the target name only when a port is chosen (spec 25 16.3).
+            _ => Output::Port(general.selected_text(17).unwrap_or_else(|| match &setup.output {
+                Output::Port(p) => p.clone(),
+                _ => bc_core::emboss_setup::ports(find_model(cat, &model)).into_iter().next().unwrap_or_default(),
+            })),
         };
         s.serial_init = general.checked(21);
         s.baud = general.selected_text(23).and_then(|b| b.parse().ok()).unwrap_or(s.baud);
@@ -563,9 +648,9 @@ pub fn edit(setup: &mut Setup, cat: &Catalog) -> bool {
         s.one_at_a_time = advanced.checked(20);
         s.text_delay = advanced.number(22).unwrap_or(0).max(0) as u32;
         s.control_delay = advanced.number(24).unwrap_or(0).max(0) as u32;
-        if let Some(page) = transend_page {
-            read_transend(page, &mut s);
-        }
+        // The TranSend SE values stay as they were across a change of model (spec 25 15.4), so they are read from
+        // the page whether its tab shows or not.
+        read_transend(transend_page, &mut s);
         *setup = s;
         break true;
     };

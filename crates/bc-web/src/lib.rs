@@ -969,6 +969,11 @@ impl Embossers {
         find_model(&self.0, label).is_some_and(|m| m.flag(key))
     }
 
+    /// The ports Write to Port lists for a model (spec 25 16.1); none for an unknown model.
+    pub fn ports(&self, label: &str) -> Vec<String> {
+        bc_core::emboss_setup::ports(find_model(&self.0, label))
+    }
+
     /// The output encodings a model offers.
     pub fn encodings(&self, label: &str) -> Vec<String> {
         find_model(&self.0, label).map(|m| m.encodings().iter().map(|s| s.to_string()).collect()).unwrap_or_default()
@@ -1032,13 +1037,13 @@ pub fn a4_region_of(region: &str) -> bool {
     bc_core::emboss_setup::a4_region(region)
 }
 
-/// The choice lists of the embosser setup sheet, as JSON: ports, bauds, parities, handshaking, versions, line ends,
-/// page ends, letter cases and the TranSend SE printer choices.
+/// The choice lists of the embosser setup sheet, as JSON: bauds, parities, handshaking, versions, line ends, page
+/// ends, letter cases and the TranSend SE printer choices (the ports follow the model: the catalog's `ports`).
 #[wasm_bindgen]
 pub fn setup_lists() -> String {
     use bc_core::emboss_setup::*;
     serde_json::json!({
-        "ports": PORTS, "bauds": BAUDS, "parities": PARITIES, "handshaking": HANDSHAKING, "versions": VERSIONS,
+        "bauds": BAUDS, "parities": PARITIES, "handshaking": HANDSHAKING, "versions": VERSIONS,
         "lineEnds": LINE_ENDS, "pageEnds": PAGE_ENDS, "cases": CASES, "transendFilters": TRANSEND_FILTERS,
     })
     .to_string()

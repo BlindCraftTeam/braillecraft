@@ -199,6 +199,29 @@ impl Dlg {
         (sheet, out)
     }
 
+    /// Shows or takes away the tab of sheet page `pages[n]` (named `tab`), as the reference's sheet does (spec 25
+    /// 15.1): every page is made when the sheet opens, and a page taken away keeps its controls and their values; put
+    /// back, it goes after the shown pages that come before it in `pages`.
+    pub fn set_sheet_page(pages: &[Dlg], n: usize, tab: &str, on: bool) {
+        let Some(panel) = pages.get(n).and_then(|d| d.page) else { return };
+        let Some(book) = panel.get_parent().and_then(|w| w.as_widget::<Notebook>()) else { return };
+        let place = |p: &Panel| (0..book.get_page_count()).find(|i| book.get_page(*i).is_some_and(|w| w.handle_ptr() == p.handle_ptr()));
+        match (place(&panel), on) {
+            (Some(i), false) => {
+                book.remove_page(i);
+                panel.show(false);
+            }
+            (None, true) => {
+                let before = pages[..n].iter().filter(|d| d.page.as_ref().is_some_and(|p| place(p).is_some())).count();
+                // Shown again first: GTK hides the tab of a page whose window is hidden. Not selected, the notebook
+                // keeps the page out of sight until its tab is chosen.
+                panel.show(true);
+                book.insert_page(before, &panel, tab, false, None);
+            }
+            _ => {}
+        }
+    }
+
     /// The window the controls are in: the page of a sheet, or the dialog.
     pub fn container(&self) -> &dyn WxWidget {
         match &self.page {
@@ -643,13 +666,15 @@ impl Dlg {
         }
     }
 
+    /// The chosen item's text; None when nothing is chosen (wxWidgets answers an empty text then).
     pub fn selected_text(&self, cid: i32) -> Option<String> {
         let w = self.win(cid)?;
-        if let Some(l) = w.as_widget::<ListBox>() {
+        let text = if let Some(l) = w.as_widget::<ListBox>() {
             l.get_string_selection()
         } else {
             w.as_widget::<Choice>()?.get_string_selection()
-        }
+        };
+        text.filter(|t| !t.is_empty())
     }
 
     pub fn select(&self, cid: i32, index: u32) {
