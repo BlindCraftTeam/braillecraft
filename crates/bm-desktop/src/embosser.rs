@@ -315,6 +315,145 @@ pub fn save_default_layout(layout: &Layout, cells: u32, lines: u32) {
     settings_store::set(SECTION, "Layout", &serde_json::to_string(&(layout, cells, lines)).unwrap_or_default());
 }
 
+// ------------------------------------------------------------------ the embossing job
+
+/// The Index driver level of a setup: its version choice, else the firmware range its model is listed with.
+/// INFERENCE (spec 25 8.3): versions 3, 4 and 5 are levels 4, 5 and 6; versions 1 and 2 build no parameter string.
+fn index_level(s: &Setup) -> u8 {
+    match s.version {
+        1 => return 1,
+        2 => return 2,
+        3 | 4 => return 4,
+        5 => return 5,
+        6 => return 6,
+        _ => {}
+    }
+    let range = s.model.rsplit(' ').next().unwrap_or("");
+    match range.rsplit('-').next().unwrap_or(range) {
+        "V5" => 6,
+        "V4" => 5,
+        "V3" | "V3_early" => 4,
+        "V2" => 2,
+        "V1" => 1,
+        _ => 0,
+    }
+}
+
+/// The byte sent for each cell in a setup's output encoding; None for North American English, which the byte
+/// pipeline sends itself. The encoding tables are the program's own (Global, Internationalization); a character
+/// above one byte is sent as a space.
+fn encoding_codes(name: &str) -> Option<[u8; 64]> {
+    if name.eq_ignore_ascii_case("North American English") {
+        return None;
+    }
+    let enc = crate::encodings::all().iter().find(|e| e.name.eq_ignore_ascii_case(name))?;
+    let mut codes = [b' '; 64];
+    for (pattern, code) in codes.iter_mut().enumerate() {
+        let c = enc.cell_char(pattern) as u32;
+        if c <= 0xff {
+            *code = c as u8;
+        }
+    }
+    Some(codes)
+}
+
+/// The byte pipeline's options for a job of `copies` copies of a document laid out `cells` by `lines` with
+/// `layout`, on `setup` and its `model`: the driver's job start (spec 25 section 8), padding, line and page ends.
+/// INFERENCES, as the flags behind them were not traced (spec 25 8.4): the Index paper is sent in millimetres for
+/// models marked IndexPagemm; Index V3 and later and Enabling models with escape codes set their margins by command
+/// (no padding) and an Index V3 or later makes the copies itself (MC); the Enabling side argument is @; Enabling's
+/// lines per page count the top margin.
+pub fn job_options(s: &Setup, model: &Model, layout: &Layout, cells: u32, lines: u32, copies: u32) -> bm_core::emboss::Options {
+    use bm_core::emboss::{enabling_start, index_start, parse_codes, EnablingStart, IndexStart, LineEnd, Options};
+    let form = model.forms.iter().find(|f| f.id == layout.form);
+    let driver = model.driver();
+    let (index, enabling) = (driver.contains("Index"), driver.contains("Enabling"));
+    let interpoint = layout.interpoint && s.interpoint_enabled;
+    let binding = layout.binding + form.map_or(0, |f| f.cell_offset);
+    let escape = s.escape_codes && (model.flag("ETCAllowEscapeCodes") || model.flag("UsingEscapeCodes"));
+    let level = if index { index_level(s) } else { 0 };
+    let mut start = Vec::new();
+    if index {
+        start = index_start(&IndexStart {
+            level,
+            form_width: form.map_or(0, |f| f.width),
+            form_length: form.map_or(0, |f| f.length),
+            form_cells: form.map_or(cells + binding, |f| f.maximum.0),
+            form_id: layout.form.clone(),
+            booklet: form.is_some_and(|f| f.double_page),
+            to_mm: model.flag("IndexPagemm"),
+            z_fold: s.z_fold && model.flag("IndexZfold"),
+            cells,
+            binding,
+            lines,
+            interpoint,
+            copies,
+            sequence: model.text("InitSequence").unwrap_or("").to_string(),
+            ..IndexStart::default()
+        });
+    } else if enabling && escape {
+        start = enabling_start(&EnablingStart {
+            full: true,
+            side: b'@',
+            seek_top_of_form: s.seek_top_of_form && model.flag("AllowSeekTOF"),
+            voice: model.flag("ETSpeaks"),
+            interpoint,
+            form_length: form.map_or(110, |f| f.length),
+            lines: lines + layout.top_margin,
+            cells,
+            binding,
+            ..EnablingStart::default()
+        });
+    }
+    if s.custom_codes {
+        start.extend(parse_codes(&s.start_codes));
+    }
+    let puma = s.encoding.to_ascii_lowercase().contains("puma");
+    Options {
+        cells,
+        lines,
+        top_margin: layout.top_margin,
+        binding,
+        interpoint,
+        margins_by_command: escape || (index && level >= 4),
+        letters_upper: s.upper_case,
+        high_punctuation: s.high_punctuation,
+        encoding: encoding_codes(&s.encoding),
+        line_end: if puma { LineEnd::Puma } else { [LineEnd::CrLf, LineEnd::Cr, LineEnd::Lf][s.end_of_line.min(2)] },
+        end_of_page: s.end_of_page.min(6) as u8,
+        eol_on_full_line: s.eol_on_full_line,
+        eop_on_full_page: s.eop_on_full_page,
+        pad_lines: s.pad_lines,
+        make_up_sides: !model.flag("NoMakeupSides"),
+        start,
+        end: if s.custom_codes { parse_codes(&s.end_codes) } else { Vec::new() },
+        control_d: model.flag("ControlD"),
+        control_z: model.flag("ControlZ"),
+        close_sync: Vec::new(),
+        copies_by_embosser: index && level >= 4 && copies > 1,
+    }
+}
+
+/// Where a setup's output goes; None for Write to File with no name (the file is asked for each time).
+pub fn target(s: &Setup) -> Option<bm_core::emboss_out::Target> {
+    use bm_core::emboss_out::{Serial, Target};
+    Some(match &s.output {
+        Output::File(f) if f.trim().is_empty() => return None,
+        Output::File(f) => Target::File(f.trim().into()),
+        Output::Printer(p) => Target::Printer(p.clone()),
+        Output::Port(p) => Target::Port {
+            name: p.clone(),
+            serial: s.serial_init.then(|| Serial {
+                baud: s.baud,
+                parity: s.parity,
+                data_bits: s.data_bits,
+                stop_bits: s.stop_bits,
+                handshaking: s.handshaking,
+            }),
+        },
+    })
+}
+
 // ------------------------------------------------------------------ the setup sheet
 
 /// A second handle on a sheet page, for event handlers.

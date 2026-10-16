@@ -9,3 +9,7 @@ authors.workspace = true
 [dependencies]
 # Multi-byte code pages for formatted text (Shift_JIS, GBK, EUC-KR, Big5, EUC-JP, ISO-2022-JP).
 encoding_rs = "=0.8.35"
+
+# Raw printing to an embosser's printer queue (the spooler's RAW data type).
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "=0.61.2", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_Graphics_Printing", "Win32_Security"] }

@@ -20,7 +20,6 @@ use bm_core::table_list::TableList;
 
 // Messages for parts of the program that later build steps bring. They say what is missing and where it comes.
 const PLANNED_EBRAILLE: &str = "eBraille output is built after the formatted braille, document and PEF outputs.";
-const PLANNED_EMBOSS: &str = "Embossing (Index and Enabling embossers, and emboss to file) is built in step 10 of the plan.";
 const PLANNED_SPELL: &str = "The spell checker (Hunspell dictionaries) is built after the core features of version 1.";
 const PLANNED_HELP: &str = "The BrailleMaker help is written with the features it describes; it is not in this build yet.";
 const PLANNED_TEMPLATES: &str = "Templates are built with the BrailleMaker document format in step 7 of the plan.";
@@ -1044,9 +1043,96 @@ pub fn exit_program() {
 
 /// File, Print (dialog 1040, spec 24): copies, the page range, and interline print for a braille document; then the
 /// laid-out pages are printed, one print job per copy.
+/// The page range radios of File Print: All, Current page, Selection, page numbers, page sequence numbers.
+const PRINT_RANGE: [i32; 5] = [9, 10, 11, 12, 14];
+/// The same radios in File Emboss.
+const EMBOSS_RANGE: [i32; 5] = [9, 10, 11, 12, 13];
+
+/// The page range group of File Print and File Emboss: All chosen, and the two range fields enabled only with the
+/// page numbers and page sequence numbers radios.
+fn wire_page_range(d: &Dlg, radios: [i32; 5], fields: (i32, i32)) {
+    d.set_radio(&radios, 0);
+    d.enable(fields.0, false);
+    d.enable(fields.1, false);
+    let (numbers_field, sequence_field) = (d.win(fields.0), d.win(fields.1));
+    for (i, radio) in radios.iter().enumerate() {
+        let (numbers_field, sequence_field) = (numbers_field.clone(), sequence_field.clone());
+        d.on_radio(*radio, move || {
+            if let Some(w) = &numbers_field {
+                w.enable(i == 3);
+            }
+            if let Some(w) = &sequence_field {
+                w.enable(i == 4);
+            }
+        });
+    }
+}
+
+/// The copies field: a number from 1 up, else the reference message and None.
+fn copies_field(d: &Dlg, cid: i32) -> Option<u32> {
+    match d.number(cid).filter(|n| (1..=i32::MAX as i64).contains(n)) {
+        Some(n) => Some(n as u32),
+        None => {
+            message("You must print or emboss at least 1 copy, or press Cancel to avoid printing any.");
+            None
+        }
+    }
+}
+
+/// The pages a page range group asks for (indexes into `pages`, None for a blank page), or None when a message was
+/// shown and the dialog stays open. `caret` and the selection `(from, to)` are positions in the document.
+fn chosen_pages(d: &Dlg, radios: [i32; 5], fields: (i32, i32), pages: &[bm_core::format::Page], caret: i64, (from, to): (i64, i64)) -> Option<Vec<Option<usize>>> {
+    use crate::print::{parse_range, Range};
+    let count = pages.len();
+    let range = match d.radio(&radios).unwrap_or(0) {
+        0 => (Range::Pages((0..count).map(Some).collect()), false, false),
+        1 => {
+            let p = bm_core::format::locate(pages, caret.max(0) as usize).0;
+            (Range::Pages(vec![Some(p - 1)]), false, false)
+        }
+        2 => {
+            // INFERENCE: the reference gives an error for an empty selection (spec 24, 2a); its message is not
+            // traced, so the no-pages message stands in.
+            if from >= to {
+                (Range::NoneFound, false, false)
+            } else {
+                let first = bm_core::format::locate(pages, from.max(0) as usize).0;
+                let last = bm_core::format::locate(pages, (to - 1).max(0) as usize).0;
+                (Range::Pages((first - 1..last).map(Some).collect()), false, false)
+            }
+        }
+        // Page n is the n-th laid-out page both for the page numbers and for the page sequence numbers: the
+        // formatter numbers pages from 1 in order.
+        3 => parse_range(&d.text(fields.0), count),
+        _ => parse_range(&d.text(fields.1), count),
+    };
+    match range {
+        (Range::Malformed, ..) => {
+            message("The page range specified is not written properly.  Type your page range as in the following example, which requests pages 1 through 7, a blank page, and then page 9 only: 1-7,b,9");
+            None
+        }
+        (Range::Empty, ..) => {
+            message("You must enter at least one page number.");
+            None
+        }
+        (Range::NoneFound, ..) => {
+            message("That page range does not match any pages found in your document.");
+            None
+        }
+        (Range::Pages(p), missing, repeated) => {
+            if missing && !yes_no("The page range you entered must be adjusted because not all pages you specified were found in this document. Do you wish to proceed anyway?") {
+                return None;
+            }
+            if repeated && !yes_no("The page range you have specified implies that one or more pages will be printed more than once.  Do you wish to proceed?") {
+                return None;
+            }
+            Some(p)
+        }
+    }
+}
+
 fn print() {
     use crate::dlg::Value;
-    use crate::print::{parse_range, Range};
     let Some((i, key, braille, caret, (from, to))) = app::with(|a| {
         a.active.map(|i| {
             let d = &a.docs[i];
@@ -1068,7 +1154,7 @@ fn print() {
     .unwrap_or(false);
     let d = open_dialog(1040, None);
     d.set_text(7, "1");
-    d.set_radio(&[9, 10, 11, 12, 14], 0);
+    wire_page_range(&d, PRINT_RANGE, (15, 16));
     // On a braille document the page-number choice reads "Braille page number(s)": the reference copies control 13's
     // text into control 12 (spec 24, 2a); control 13 itself is not used.
     if braille {
@@ -1077,20 +1163,6 @@ fn print() {
         }
     }
     d.hide(13);
-    d.enable(15, false);
-    d.enable(16, false);
-    let (e15, e16) = (d.win(15), d.win(16));
-    for (radio, numbers, sequence) in [(9, false, false), (10, false, false), (11, false, false), (12, true, false), (14, false, true)] {
-        let (e15, e16) = (e15.clone(), e16.clone());
-        d.on_radio(radio, move || {
-            if let Some(w) = &e15 {
-                w.enable(numbers);
-            }
-            if let Some(w) = &e16 {
-                w.enable(sequence);
-            }
-        });
-    }
     d.set_checked(17, braille && interline_before);
     d.enable(17, braille);
     let (copies, chosen, interline) = loop {
@@ -1098,57 +1170,9 @@ fn print() {
             d.destroy();
             return;
         }
-        let Some(copies) = d.number(7).filter(|n| (1..=i32::MAX as i64).contains(n)) else {
-            message("You must print or emboss at least 1 copy, or press Cancel to avoid printing any.");
-            continue;
-        };
-        let count = pages.len();
-        let range = match d.radio(&[9, 10, 11, 12, 14]).unwrap_or(0) {
-            0 => (Range::Pages((0..count).map(Some).collect()), false, false),
-            1 => {
-                let p = bm_core::format::locate(&pages, caret.max(0) as usize).0;
-                (Range::Pages(vec![Some(p - 1)]), false, false)
-            }
-            2 => {
-                // INFERENCE: the reference gives an error for an empty selection (spec 24, 2a); its message is not
-                // traced, so the no-pages message stands in.
-                if from >= to {
-                    (Range::NoneFound, false, false)
-                } else {
-                    let first = bm_core::format::locate(&pages, from.max(0) as usize).0;
-                    let last = bm_core::format::locate(&pages, (to - 1).max(0) as usize).0;
-                    (Range::Pages((first - 1..last).map(Some).collect()), false, false)
-                }
-            }
-            // Page n is the n-th laid-out page both for the page numbers and for the page sequence numbers: the
-            // formatter numbers pages from 1 in order.
-            3 => parse_range(&d.text(15), count),
-            _ => parse_range(&d.text(16), count),
-        };
-        let chosen = match range {
-            (Range::Malformed, ..) => {
-                message("The page range specified is not written properly.  Type your page range as in the following example, which requests pages 1 through 7, a blank page, and then page 9 only: 1-7,b,9");
-                continue;
-            }
-            (Range::Empty, ..) => {
-                message("You must enter at least one page number.");
-                continue;
-            }
-            (Range::NoneFound, ..) => {
-                message("That page range does not match any pages found in your document.");
-                continue;
-            }
-            (Range::Pages(p), missing, repeated) => {
-                if missing && !yes_no("The page range you entered must be adjusted because not all pages you specified were found in this document. Do you wish to proceed anyway?") {
-                    continue;
-                }
-                if repeated && !yes_no("The page range you have specified implies that one or more pages will be printed more than once.  Do you wish to proceed?") {
-                    continue;
-                }
-                p
-            }
-        };
-        break (copies as u32, chosen, braille && d.checked(17));
+        let Some(copies) = copies_field(&d, 7) else { continue };
+        let Some(chosen) = chosen_pages(&d, PRINT_RANGE, (15, 16), &pages, caret, (from, to)) else { continue };
+        break (copies, chosen, braille && d.checked(17));
     };
     d.destroy();
     if braille {
@@ -1212,16 +1236,99 @@ fn print() {
     }
 }
 
+/// File, Emboss (dialog 1039, spec 25 2a): the document's laid-out pages in the chosen range, `copies` times,
+/// through its embosser setup's byte pipeline to the setup's output.
 fn emboss() {
-    let Some((setup, form)) = app::with(|a| a.doc().map(|d| (d.embosser.clone(), d.layout.form.clone()))) else { return };
+    use crate::embosser as emb;
+    let Some((i, name, setup_name, layout, cells, lines, caret, selection)) = app::with(|a| {
+        a.active.map(|i| {
+            let d = &a.docs[i];
+            (i, d.name.clone(), d.embosser.clone(), d.layout.clone(), d.cells, d.lines, d.text.get_insertion_point(), d.text.get_selection())
+        })
+    }) else {
+        return;
+    };
+    let Some(setup) = emb::load_setup(&setup_name) else {
+        message("Embosser not found.");
+        return;
+    };
+    let ready = emb::with_catalog(|cat| match cat {
+        Err(e) => Err(e.to_string()),
+        Ok(cat) => emb::find_model(cat, &setup.model).cloned().ok_or_else(|| "Embosser not found.".to_string()),
+    });
+    let model = match ready {
+        Ok(m) => m,
+        Err(e) => {
+            message(&e);
+            return;
+        }
+    };
+    let pages = app::with(|a| {
+        let shown = a.docs[i].shown();
+        a.laid_out(i, &shown)
+    });
     let d = open_dialog(1039, None);
-    d.set_radio(&[9, 10, 11, 12, 13], 0);
-    d.set_text(23, if setup.is_empty() { NO_EMBOSSER } else { &setup });
-    d.set_text(25, &crate::embosser::form_name(&form));
-    let ok = d.show() == 1;
+    d.set_text(7, "1");
+    wire_page_range(&d, EMBOSS_RANGE, (14, 15));
+    d.set_text(23, &setup.shown_name());
+    d.set_text(25, &emb::form_name(&layout.form));
+    let (copies, chosen) = loop {
+        if d.show() != 1 {
+            d.destroy();
+            return;
+        }
+        let Some(copies) = copies_field(&d, 7) else { continue };
+        let Some(chosen) = chosen_pages(&d, EMBOSS_RANGE, (14, 15), &pages, caret, selection) else { continue };
+        break (copies, chosen);
+    };
     d.destroy();
-    if ok {
-        message(PLANNED_EMBOSS);
+    // The pages as North American ASCII braille, which the byte pipeline takes: the document's text is in the
+    // display encoding (Global, Internationalization), so each character goes to its cell and that cell's character.
+    let sides: Vec<Option<Vec<String>>> = app::with(|a| {
+        let enc = a.encoding();
+        chosen
+            .iter()
+            .map(|p| {
+                p.map(|p| {
+                    pages[p]
+                        .lines
+                        .iter()
+                        .map(|l| {
+                            enc.text_to_cells(&l.text)
+                                .chars()
+                                .map(|c| match (c as u32).checked_sub(0x2800).filter(|n| *n < 64) {
+                                    Some(cell) => bm_core::emboss::NA_CELLS[cell as usize] as char,
+                                    None => c,
+                                })
+                                .collect()
+                        })
+                        .collect()
+                })
+            })
+            .collect()
+    });
+    let options = emb::job_options(&setup, &model, &layout, cells, lines, copies);
+    let bytes = bm_core::emboss::job(&options, &sides, copies);
+    let target = match emb::target(&setup) {
+        Some(t) => t,
+        None => {
+            // Write to File with no name: the file is asked for (INFERENCE: the reference's title and filter,
+            // strings 0x273c to 0x273e, were not read).
+            let f = app::frame();
+            let dialog = FileDialog::builder(&f)
+                .with_message("Emboss to File")
+                .with_wildcard("Braille files (*.brl, *.brf)|*.brl;*.brf|All files|*")
+                .with_default_file(&format!("{}.brl", std::path::Path::new(&name).file_stem().and_then(|s| s.to_str()).unwrap_or("Untitled")))
+                .with_style(FileDialogStyle::Save | FileDialogStyle::OverwritePrompt)
+                .build();
+            let path = (dialog.show_modal() == wxdragon::id::ID_OK).then(|| dialog.get_path()).flatten();
+            dialog.destroy();
+            let Some(path) = path else { return };
+            bm_core::emboss_out::Target::File(path.into())
+        }
+    };
+    if let Err(e) = bm_core::emboss_out::send(&target, &name, &bytes) {
+        message(&e.message());
     }
 }
 

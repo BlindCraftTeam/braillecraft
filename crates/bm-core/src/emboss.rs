@@ -27,7 +27,7 @@ pub struct Options {
     /// Cells of binding margin (the form's cell offset included).
     pub binding: u32,
     pub interpoint: bool,
-    /// The model sets its margins by command, so no padding is sent.
+    /// The model sets its margins by command, so no left padding is sent.
     pub margins_by_command: bool,
     /// North American output: letters sent upper case; punctuation sent high (` { | } ~ for @ [ \ ] ^).
     pub letters_upper: bool,
@@ -264,10 +264,10 @@ impl Writer<'_> {
 
     fn side(&mut self, page: Option<&[String]>, odd: bool) {
         let o = self.o;
-        if !o.margins_by_command {
-            for _ in 0..o.top_margin {
-                self.line_end();
-            }
+        // The top margin is blank lines on every model; setting the margins by command takes away only the left
+        // padding (spec 25 4c).
+        for _ in 0..o.top_margin {
+            self.line_end();
         }
         match page {
             Some(lines) => {
@@ -324,9 +324,260 @@ pub fn job(o: &Options, pages: &[Option<Vec<String>>], copies: u32) -> Vec<u8> {
     w.out
 }
 
+/// What the Index job start is built from (spec 25 section 8.1).
+#[derive(Debug, Clone, Default)]
+pub struct IndexStart {
+    /// The driver level: below 4 no parameter string is built. INFERENCE: 4, 5 and 6 are the Index generations the
+    /// model list names V3, V4 and V5.
+    pub level: u8,
+    /// The form's width and length (tenths of an inch), its largest cells per line, its paper id and whether it is
+    /// a folded booklet.
+    pub form_width: u32,
+    pub form_length: u32,
+    pub form_cells: u32,
+    pub form_id: String,
+    pub booklet: bool,
+    /// Width and length are swapped (INFERENCE: landscape or rotated paper).
+    pub rotated: bool,
+    /// The dimensions go out in millimetres (INFERENCE: the form is in tenths of an inch).
+    pub to_mm: bool,
+    /// Sideways paper names (_side, _landscape) choose their own double page codes at level 5 and above.
+    pub sideways_codes: bool,
+    /// The alternative double page codes 3 and 5 (INFERENCE: Z-fold paper).
+    pub z_fold: bool,
+    /// The 8-dot line spacing (LS100).
+    pub eight_dot: bool,
+    pub cells: u32,
+    pub binding: u32,
+    pub lines: u32,
+    /// Lines added to LP.
+    pub extra_lines: u32,
+    pub interpoint: bool,
+    pub copies: u32,
+    /// The model's field list (InitSequence), empty for none.
+    pub sequence: String,
+}
+
+/// A form dimension as the Index start sends it.
+fn index_dimension(v: u32, to_mm: bool) -> u32 {
+    if to_mm {
+        match (v * 254 + 50) / 100 {
+            147 => 148,
+            211 => 210,
+            419 => 420,
+            mm => mm,
+        }
+    } else if v % 10 == 5 {
+        v - 2
+    } else {
+        v
+    }
+}
+
+/// The Index parameter fields, in the driver's own order.
+pub fn index_fields(s: &IndexStart) -> Vec<String> {
+    if !(4..=6).contains(&s.level) {
+        return Vec::new();
+    }
+    let double = s.interpoint;
+    let sideways = s.form_id.contains("_side") || s.form_id.contains("_landscape");
+    let dp = if s.booklet {
+        if !double && s.level >= 5 { '8' } else { '4' }
+    } else if s.sideways_codes && s.level >= 5 && sideways {
+        if double { '6' } else { '7' }
+    } else if s.z_fold {
+        if double { '3' } else { '5' }
+    } else if double {
+        '2'
+    } else {
+        '1'
+    };
+    let (w, l) = if s.rotated { (s.form_length, s.form_width) } else { (s.form_width, s.form_length) };
+    let (pw, pl) = (index_dimension(w, s.to_mm), index_dimension(l, s.to_mm));
+    let mut f = vec![format!("DP{dp}")];
+    if s.level == 4 {
+        let (im, om, tm) = if s.booklet {
+            let om = (index_dimension(s.form_width, s.to_mm) / 12).saturating_sub(2 + s.binding + s.cells);
+            (s.binding + 2, om, s.lines + 1)
+        } else {
+            (0, s.form_cells.saturating_sub(s.cells + s.binding), 0)
+        };
+        f.extend([format!("PW{pw}"), format!("PL{pl}"), format!("IM{im}"), format!("OM{om}"), format!("TM{tm}"), "BM0".into()]);
+    } else {
+        let ls = if s.eight_dot { 100 } else { 50 };
+        f.extend([
+            format!("LS{ls}"),
+            format!("CH{}", s.cells),
+            format!("BI{}", s.binding),
+            format!("LP{}", s.lines + s.extra_lines),
+            "TM0".into(),
+        ]);
+    }
+    if s.copies > 1 {
+        f.push(format!("MC{}", s.copies));
+    }
+    f
+}
+
+/// The Index job start: ESC D, the fields separated by commas, and a semicolon. With the model's field list the
+/// fields go out in its order: a bare name takes the field built here, a field written with its value is sent as
+/// written. INFERENCE: the merge with the model's list was seen, not traced field by field; this is the reading
+/// that gives the built order for the lists the models carry. Fields MC and MC1 are never sent.
+pub fn index_start(s: &IndexStart) -> Vec<u8> {
+    let built = index_fields(s);
+    if built.is_empty() {
+        return Vec::new();
+    }
+    let fields: Vec<String> = if s.sequence.trim().is_empty() {
+        built
+    } else {
+        s.sequence
+            .split(',')
+            .map(str::trim)
+            .filter(|f| !f.is_empty())
+            .filter_map(|f| {
+                if f.len() == 2 && f.bytes().all(|b| b.is_ascii_uppercase()) {
+                    built.iter().find(|b| b.starts_with(f)).cloned()
+                } else {
+                    Some(f.to_string())
+                }
+            })
+            .collect()
+    };
+    let fields: Vec<&String> = fields.iter().filter(|f| *f != "MC" && *f != "MC1").collect();
+    if fields.is_empty() {
+        return Vec::new();
+    }
+    let mut out = vec![0x1b, b'D'];
+    for (i, f) in fields.iter().enumerate() {
+        if i > 0 {
+            out.push(b',');
+        }
+        out.extend_from_slice(f.as_bytes());
+    }
+    out.push(b';');
+    out
+}
+
+/// What the Enabling job start is built from (spec 25 section 8.2).
+#[derive(Debug, Clone, Default)]
+pub struct EnablingStart {
+    /// The start of a job (the whole set); otherwise only the side is chosen again.
+    pub full: bool,
+    /// The ESC i argument.
+    pub side: u8,
+    pub seek_top_of_form: bool,
+    /// The model speaks (ET Speaks), and its voice is left on.
+    pub voice: bool,
+    pub voice_on: bool,
+    /// An 8-dot table is in use, and the 8-dot case of it.
+    pub dot_table: bool,
+    pub eight_dot: bool,
+    /// Perforation skip and the interpoint side choice (one setup flag, not traced), and interpoint itself.
+    pub perforation_skip: bool,
+    pub interpoint: bool,
+    pub label_mode: bool,
+    /// Form length (tenths of an inch), lines per page, cells and binding margin.
+    pub form_length: u32,
+    pub lines: u32,
+    pub cells: u32,
+    pub binding: u32,
+    /// The setup's init string; a <Tag> in it takes that code's place.
+    pub init: String,
+}
+
+/// The Enabling job start: each code in the driver's order, sent when its condition holds, or put in place of its
+/// <Tag> where the init string holds that tag; then the init string.
+pub fn enabling_start(e: &EnablingStart) -> Vec<u8> {
+    const ESC: u8 = 0x1b;
+    let pick = |on: bool, a: u8, b: u8| if on { b } else { a };
+    let mut init = e.init.clone().into_bytes();
+    let mut out = Vec::new();
+    let items: [(&str, bool, Vec<u8>); 18] = [
+        ("SeekTOF", e.full && e.seek_top_of_form, vec![ESC, b'g']),
+        ("VoiceOff", e.full && e.voice, vec![ESC, b'X', b'@']),
+        ("BrailleMode", e.full, vec![ESC, b'K', pick(e.eight_dot, b'@', b'A')]),
+        ("IgnoreDot7And8", e.dot_table, vec![ESC, pick(e.eight_dot, b'[', b'2')]),
+        ("WordWrap", true, vec![ESC, b'W', b'@']),
+        ("HotZone", true, vec![ESC, b'H', b'@']),
+        ("ASCII", true, vec![ESC, b'&', b'@']),
+        ("PerfSkip", e.full && e.perforation_skip, vec![ESC, b'S', pick(e.interpoint, b'@', b'A')]),
+        ("LabelMode", e.full && e.label_mode, vec![ESC, b'j', b'A']),
+        ("DBSMode", e.dot_table, vec![ESC, b's', b'@']),
+        ("FormLength", true, vec![ESC, b'T', (e.form_length / 10 + 0x40) as u8]),
+        ("LinesPerPage", true, vec![ESC, b'Q', (e.lines + 0x40) as u8]),
+        ("LeftMargin", true, vec![ESC, b'L', b'A']),
+        ("RightMargin", true, vec![ESC, b'R', (e.cells + e.binding + 0x40) as u8]),
+        ("Interpoint", e.full && e.perforation_skip, vec![ESC, b'i', e.side]),
+        ("SideSelection", !e.full, vec![ESC, b'i', e.side]),
+        ("VoiceOff", e.full && e.voice && !e.voice_on, vec![ESC, b'X', b'@']),
+        ("VoiceOn", e.full && e.voice && e.voice_on, vec![ESC, b'X', b'A']),
+    ];
+    for (tag, send, code) in items {
+        let tag = format!("<{tag}>").into_bytes();
+        if let Some(at) = init.windows(tag.len()).position(|w| w == tag.as_slice()) {
+            init.splice(at..at + tag.len(), code);
+        } else if send {
+            out.extend_from_slice(&code);
+        }
+    }
+    out.extend_from_slice(&init);
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// ESC D and the Index fields after it.
+    fn esc_d(fields: &[u8]) -> Vec<u8> {
+        let mut v = vec![0x1b, b'D'];
+        v.extend_from_slice(fields);
+        v
+    }
+
+    #[test]
+    fn index_start_levels() {
+        // V3 (level 4) on 11.5 by 11 inch paper, 40 cells of 42, single sided, with the model's field list.
+        let v3 = IndexStart {
+            level: 4,
+            form_width: 115,
+            form_length: 110,
+            form_cells: 42,
+            form_id: "11_w".into(),
+            to_mm: true,
+            cells: 40,
+            lines: 25,
+            copies: 1,
+            sequence: "BT0,DP,PW,PL,IM,OM,TM,BM,MC".into(),
+            ..IndexStart::default()
+        };
+        assert_eq!(index_start(&v3), esc_d(b"BT0,DP1,PW292,PL279,IM0,OM2,TM0,BM0;"));
+        // Two copies add MC2; interpoint is DP2; without a field list the built order is sent.
+        let two = IndexStart { copies: 2, interpoint: true, sequence: String::new(), ..v3.clone() };
+        assert_eq!(index_start(&two), esc_d(b"DP2,PW292,PL279,IM0,OM2,TM0,BM0,MC2;"));
+        // V5 (level 6): line spacing, cells, binding, lines; LS50 written in the list is sent as written.
+        let v5 = IndexStart { level: 6, binding: 2, sequence: "BT0,TD0,PN0,DP,LS50,TM,BI,CH,LP,MC".into(), ..v3.clone() };
+        assert_eq!(index_start(&v5), esc_d(b"BT0,TD0,PN0,DP1,LS50,TM0,BI2,CH40,LP25;"));
+        // A booklet single sided at level 5 is DP8; V1 and V2 build nothing.
+        assert_eq!(index_fields(&IndexStart { booklet: true, ..v5.clone() })[0], "DP8");
+        assert!(index_start(&IndexStart { level: 3, ..v3 }).is_empty());
+        // Millimetre fixes and the tenths rule.
+        assert_eq!((index_dimension(58, true), index_dimension(83, true), index_dimension(165, true)), (148, 210, 420));
+        assert_eq!((index_dimension(115, false), index_dimension(110, false)), (113, 110));
+    }
+
+    #[test]
+    fn enabling_start_codes() {
+        let e = EnablingStart { full: true, form_length: 110, lines: 25, cells: 40, binding: 2, ..EnablingStart::default() };
+        let out = enabling_start(&e);
+        assert_eq!(out, b"\x1bK@\x1bW@\x1bH@\x1b&@\x1bTK\x1bQY\x1bLA\x1bRj".to_vec());
+        // A tag in the init string takes its code's place there; a later copy only chooses the side.
+        let tagged = EnablingStart { init: "<FormLength>!".into(), ..e.clone() };
+        assert_eq!(enabling_start(&tagged), b"\x1bK@\x1bW@\x1bH@\x1b&@\x1bQY\x1bLA\x1bRj\x1bTK!".to_vec());
+        let later = EnablingStart { full: false, side: b'A', ..e };
+        assert!(enabling_start(&later).ends_with(b"\x1biA"));
+    }
 
     fn page(lines: &[&str]) -> Option<Vec<String>> {
         Some(lines.iter().map(|s| s.to_string()).collect())

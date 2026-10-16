@@ -8,6 +8,7 @@ pub mod codepages;
 pub mod doctext;
 pub mod dxfile;
 pub mod emboss;
+pub mod emboss_out;
 pub mod embossers;
 pub mod engine;
 pub mod format;
