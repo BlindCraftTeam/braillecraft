@@ -2104,6 +2104,22 @@ fn embosser_setup(global: bool) {
 /// The margin fields of Printer Setup (the system page setup's ids): left, top, right, bottom.
 const MARGIN_FIELDS: [i32; 4] = [1155, 1156, 1157, 1158];
 
+/// What Printer Setup's sample page shows: `base` with the paper, orientation and margins now in the dialog (a margin
+/// that does not read as a number keeps its value from `base`).
+fn sample_setup(d: &Dlg, base: &crate::print::PrinterSetup) -> crate::print::PrinterSetup {
+    let mut s = base.clone();
+    if let Some(p) = d.selected_text(1137).and_then(|name| crate::print::PAPERS.iter().find(|p| p.0 == name)) {
+        s.paper = (p.1, p.2);
+    }
+    s.landscape = d.radio(&[1056, 1057]) == Some(1);
+    for (i, c) in MARGIN_FIELDS.iter().enumerate() {
+        if let Some(m) = crate::print::parse_margin(&d.text(*c), s.metric) {
+            s.margins[i] = m;
+        }
+    }
+    s
+}
+
 /// Fills Printer Setup's paper, orientation and margins from `s`.
 fn show_printer_setup(d: &Dlg, s: &crate::print::PrinterSetup) {
     let mut papers: Vec<String> = crate::print::PAPERS.iter().map(|p| p.0.to_string()).collect();
@@ -2152,6 +2168,29 @@ fn printer_setup(global: bool) {
     d.enable(2005, !braille_doc);
     d.closes_with(1026);
     d.on_button(1038, || message(PLANNED_HELP));
+    // The sample page follows the paper, orientation and margins as they are chosen and typed.
+    let sample = crate::page_sample::PageSample::install(&d, &setup);
+    if let Some(sample) = &sample {
+        let (id, dialog, base, sample) = (d.id, d.dialog, setup.clone(), sample.clone());
+        let redraw = std::rc::Rc::new(move || {
+            let d = Dlg { id, dialog, page: None };
+            sample.set(&sample_setup(&d, &base));
+        });
+        if let Some(c) = d.win(1137).and_then(|w| w.as_widget::<Choice>()) {
+            let r = redraw.clone();
+            c.on_selection_changed(move |_| r());
+        }
+        for cid in [1056, 1057] {
+            let r = redraw.clone();
+            d.on_radio(cid, move || r());
+        }
+        for cid in MARGIN_FIELDS {
+            if let Some(t) = d.win(cid).and_then(|w| w.as_widget::<TextCtrl>()) {
+                let r = redraw.clone();
+                t.on_text_updated(move |_| r());
+            }
+        }
+    }
     let mut driver = None;
     // Reads the paper and orientation chosen in the dialog into `setup`.
     let read_paper = |d: &Dlg, setup: &mut PrinterSetup| {
@@ -2167,6 +2206,9 @@ fn printer_setup(global: bool) {
                 if let Some(chosen) = crate::print::choose_printer(key, &mut setup) {
                     driver = Some(chosen);
                     show_printer_setup(&d, &setup);
+                    if let Some(s) = &sample {
+                        s.set(&sample_setup(&d, &setup));
+                    }
                     // The margins typed stay as typed.
                 }
             }

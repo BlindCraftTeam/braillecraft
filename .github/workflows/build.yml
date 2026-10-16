@@ -82,10 +82,13 @@ jobs:
           mkdir -p layout/pictures
           exe=dist/BrailleCraft/braillecraft-desktop${{ runner.os == 'Windows' && '.exe' || '' }}
           if [ "$RUNNER_OS" = Linux ]; then
-            sudo apt-get install -y xvfb x11-apps imagemagick > /dev/null
+            sudo apt-get install -y xvfb x11-apps imagemagick openbox > /dev/null
             Xvfb :99 -screen 0 1280x900x24 > /dev/null 2>&1 &
             export DISPLAY=:99
             sleep 2
+            # A window manager, so the main window becomes active as on a desktop (BC_LAYOUT_RUN waits for that).
+            openbox > /dev/null 2>&1 &
+            sleep 1
           fi
           BC_LAYOUT_CHECK=layout/layout.txt $exe || true
           grep " found$" layout/layout.txt | grep -v ": 0 found" || true
@@ -97,6 +100,19 @@ jobs:
               macOS) screencapture -x layout/pictures/$p.png || true ;;
               Linux) xwd -root -silent | convert xwd:- layout/pictures/$p.png || true ;;
               Windows) powershell -NoProfile -File tools/ci/screenshot.ps1 layout/pictures/$p.png || true ;;
+            esac
+            if [ "$RUNNER_OS" = Windows ]; then taskkill //F //IM braillecraft-desktop.exe > /dev/null 2>&1 || true; else kill $pid 2> /dev/null || true; fi
+            sleep 1
+          done
+          # The same dialogs as their menu commands open them, filled as they are in use (BC_LAYOUT_RUN): one command
+          # for each dialog a command opens.
+          for c in 1101 1103 1111 1112 1211 1215 1409 1416 1501 2601 2602 2604 2608 2609 2612 3101 3102 3104 3105 3106 3107 3108 3109 3111 3113 3114 3115 3117 3211; do
+            BC_LAYOUT_RUN=$c $exe & pid=$!
+            sleep 5
+            case "$RUNNER_OS" in
+              macOS) screencapture -x layout/pictures/cmd-$c.png || true ;;
+              Linux) xwd -root -silent | convert xwd:- layout/pictures/cmd-$c.png || true ;;
+              Windows) powershell -NoProfile -File tools/ci/screenshot.ps1 layout/pictures/cmd-$c.png || true ;;
             esac
             if [ "$RUNNER_OS" = Windows ]; then taskkill //F //IM braillecraft-desktop.exe > /dev/null 2>&1 || true; else kill $pid 2> /dev/null || true; fi
             sleep 1

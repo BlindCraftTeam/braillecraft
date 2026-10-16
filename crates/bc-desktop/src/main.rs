@@ -15,6 +15,7 @@ mod encodings;
 mod jaws_install;
 mod menu;
 mod menu_table;
+mod page_sample;
 mod print;
 mod settings_store;
 mod speech;
@@ -210,11 +211,17 @@ fn main() {
 
         // Global, Embosser Setup at start-up when no embosser is set up, once the main window is first active: a
         // dialog opened before that is stacked under the main window by the window manager, out of reach.
+        // Layout check, the picture of a dialog as a command opens it (BC_LAYOUT_RUN=<command id>): that menu command
+        // runs in place of the start-up Embosser Setup, so its dialog is filled as it is in use.
+        let run_for_picture: Option<i32> = std::env::var("BC_LAYOUT_RUN").ok().and_then(|c| c.parse().ok());
         let started = std::rc::Rc::new(std::cell::Cell::new(false));
         frame.on_activate(move |e| {
             if let WindowEventData::Activate(a) = &e {
                 if a.is_active() && !started.replace(true) {
-                    wxdragon::call_after(Box::new(commands::embosser_setup_at_start));
+                    match run_for_picture {
+                        Some(cmd) => wxdragon::call_after(Box::new(move || commands::run(cmd, false))),
+                        None => wxdragon::call_after(Box::new(commands::embosser_setup_at_start)),
+                    }
                 }
                 a.event.skip(true);
             }

@@ -153,6 +153,14 @@ impl Dlg {
         (sheet, out)
     }
 
+    /// The window the controls are in: the page of a sheet, or the dialog.
+    pub fn container(&self) -> &dyn WxWidget {
+        match &self.page {
+            Some(p) => p,
+            None => &self.dialog,
+        }
+    }
+
     /// The client size of the dialog, or of the page.
     fn client(&self) -> Size {
         match &self.page {
@@ -222,14 +230,25 @@ impl Dlg {
         }
         // Wrapped to the room it has in the dialog: on macOS a label takes the width of its whole text when it is
         // made, so its own width would leave it on one line, far past the dialog's edge.
+        // Where the wrapped text needs more lines than the rectangle the reference gave it (its font is wider here), the
+        // label grows down and what starts below it moves down by as much, as a group box around it grows; labels are
+        // taken from the top so each move sees the positions the ones above it left.
         let room = self.client().width - self.margin().width;
-        for cid in several_lines {
+        let mut labels: Vec<(i32, i32)> =
+            several_lines.into_iter().filter_map(|cid| self.win(cid).map(|w| (w.get_position().y, cid))).collect();
+        labels.sort();
+        for (_, cid) in labels {
             if let Some(s) = self.win(cid).and_then(|w| w.as_widget::<StaticText>()) {
                 let (p, size) = (s.get_position(), s.get_size());
                 let width = size.width.min(room - p.x).max(1);
                 s.set_size(Size::new(width, size.height));
                 s.wrap(width);
-                s.set_size(Size::new(width, size.height.max(s.get_best_size().height)));
+                let height = size.height.max(s.get_best_size().height);
+                s.set_size(Size::new(width, height));
+                let extra = height - size.height;
+                if extra > 0 {
+                    self.push_down(cid, p.y, p.y + size.height, extra);
+                }
             }
         }
         self.cover_controls();
@@ -255,6 +274,24 @@ impl Dlg {
             Some(p) => dialog_units(p, 4, 4),
             None => dialog_units(&self.dialog, 4, 4),
         }
+    }
+
+    /// Control `cid`, which spanned `top` to `bottom`, has grown down by `extra`: every control that starts at or below
+    /// its old bottom moves down by `extra`, a group box that holds it grows by `extra`, and so does the dialog (or
+    /// page), keeping the room the reference left below its last control.
+    fn push_down(&self, cid: i32, top: i32, bottom: i32, extra: i32) {
+        for (other, kind) in self.controls() {
+            let Some(o) = self.win(*other).filter(|_| *other != cid) else { continue };
+            let (op, os) = (o.get_position(), o.get_size());
+            if op.y >= bottom - 2 {
+                o.move_window(op.x, op.y + extra);
+            } else if *kind == Ctl::Box && op.y <= top && op.y + os.height > top {
+                o.set_min_size(Size::new(-1, -1));
+                o.set_size(Size::new(os.width, os.height + extra));
+            }
+        }
+        let c = self.client();
+        self.set_client(Size::new(c.width, c.height + extra));
     }
 
     /// After the controls have grown, the dialog (or page) grows until every control lies inside it, with the
@@ -688,8 +725,8 @@ impl Dlg {
 }
 
 /// Layout check (BC_LAYOUT_CHECK=<file>): every dialog and the embosser setup sheet are laid out as on this system
-/// and each pair of shown controls that overlap, and each control that reaches past its dialog, is written to the
-/// file, with a count per dialog. Group boxes are left out of the pairs: they hold other controls by design.
+/// and each pair of shown controls whose drawn parts overlap (see `drawn`), and each control that reaches past its
+/// dialog, is written to the file, with a count per dialog. A group box takes part by its title band only.
 pub fn layout_check(path: &str) {
     let mut out = String::new();
     let frame = crate::app::frame();
@@ -741,35 +778,67 @@ pub fn layout_show(page: i32) {
     sheet.dialog.raise();
 }
 
+/// What a control draws, as a rectangle (x, y, width, height). A label draws its text, not its whole rectangle: the
+/// reference's rectangles of neighbouring labels often overlap where their text does not (a label 60 units wide
+/// holding a word of 30), so a label is measured by its lines of text, within its rectangle. A titled group box
+/// draws its title in a band across its top; that band is what other controls must not reach (the frame below it
+/// holds the box's own controls by design).
+fn drawn(w: &Window, kind: Ctl) -> Option<(i32, i32, i32, i32)> {
+    let (p, s) = (w.get_position(), w.get_size());
+    if !w.is_shown() || s.width <= 0 || s.height <= 0 {
+        return None;
+    }
+    let label = w.get_label().unwrap_or_default().replace('&', "");
+    match kind {
+        Ctl::Static => {
+            let line = w.get_text_extent("Ag").height.max(1);
+            let lines: Vec<&str> = label.split('\n').collect();
+            let width = lines.iter().map(|l| w.get_text_extent(l).width).max().unwrap_or(0);
+            if width == 0 {
+                return None;
+            }
+            Some((p.x, p.y, width.min(s.width), (line * lines.len() as i32).min(s.height)))
+        }
+        Ctl::Box if !label.trim().is_empty() => {
+            let t = w.get_text_extent(&label);
+            Some((p.x, p.y, (t.width + 2 * t.height).min(s.width), t.height))
+        }
+        Ctl::Box => None,
+        _ => Some((p.x, p.y, s.width, s.height)),
+    }
+}
+
 fn report_layout(d: &Dlg, name: &str, out: &mut String) {
     use std::fmt::Write;
     let client = d.client();
+    let mut found = 0;
     let mut rects = Vec::new();
     for (cid, kind) in d.controls() {
         let Some(w) = d.win(*cid) else { continue };
         let (p, s) = (w.get_position(), w.get_size());
-        if !w.is_shown() || s.width <= 0 || s.height <= 0 {
-            continue;
+        if w.is_shown() && s.width > 0 && s.height > 0 && (p.x + s.width > client.width + 1 || p.y + s.height > client.height + 1) {
+            found += 1;
+            let _ = writeln!(out, "{name}: {cid} {kind:?} {},{} {}x{} reaches past the {}x{} dialog", p.x, p.y, s.width, s.height, client.width, client.height);
         }
-        rects.push((*cid, *kind, p.x, p.y, s.width, s.height));
+        if let Some((x, y, w, h)) = drawn(&w, *kind) {
+            rects.push((*cid, *kind, x, y, w, h));
+        }
     }
-    let mut found = 0;
     for (i, a) in rects.iter().enumerate() {
         let (acid, akind, ax, ay, aw, ah) = *a;
-        if ax + aw > client.width + 1 || ay + ah > client.height + 1 {
-            found += 1;
-            let _ = writeln!(out, "{name}: {acid} {akind:?} {ax},{ay} {aw}x{ah} reaches past the {}x{} dialog", client.width, client.height);
-        }
-        if akind == Ctl::Box {
-            continue;
-        }
         for &(bcid, bkind, bx, by, bw, bh) in &rects[i + 1..] {
-            if bkind == Ctl::Box {
+            if akind == Ctl::Box && bkind == Ctl::Box {
                 continue;
             }
             if ax + 1 < bx + bw && bx + 1 < ax + aw && ay + 1 < by + bh && by + 1 < ay + ah {
                 found += 1;
-                let _ = writeln!(out, "{name}: {acid} {akind:?} {ax},{ay} {aw}x{ah} overlaps {bcid} {bkind:?} {bx},{by} {bw}x{bh}");
+                let title = |k: Ctl| if k == Ctl::Box { " title" } else { "" };
+                let _ = writeln!(
+                    out,
+                    "{name}: {acid} {akind:?}{} {ax},{ay} {aw}x{ah} overlaps {bcid} {bkind:?}{} {bx},{by} {bw}x{bh}",
+                    title(akind),
+                    title(bkind)
+                );
             }
         }
     }
