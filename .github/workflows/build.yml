@@ -73,27 +73,35 @@ jobs:
           path: dist/BrailleCraft
 
       # The dialogs as this system draws them (dlg::layout_check): each pair of overlapping controls and each control
-      # past its dialog's edge, per dialog; on macOS also a picture of each page of the embosser setup sheet. Kept as
-      # the braillecraft-layout-<system> artifact.
+      # past its dialog's edge, per dialog; then a picture of every dialog and of every page of the embosser setup
+      # sheet, each opened by itself (BC_LAYOUT_SHOW). Kept as the braillecraft-layout-<system> artifact.
       - name: Dialog layout check
         shell: bash
-        timeout-minutes: 5
+        timeout-minutes: 25
         run: |
-          mkdir -p layout
+          mkdir -p layout/pictures
           exe=dist/BrailleCraft/braillecraft-desktop${{ runner.os == 'Windows' && '.exe' || '' }}
-          run=""
-          if [ "$RUNNER_OS" = Linux ]; then sudo apt-get install -y xvfb > /dev/null; run="xvfb-run -a"; fi
-          BC_LAYOUT_CHECK=layout/layout.txt $run $exe || true
-          grep " found$" layout/layout.txt | grep -v ": 0 found" || true
-          if [ "$RUNNER_OS" = macOS ]; then
-            for p in 10001 10002 10003 10004 1032 1017; do
-              BC_LAYOUT_SHOW=$p $exe & pid=$!
-              sleep 6
-              screencapture -x layout/sheet-$p.png || true
-              kill $pid || true
-              sleep 1
-            done
+          if [ "$RUNNER_OS" = Linux ]; then
+            sudo apt-get install -y xvfb x11-apps imagemagick > /dev/null
+            Xvfb :99 -screen 0 1280x900x24 > /dev/null 2>&1 &
+            export DISPLAY=:99
+            sleep 2
           fi
+          BC_LAYOUT_CHECK=layout/layout.txt $exe || true
+          grep " found$" layout/layout.txt | grep -v ": 0 found" || true
+          ids="$(grep -o 'name="dlg[0-9]*"' ui-native/dialogs.xrc | tr -dc '0-9\n' | grep -v -x -E '1000[0-4]') 10001 10002 10003 10004"
+          for p in $ids; do
+            BC_LAYOUT_SHOW=$p $exe & pid=$!
+            sleep 4
+            case "$RUNNER_OS" in
+              macOS) screencapture -x layout/pictures/$p.png || true ;;
+              Linux) xwd -root -silent | convert xwd:- layout/pictures/$p.png || true ;;
+              Windows) powershell -NoProfile -File tools/ci/screenshot.ps1 layout/pictures/$p.png || true ;;
+            esac
+            if [ "$RUNNER_OS" = Windows ]; then taskkill //F //IM braillecraft-desktop.exe > /dev/null 2>&1 || true; else kill $pid 2> /dev/null || true; fi
+            sleep 1
+          done
+          ls layout/pictures | wc -l
 
       - uses: actions/upload-artifact@v7
         with:
