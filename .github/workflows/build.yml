@@ -90,7 +90,15 @@ jobs:
             openbox > /dev/null 2>&1 &
             sleep 1
           fi
-          BC_LAYOUT_CHECK=layout/layout.txt $exe || true
+          # The check writes its report as it goes and ends by itself; one still running after 300 seconds is stopped
+          # and the end of its report shows where it stood.
+          BC_LAYOUT_CHECK=layout/layout.txt $exe & pid=$!
+          for i in $(seq 300); do kill -0 $pid 2> /dev/null || break; sleep 1; done
+          if kill -0 $pid 2> /dev/null; then
+            echo "layout check still running after 300 seconds; stopped"
+            if [ "$RUNNER_OS" = Windows ]; then taskkill //F //IM braillecraft-desktop.exe > /dev/null 2>&1 || true; else kill $pid 2> /dev/null || true; fi
+          fi
+          tail -n 3 layout/layout.txt || true
           grep " found$" layout/layout.txt | grep -v ": 0 found" || true
           # A picture is taken once the program's window is showing (on Linux; a fixed wait left most pictures
           # black there), else after a fixed wait.
@@ -130,6 +138,7 @@ jobs:
           ls layout/pictures | wc -l
 
       - uses: actions/upload-artifact@v7
+        if: always()
         with:
           name: braillecraft-layout-${{ matrix.name }}
           path: layout

@@ -231,8 +231,9 @@ fn main() {
         // and the program ends; or one page of the embosser setup sheet left open for a picture.
         if let Ok(path) = std::env::var("BC_LAYOUT_CHECK") {
             dlg::layout_check(&path);
-            app::with(|a| a.frame.destroy());
-            return;
+            // The check has nothing left to do once its report is written; the process ends here rather than
+            // waiting for the toolkit to close (on Windows the CI step never saw it end).
+            std::process::exit(0);
         }
         if let Some(page) = std::env::var("BC_LAYOUT_SHOW").ok().and_then(|p| p.parse().ok()) {
             dlg::layout_show(page);

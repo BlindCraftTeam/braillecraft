@@ -728,31 +728,47 @@ impl Dlg {
 /// and each pair of shown controls whose drawn parts overlap (see `drawn`), and each control that reaches past its
 /// dialog, is written to the file, with a count per dialog. A group box takes part by its title band only.
 pub fn layout_check(path: &str) {
-    let mut out = String::new();
+    use std::io::Write;
+    // Written as it goes, a line per dialog before it opens, so a check that stops partway shows where.
+    let mut file = match std::fs::File::create(path) {
+        Ok(f) => f,
+        Err(e) => {
+            eprintln!("BrailleCraft: layout check not written to {path}: {e}");
+            return;
+        }
+    };
+    let mut put = |text: &str| {
+        let _ = file.write_all(text.as_bytes());
+        let _ = file.flush();
+    };
     let frame = crate::app::frame();
     for (id, _, _, _) in DIALOGS.iter() {
         if (10000..=10004).contains(id) {
             continue;
         }
+        put(&format!("opening dialog {id}\n"));
+        let mut out = String::new();
         let d = Dlg::open(&frame, *id, None);
         report_layout(&d, &format!("dialog {id}"), &mut out);
         d.destroy();
+        put(&out);
     }
     let models = crate::embosser::layout_models();
     if models.is_empty() {
-        out.push_str("embosser setup sheet: no embosser models\n");
+        put("embosser setup sheet: no embosser models\n");
     }
     for model in models {
+        put(&format!("opening sheet ({model})\n"));
+        let mut out = String::new();
         if let Some((sheet, pages)) = crate::embosser::layout_sheet(&model) {
             for p in &pages {
                 report_layout(p, &format!("sheet page {} ({model})", p.id), &mut out);
             }
             sheet.destroy();
         }
+        put(&out);
     }
-    if let Err(e) = std::fs::write(path, out) {
-        eprintln!("BrailleCraft: layout check not written to {path}: {e}");
-    }
+    put("layout check finished\n");
 }
 
 /// Layout check, the picture (BC_LAYOUT_SHOW=<page id>): the setup sheet with that one page, shown and left open.
