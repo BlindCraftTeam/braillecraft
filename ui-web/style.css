@@ -111,7 +111,16 @@ header { border-bottom: 1px solid var(--line); background: var(--face); }
 [role="separator"] { margin: 0.25rem 0; border-top: 1px solid var(--line); }
 [role="menu"][hidden] { display: none; }
 .shortcut { color: inherit; }
-.mark { display: inline-block; width: 1.2rem; }
+/* The marks of check and radio items, in a column every item of a menu keeps, as desktop menus show them. The mark
+   has empty alternative text: screen readers take the state from aria-checked. */
+[role="menu"] [role^="menuitem"] > span:first-child::before {
+  content: "";
+  display: inline-block;
+  width: 1.2rem;
+}
+[role="menu"] [role="menuitemcheckbox"][aria-checked="true"] > span:first-child::before { content: "\2713" / ""; }
+[role="menu"] [role="menuitemradio"][aria-checked="true"] > span:first-child::before { content: "\25CF" / ""; }
+[role^="menuitem"][aria-disabled="true"] { color: GrayText; }
 .mn { text-decoration: underline; }
 
 /* The document window. */

@@ -2598,7 +2598,9 @@ async function refreshTableMenus() {
   if (m.active !== null) menubar.querySelector(`[data-id="${LANGUAGE_BASE + m.active}"]`)?.setAttribute("aria-checked", "true");
   const learningMenu = learningItem.closest("[role=menu]");
   const courses = m.courses.slice(0, COURSE_MAX).map((name, i) => ({ id: COURSE_BASE + i, label: `${name.replaceAll("&", "&&")}...`, kind: "check" }));
-  setDynamicItems(learningMenu, courses.length ? [{ separator: true }, ...courses, { separator: true }] : [], learningItem.parentElement.nextSibling, "Learning Tables");
+  // Between Uncontracted and Fully Contracted: put in before Fully Contracted, which the program never removes.
+  const fullyContracted = menubar.querySelector('[data-id="2802"]').parentElement;
+  setDynamicItems(learningMenu, courses.length ? [{ separator: true }, ...courses, { separator: true }] : [], fullyContracted, "Learning Tables");
   const checked = typeof m.checked === "number" && m.checked < COURSE_MAX ? COURSE_BASE + m.checked : m.checked;
   for (const item of learningMenu.querySelectorAll("[data-id]")) item.setAttribute("aria-checked", String(Number(item.dataset.id) === checked));
   // The Learning Tables item itself is available only when the language has learning steps.
