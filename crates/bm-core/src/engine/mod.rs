@@ -1,4 +1,4 @@
-//! The BrailleMaker translation engine. It translates with BrailleMaker's own table sources (tables/*.bmt, compiled
+//! The BrailleCraft translation engine. It translates with BrailleCraft's own table sources (tables/*.bmt, compiled
 //! by `compile`, found by code through `TableSet`), or with binary rule tables (.btb) and scan tables (.sct) read
 //! from a folder at run time.
 //!
@@ -57,7 +57,7 @@ pub enum EngineError {
     BadTable(String),
     /// The text holds a character with no code page 437 form.
     NotEncodable(char),
-    /// The table uses a part of the scanner that BrailleMaker does not have yet.
+    /// The table uses a part of the scanner that BrailleCraft does not have yet.
     NotSupported(&'static str),
     /// A table source (.bmt) has a mistake: the line and what is wrong.
     Source(String),
@@ -69,7 +69,7 @@ impl std::fmt::Display for EngineError {
             EngineError::Read(s) => write!(f, "A translation table could not be read: {s}"),
             EngineError::BadTable(s) => write!(f, "A translation table is damaged or of an unknown kind: {s}"),
             EngineError::NotEncodable(c) => write!(f, "The character {c} (U+{:04X}) cannot be translated.", *c as u32),
-            EngineError::NotSupported(s) => write!(f, "The translation table uses {s}, which BrailleMaker does not have yet."),
+            EngineError::NotSupported(s) => write!(f, "The translation table uses {s}, which BrailleCraft does not have yet."),
             EngineError::Source(s) => write!(f, "A translation table source has a mistake: {s}"),
         }
     }
@@ -406,7 +406,7 @@ mod tests {
         }
     }
 
-    /// BrailleMaker's own table source from the repository's tables folder.
+    /// BrailleCraft's own table source from the repository's tables folder.
     fn shipped(name: &str) -> Translator {
         let path = format!("{}/../../tables/{name}", env!("CARGO_MANIFEST_DIR"));
         let text = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{path}: {e}"));
@@ -490,7 +490,7 @@ mod tests {
     }
 
     /// A rule that takes no characters and leaves its own condition true matches here at the gamma again and again;
-    /// the reference program never finishes this text. BrailleMaker stops the repeat (rules.rs, run) and gives the
+    /// the reference program never finishes this text. BrailleCraft stops the repeat (rules.rs, run) and gives the
     /// gamma its default output, as the Python reference port with the same stop does.
     #[test]
     fn a_rule_that_repeats_without_taking_characters_is_stopped() {

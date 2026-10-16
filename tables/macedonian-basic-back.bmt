@@ -1,4 +1,4 @@
-# The rules of mkdacb.btb and gendxb.sct, recreated as BrailleMaker table source.
+# The rules of mkdacb.btb and gendxb.sct, recreated as BrailleCraft table source.
 table "Macedonian - basic, braille to print"
 default-char 42
 raw 0

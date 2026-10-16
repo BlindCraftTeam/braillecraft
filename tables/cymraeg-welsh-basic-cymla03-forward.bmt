@@ -1,4 +1,4 @@
-# The rules of cymla03.btb and enudxp.sct, recreated as BrailleMaker table source.
+# The rules of cymla03.btb and enudxp.sct, recreated as BrailleCraft table source.
 table "Cymraeg (Welsh) - basic, print to braille"
 default-char 42
 raw 0

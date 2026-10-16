@@ -1,8 +1,8 @@
-"""Builds the BrailleMaker braille screen fonts.
+"""Builds the BrailleCraft braille screen fonts.
 
 For every encoding table in tools/fonts/encodings/*.json two TrueType fonts are written to ui/fonts/:
-  BrailleMaker Braille <Name>     the six-dot cells, raised dots only
-  BrailleMaker SimBraille <Name>  the same cells with small marks at the unraised positions
+  BrailleCraft Braille <Name>     the six-dot cells, raised dots only
+  BrailleCraft SimBraille <Name>  the same cells with small marks at the unraised positions
 Each table lists, for the 64 cells in dot-pattern order (dot 1 = 1, dot 2 = 2, dot 3 = 4, dot 4 = 8, dot 5 = 16,
 dot 6 = 32), the characters that show that cell in that encoding. Every font also shows the Unicode braille
 patterns U+2800 to U+283F and draws U+00A0 (no-break space) as the blank cell.
@@ -71,7 +71,7 @@ def code_points(entry):
 
 def build(table, shadow):
     kind = "SimBraille" if shadow else "Braille"
-    family = f"BrailleMaker {kind} {table['name']}"
+    family = f"BrailleCraft {kind} {table['name']}"
     names = [".notdef"] + [f"cell{p:02d}" for p in range(64)]
     glyphs = {".notdef": notdef_glyph()}
     for p in range(64):
@@ -105,7 +105,7 @@ def build(table, shadow):
                 usWinAscent=ASCENT, usWinDescent=DESCENT, achVendID="BMKR", fsType=0)
     fb.setupPost(isFixedPitch=1)
     fb.setupHead(unitsPerEm=UPM)
-    out = OUT / f"BrailleMaker-{kind}-{table['id']}.ttf"
+    out = OUT / f"BrailleCraft-{kind}-{table['id']}.ttf"
     fb.save(str(out))
     return out
 
@@ -122,7 +122,7 @@ def main():
             raise SystemExit(f"{path.name}: {len(table['cells'])} cells, expected 64")
         for shadow in (False, True):
             print(build(table, shadow).relative_to(ROOT))
-        # For the page: every cell's characters in this encoding, the first being the one BrailleMaker writes.
+        # For the page: every cell's characters in this encoding, the first being the one BrailleCraft writes.
         chars = ["".join(chr(cp) for cp in code_points(entry)) for entry in table["cells"]]
         index.append({"id": table["id"], "name": table["name"], "order": table.get("order", 99),
                       "source": table["source"], "cells": chars})

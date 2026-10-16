@@ -7,7 +7,7 @@
 //! or at the size set there, with the line numbers of a braille page in a column on each side when Global, View
 //! Preferences shows line numbers, and under each braille line its print in a 9-point font when interline print is on.
 //!
-//! The reference program prints through the Windows printer directly; BrailleMaker prints through wxWidgets printing
+//! The reference program prints through the Windows printer directly; BrailleCraft prints through wxWidgets printing
 //! (wxPrinter and a wxPrintout), our port choice, so the same pages print on Windows, macOS and Linux.
 
 use std::cell::RefCell;
@@ -383,7 +383,7 @@ pub fn run(key: u64, setup: &PrinterSetup, job: Job, copies: u32) -> Outcome {
 
 /// Whether the system has a print server to ask for printers. On Linux the system print dialog's printer list comes
 /// from CUPS; without a CUPS server to reach, a print waits for it without end, so File, Print says so instead
-/// (BrailleMaker's own check; the reference program shows message 2632 when it cannot get printer information).
+/// (BrailleCraft's own check; the reference program shows message 2632 when it cannot get printer information).
 pub fn print_server_reachable() -> bool {
     if cfg!(target_os = "linux") {
         std::env::var_os("CUPS_SERVER").is_some()

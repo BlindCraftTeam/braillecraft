@@ -297,10 +297,10 @@ const HELP: &[E] = &[
     E::I("help.topics", "&Help Topics...", None),
     E::I("help.translate", "&Translate Help...", None),
     E::I("help.favorites", "&Favorite Topics...", None),
-    E::I("help.whatsNew", "&New in BrailleMaker 0.1", None),
+    E::I("help.whatsNew", "&New in BrailleCraft 0.1", None),
     E::S,
     E::I("help.checkUpdates", "Check for &Updates...", None),
-    E::I("help.about", "&About BrailleMaker...", None),
+    E::I("help.about", "&About BrailleCraft...", None),
 ];
 
 pub const MENUS: &[(&str, &[E])] = &[
@@ -311,7 +311,7 @@ pub const MENUS: &[(&str, &[E])] = &[
     ("&Table", TABLE),
     ("&Document", DOCUMENT),
     // The Macro menu is shown only when macros are defined (the main window shows
-    // File Edit View Layout Table Document Global Help), so BrailleMaker leaves it out until macros exist.
+    // File Edit View Layout Table Document Global Help), so BrailleCraft leaves it out until macros exist.
     ("&Global", GLOBAL),
     ("&Help", HELP),
 ];
@@ -388,14 +388,14 @@ pub fn install(app: &AppHandle) -> tauri::Result<()> {
     #[cfg(target_os = "macos")]
     {
         // On macOS the first menu is the application menu.
-        let app_menu = Submenu::new(app, "BrailleMaker", true)?;
-        app_menu.append(&MenuItem::with_id(app, "help.about", "About BrailleMaker", true, None::<&str>)?)?;
+        let app_menu = Submenu::new(app, "BrailleCraft", true)?;
+        app_menu.append(&MenuItem::with_id(app, "help.about", "About BrailleCraft", true, None::<&str>)?)?;
         app_menu.append(&PredefinedMenuItem::separator(app)?)?;
         app_menu.append(&PredefinedMenuItem::hide(app, None)?)?;
         app_menu.append(&PredefinedMenuItem::hide_others(app, None)?)?;
         app_menu.append(&PredefinedMenuItem::show_all(app, None)?)?;
         app_menu.append(&PredefinedMenuItem::separator(app)?)?;
-        app_menu.append(&MenuItem::with_id(app, "file.exit", "Quit BrailleMaker", true, Some("Cmd+Q"))?)?;
+        app_menu.append(&MenuItem::with_id(app, "file.exit", "Quit BrailleCraft", true, Some("Cmd+Q"))?)?;
         bar.append(&app_menu)?;
     }
 

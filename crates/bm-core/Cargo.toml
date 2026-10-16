@@ -1,6 +1,6 @@
 [package]
 name = "bm-core"
-description = "BrailleMaker core: document model, translation pipeline, import and export, embossing"
+description = "BrailleCraft core: document model, translation pipeline, import and export, embossing"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

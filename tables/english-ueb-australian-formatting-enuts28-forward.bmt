@@ -1,4 +1,4 @@
-# The rules of enuts28.btb and enudxp.sct, recreated as BrailleMaker table source.
+# The rules of enuts28.btb and enudxp.sct, recreated as BrailleCraft table source.
 table "English (UEB) - Australian formatting, print to braille"
 default-char 42
 raw 0

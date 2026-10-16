@@ -1,4 +1,4 @@
-# The rules of ltaacp.btb and gendxp.sct, recreated as BrailleMaker table source.
+# The rules of ltaacp.btb and gendxp.sct, recreated as BrailleCraft table source.
 table "Lithuanian - basic, print to braille"
 default-char 42
 raw 0

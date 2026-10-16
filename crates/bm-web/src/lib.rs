@@ -1,4 +1,4 @@
-//! BrailleMaker in the browser (queue line 11): the core's translation, document files, braille page layout and
+//! BrailleCraft in the browser (queue line 11): the core's translation, document files, braille page layout and
 //! embossing, called from the web interface. The browser has no folder of tables to open, so the page fetches the
 //! shipped table sources and hands them in as text.
 

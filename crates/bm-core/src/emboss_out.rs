@@ -1,7 +1,7 @@
 //! Where an embossing job's bytes go (re/spec/25-emboss.md section 5): a file, a port (parallel, serial or USB
 //! printer device), or a printer queue that takes the bytes as they are. The file holds exactly the bytes a port
 //! would get. The reference program runs on Windows only; how ports and printer queues are reached on Linux and
-//! macOS is BrailleMaker's own choice (spec 25 section 6).
+//! macOS is BrailleCraft's own choice (spec 25 section 6).
 
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -48,7 +48,7 @@ impl Failure {
             Failure::Port => "Embossing failed because the port cannot be opened. Please check the the port exists and is not in use by other software.".into(),
             // The reference ends with the source line and file of the failure; here the system's own text stands there.
             Failure::Printer(detail) => format!(
-                "BrailleMaker is unable to communicate with your braille embosser. Please check that it is correctly installed. For example, you my be attempting to output to a USB port that is not valid. In the event that there is another cause of this problem, you can report that embossing failed due to an error: {detail}"
+                "BrailleCraft is unable to communicate with your braille embosser. Please check that it is correctly installed. For example, you my be attempting to output to a USB port that is not valid. In the event that there is another cause of this problem, you can report that embossing failed due to an error: {detail}"
             ),
         }
     }

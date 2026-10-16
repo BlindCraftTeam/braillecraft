@@ -1,6 +1,6 @@
-// BrailleMaker main window. The menu bar (crates/bm-shell/src/menu.rs) follows the menu table; each command arrives
+// BrailleCraft main window. The menu bar (crates/bm-shell/src/menu.rs) follows the menu table; each command arrives
 // here as a "menu" event and is carried out by COMMANDS below. Commands that need parts not built yet (the
-// translator, the BrailleMaker file format, printing and embossing) say so in a message box that names the build
+// translator, the BrailleCraft file format, printing and embossing) say so in a message box that names the build
 // step that brings them. In a plain browser, with no native menu, the shortcuts are bound to the keyboard.
 "use strict";
 
@@ -11,7 +11,7 @@ const invoke = (cmd, args) => (tauri && tauri.core ? tauri.core.invoke(cmd, args
 async function shellCall(cmd, args) {
   if (tauri && tauri.core) return tauri.core.invoke(cmd, args);
   if (window.BM_TRANSLATOR && window.BM_TRANSLATOR[cmd]) return window.BM_TRANSLATOR[cmd](args);
-  throw new Error("Translation runs in the BrailleMaker desktop program.");
+  throw new Error("Translation runs in the BrailleCraft desktop program.");
 }
 
 const editor = document.getElementById("doc");
@@ -73,12 +73,12 @@ function textToCells(text, encodingId = settingsGlobal.encoding) {
 function stripCodes(text) { return text.replace(/\[[^\]\n]*\]/g, ""); }
 
 const PLANNED = {
-  save: "Saving needs the BrailleMaker document format, which is built in step 7 of the plan. Until then, copy the text out with Select All and Copy.",
+  save: "Saving needs the BrailleCraft document format, which is built in step 7 of the plan. Until then, copy the text out with Select All and Copy.",
   print: "Printing is built in step 9 of the plan.",
   emboss: "Embossing (Index and Enabling embossers, and emboss to file) is built in step 10 of the plan.",
   spell: "The spell checker (Hunspell dictionaries) is built after the core features of version 1.",
-  help: "The BrailleMaker help is written with the features it describes; it is not in this build yet.",
-  templates: "Templates are built with the BrailleMaker document format in step 7 of the plan.",
+  help: "The BrailleCraft help is written with the features it describes; it is not in this build yet.",
+  templates: "Templates are built with the BrailleCraft document format in step 7 of the plan.",
   pictures: "Pictures are built after the core features of version 1.",
   toc: "Table of contents generation needs the page formatter, built in step 8 of the plan.",
   tables: "The table list by region comes next; for now Document, Learning Tables chooses between uncontracted and contracted English (UEB).",
@@ -153,7 +153,7 @@ function activate(index) {
     editor.value = "";
     editor.disabled = true;
     editorLabel.textContent = "No document open";
-    setTitle("BrailleMaker");
+    setTitle("BrailleCraft");
     refreshMenus();
     updateStatus();
     return;
@@ -163,7 +163,7 @@ function activate(index) {
   editor.setSelectionRange(d.selStart, d.selEnd);
   editor.scrollTop = d.scrollTop;
   editorLabel.textContent = fullName(d);
-  setTitle(`BrailleMaker - [${fullName(d)}]`);
+  setTitle(`BrailleCraft - [${fullName(d)}]`);
   lastTranslatedLine = null;
   applyView();
   refreshMenus();
@@ -399,8 +399,8 @@ async function doFind(again) {
   if (i < 0 && !atEdge) {
     // Offer to continue from the other end of the document.
     const question = backward
-      ? "BrailleMaker has finished searching to the beginning of the document.  Would you like to continue searching at the end?"
-      : "BrailleMaker has finished searching to the end of the document.  Would you like to continue searching at the beginning?";
+      ? "BrailleCraft has finished searching to the beginning of the document.  Would you like to continue searching at the end?"
+      : "BrailleCraft has finished searching to the end of the document.  Would you like to continue searching at the beginning?";
     const r = await showDialog("yesNo", (p) => { p.text.textContent = question; });
     if (r.button !== "yes") return;
     i = findNext(lastFind, backward ? editor.value.length : 0, backward);
@@ -523,7 +523,7 @@ async function exitApp() {
     if (documents[i].dirty) { activate(i); if (!(await confirmDiscard(documents[i]))) return; }
   }
   if (tauri) invoke("exit_app");
-  else announce("BrailleMaker would exit now.");
+  else announce("BrailleCraft would exit now.");
 }
 
 // ---------------------------------------------------------------- dialogs wired to settings
@@ -863,8 +863,8 @@ const COMMANDS = {
   "help.topics": () => messageBox(PLANNED.help),
   "help.translate": () => messageBox(PLANNED.help),
   "help.favorites": () => messageBox(PLANNED.help),
-  "help.whatsNew": () => messageBox("BrailleMaker 0.1: the main window, menus, dialogs, editing, find and replace, six-key entry and the code vocabulary. Translation, the file format, printing and embossing follow in the plan."),
-  "help.checkUpdates": () => messageBox("Updates are published on the BrailleMaker GitHub page."),
+  "help.whatsNew": () => messageBox("BrailleCraft 0.1: the main window, menus, dialogs, editing, find and replace, six-key entry and the code vocabulary. Translation, the file format, printing and embossing follow in the plan."),
+  "help.checkUpdates": () => messageBox("Updates are published on the BrailleCraft GitHub page."),
   "help.about": () => showDialog("about"),
 };
 for (const id of Object.keys(CODE_INSERTS)) COMMANDS[id] = () => insertCode(id);
@@ -945,7 +945,7 @@ const loadedFonts = [];
 async function loadBrailleFonts(id) {
   for (const f of loadedFonts.splice(0)) document.fonts.delete(f);
   for (const kind of ["Braille", "SimBraille"]) {
-    const face = new FontFace(`BrailleMaker ${kind}`, `url("fonts/BrailleMaker-${kind}-${id}.ttf")`);
+    const face = new FontFace(`BrailleCraft ${kind}`, `url("fonts/BrailleCraft-${kind}-${id}.ttf")`);
     try {
       await face.load();
       document.fonts.add(face);

@@ -265,10 +265,10 @@ const M19: &[Entry] = &[
     Entry::Item(3202, "&Help Topics...", Kind::Normal),
     Entry::Item(3204, "&Translate Help...", Kind::Normal),
     Entry::Item(3205, "&Favorite Topics...", Kind::Normal),
-    Entry::Item(3206, "&New in BrailleMaker 0.1", Kind::Normal),
+    Entry::Item(3206, "&New in BrailleCraft 0.1", Kind::Normal),
     Entry::Separator,
     Entry::Item(3210, "Check for &Updates...", Kind::Normal),
-    Entry::Item(3211, "&About BrailleMaker...", Kind::Normal),
+    Entry::Item(3211, "&About BrailleCraft...", Kind::Normal),
 ];
 
 /// The menu bar, menus in order.

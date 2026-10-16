@@ -1,4 +1,4 @@
-"""Writes BrailleMaker encoding tables (tools/fonts/encodings/*.json) from a braille display code page file: for each
+"""Writes BrailleCraft encoding tables (tools/fonts/encodings/*.json) from a braille display code page file: for each
 section, the characters that show each of the 64 cells.
 
 Run: python3 tools/fonts/import_display_encodings.py <path to the code page file>

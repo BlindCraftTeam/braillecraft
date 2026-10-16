@@ -21,16 +21,16 @@ pub fn read() -> CommandLine {
 /// editor (a file with no option).
 pub fn run(cl: &CommandLine) -> bool {
     for line in &cl.log {
-        eprintln!("BrailleMaker: {line}");
+        eprintln!("BrailleCraft: {line}");
     }
     if let Some(name) = &cl.template {
         if !crate::translation::set_run_template(name) {
-            eprintln!("BrailleMaker: Ignoring command line parameter: /template:{name}");
+            eprintln!("BrailleCraft: Ignoring command line parameter: /template:{name}");
         }
     }
     if cl.reset_save_folder || cl.reset_open_folder {
-        // BrailleMaker's file dialogs start in the system's own folder each time; there is no kept folder to reset.
-        eprintln!("BrailleMaker: no file folder is kept, so there is nothing to reset");
+        // BrailleCraft's file dialogs start in the system's own folder each time; there is no kept folder to reset.
+        eprintln!("BrailleCraft: no file folder is kept, so there is nothing to reset");
     }
     let copies = cl.copies.unwrap_or(1);
     let mut opened = false;
@@ -41,7 +41,7 @@ pub fn run(cl: &CommandLine) -> bool {
             continue;
         }
         if let Mode::NotAvailable(option) = &action.mode {
-            eprintln!("BrailleMaker: {option} is not available in BrailleMaker; {} was left as it is", action.file.display());
+            eprintln!("BrailleCraft: {option} is not available in BrailleCraft; {} was left as it is", action.file.display());
             documents::destroy(key);
             continue;
         }
@@ -77,7 +77,7 @@ fn carry_out(key: u64, mode: &Mode, cl: &CommandLine, copies: u32) -> Step {
             Err(e) => {
                 return match cl.prompt {
                     Prompt::Continue => {
-                        eprintln!("BrailleMaker: {e}");
+                        eprintln!("BrailleCraft: {e}");
                         Step::Next
                     }
                     Prompt::Stop => Step::Stop,
@@ -116,7 +116,7 @@ fn carry_out(key: u64, mode: &Mode, cl: &CommandLine, copies: u32) -> Step {
                     true
                 }
                 Some(name) => {
-                    eprintln!("BrailleMaker: no embosser setup is named {name}");
+                    eprintln!("BrailleCraft: no embosser setup is named {name}");
                     false
                 }
                 None => true,

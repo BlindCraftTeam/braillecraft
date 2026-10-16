@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The BrailleCraft installer for Windows (WiX Toolset 5), as the reference program's installer is laid out
+  (re/spec/26-installer.md): a per-machine install, administrative rights required; the program with its tables,
+  templates, embosser models and fonts; the braille fonts installed for every program; the JAWS scripts; Start menu
+  and desktop shortcuts; the print and braille document types with their icons and the Open, Print and Emboss
+  verbs; older versions removed on upgrade; and a check box on the last page to start BrailleCraft.
+
+  Built in CI (.github/workflows/build.yml):
+    wix build packaging/windows/braillecraft.wxs fonts.wxs -arch x64 -ext WixToolset.UI.wixext
+      -ext WixToolset.Util.wixext -d Version=<version> -bindpath dist=<program folder> -bindpath icons=packaging/icons
+  fonts.wxs is written by packaging/windows/fonts_fragment.py from the program folder's fonts.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+  <Package Name="BrailleCraft" Manufacturer="BrailleCraft" Version="$(Version)" UpgradeCode="{6C1E8B9A-3F4D-4E27-9B6A-2D5C8F1A7E43}" Scope="perMachine" Language="1033">
+    <SummaryInformation Description="BrailleCraft braille translation and embossing" />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of BrailleCraft is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Icon Id="BrailleCraftIcon" SourceFile="!(bindpath.icons)\braillecraft.ico" />
+    <Property Id="ARPPRODUCTICON" Value="BrailleCraftIcon" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="BrailleCraft">
+        <Directory Id="IconsFolder" Name="icons" />
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="MenuFolder" Name="BrailleCraft" />
+    </StandardDirectory>
+    <StandardDirectory Id="DesktopFolder" />
+
+    <!-- The program itself, named so the shortcuts and the document verbs can point at it. Its file keeps the name
+         braillecraft-desktop.exe: JAWS finds its scripts by the program's file name. -->
+    <Component Id="ProgramExe" Directory="INSTALLFOLDER">
+      <File Id="BrailleCraftExe" Source="!(bindpath.dist)\braillecraft-desktop.exe" KeyPath="yes" />
+    </Component>
+
+    <!-- Everything else in the program folder: the fonts the program loads itself, the tables, templates and
+         embosser models. The JAWS scripts are their own feature. -->
+    <ComponentGroup Id="ProgramFiles" Directory="INSTALLFOLDER">
+      <Files Include="!(bindpath.dist)\**">
+        <Exclude Files="!(bindpath.dist)\braillecraft-desktop.exe" />
+        <Exclude Files="!(bindpath.dist)\jaws\**" />
+      </Files>
+    </ComponentGroup>
+    <ComponentGroup Id="JawsScripts" Directory="INSTALLFOLDER" Subdirectory="jaws">
+      <Files Include="!(bindpath.dist)\jaws\**" />
+    </ComponentGroup>
+
+    <!-- The document types: .dxp print documents and .dxb braille documents, each with its icon and the verbs the
+         reference program gives them. Two unversioned files, so the component has a fixed id of its own. -->
+    <Component Id="DocumentTypes" Directory="IconsFolder" Guid="F2035C1E-C8E2-4BDF-A3AA-8DD2EFEA2062">
+      <File Id="PrintDocumentIco" Source="!(bindpath.icons)\print-document.ico" KeyPath="yes" />
+      <File Id="BrailleDocumentIco" Source="!(bindpath.icons)\braille-document.ico" />
+      <ProgId Id="BrailleCraft.dxp" Description="BrailleCraft Print Document" Icon="PrintDocumentIco" Advertise="no">
+        <Extension Id="dxp">
+          <Verb Id="open" Command="&amp;Open with BrailleCraft" TargetFile="BrailleCraftExe" Argument="&quot;%1&quot;" />
+          <Verb Id="print" Command="&amp;Print with BrailleCraft" TargetFile="BrailleCraftExe" Argument="/print &quot;%1&quot;" />
+          <Verb Id="emboss" Command="&amp;Emboss with BrailleCraft" TargetFile="BrailleCraftExe" Argument="/braille &quot;%1&quot;" />
+        </Extension>
+      </ProgId>
+      <ProgId Id="BrailleCraft.dxb" Description="BrailleCraft Braille Document" Icon="BrailleDocumentIco" Advertise="no">
+        <Extension Id="dxb">
+          <Verb Id="open" Command="&amp;Open with BrailleCraft" TargetFile="BrailleCraftExe" Argument="&quot;%1&quot;" />
+          <Verb Id="emboss" Command="&amp;Emboss with BrailleCraft" TargetFile="BrailleCraftExe" Argument="/braille &quot;%1&quot;" />
+          <Verb Id="print" Command="&amp;Print with BrailleCraft" TargetFile="BrailleCraftExe" Argument="/simulate &quot;%1&quot;" />
+        </Extension>
+      </ProgId>
+    </Component>
+
+    <Component Id="StartMenuShortcut" Directory="MenuFolder">
+      <Shortcut Id="StartMenuBrailleCraft" Name="BrailleCraft" Target="[#BrailleCraftExe]" WorkingDirectory="INSTALLFOLDER" Icon="BrailleCraftIcon" />
+      <RemoveFolder Id="RemoveMenuFolder" On="uninstall" />
+      <RegistryValue Root="HKLM" Key="Software\BrailleCraft" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+    <Component Id="DesktopShortcut" Directory="DesktopFolder">
+      <Shortcut Id="DesktopBrailleCraft" Name="BrailleCraft" Target="[#BrailleCraftExe]" WorkingDirectory="INSTALLFOLDER" Icon="BrailleCraftIcon" />
+      <RegistryValue Root="HKLM" Key="Software\BrailleCraft" Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
+    <Feature Id="Program" Title="BrailleCraft" Description="The program, its translation tables, templates and embosser models." Level="1" AllowAbsent="no" Display="expand" ConfigurableDirectory="INSTALLFOLDER">
+      <ComponentRef Id="ProgramExe" />
+      <ComponentGroupRef Id="ProgramFiles" />
+      <ComponentRef Id="DocumentTypes" />
+      <ComponentRef Id="StartMenuShortcut" />
+      <Feature Id="Fonts" Title="Braille Fonts" Description="The braille and simulated braille fonts, for every program on this computer." Level="1">
+        <ComponentGroupRef Id="SystemFonts" />
+      </Feature>
+      <Feature Id="Jaws" Title="JAWS Scripts" Description="The BrailleCraft scripts for JAWS; BrailleCraft offers to put them in each JAWS version's settings when it starts." Level="1">
+        <ComponentGroupRef Id="JawsScripts" />
+      </Feature>
+      <Feature Id="Desktop" Title="Desktop Shortcut" Description="A shortcut to BrailleCraft on the desktop." Level="1">
+        <ComponentRef Id="DesktopShortcut" />
+      </Feature>
+    </Feature>
+
+    <!-- The installer's pages: Welcome, the feature tree (Typical or Custom choices, with the folder), Ready,
+         progress, and the last page with the check box to start BrailleCraft. -->
+    <ui:WixUI Id="WixUI_FeatureTree" InstallDirectory="INSTALLFOLDER" />
+    <UI>
+      <!-- The licence page waits for the licence text (queue line 14): Welcome goes straight to the features. -->
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="CustomizeDlg" Order="9" Condition="NOT Installed" />
+      <Publish Dialog="CustomizeDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="9" Condition="NOT Installed" />
+      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchBrailleCraft" Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND NOT Installed" />
+    </UI>
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Start BrailleCraft" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+    <!-- As the reference installer does (re/spec/26-installer.md section 26.6): when the installing user has no
+         embosser setup yet, the last page says the program will set up the embossers; the program itself opens
+         Embosser Setup at start-up in that case. The program is started with no arguments. -->
+    <Property Id="EMBOSSERSETUPS">
+      <RegistrySearch Id="EmbosserSetupsSearch" Root="HKCU" Key="Software\BrailleCraft\BrailleCraft\Embosser" Name="Setups" Type="raw" />
+    </Property>
+    <SetProperty Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Start BrailleCraft to set up your embossers" Before="CostFinalize" Sequence="ui" Condition="NOT EMBOSSERSETUPS OR EMBOSSERSETUPS = &quot;[]&quot;" />
+    <Property Id="WixShellExecTarget" Value="[#BrailleCraftExe]" />
+    <CustomAction Id="LaunchBrailleCraft" BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)" DllEntry="WixShellExec" Impersonate="yes" />
+  </Package>
+</Wix>

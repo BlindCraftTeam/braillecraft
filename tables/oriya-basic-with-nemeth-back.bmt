@@ -1,4 +1,4 @@
-# The rules of oriacb.btb and gendxb.sct, recreated as BrailleMaker table source.
+# The rules of oriacb.btb and gendxb.sct, recreated as BrailleCraft table source.
 table "Oriya - basic with Nemeth, braille to print"
 default-char 42
 raw 0

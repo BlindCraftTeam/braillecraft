@@ -1,4 +1,4 @@
-# The rules of msaacp.btb and mlydxp.sct, recreated as BrailleMaker table source.
+# The rules of msaacp.btb and mlydxp.sct, recreated as BrailleCraft table source.
 table "Malay - basic, print to braille"
 default-char 42
 raw 0

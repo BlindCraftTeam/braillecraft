@@ -1,0 +1,15 @@
+wxdragon-sys 0.9.22 (crates.io, MIT OR Apache-2.0), vendored for BrailleCraft.
+
+Changes, all in cpp/include/core/wxd_print.h and cpp/src/print.cpp, marked "Added for BrailleCraft":
+- wxd_PrintData_Assign: copy one print data object into another.
+- wxd_PrintData_SetPrinterName / wxd_PrintData_GetPrinterName: the chosen printer.
+- wxd_PrintData_SetPaperSizeTenthsMM / wxd_PrintData_GetPaperSizeTenthsMM: the paper, by its size (a standard
+  paper when one has that size, else a custom size).
+- wxd_PrintData_SetLandscape / wxd_PrintData_IsLandscape: the orientation.
+- wxd_PrintData_SetNoCopies: the copy count.
+- wxd_Printer_GetLastError: whether the last print was cancelled or failed.
+- wxd_Printout_GetPaperRectPixels: the paper's rectangle in printer pixels, so margins are measured from the paper's
+  edge.
+
+The Rust bindings are generated from the header when the crate builds, so no Rust file changed.
+The workspace Cargo.toml uses this copy through [patch.crates-io].

@@ -1,4 +1,4 @@
-// BrailleMaker web build: the desktop program's menus and dialogs (ui-web/tables.js, generated from the desktop's own
+// BrailleCraft web build: the desktop program's menus and dialogs (ui-web/tables.js, generated from the desktop's own
 // tables), a document editor with the translated line and status line, and the core (bm-web, WebAssembly) for
 // documents, translation, embosser setups and embossing.
 
@@ -205,7 +205,7 @@ const memory = new Map();
 const store = {
   get(key) {
     try {
-      return localStorage.getItem(`braillemaker.${key}`) ?? memory.get(key) ?? null;
+      return localStorage.getItem(`braillecraft.${key}`) ?? memory.get(key) ?? null;
     } catch {
       return memory.get(key) ?? null;
     }
@@ -214,9 +214,9 @@ const store = {
     memory.set(key, value);
     try {
       if (value === null) {
-        localStorage.removeItem(`braillemaker.${key}`);
+        localStorage.removeItem(`braillecraft.${key}`);
       } else {
-        localStorage.setItem(`braillemaker.${key}`, value);
+        localStorage.setItem(`braillecraft.${key}`, value);
       }
     } catch {
       // Kept in memory only.
@@ -344,7 +344,7 @@ function kindName() {
 }
 
 function showTitle() {
-  const title = `BrailleMaker - [${doc.name} -- ${kindName()}]`;
+  const title = `BrailleCraft - [${doc.name} -- ${kindName()}]`;
   $("doc-title").textContent = title;
   document.title = title;
 }
@@ -376,15 +376,15 @@ function cellChar(pattern) {
   return [...(encodingNow().cells[pattern] ?? "")][0] ?? String.fromCodePoint(0x2800 + pattern);
 }
 
-// The braille fonts of the shown encoding ("BrailleMaker Braille North American English" and its SimBraille),
+// The braille fonts of the shown encoding ("BrailleCraft Braille North American English" and its SimBraille),
 // loaded from fonts/ beside the page when first used.
 const facesAdded = new Set();
 function brailleFamily(kind) {
   const e = encodingNow();
-  const family = `BrailleMaker ${kind} ${e.name}`;
+  const family = `BrailleCraft ${kind} ${e.name}`;
   if (!facesAdded.has(family) && "FontFace" in window) {
     facesAdded.add(family);
-    const face = new FontFace(family, `url("fonts/BrailleMaker-${kind}-${e.id}.ttf")`);
+    const face = new FontFace(family, `url("fonts/BrailleCraft-${kind}-${e.id}.ttf")`);
     document.fonts.add(face);
     face.load().catch(() => {});
   }
@@ -921,7 +921,7 @@ async function showDialog(rid, { title, setup, onOk, memory, after, closes = [] 
 // A message box (the desktop program's message, yes_no and yes_no_cancel): OK, or Yes and No, or Yes, No and Cancel;
 // Escape answers No, or Cancel when there is one. Answers "ok", "no" or "cancel".
 async function messageBox(text, yesNo = false, cancel = false) {
-  const { dialog, form } = newDialog("BrailleMaker", "message");
+  const { dialog, form } = newDialog("BrailleCraft", "message");
   dialog.setAttribute("role", "alertdialog");
   const p = document.createElement("p");
   p.className = "message";
@@ -1290,7 +1290,7 @@ async function embosserSetup(global) {
         d.setText(19, String(top2));
         d.setText(21, String(binding2));
         await message(
-          `BrailleMaker has updated desired document settings to fit the selected page size.\n\nCharacters per line: ${c2}\nLines per page: ${l2}\nTop margin in lines: ${top2}\nBinding margin in characters: ${binding2}`,
+          `BrailleCraft has updated desired document settings to fit the selected page size.\n\nCharacters per line: ${c2}\nLines per page: ${l2}\nTop margin in lines: ${top2}\nBinding margin in characters: ${binding2}`,
         );
         return false;
       }
@@ -2112,8 +2112,8 @@ async function shortcutPreferences() {
 
 // Messages for parts of the program that later build steps bring, as the desktop program gives them.
 const PLANNED_SPELL = "The spell checker (Hunspell dictionaries) is built after the core features of version 1.";
-const PLANNED_HELP = "The BrailleMaker help is written with the features it describes; it is not in this build yet.";
-const PLANNED_TEMPLATES = "Templates are built with the BrailleMaker document format in step 7 of the plan.";
+const PLANNED_HELP = "The BrailleCraft help is written with the features it describes; it is not in this build yet.";
+const PLANNED_TEMPLATES = "Templates are built with the BrailleCraft document format in step 7 of the plan.";
 const PLANNED_PICTURES = "Pictures are built after the core features of version 1.";
 const PLANNED_FORMATTER = "This needs the page formatter, built in step 8 of the plan.";
 const PLANNED_EBRAILLE = "eBraille output is built after the formatted braille, document and PEF outputs.";
@@ -2325,8 +2325,8 @@ async function find(again) {
   const atEdge = spec.backward ? from === value.length : from === 0;
   if (found === null && !atEdge) {
     const q = spec.backward
-      ? "BrailleMaker has finished searching to the beginning of the document.  Would you like to continue searching at the end?"
-      : "BrailleMaker has finished searching to the end of the document.  Would you like to continue searching at the beginning?";
+      ? "BrailleCraft has finished searching to the beginning of the document.  Would you like to continue searching at the end?"
+      : "BrailleCraft has finished searching to the end of the document.  Would you like to continue searching at the beginning?";
     if (!(await yesNo(q))) return;
     found = findNext(spec, value, spec.backward ? value.length : 0, spec.backward);
   }
@@ -2585,12 +2585,12 @@ async function closeDocument() {
 }
 
 // File, Exit: after the save question, the page is closed where the browser allows it; else the browser's tab closes
-// BrailleMaker.
+// BrailleCraft.
 async function exitProgram() {
   if (!(await confirmDiscard())) return;
   doc.dirty = false;
   window.close();
-  await message("To leave BrailleMaker, close its browser tab or window.");
+  await message("To leave BrailleCraft, close its browser tab or window.");
 }
 
 // Layout, Join Lines: the next line break becomes a space.
@@ -2883,9 +2883,9 @@ const COMMANDS = {
   3205: () => message(PLANNED_HELP),
   3206: () =>
     message(
-      "BrailleMaker 0.1: the main window, menus, dialogs, editing, find and replace, six-key entry, the code vocabulary, braille fonts for 18 encodings, and translation with the BrailleMaker engine and its tables. The file format, printing and embossing follow in the plan.",
+      "BrailleCraft 0.1: the main window, menus, dialogs, editing, find and replace, six-key entry, the code vocabulary, braille fonts for 18 encodings, and translation with the BrailleCraft engine and its tables. The file format, printing and embossing follow in the plan.",
     ),
-  3210: () => message("Updates are published on the BrailleMaker GitHub page."),
+  3210: () => message("Updates are published on the BrailleCraft GitHub page."),
   3101: () => embosserSetup(true),
   3102: () => printerSetup(true),
   3104: () => showDialog(1060, { memory: "", setup: (d) => (d.setChecked(10, true), d.setText(12, ""), d.setText(14, "05:00")) }),
@@ -2938,7 +2938,7 @@ const COMMANDS = {
     await showDialog(1016, {
       setup(d) {
         d.setText(8, `Version ${core ? core.version() : ""}`);
-        d.setText(10, `Braille translation: the BrailleMaker engine, ${tableCount ? `${tableCount} tables` : "no tables found"}`);
+        d.setText(10, `Braille translation: the BrailleCraft engine, ${tableCount ? `${tableCount} tables` : "no tables found"}`);
       },
     });
   },

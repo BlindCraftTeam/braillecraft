@@ -1,4 +1,4 @@
-//! Compares translation with BrailleMaker's own data (shipped tables, template and table list) against the binary
+//! Compares translation with BrailleCraft's own data (shipped tables, template and table list) against the binary
 //! tables with the same template and table list, for text with style and language codes, line by line.
 //!
 //! Usage: template_equivalence FOLDER TEMPLATE_CODE CORPUS [DOCUMENTS]

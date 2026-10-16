@@ -1,4 +1,4 @@
-/* BrailleMaker web build: a desktop program's look in the browser - the system font, compact controls at the
+/* BrailleCraft web build: a desktop program's look in the browser - the system font, compact controls at the
    WCAG 2.2 target size, visible keyboard focus, and colours with AA contrast in light and dark. */
 
 :root {
@@ -28,8 +28,8 @@
 
 /* North American ASCII braille shown as braille cells (the program's own font). */
 @font-face {
-  font-family: "BrailleMaker Braille";
-  src: url("fonts/BrailleMaker-Braille-north-american.ttf") format("truetype");
+  font-family: "BrailleCraft Braille";
+  src: url("fonts/BrailleCraft-Braille-north-american.ttf") format("truetype");
 }
 
 * { box-sizing: border-box; }
@@ -137,7 +137,7 @@ h1 { font-size: 1rem; font-weight: normal; margin: 0 0 0.25rem; }
   font: 1.1rem/1.4 monospace;
   resize: vertical;
 }
-#editor.braille { font-family: "BrailleMaker Braille", monospace; }
+#editor.braille { font-family: "BrailleCraft Braille", monospace; }
 #translated {
   display: block;
   min-height: 1.6rem;
@@ -146,7 +146,7 @@ h1 { font-size: 1rem; font-weight: normal; margin: 0 0 0.25rem; }
   border-top: 0;
   font: 1.1rem monospace;
 }
-#translated.braille { font-family: "BrailleMaker Braille", monospace; }
+#translated.braille { font-family: "BrailleCraft Braille", monospace; }
 #translated-section[hidden] { display: none; }
 #status {
   margin: 0;

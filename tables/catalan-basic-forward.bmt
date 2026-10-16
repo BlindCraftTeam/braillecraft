@@ -1,4 +1,4 @@
-# The rules of catacp.btb and gendxp.sct, recreated as BrailleMaker table source.
+# The rules of catacp.btb and gendxp.sct, recreated as BrailleCraft table source.
 table "Catalan - basic, print to braille"
 default-char 42
 raw 0

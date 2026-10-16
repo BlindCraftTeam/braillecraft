@@ -1,4 +1,4 @@
-# The rules of snaacp.btb and enudxp.sct, recreated as BrailleMaker table source.
+# The rules of snaacp.btb and enudxp.sct, recreated as BrailleCraft table source.
 table "Shona - basic, print to braille"
 default-char 42
 raw 0

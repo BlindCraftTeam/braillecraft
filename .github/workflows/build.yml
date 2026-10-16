@@ -1,4 +1,4 @@
-# Builds BrailleMaker for Linux, Windows and macOS on every push to main and keeps the installers as
+# Builds BrailleCraft for Linux, Windows and macOS on every push to main and keeps the installers as
 # downloads on the run page (Actions, the run, Artifacts). The macOS build is for the runner's processor (Apple
 # Silicon).
 # Builds are unsigned: Windows SmartScreen and macOS Gatekeeper ask before the first launch.
@@ -58,19 +58,19 @@ jobs:
         shell: bash
         run: |
           cargo build --release -p bm-desktop
-          mkdir -p dist/BrailleMaker
-          cp target/release/braillemaker-desktop${{ runner.os == 'Windows' && '.exe' || '' }} dist/BrailleMaker/
-          cp -r ui/fonts dist/BrailleMaker/fonts
-          cp -r tables dist/BrailleMaker/tables
-          cp -r templates dist/BrailleMaker/templates
-          cp -r embossers dist/BrailleMaker/embossers
-          cp -r scripts/jaws dist/BrailleMaker/jaws
+          mkdir -p dist/BrailleCraft
+          cp target/release/braillecraft-desktop${{ runner.os == 'Windows' && '.exe' || '' }} dist/BrailleCraft/
+          cp -r ui/fonts dist/BrailleCraft/fonts
+          cp -r tables dist/BrailleCraft/tables
+          cp -r templates dist/BrailleCraft/templates
+          cp -r embossers dist/BrailleCraft/embossers
+          cp -r scripts/jaws dist/BrailleCraft/jaws
 
       - uses: actions/upload-artifact@v7
         with:
-          name: braillemaker-desktop-${{ matrix.name }}
+          name: braillecraft-desktop-${{ matrix.name }}
           if-no-files-found: error
-          path: dist/BrailleMaker
+          path: dist/BrailleCraft
 
       # The Windows installer of the native program (packaging/windows, WiX Toolset 5), laid out as the reference
       # program's installer (re/spec/26-installer.md).
@@ -81,14 +81,14 @@ jobs:
           dotnet tool install --global wix --version 5.0.2
           wix extension add -g WixToolset.UI.wixext/5.0.2 WixToolset.Util.wixext/5.0.2
           version=$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)
-          python packaging/windows/fonts_fragment.py dist/BrailleMaker/fonts > fonts.wxs
+          python packaging/windows/fonts_fragment.py dist/BrailleCraft/fonts > fonts.wxs
           mkdir -p installers
-          wix build packaging/windows/braillemaker.wxs fonts.wxs -arch x64 -ext WixToolset.UI.wixext -ext WixToolset.Util.wixext -d Version=$version -bindpath "dist=$(cygpath -w "$PWD/dist/BrailleMaker")" -bindpath "icons=$(cygpath -w "$PWD/packaging/icons")" -o installers/BrailleMaker-$version-x64.msi
+          wix build packaging/windows/braillecraft.wxs fonts.wxs -arch x64 -ext WixToolset.UI.wixext -ext WixToolset.Util.wixext -d Version=$version -bindpath "dist=$(cygpath -w "$PWD/dist/BrailleCraft")" -bindpath "icons=$(cygpath -w "$PWD/packaging/icons")" -o installers/BrailleCraft-$version-x64.msi
 
       - uses: actions/upload-artifact@v7
         if: runner.os == 'Windows'
         with:
-          name: braillemaker-windows-installer
+          name: braillecraft-windows-installer
           if-no-files-found: error
           path: installers/*.msi
 
@@ -99,16 +99,16 @@ jobs:
         run: |
           sudo apt-get install -y rpm dpkg-dev
           version=$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)
-          bash packaging/linux/build-packages.sh dist/BrailleMaker $version installers
+          bash packaging/linux/build-packages.sh dist/BrailleCraft $version installers
           curl -fsSL -o appimagetool https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
           echo "ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0  appimagetool" | sha256sum -c -
           chmod 755 appimagetool
-          APPIMAGE_EXTRACT_AND_RUN=1 APPIMAGETOOL=$PWD/appimagetool bash packaging/linux/build-appimage.sh dist/BrailleMaker $version installers
+          APPIMAGE_EXTRACT_AND_RUN=1 APPIMAGETOOL=$PWD/appimagetool bash packaging/linux/build-appimage.sh dist/BrailleCraft $version installers
 
       - uses: actions/upload-artifact@v7
         if: runner.os == 'Linux'
         with:
-          name: braillemaker-linux-packages
+          name: braillecraft-linux-packages
           if-no-files-found: error
           path: |
             installers/*.deb
@@ -120,12 +120,12 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           version=$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)
-          bash packaging/macos/build-app.sh dist/BrailleMaker $version installers
+          bash packaging/macos/build-app.sh dist/BrailleCraft $version installers
 
       - uses: actions/upload-artifact@v7
         if: runner.os == 'macOS'
         with:
-          name: braillemaker-macos-installer
+          name: braillecraft-macos-installer
           if-no-files-found: error
           path: installers/*.dmg
 
@@ -162,6 +162,6 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: braillemaker-web
+          name: braillecraft-web
           if-no-files-found: error
           path: site

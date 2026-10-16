@@ -1,4 +1,4 @@
-# The rules of amhacb.btb and engdxb.sct, recreated as BrailleMaker table source.
+# The rules of amhacb.btb and engdxb.sct, recreated as BrailleCraft table source.
 table "Amharic - basic, braille to print"
 default-char 42
 raw 0

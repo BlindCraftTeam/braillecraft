@@ -1,4 +1,4 @@
-//! The document templates shipped with BrailleMaker (templates/*.template and templates/index.tsv): a template's
+//! The document templates shipped with BrailleCraft (templates/*.template and templates/index.tsv): a template's
 //! settings are "Key: Value" lines (TranslationTables names the four tables), followed by "Styles:" and the styles.
 //! File, New lists the templates by name; a new document takes its template's tables and styles.
 

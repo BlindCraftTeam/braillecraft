@@ -1,0 +1,660 @@
+:function IsSpeechOnDemandActive
+:Returns int No Return Description
+:SearchRank 1
+
+:function AppSpeechOff
+:SearchRank 1
+
+:function AppSpeechOn
+:SearchRank 1
+
+:function PauseForMovement
+:SearchRank 1
+:Synopsis inserts a delay before speaking, to allow time for JAWS to catch up with movement
+:Description causes the script to delay with the Delay(1) function
+:Category Script
+
+:function AutoStartEvent
+:SearchRank 1
+:Synopsis Saves entering voice profile index, sets script flags, and speaks intro message on first run.
+:Description Identifies BrailleCraft program; sets flag for braille verbalization if opening into a braille doc.
+:Category Script
+
+:function AutoFinishEvent
+:SearchRank 1
+:Synopsis Restores the entering voice profile index.
+:Category Options
+
+:script ScriptFileName
+:SearchRank 1
+
+:script HotKeyHelp
+:SearchRank 1
+
+:function SayBrailleChar
+:SearchRank 1
+:Synopsis speaks the braille verbalization for a character
+:Description speaks a string segment from the appropriate csBrailleChars segmented string in braillecraft-desktop.jsh; these string segments can be localized
+:Category Say
+:Param string/VCTX voice context
+:Param string/CurrentChar character to be spoken as braille
+
+:function FocusPointMovedEvent
+:SearchRank 1
+:Param int/nX x position
+:Param int/nY No Description
+:Param int/nOldX No Description
+:Param int/nOldY No Description
+:Param int/nUnit No Description
+:Param int/nDir No Description
+:Param int/nTimeElapsed No Description
+
+:function FocusPointMovedEventCosmo
+:SearchRank 1
+:Param int/nX No Description
+:Param int/nY No Description
+:Param int/nOldX No Description
+:Param int/nOldY No Description
+:Param int/nUnit No Description
+:Param int/nDir No Description
+:Param int/nElapsedTime No Description
+
+:function NewFocusPoint
+:SearchRank 1
+:Param int/nX No Description
+:Param int/nY No Description
+:Param int/nOldX No Description
+:Param int/nOldY No Description
+
+:function NewFocusPointHighlight
+:SearchRank 1
+:Param int/nX No Description
+:Param int/nY No Description
+:Param int/nOldX No Description
+:Param int/nOldY No Description
+
+:function FocusChangedEvent
+:SearchRank 1
+:Param handle/hWnd No Description
+:Param handle/hOldWnd No Description
+
+:function MenuModeEvent
+:Returns int No Return Description
+:SearchRank 1
+:Param handle/WinHandle No Description
+:Param int/mode No Description
+
+:function SayCharacterValue
+:SearchRank 1
+:Category Say
+
+:function GetUnicodeValue
+:Returns string The Unicode value from the status line; otherwise blank.
+:SearchRank 1
+:Description In a print document, when the Unicode value appears on the status line, gives this value.
+
+:function GetColumnNum
+:Returns string No Return Description
+:SearchRank 1
+
+:function GetLineNum
+:Returns int current line number or -1 if not available.
+:SearchRank 1
+:Synopsis Gets line number from the status line.
+:Description If document window is in coded view, with no location info on the status line, returns -1.
+:Category Application
+
+:function GetPageNum
+:Returns string current page number
+:SearchRank 1
+:Synopsis In a document window gives current page number as string
+:Category Positioning
+
+:function GetStyleName
+:Returns string current style name, or blank string if not available.
+:SearchRank 1
+:Synopsis Returns name of current style.
+:Description Returns name of current style, or -1 if not available.
+:Category Application
+
+:script AltF3Press
+:DisplayName Turn Codes On Or Off
+:SearchRank 1
+:Synopsis says whether turning codes on or off
+:Description looks at whether location info is available on the status line to know whether codes are on or off
+:Category Say
+
+:script F2Press
+:DisplayName Turn 6-Key Entry On or Off
+:SearchRank 1
+:Synopsis says whether turning 6-key entry on or off
+:Description uses Keys field on status line to determine whether 6-key entry is on or off
+:Category Say
+
+:function Get6KeyStatus
+:Returns int returns 1 if the 6-key entry setting is current, otherwise returns 0
+:SearchRank 1
+:Synopsis determines if the 6-key keyboard setting is in use
+:Category Application
+
+:script ControlF8Press
+:DisplayName Toggle Translated Line
+:SearchRank 1
+:Synopsis announces new state of translated line
+:Category Say
+
+:function SayHighlightedText
+:SearchRank 1
+:Description in BrailleCraft, used to speak misspelled word in Spell checker
+:Category Say
+:Param handle/hwnd No Description
+:Param string/buffer No Description
+
+:script SayLine
+:SearchRank 1
+
+:function SayLineUnit
+:SearchRank 1
+:Param int/UnitMovement No Description
+
+:script SayNextLine
+:SearchRank 1
+
+:script BrailleNextLine
+:SearchRank 1
+
+:script SayPriorLine
+:SearchRank 1
+
+:script BraillePriorLine
+:SearchRank 1
+
+:script BottomOfFile
+:SearchRank 1
+
+:script TopOfFile
+:SearchRank 1
+
+:script JAWSPageDown
+:SearchRank 1
+
+:script JAWSPageUp
+:SearchRank 1
+
+:script ChangeLine
+:DisplayName Speak Changed Line
+:SearchRank 1
+:Synopsis Handles speaking and brailling of line at new cursor position.
+:Description When in a braille document and set for speaking translated line, uses that. Delay prevents speaking wrong line.
+:Category Say
+
+:function SpeakLineOfText
+:SearchRank 1
+:Synopsis Handles speaking and brailling of current line.
+:Description When in a braille document and set for speaking translated line, uses that.
+:Category Say
+
+:function SpeakSpaces
+:SearchRank 1
+:Param int/iNumSpaces No Description
+
+:function DecipherItemOfText
+:Returns int 1 indicates that more speech is needed; 0 indicates that item has already been spoken
+:SearchRank 1
+:Synopsis when moving in text, preprocesses item to be spoken
+:Description Determines if cursor is on a code for special speaking.
+:Category Say
+
+:function DecipherItemUIA
+:SearchRank 1
+:Param string/sText No Description
+
+:function NextCharacterSelectIfOn
+:SearchRank 1
+:Synopsis moves by character without messing up text selection
+:Category Cursor
+
+:function PriorCharacterSelectIfOn
+:SearchRank 1
+:Synopsis moves by character without messing up text selection
+:Category Cursor
+
+:function NextWordSelectIfOn
+:SearchRank 1
+:Synopsis moves by wordd without messing up text selection
+:Category Cursor
+
+:function PriorWordSelectIfOn
+:SearchRank 1
+:Synopsis moves by word without messing up text selection
+:Category Cursor
+
+:function NextLineSelectIfOn
+:SearchRank 1
+:Category Application
+
+:function PriorLineSelectIfOn
+:SearchRank 1
+:Category Application
+
+:script SayWord
+:SearchRank 1
+
+:function SayWordUnit
+:SearchRank 1
+:Param int/UnitMovement No Description
+
+:script SayNextWord
+:SearchRank 1
+
+:script SayPriorWord
+:SearchRank 1
+
+:script SayCharacter
+:SearchRank 1
+
+:function SayCharacterUnit
+:SearchRank 1
+:Param int/UnitMovement No Description
+
+:function SayTheCharacter
+:SearchRank 1
+:Synopsis says the current character, using braille verbalization if appropriate.
+:Description If in a braille document, uses the braille verbalization for that character found in braillecraft-desktop.jsm.
+:Category Say
+
+:script SayNextCharacter
+:SearchRank 1
+
+:script SayPriorCharacter
+:SearchRank 1
+
+:function SayNextCharacterTranslatedLine
+:SearchRank 1
+:Synopsis Speaks a character on the translated line as braille if in a print document.
+:Description Also announces the end of the translated line.
+:Category Say
+
+:function SayPriorCharacterTranslatedLine
+:SearchRank 1
+:Synopsis Speaks a character on the translated line as braille if in a print document.
+:Description Also announces the start of the translated line.
+:Category Say
+
+:script SayDocNameAndStatusLine
+:DisplayName Say Document Name
+:SearchRank 1
+:Synopsis speaks name of document and status line
+:Category Say
+
+:function CheckTransLine
+:Returns int 1 if translated line is showing, otherwise 0
+:SearchRank 1
+:Synopsis tells if the translated line is showing
+:Category WindowsAndObjects
+
+:script SpeakTransLine
+:DisplayName Speak Translated Line
+:SearchRank 1
+:Synopsis speaks translated line; in print document slows the speech and spells it.
+:Description If translated line is not visible, tries turning it on. If still not visible, gives up.
+:Category Say
+
+:function SpeakWordAsBrailleCells
+:SearchRank 1
+:Param string/sBrailleText No Description
+
+:function SpeakLineAsBrailleCells
+:SearchRank 1
+:Param string/sBrailleLine No Description
+
+:function SpeakStringAsBrailleCells
+:SearchRank 1
+:Param string/VCTX No Description
+:Param string/sBrailleText No Description
+
+:function CountPrecedingSpaces
+:Returns int No Return Description
+:SearchRank 1
+
+:function CountFinalSpaces
+:Returns int number of final spaces
+:SearchRank 1
+:Category String
+
+:script TransLineCursorToggle
+:DisplayName Translated Line Cursor Toggle
+:SearchRank 1
+:Synopsis Toggles between PC cursor and JAWS cursor at start of translated line.
+:Description Uses FindColors command to find translated line. If it's not visible, tries turning it on. If still not visible, gives up.
+:Category Cursor
+
+:script ReadLineInBrailleDocToggle
+:DisplayName Toggle Line Reading in Braille Document
+:SearchRank 1
+
+:script ReadStyleChangeToggle
+:DisplayName Toggle Style Change Reading
+:SearchRank 1
+:Synopsis Toggles setting for announcing style change when moving in a doc.
+:Description Sets global variable DoNotAnnounceStyleChange.
+:Category SpeakingLevel
+
+:script BrailleDocInputEchoToggle
+:SearchRank 1
+
+:script ShowRequestedStatusInfoOnBrailleDisplayToggle
+:SearchRank 1
+:Synopsis Toggles whether screen messages appear on the braille display.
+:Description Sets OPT_BRL_MESSAGES to 0 or 1.
+
+:script SayStyleName
+:DisplayName Say Style Name
+:SearchRank 1
+:Synopsis says the name of the current style
+:Description reads style name from status linespeaks columns 16 through 65 on the status line
+:Category Say
+
+:script SayLocation
+:DisplayName Say Location
+:SearchRank 1
+:Synopsis says the current location
+:Description reads the location info from the status line
+:Category Say
+
+:function HandleCustomWindows
+:SearchRank 1
+:Param handle/hWnd No Description
+
+:script JAWSBackspace
+:SearchRank 1
+
+:script JAWSDelete
+:SearchRank 1
+
+:script CutToClipboard
+:SearchRank 1
+
+:script BrailleRouting
+:SearchRank 1
+
+:function IsDocumentWindow
+:Returns int true or false
+:SearchRank 1
+:Synopsis checks to see if handle is for a document window
+:Category Application
+:Param handle/hwnd No Description
+
+:function IsDocumentWindowJAWSCursor
+:Returns int TRUE if the JAWS cursor is active and the current window is a document window
+:SearchRank 1
+:Synopsis document window, but with JAWS cursor active
+:Category Cursor
+:Param handle/hwnd No Description
+
+:function IsBrailleDocumentWindow
+:Returns int No Return Description
+:SearchRank 1
+:Synopsis is current window a braille document window?
+:Category Application
+:Param handle/hwnd No Description
+
+:script ChangeCase
+:DisplayName Change Case
+:SearchRank 1
+:Synopsis gives feedback for the command to change case
+:Category Say
+
+:function SelectNextCharacter
+:SearchRank 1
+
+:function SelectPriorCharacter
+:SearchRank 1
+
+:function SelectNextWord
+:SearchRank 1
+
+:function SelectPriorWord
+:SearchRank 1
+
+:function SelectNextLine
+:SearchRank 1
+
+:function SelectPriorLine
+:SearchRank 1
+
+:function SayTextSelection
+:SearchRank 1
+:Synopsis Overrides the default function.
+:Description Speaks the selected text in a BrailleCraft-friendly way.
+:Category Say
+:Param string/Select No Description
+:Param string/sText No Description
+:Param int/bUseOTChar No Description
+
+:function Highlighting
+:DisplayName Highlighting
+:SearchRank 1
+:Synopsis determines whether BrailleCraft's highlighting is on or off and announces any change
+:Description called when Control+H is pressed and when focus is changed
+:Category Application
+
+:function ProcessKeyPressed
+:SearchRank 1
+:Param int/nKey No Description
+:Param string/strKeyName No Description
+:Param int/nIsBrailleKey No Description
+:Param int/nIsScriptKey No Description
+
+:function ScreenStabilizedEvent
+:SearchRank 1
+:Param handle/LastScreenWrite No Description
+
+:function IndicateComputerBraille
+:SearchRank 1
+
+:script SayLinePosition
+:DisplayName Say Line Position
+:SearchRank 1
+
+:script SayTotalAndLeftOffset
+:DisplayName Say Line Length
+:SearchRank 1
+:Synopsis Says line length; called twice quickly, says number of spaces at left.
+:Category Positioning
+
+:script SpeakLastWord
+:DisplayName Speak Last Word
+:SearchRank 1
+:Synopsis speaks the last word on the current line
+
+:function SaveOldValues
+:SearchRank 1
+:Synopsis saves old values for page numbers and the like
+:Category Cursor
+
+:function GetNewValues
+:SearchRank 1
+:Synopsis Gets new values for PageNum and the like and compares with old ones.
+:Category Cursor
+
+:script SpeakSpellCheckWord
+:SearchRank 1
+
+:script ReadWordInContext
+:SearchRank 1
+
+:function LoadNonJCFOptions
+:SearchRank 1
+
+:function QuickSettings
+:SearchRank 1
+
+:function QuickSettingsPreProcess
+:SearchRank 1
+
+:function QuickSettingsPostProcess
+:SearchRank 1
+
+:function GetLastBrailleInput
+:Returns string the last character input in a braille document
+:SearchRank 1
+:Synopsis provides the character just input in a braille document
+:Description This provides the character just input in a braille document whether or not UIA notifications are turned on.
+
+:function CheckHighlight
+:SearchRank 1
+:Synopsis Checks to see whether highlighting is on or off in BrailleCraft 12.5 or higher
+:Description Looks at the status line to see if Keys:1 or Keys:6 is followed by the letter h.
+:Category Application
+
+:function ProcessKeyPressed
+:SearchRank 1
+:Param int/nKey No Description
+:Param string/strKeyName No Description
+:Param int/nIsBrailleKey No Description
+:Param int/nIsScriptKey No Description
+
+:function ProcessEventOnFocusChangedEvent
+:SearchRank 1
+:Param handle/AppWindow No Description
+:Param handle/RealWindow No Description
+:Param string/RealWindowName No Description
+:Param handle/FocusWindow No Description
+:Param handle/PrevWindow No Description
+
+:function IsCosmoConnected
+:SearchRank 1
+
+:script CheckCosmo
+:SearchRank 1
+
+:function Scroll
+:SearchRank 1
+:Synopsis Scroll the screen down or up as needed.
+:Category Positioning
+
+:script CloseDocumentWindow
+:SearchRank 1
+
+:script TranslateDocument
+:SearchRank 1
+
+:script Tab
+:SearchRank 1
+
+:script ShiftTab
+:SearchRank 1
+
+:function SpeakTableEntry
+:SearchRank 1
+:Category Say
+
+:script Enter
+:SearchRank 1
+
+:function SayDocChar
+:SearchRank 1
+:Category Say
+:Param string/VCTX No Description
+:Param string/sChar No Description
+
+:function SayDocPriorChar
+:SearchRank 1
+:Synopsis Say the prior character, but use GetLastBrailleInput if editing braille.
+
+:script BraillePanLeft
+:SearchRank 1
+:Synopsis Sets MotionFlag to 1 and calls the default script
+:Category Cursor
+
+:script BraillePanRight
+:SearchRank 1
+:Synopsis Sets MotionFlag to 1 and calls the default script
+:Category Cursor
+
+:script BrailleMoveLeft
+:SearchRank 1
+:Synopsis Sets MotionFlag to 1 and calls the default script.
+:Description Moves the Braille display to the left without leaving the current line.
+:Category Cursor
+
+:script BrailleMoveRight
+:SearchRank 1
+:Synopsis Sets MotionFlag to 1 an calls the default script.
+:Category Cursor
+
+:script SpeakLineAsWords
+:SearchRank 1
+
+:function SpeakWord
+:SearchRank 1
+
+:function GetLocaleNameForLangID
+:Returns string No Return Description
+:SearchRank 1
+:Param string/langAbbrevOrLangIdStr No Description
+
+:function BrailleGetCurrentProfileName
+:Returns string No Return Description
+:SearchRank 1
+
+:script BrailleSelectAProfile
+:SearchRank 1
+
+:function ProcessSpeechOnNewTextEvent
+:SearchRank 1
+:Param handle/hFocus No Description
+:Param handle/hwnd No Description
+:Param string/buffer No Description
+:Param int/nAttributes No Description
+:Param int/nTextColor No Description
+:Param int/nBackgroundColor No Description
+:Param int/nEcho No Description
+:Param string/sFrameName No Description
+
+:function SayLineInsteadOfSayAll
+:Returns int No Return Description
+:SearchRank 1
+
+:script SpecialSayAll
+:SearchRank 1
+:Category Say
+
+:script SpecialSayAll
+:SearchRank 1
+:Category Say
+
+:function SayAllStoppedEvent
+:SearchRank 1
+
+:function GetStatusLine
+:Returns handle No Return Description
+:SearchRank 1
+
+:function SpeakCompletedBrailleWord
+:SearchRank 1
+
+:script NextRowEntry
+:SearchRank 1
+:Synopsis In a table moves down one row and speaks the table entry. Otherwise moves to the next paragraph and speaks the first line.
+
+:script PriorRowEntry
+:SearchRank 1
+:Synopsis In a table moves up one row and speaks the table entry. Otherwise moves to the prior paragraph and speaks the first line.
+
+:script NextColumnEntry
+:SearchRank 1
+:Synopsis In a table moves right one column and speaks the table entry. Otherwise does nothing.
+
+:script PriorColumnEntry
+:SearchRank 1
+:Synopsis In a table moves left one column and speaks the table entry. Otherwise does nothing.
+
+:script SayTableEntry
+:SearchRank 1
+:Synopsis In a table reads the current entry. Otherwise does nothing.
+
+:script SpeakCompletedBrailleWordsToggle
+:SearchRank 1
+

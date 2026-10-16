@@ -1,4 +1,4 @@
-# The rules of prsacp.btb and amedxp.sct, recreated as BrailleMaker table source.
+# The rules of prsacp.btb and amedxp.sct, recreated as BrailleCraft table source.
 table "Dari - basic, print to braille"
 default-char 42
 raw 0

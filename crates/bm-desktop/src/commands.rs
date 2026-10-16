@@ -21,8 +21,8 @@ use bm_core::table_list::TableList;
 // Messages for parts of the program that later build steps bring. They say what is missing and where it comes.
 const PLANNED_EBRAILLE: &str = "eBraille output is built after the formatted braille, document and PEF outputs.";
 const PLANNED_SPELL: &str = "The spell checker (Hunspell dictionaries) is built after the core features of version 1.";
-const PLANNED_HELP: &str = "The BrailleMaker help is written with the features it describes; it is not in this build yet.";
-const PLANNED_TEMPLATES: &str = "Templates are built with the BrailleMaker document format in step 7 of the plan.";
+const PLANNED_HELP: &str = "The BrailleCraft help is written with the features it describes; it is not in this build yet.";
+const PLANNED_TEMPLATES: &str = "Templates are built with the BrailleCraft document format in step 7 of the plan.";
 const PLANNED_PICTURES: &str = "Pictures are built after the core features of version 1.";
 const PLANNED_FORMATTER: &str = "This needs the page formatter, built in step 8 of the plan.";
 
@@ -32,7 +32,7 @@ const STYLE_SHOW: &[&str] = &["Recommended and In-Use Styles", "All Styles", "St
 
 pub fn message(text: &str) {
     let f = app::frame();
-    MessageDialog::builder(&f, text, "BrailleMaker")
+    MessageDialog::builder(&f, text, "BrailleCraft")
         .with_style(MessageDialogStyle::OK | MessageDialogStyle::IconInformation)
         .build()
         .show_modal();
@@ -40,7 +40,7 @@ pub fn message(text: &str) {
 
 fn yes_no(text: &str) -> bool {
     let f = app::frame();
-    MessageDialog::builder(&f, text, "BrailleMaker")
+    MessageDialog::builder(&f, text, "BrailleCraft")
         .with_style(MessageDialogStyle::YesNo | MessageDialogStyle::IconQuestion)
         .build()
         .show_modal()
@@ -50,7 +50,7 @@ fn yes_no(text: &str) -> bool {
 /// Yes, No or Cancel: Some(true), Some(false), None.
 fn yes_no_cancel(text: &str) -> Option<bool> {
     let f = app::frame();
-    let r = MessageDialog::builder(&f, text, "BrailleMaker")
+    let r = MessageDialog::builder(&f, text, "BrailleCraft")
         .with_style(MessageDialogStyle::YesNo | MessageDialogStyle::Cancel | MessageDialogStyle::IconWarning)
         .build()
         .show_modal();
@@ -365,8 +365,8 @@ pub fn run(id: i32, checked: bool) {
         }
 
         3202 | 3204 | 3205 => message(PLANNED_HELP),
-        3206 => message("BrailleMaker 0.1: the main window, menus, dialogs, editing, find and replace, six-key entry, the code vocabulary, braille fonts for 18 encodings, and translation with the BrailleMaker engine and its tables. The file format, printing and embossing follow in the plan."),
-        3210 => message("Updates are published on the BrailleMaker GitHub page."),
+        3206 => message("BrailleCraft 0.1: the main window, menus, dialogs, editing, find and replace, six-key entry, the code vocabulary, braille fonts for 18 encodings, and translation with the BrailleCraft engine and its tables. The file format, printing and embossing follow in the plan."),
+        3210 => message("Updates are published on the BrailleCraft GitHub page."),
         3211 => about(),
         _ => {}
     }
@@ -731,7 +731,7 @@ enum SaveType {
 }
 
 /// The Save As file types, in the reference program's order for each kind of document (spec 04d-B), as far as
-/// BrailleMaker writes them; the first is chosen when the dialog opens, every time.
+/// BrailleCraft writes them; the first is chosen when the dialog opens, every time.
 fn save_types(braille: bool) -> &'static [(&'static str, &'static str, SaveType)] {
     if braille {
         &[
@@ -1665,9 +1665,9 @@ fn find(again: bool) {
     if found.is_none() && !at_edge {
         // Offer to continue from the other end of the document.
         let q = if spec.backward {
-            "BrailleMaker has finished searching to the beginning of the document.  Would you like to continue searching at the end?"
+            "BrailleCraft has finished searching to the beginning of the document.  Would you like to continue searching at the end?"
         } else {
-            "BrailleMaker has finished searching to the end of the document.  Would you like to continue searching at the beginning?"
+            "BrailleCraft has finished searching to the end of the document.  Would you like to continue searching at the beginning?"
         };
         if !yes_no(q) {
             return;
@@ -2066,7 +2066,7 @@ fn embosser_setup(global: bool) {
             d.set_text(21, &binding2.to_string());
             // INFERENCE: the reference message ends with the corrected values (its %s); they are listed here.
             message(&format!(
-                "BrailleMaker has updated desired document settings to fit the selected page size.\n\nCharacters per line: {c2}\nLines per page: {l2}\nTop margin in lines: {top2}\nBinding margin in characters: {binding2}"
+                "BrailleCraft has updated desired document settings to fit the selected page size.\n\nCharacters per line: {c2}\nLines per page: {l2}\nTop margin in lines: {top2}\nBinding margin in characters: {binding2}"
             ));
             continue;
         }
@@ -2683,7 +2683,7 @@ pub fn jaws_start_up(source: &std::path::Path) {
 fn about() {
     let d = open_dialog(1016, None);
     d.set_text(8, &format!("Version {}", env!("CARGO_PKG_VERSION")));
-    d.set_text(10, &format!("Braille translation: the BrailleMaker engine, {}", crate::translation::table_count()));
+    d.set_text(10, &format!("Braille translation: the BrailleCraft engine, {}", crate::translation::table_count()));
     d.show();
     d.destroy();
 }

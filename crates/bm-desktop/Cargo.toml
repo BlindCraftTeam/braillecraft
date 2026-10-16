@@ -1,13 +1,13 @@
 [package]
 name = "bm-desktop"
-description = "BrailleMaker desktop program: native windows, menus and dialogs (wxWidgets through wxDragon)."
+description = "BrailleCraft desktop program: native windows, menus and dialogs (wxWidgets through wxDragon)."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 
 [[bin]]
-name = "braillemaker-desktop"
+name = "braillecraft-desktop"
 path = "src/main.rs"
 
 [dependencies]

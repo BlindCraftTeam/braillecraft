@@ -7,7 +7,7 @@
 WXD_EXPORTED wxd_PrintData_t* wxd_PrintData_Create();
 WXD_EXPORTED void wxd_PrintData_Destroy(wxd_PrintData_t* self);
 WXD_EXPORTED bool wxd_PrintData_IsOk(wxd_PrintData_t* self);
-// Added for BrailleMaker (see CHANGES-BrailleMaker.txt).
+// Added for BrailleCraft (see CHANGES-BrailleCraft.txt).
 WXD_EXPORTED void wxd_PrintData_Assign(wxd_PrintData_t* self, wxd_PrintData_t* other);
 WXD_EXPORTED void wxd_PrintData_SetPrinterName(wxd_PrintData_t* self, const char* name);
 WXD_EXPORTED int wxd_PrintData_GetPrinterName(wxd_PrintData_t* self, char* buffer, int buffer_len);
@@ -49,7 +49,7 @@ WXD_EXPORTED void wxd_Printout_GetPageSizeMM(wxd_Printout_t* self, int* w, int* 
 WXD_EXPORTED void wxd_Printout_GetPPIScreen(wxd_Printout_t* self, int* x, int* y);
 WXD_EXPORTED void wxd_Printout_GetPPIPrinter(wxd_Printout_t* self, int* x, int* y);
 WXD_EXPORTED bool wxd_Printout_IsPreview(wxd_Printout_t* self);
-// Added for BrailleMaker: the paper rectangle in printer pixels, relative to the printable area's origin.
+// Added for BrailleCraft: the paper rectangle in printer pixels, relative to the printable area's origin.
 WXD_EXPORTED void wxd_Printout_GetPaperRectPixels(wxd_Printout_t* self, int* x, int* y, int* w, int* h);
 
 // --- Printer ---

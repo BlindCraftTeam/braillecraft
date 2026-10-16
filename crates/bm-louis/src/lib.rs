@@ -1,7 +1,7 @@
-//! BrailleMaker's binding to liblouis 3.39.0 (LGPL 2.1 or later), built from source by build.rs.
+//! BrailleCraft's binding to liblouis 3.39.0 (LGPL 2.1 or later), built from source by build.rs.
 //!
 //! Translation works in Unicode braille: `translate` returns dot patterns as characters U+2800 to U+283F (U+2800 is
-//! the blank cell), and `back_translate` reads them. BrailleMaker turns cells into a braille encoding's characters
+//! the blank cell), and `back_translate` reads them. BrailleCraft turns cells into a braille encoding's characters
 //! itself, so the result never depends on the display file a liblouis table happens to include.
 //! liblouis keeps global state and is not thread-safe, so every call goes through one lock.
 

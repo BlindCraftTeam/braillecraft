@@ -1,0 +1,33 @@
+[OSM]
+VertCaretMaxY=100
+VertCaretMaxX=5
+CaretSearch=254
+IncludeGraphics=0
+LeftMargin=8
+PixelsPerTab=25
+[WindowClasses]
+RICHEDIT50W=MultilineEdit
+BrailleCraft_CODESEDIT=Edit
+MDIClient=Dialog
+[OutputModes]
+CONTROL_NAME=1|2|2|Control Name
+Help_Balloon=1|1|2|Help Balloon
+CONTROL_TYPE=1|2|2|Control Type
+DIALOG_NAME=1|2|2|Dialog Name
+DIALOG_TEXT=1|2|2|Dialog Text
+CONTROL_GROUP_NAME=1|2|2|Control Group Name
+[options]
+LinePauses=1
+[NonJCFOptions]
+BrailleLineSpeakingLevel=3
+BrailleDocInputEcho=5
+SpeakBrailleCharsAsLocalBrailleSigns=1
+AnnounceStyleChanges=0
+AnnounceForcedLineSkips=0
+ShowRequestedStatusInfoOnBrailleDisplay=1
+SpeakPrintLinesByWord=0
+UseStatusLineForUnicodeValues=0
+[Braille]
+BrailleMode=1
+NavByParagraph=1
+UseOSM=0

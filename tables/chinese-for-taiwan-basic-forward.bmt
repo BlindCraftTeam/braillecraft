@@ -1,4 +1,4 @@
-# The rules of zhtwcp.btb and gendxp.sct, recreated as BrailleMaker table source.
+# The rules of zhtwcp.btb and gendxp.sct, recreated as BrailleCraft table source.
 table "Chinese for Taiwan - basic, print to braille"
 default-char 42
 raw 0

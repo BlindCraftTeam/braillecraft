@@ -1,4 +1,4 @@
-# The rules of malacp.btb and gendxp.sct, recreated as BrailleMaker table source.
+# The rules of malacp.btb and gendxp.sct, recreated as BrailleCraft table source.
 table "Malayalam - basic with Nemeth, print to braille"
 default-char 42
 raw 0

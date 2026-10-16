@@ -1,4 +1,4 @@
-# The rules of telacp.btb and gendxp.sct, recreated as BrailleMaker table source.
+# The rules of telacp.btb and gendxp.sct, recreated as BrailleCraft table source.
 table "Telugu - basic with Nemeth, print to braille"
 default-char 42
 raw 0

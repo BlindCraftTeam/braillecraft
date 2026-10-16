@@ -847,7 +847,7 @@ impl<'a> Engine<'a> {
             }
             let trans;
             let mut matched = rs >= 1 && self.try_rules(rs);
-            // BrailleMaker's own stop, not in the reference program (whose run loop has no guard): a rule that takes
+            // BrailleCraft's own stop, not in the reference program (whose run loop has no guard): a rule that takes
             // no characters, matched with everything the next step depends on exactly as at the previous such match,
             // would match again forever. That character goes the way of one no rule matches instead.
             if matched && self.m_consume == 0 {

@@ -140,7 +140,7 @@ impl StyleTable {
 pub enum LanguageSource {
     /// Binary rule tables (.btb) in a folder.
     Folder(PathBuf),
-    /// The tables shipped with BrailleMaker, compiled from their sources.
+    /// The tables shipped with BrailleCraft, compiled from their sources.
     Shipped(Rc<TableSet>),
     /// Rule tables already loaded, by rules table code (the web build, which fetches tables as they are needed). A
     /// code asked for and not loaded is noted, so the caller can load it and translate again.

@@ -1,6 +1,6 @@
-//! BrailleMaker core.
+//! BrailleCraft core.
 //!
-//! Everything that is not user interface lives here: the document model, translation through the BrailleMaker
+//! Everything that is not user interface lives here: the document model, translation through the BrailleCraft
 //! engine, document templates, braille page formatting, import and export, and the embosser job layer. The
 //! desktop shell and the web build both call into this crate.
 

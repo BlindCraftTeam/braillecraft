@@ -1,4 +1,4 @@
-//! The tables shipped with BrailleMaker: a folder of table sources (.bmt) and its index (index.tsv), which names,
+//! The tables shipped with BrailleCraft: a folder of table sources (.bmt) and its index (index.tsv), which names,
 //! for each rules table code a document can carry, its scan table code, the table source that recreates the pair
 //! and the language. A table is compiled the first time it is asked for and kept.
 

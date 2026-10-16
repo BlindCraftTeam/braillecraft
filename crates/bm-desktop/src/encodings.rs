@@ -116,9 +116,9 @@ impl Encoding {
             .collect()
     }
 
-    /// The family names of this encoding's braille fonts (ui/fonts/BrailleMaker-<kind>-<id>.ttf).
+    /// The family names of this encoding's braille fonts (ui/fonts/BrailleCraft-<kind>-<id>.ttf).
     pub fn font_family(&self, kind: &str) -> String {
-        format!("BrailleMaker {kind} {}", self.name)
+        format!("BrailleCraft {kind} {}", self.name)
     }
 }
 

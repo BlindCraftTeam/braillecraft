@@ -1,4 +1,4 @@
-# The rules of chvacb.btb and gendxb.sct, recreated as BrailleMaker table source.
+# The rules of chvacb.btb and gendxb.sct, recreated as BrailleCraft table source.
 table "Bashkir - basic, braille to print"
 default-char 42
 raw 0

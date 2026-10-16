@@ -1,4 +1,4 @@
-# The rules of eusacb.btb and gendxb.sct, recreated as BrailleMaker table source.
+# The rules of eusacb.btb and gendxb.sct, recreated as BrailleCraft table source.
 table "Basque - basic, braille to print"
 default-char 42
 raw 0

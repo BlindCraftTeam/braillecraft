@@ -1,6 +1,6 @@
 [package]
 name = "bm-louis"
-description = "BrailleMaker binding to the liblouis braille translation library (LGPL 2.1 or later), built from source"
+description = "BrailleCraft binding to the liblouis braille translation library (LGPL 2.1 or later), built from source"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

@@ -1,4 +1,4 @@
-//! The table compiler: BrailleMaker's own translation tables are written as plain text (.bmt) and compiled here
+//! The table compiler: BrailleCraft's own translation tables are written as plain text (.bmt) and compiled here
 //! into the binary rule table the engine loads (`table.rs`), plus the scanner settings (`ScanTable`).
 //!
 //! The source layout, one statement per line, `#` to the end of a line is a comment:

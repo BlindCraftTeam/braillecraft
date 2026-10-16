@@ -9,6 +9,6 @@ edition = "2021"
 rust-version = "1.80"
 authors = ["Jeremiah Beasley <jbeasley@jb11.net>"]
 
-# wxdragon-sys 0.9.22 with the printing functions BrailleMaker needs added (vendor/wxdragon-sys/CHANGES-BrailleMaker.txt).
+# wxdragon-sys 0.9.22 with the printing functions BrailleCraft needs added (vendor/wxdragon-sys/CHANGES-BrailleCraft.txt).
 [patch.crates-io]
 wxdragon-sys = { path = "vendor/wxdragon-sys" }

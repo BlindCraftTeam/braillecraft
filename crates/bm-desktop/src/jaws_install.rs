@@ -13,7 +13,7 @@
 //! - On yes: in each folder, keeps a copy of every file it replaces (name_bak), copies the shipped files, and runs
 //!   scompile.exe on each .jss whose .jsb is missing or older than the .jss or the headers and messages it uses,
 //!   in that folder, with no window, waiting for it to finish.
-//! - Then asks whether to restart BrailleMaker, since JAWS takes up new scripts when the program starts again.
+//! - Then asks whether to restart BrailleCraft, since JAWS takes up new scripts when the program starts again.
 //! Every step is written to install.log in the shipped "jaws" folder, or nowhere when that cannot be written.
 #![cfg(windows)]
 
@@ -24,17 +24,17 @@ use std::os::windows::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-/// The question asked before installing (the message of the reference dialog, in BrailleMaker's name).
+/// The question asked before installing (the message of the reference dialog, in BrailleCraft's name).
 pub const OFFER_TITLE: &str = "Install JAWS Scripts";
 pub const OFFER_TEXT: &str = "You have one or more JAWS® installations without the most up-to-date script files for \
-BrailleMaker.  Installing the most recent script files (included with BrailleMaker) will help BrailleMaker to work \
+BrailleCraft.  Installing the most recent script files (included with BrailleCraft) will help BrailleCraft to work \
 better with JAWS.";
 pub const OFFER_QUESTION: &str =
-    "Would you like to install the script files?  (Any existing BrailleMaker script files will be backed up.)";
+    "Would you like to install the script files?  (Any existing BrailleCraft script files will be backed up.)";
 pub const OFFER_DO_NOT_ASK: &str = "Do not ask this again";
 /// The question asked after installing.
-pub const RESTART_TEXT: &str = "JAWS® will not work with the newly installed script files until BrailleMaker \
-restarts.  Would you like to restart BrailleMaker now?";
+pub const RESTART_TEXT: &str = "JAWS® will not work with the newly installed script files until BrailleCraft \
+restarts.  Would you like to restart BrailleCraft now?";
 /// The settings section and the start of the key under which "Do not ask this again" is kept.
 pub const SETTINGS_SECTION: &str = "AddIns";
 

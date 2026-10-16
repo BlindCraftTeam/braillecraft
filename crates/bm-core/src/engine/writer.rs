@@ -28,11 +28,11 @@ pub struct Chitab {
     upper2: HashMap<i64, i64>,
 }
 
-/// BrailleMaker's own character table, built into the program.
+/// BrailleCraft's own character table, built into the program.
 const CHARACTERS: &str = include_str!("../../../../tables/characters.txt");
 
 impl Chitab {
-    /// BrailleMaker's character table (tables/characters.txt): tab-separated lines of code, small-letter code,
+    /// BrailleCraft's character table (tables/characters.txt): tab-separated lines of code, small-letter code,
     /// Unicode, count (hex, "-" for none), then text forms the engine does not use; "#" starts a comment line.
     pub fn parse_characters(text: &str) -> Chitab {
         let mut t = Chitab::default();

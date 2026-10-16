@@ -1,7 +1,7 @@
 {
-  "productName": "BrailleMaker",
+  "productName": "BrailleCraft",
   "version": "0.1.0",
-  "identifier": "net.jb11.braillemaker",
+  "identifier": "net.jb11.braillecraft",
   "build": {
     "frontendDist": "../../ui"
   },
@@ -9,7 +9,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "BrailleMaker",
+        "title": "BrailleCraft",
         "width": 900,
         "height": 640
       }

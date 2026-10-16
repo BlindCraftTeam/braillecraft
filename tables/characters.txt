@@ -1,4 +1,4 @@
-# BrailleMaker character table: the internal character codes the translation engine works with.
+# BrailleCraft character table: the internal character codes the translation engine works with.
 # One entry per line, fields separated by tabs, numbers in hex, "-" where there is none:
 #   code, small-letter code, Unicode, count, text form, its byte, second text form, its byte.
 # A count n stands for n codes in a row: code, small-letter code and Unicode each one higher for every step.

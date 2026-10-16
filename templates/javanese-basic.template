@@ -1,4 +1,4 @@
--braillemaker-template 1
+-braillecraft-template 1
 TranslationTables: JAVACP+GENDXP/JAVACB+GENDXB
 BraillePageNumbersEvenPages: LowerRight
 BraillePageNumbersOddPages: LowerRight

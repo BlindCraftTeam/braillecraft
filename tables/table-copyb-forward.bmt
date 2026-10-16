@@ -1,4 +1,4 @@
-# The rules of copyb.btb and gendxp.sct, recreated as BrailleMaker table source.
+# The rules of copyb.btb and gendxp.sct, recreated as BrailleCraft table source.
 table "copyb, print to braille"
 default-char 63
 raw 1

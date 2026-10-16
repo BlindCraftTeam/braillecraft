@@ -1,4 +1,4 @@
-# The rules of eusacp.btb and enudxp.sct, recreated as BrailleMaker table source.
+# The rules of eusacp.btb and enudxp.sct, recreated as BrailleCraft table source.
 table "Basque - basic, print to braille"
 default-char 42
 raw 0

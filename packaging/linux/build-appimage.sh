@@ -1,6 +1,6 @@
 #!/bin/bash
-# Builds the AppImage of the native program from its folder (the CI's dist/BrailleMaker): one file that runs on its
-# own, with the program in usr/bin and its fonts, tables, templates and embosser models in usr/share/braillemaker
+# Builds the AppImage of the native program from its folder (the CI's dist/BrailleCraft): one file that runs on its
+# own, with the program in usr/bin and its fonts, tables, templates and embosser models in usr/share/braillecraft
 # (where the program looks beside itself), the desktop entry and the program icon at the top as the AppImage format
 # asks. The program takes the braille fonts for itself (main.rs), so nothing is installed. GTK 3 and the C library
 # come from the system, as on every desktop that has GTK 3.
@@ -15,25 +15,25 @@ icons=$(cd "$here/../icons/png" && pwd)
 tool=${APPIMAGETOOL:?APPIMAGETOOL names the appimagetool program}
 mkdir -p "$out"
 stage=$(mktemp -d)
-appdir=$stage/BrailleMaker.AppDir
+appdir=$stage/BrailleCraft.AppDir
 
-install -d "$appdir/usr/bin" "$appdir/usr/share/braillemaker" "$appdir/usr/share/applications" \
+install -d "$appdir/usr/bin" "$appdir/usr/share/braillecraft" "$appdir/usr/share/applications" \
   "$appdir/usr/share/icons/hicolor/256x256/apps"
-install -m 755 "$dist/braillemaker-desktop" "$appdir/usr/bin/braillemaker-desktop"
+install -m 755 "$dist/braillecraft-desktop" "$appdir/usr/bin/braillecraft-desktop"
 for d in fonts tables templates embossers; do
-  cp -r "$dist/$d" "$appdir/usr/share/braillemaker/$d"
+  cp -r "$dist/$d" "$appdir/usr/share/braillecraft/$d"
 done
-install -m 644 "$here/braillemaker.desktop" "$appdir/braillemaker.desktop"
-install -m 644 "$here/braillemaker.desktop" "$appdir/usr/share/applications/braillemaker.desktop"
-install -m 644 "$icons/braillemaker-256.png" "$appdir/braillemaker.png"
-install -m 644 "$icons/braillemaker-256.png" "$appdir/usr/share/icons/hicolor/256x256/apps/braillemaker.png"
+install -m 644 "$here/braillecraft.desktop" "$appdir/braillecraft.desktop"
+install -m 644 "$here/braillecraft.desktop" "$appdir/usr/share/applications/braillecraft.desktop"
+install -m 644 "$icons/braillecraft-256.png" "$appdir/braillecraft.png"
+install -m 644 "$icons/braillecraft-256.png" "$appdir/usr/share/icons/hicolor/256x256/apps/braillecraft.png"
 cat > "$appdir/AppRun" <<'EOF'
 #!/bin/sh
 here=$(dirname "$(readlink -f "$0")")
-exec "$here/usr/bin/braillemaker-desktop" "$@"
+exec "$here/usr/bin/braillecraft-desktop" "$@"
 EOF
 chmod 755 "$appdir/AppRun"
 
-ARCH=x86_64 "$tool" --no-appstream "$appdir" "$out/BrailleMaker-$version-x86_64.AppImage"
+ARCH=x86_64 "$tool" --no-appstream "$appdir" "$out/BrailleCraft-$version-x86_64.AppImage"
 rm -rf "$stage"
 ls -la "$out"

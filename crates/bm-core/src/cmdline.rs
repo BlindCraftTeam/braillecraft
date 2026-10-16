@@ -25,7 +25,7 @@ pub enum Mode {
     Brf(PathBuf),
     /// /lbf:<file>: saved as refreshable braille.
     Lbf(PathBuf),
-    /// An option the reference program has whose effect BrailleMaker does not carry out (its name, for the log):
+    /// An option the reference program has whose effect BrailleCraft does not carry out (its name, for the log):
     /// /RemoveEmbosserInfo, /RemovePrinterInfo, /RemovePageInfo, /ebrl, /dumpstyles, /dumptemplate.
     NotAvailable(String),
 }
@@ -140,9 +140,9 @@ pub fn parse(args: &[String], expand: impl Fn(&str) -> Vec<PathBuf>) -> CommandL
                 },
                 "resetfilesavefolder" => cl.reset_save_folder = true,
                 "resetfileopenfolder" => cl.reset_open_folder = true,
-                // Options of the reference program BrailleMaker has nothing for (its Word importer's style map, its
+                // Options of the reference program BrailleCraft has nothing for (its Word importer's style map, its
                 // debugging and automation hooks, its window title): kept out of the run, as noted.
-                "wordstylemap" | "debug" | "api" | "title" => cl.log.push(format!("Not used by BrailleMaker: {arg}")),
+                "wordstylemap" | "debug" | "api" | "title" => cl.log.push(format!("Not used by BrailleCraft: {arg}")),
                 // Not an option name: a file when it names one (on Linux and macOS a path starts with "/"); an unknown
                 // name with no path in it is an option the program does not know.
                 _ => {
@@ -245,7 +245,7 @@ mod tests {
         let cl = parse(&args(&["/copies:3", "/pagesize=25x40", "/template:English (UEB) - basic", "/prompt:continue", "-brf:out.brf", "x.dxp", "/frob", "missing.dxp", "/debug:1"]), found);
         assert_eq!((cl.copies, cl.page_size, cl.template.as_deref(), cl.prompt), (Some(3), Some((25, 40)), Some("English (UEB) - basic"), Prompt::Continue));
         assert_eq!(cl.actions[0].mode, Mode::Brf(PathBuf::from("out.brf")));
-        assert_eq!(cl.log, vec!["Ignoring command line parameter: /frob".to_string(), "Cannot open file missing.dxp".into(), "Not used by BrailleMaker: /debug:1".into()]);
+        assert_eq!(cl.log, vec!["Ignoring command line parameter: /frob".to_string(), "Cannot open file missing.dxp".into(), "Not used by BrailleCraft: /debug:1".into()]);
         // A path is a file, also when it starts with "/".
         assert_eq!(parse(&args(&["/print", "/home/x/a.dxp"]), found).actions[0].file, PathBuf::from("/home/x/a.dxp"));
         assert_eq!(parse(&args(&["/copies:0"]), found).log, vec!["Ignoring command line parameter: /copies:0".to_string()]);

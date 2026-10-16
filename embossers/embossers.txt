@@ -1,4 +1,4 @@
-# BrailleMaker embosser models.
+# BrailleCraft embosser models.
 #
 # A model is one or more name lines, each a name in double quotes, optionally followed by an Index firmware version
 # or range (V2, V3_early-V3, V5), then its properties between a line { and a line }. A property line is a name

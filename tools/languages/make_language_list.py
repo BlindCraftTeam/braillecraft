@@ -1,4 +1,4 @@
-"""Writes tables/languages.tsv, BrailleMaker's list of translation table sets by language: the list shown under
+"""Writes tables/languages.tsv, BrailleCraft's list of translation table sets by language: the list shown under
 Document, Translation Tables, and the learning steps shown under Document, Learning Tables.
 
 Usage: python3 -I make_language_list.py <language list> <language names> <out.tsv>

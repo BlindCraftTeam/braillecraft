@@ -101,7 +101,7 @@ extern "C" bool wxd_PrintData_IsOk(wxd_PrintData_t* self) {
     return reinterpret_cast<wxPrintData*>(self)->IsOk();
 }
 
-// Added for BrailleMaker (see CHANGES-BrailleMaker.txt).
+// Added for BrailleCraft (see CHANGES-BrailleCraft.txt).
 extern "C" void wxd_PrintData_Assign(wxd_PrintData_t* self, wxd_PrintData_t* other) {
     *reinterpret_cast<wxPrintData*>(self) = *reinterpret_cast<wxPrintData*>(other);
 }
@@ -246,7 +246,7 @@ extern "C" bool wxd_Printout_IsPreview(wxd_Printout_t* self) {
     return reinterpret_cast<wxPrintout*>(self)->IsPreview();
 }
 
-// Added for BrailleMaker (see CHANGES-BrailleMaker.txt).
+// Added for BrailleCraft (see CHANGES-BrailleCraft.txt).
 extern "C" void wxd_Printout_GetPaperRectPixels(wxd_Printout_t* self, int* x, int* y, int* w, int* h) {
     wxRect r = reinterpret_cast<wxPrintout*>(self)->GetPaperRectPixels();
     if (x) *x = r.x;

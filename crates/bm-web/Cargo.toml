@@ -1,6 +1,6 @@
 [package]
 name = "bm-web"
-description = "BrailleMaker in the browser: the core's translation, document files, layout and embossing for the web interface"
+description = "BrailleCraft in the browser: the core's translation, document files, layout and embossing for the web interface"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

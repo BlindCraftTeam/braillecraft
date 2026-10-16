@@ -16,46 +16,46 @@ import json
 import sys
 from xml.sax.saxutils import escape
 
-# Licensing, activation, registration and vendor-specific prompts are not part of BrailleMaker.
+# Licensing, activation, registration and vendor-specific prompts are not part of BrailleCraft.
 SKIP = {1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009, 1010, 1011, 1012, 1013, 1014, 1015,
         1056, 1057, 1059, 1070}
 # The embosser setup's printer-driver installation and first-run wizard pages (10005 to 10016) are a later queue line
-# (BrailleMaker queue line 10, M3b); the setup sheet itself is 10000 to 10004.
+# (BrailleCraft queue line 10, M3b); the setup sheet itself is 10000 to 10004.
 SKIP |= set(range(10005, 10017))
 # The embosser setup sheet's pages, shown as tabs of the sheet (10000): written as panels, not dialogs.
 PANELS = {10001, 10002, 10003, 10004}
 
-# About (1016) keeps its layout with BrailleMaker's own text; the activation buttons and the original credits are
+# About (1016) keeps its layout with BrailleCraft's own text; the activation buttons and the original credits are
 # left out (None). Controls 10 to 14 are filled at run time.
 ABOUT = 1016
 ABOUT_TEXT = {
     5: None, 6: None, 9: None, 20: None, 21: None, 22: None,
-    7: "BrailleMaker for Windows, Linux and Mac",
+    7: "BrailleCraft for Windows, Linux and Mac",
     8: "Version %s",
     15: "Designed, implemented, and tested by:",
     16: "Jeremiah Beasley",
     17: "Braille translation:",
-    18: "the BrailleMaker translation engine and its tables",
+    18: "the BrailleCraft translation engine and its tables",
     19: "Copyright (c) 2026 Jeremiah Beasley.",
 }
 
 
 # Titles and texts that name another program are replaced.
-TITLES = {1052: "Selective Contractions", 1054: "BrailleMaker", 1061: "BrailleMaker Autosave Recovery Wizard"}
+TITLES = {1052: "Selective Contractions", 1054: "BrailleCraft", 1061: "BrailleCraft Autosave Recovery Wizard"}
 TEXTS = {
     (1036, 12): "Allow embedded codes, eg. [[*pg*]]",
     (1037, 16): '<a href="www.example.com">www.example.com</a>',
     (1060, 12): "",
     # Install JAWS Scripts: the same texts as crates/bm-desktop/src/jaws_install.rs.
     (1058, 6): "You have one or more JAWS® installations without the most up-to-date script files for "
-               "BrailleMaker.  Installing the most recent script files (included with BrailleMaker) will help "
-               "BrailleMaker to work better with JAWS.",
-    (1058, 7): "Would you like to install the script files?  (Any existing BrailleMaker script files will be backed "
+               "BrailleCraft.  Installing the most recent script files (included with BrailleCraft) will help "
+               "BrailleCraft to work better with JAWS.",
+    (1058, 7): "Would you like to install the script files?  (Any existing BrailleCraft script files will be backed "
                "up.)",
     # Embosser setup sheet.
-    (10000, 6): "BrailleMaker",
-    (10001, 19): "(BrailleMaker will prompt if this is blank)",
-    (10003, 19): "If you want to add interline Print and Braille capabilities to BrailleMaker using your Enabling "
+    (10000, 6): "BrailleCraft",
+    (10001, 19): "(BrailleCraft will prompt if this is blank)",
+    (10003, 19): "If you want to add interline Print and Braille capabilities to BrailleCraft using your Enabling "
                  "Technologies Braille Embosser please contact:",
 }
 
@@ -198,9 +198,9 @@ def main():
         if rid in SKIP or "controls" not in d:
             continue
         controls = [dict(c, text=TEXTS[(rid, c["id"])]) if (rid, c["id"]) in TEXTS else c for c in d["controls"]]
-        title = TITLES.get(rid, d["title"] or "BrailleMaker")
+        title = TITLES.get(rid, d["title"] or "BrailleCraft")
         if rid == ABOUT:
-            title = "About BrailleMaker"
+            title = "About BrailleCraft"
             kept = []
             for c in controls:
                 if c["id"] in ABOUT_TEXT:

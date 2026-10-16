@@ -1,4 +1,4 @@
-//! Translation for File, Translate and the translated line, through the BrailleMaker engine and the tables shipped
+//! Translation for File, Translate and the translated line, through the BrailleCraft engine and the tables shipped
 //! with the program (the folder "tables" beside it, found at start-up).
 //!
 //! A document names its tables by code, as the document files do: the print-to-braille rules table and its scan

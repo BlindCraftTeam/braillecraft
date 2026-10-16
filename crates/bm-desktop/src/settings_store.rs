@@ -2,11 +2,11 @@
 //! a number written in decimal, or text. The program reads them at start-up and writes a setting when the
 //! dialog that changes it is confirmed.
 //!
-//! On Windows they are registry values (text, REG_SZ) under HKEY_CURRENT_USER\Software\BrailleMaker\BrailleMaker,
+//! On Windows they are registry values (text, REG_SZ) under HKEY_CURRENT_USER\Software\BrailleCraft\BrailleCraft,
 //! a section being a subkey; a value missing there is looked for under HKEY_LOCAL_MACHINE at the same path, which
 //! an installation or an administrator can fill with defaults for every user. Elsewhere they are a text file in the
-//! user's configuration folder ($XDG_CONFIG_HOME/BrailleMaker or ~/.config/BrailleMaker on Linux,
-//! ~/Library/Preferences/BrailleMaker on macOS), named settings.ini: settings without a section first, then one
+//! user's configuration folder ($XDG_CONFIG_HOME/BrailleCraft or ~/.config/BrailleCraft on Linux,
+//! ~/Library/Preferences/BrailleCraft on macOS), named settings.ini: settings without a section first, then one
 //! "[section]" line before each section's settings, one "key=value" line each. A line that is neither is skipped.
 
 use std::collections::BTreeMap;
@@ -49,7 +49,7 @@ impl FileStore {
 
     /// The file's text: the settings without a section first.
     pub fn text(&self) -> String {
-        let mut out = String::from("# BrailleMaker settings\n");
+        let mut out = String::from("# BrailleCraft settings\n");
         if let Some(root) = self.sections.get(ROOT) {
             for (k, v) in root {
                 out.push_str(&format!("{k}={v}\n"));
@@ -90,11 +90,11 @@ mod backend {
     pub fn path() -> Option<PathBuf> {
         let home = std::env::var_os("HOME").map(PathBuf::from);
         let folder = if cfg!(target_os = "macos") {
-            home?.join("Library").join("Preferences").join("BrailleMaker")
+            home?.join("Library").join("Preferences").join("BrailleCraft")
         } else {
             match std::env::var_os("XDG_CONFIG_HOME").filter(|v| !v.is_empty()) {
-                Some(c) => PathBuf::from(c).join("BrailleMaker"),
-                None => home?.join(".config").join("BrailleMaker"),
+                Some(c) => PathBuf::from(c).join("BrailleCraft"),
+                None => home?.join(".config").join("BrailleCraft"),
             }
         };
         Some(folder.join("settings.ini"))
@@ -124,7 +124,7 @@ mod backend {
             let _ = std::fs::create_dir_all(folder);
         }
         if let Err(e) = std::fs::write(&path, text) {
-            eprintln!("BrailleMaker: the settings could not be written to {}: {e}", path.display());
+            eprintln!("BrailleCraft: the settings could not be written to {}: {e}", path.display());
         }
     }
 }
@@ -141,7 +141,7 @@ mod backend {
     const KEY_WRITE: u32 = 0x20006;
     const REG_SZ: u32 = 1;
     /// The vendor key and the program's key under it.
-    const PRODUCT: &str = "Software\\BrailleMaker\\BrailleMaker";
+    const PRODUCT: &str = "Software\\BrailleCraft\\BrailleCraft";
 
     #[link(name = "advapi32")]
     extern "system" {
@@ -214,7 +214,7 @@ mod backend {
             )
         };
         if r != 0 {
-            eprintln!("BrailleMaker: the settings key {} could not be opened ({r})", path(section));
+            eprintln!("BrailleCraft: the settings key {} could not be opened ({r})", path(section));
             return;
         }
         let data = wide(value);
@@ -466,7 +466,7 @@ mod tests {
 
     #[test]
     fn a_damaged_line_is_skipped() {
-        let s = FileStore::parse("# BrailleMaker settings\nChordKeys=asdjkl\nthis line is damaged\n=no key\n[Fonts\n[Fonts]\nPrintFont=Courier New\n");
+        let s = FileStore::parse("# BrailleCraft settings\nChordKeys=asdjkl\nthis line is damaged\n=no key\n[Fonts\n[Fonts]\nPrintFont=Courier New\n");
         assert_eq!(s.get(ROOT, "ChordKeys"), Some("asdjkl"));
         assert_eq!(s.get("Fonts", "PrintFont"), Some("Courier New"));
         assert_eq!(s.sections.values().map(|v| v.len()).sum::<usize>(), 2);

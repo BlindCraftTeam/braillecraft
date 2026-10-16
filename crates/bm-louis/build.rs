@@ -26,7 +26,7 @@ fn main() {
         .expect("liblouis.h.in")
         .replace("@WIDECHAR_TYPE@", "unsigned short int");
     fs::write(out.join("liblouis.h"), header).expect("write liblouis.h");
-    // TABLESDIR is the built-in table folder on Linux and macOS; BrailleMaker always sets the data path instead.
+    // TABLESDIR is the built-in table folder on Linux and macOS; BrailleCraft always sets the data path instead.
     fs::write(out.join("config.h"), "#define PACKAGE_VERSION \"liblouis-3.39.0\"\n#define TABLESDIR \"\"\n")
         .expect("write config.h");
 

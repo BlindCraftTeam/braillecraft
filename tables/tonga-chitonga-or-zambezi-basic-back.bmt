@@ -1,4 +1,4 @@
-# The rules of toiacb.btb and gendxb.sct, recreated as BrailleMaker table source.
+# The rules of toiacb.btb and gendxb.sct, recreated as BrailleCraft table source.
 table "Tonga (Chitonga or Zambezi) - basic, braille to print"
 default-char 42
 raw 0

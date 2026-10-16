@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Writes BrailleMaker's own icons into packaging/icons: the program (two braille cells, b and m, on a blue square)
+"""Writes BrailleCraft's own icons into packaging/icons: the program (two braille cells, b and c, on a blue square)
 and the two document types (a page with the letter P for print documents, a page with braille dots for braille
 documents), as PNG at each size, Windows .ico files, and a macOS iconset folder for iconutil.
 
@@ -18,8 +18,8 @@ PAGE = (250, 250, 250, 255)
 EDGE = (90, 90, 90, 255)
 INK = (30, 30, 30, 255)
 
-# Braille cells as raised dots (1 to 6): b is dots 1 2, m is dots 1 3 4.
-B, M, P, DOTS = {1, 2}, {1, 3, 4}, {1, 2, 3, 4}, {1, 2, 4, 5}
+# Braille cells as raised dots (1 to 6): b is dots 1 2, c is dots 1 4.
+B, C, P, DOTS = {1, 2}, {1, 4}, {1, 2, 3, 4}, {1, 2, 4, 5}
 
 
 def cell(draw, x, y, dots, r, gap, fill, empty):
@@ -43,7 +43,7 @@ def program(size):
     gap = s * 0.17
     r = s * 0.065
     cell(d, s * 0.19, s * 0.33, B, r, gap, WHITE, (255, 255, 255, 110))
-    cell(d, s * 0.64, s * 0.33, M, r, gap, WHITE, (255, 255, 255, 110))
+    cell(d, s * 0.64, s * 0.33, C, r, gap, WHITE, (255, 255, 255, 110))
     return im.resize((size, size), Image.LANCZOS)
 
 
@@ -83,7 +83,7 @@ def write(name, make):
 
 
 if __name__ == "__main__":
-    write("braillemaker", program)
+    write("braillecraft", program)
     write("print-document", lambda n: document(n, False))
     write("braille-document", lambda n: document(n, True))
     print("icons written to", OUT)

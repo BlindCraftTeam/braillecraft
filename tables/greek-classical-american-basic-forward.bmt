@@ -1,4 +1,4 @@
-# The rules of elcacp.btb and gendxp.sct, recreated as BrailleMaker table source.
+# The rules of elcacp.btb and gendxp.sct, recreated as BrailleCraft table source.
 table "Greek (Classical-American) - basic, print to braille"
 default-char 42
 raw 0

@@ -1,4 +1,4 @@
-# The rules of qqphcp.btb and qqphcp.sct, recreated as BrailleMaker table source.
+# The rules of qqphcp.btb and qqphcp.sct, recreated as BrailleCraft table source.
 table "EBU Pharmaceutical, print to braille"
 default-char 42
 raw 0

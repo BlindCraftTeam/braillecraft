@@ -1,4 +1,4 @@
-# The rules of luaacb.btb and gendxb.sct, recreated as BrailleMaker table source.
+# The rules of luaacb.btb and gendxb.sct, recreated as BrailleCraft table source.
 table "Luba-Kasai (Luba-Lulua) - basic, braille to print"
 default-char 42
 raw 0

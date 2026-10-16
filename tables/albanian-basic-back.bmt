@@ -1,4 +1,4 @@
-# The rules of sqiacb.btb and gendxb.sct, recreated as BrailleMaker table source.
+# The rules of sqiacb.btb and gendxb.sct, recreated as BrailleCraft table source.
 table "Albanian - basic, braille to print"
 default-char 42
 raw 0

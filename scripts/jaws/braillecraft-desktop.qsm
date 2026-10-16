@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<LocalizableDefinitions File="braillecraft-desktop.qs">
+	<DisplayNameDefinitions>
+		<DisplayName ID="BrailleCraftOptions" Text="BrailleCraft Options">
+			<HelpMsg>
+This group contains options for BrailleCraft.</HelpMsg>
+		</DisplayName>
+		<DisplayName ID="BrailleCraftOptions.BrailleLineSpeakingLevel" Text="Speaking Level for Braille Lines">
+			<HelpMsg>
+This setting determines how braille lines are spoken. The choices are reading the translated line, silence, and speaking the line character by character.</HelpMsg>
+		<DisplayName ID="BrailleCraftOptions.BrailleLineSpeakingLevel.0" Text="Silent" />
+		<DisplayName ID="BrailleCraftOptions.BrailleLineSpeakingLevel.1" Text="Speak Characters" />
+		<DisplayName ID="BrailleCraftOptions.BrailleLineSpeakingLevel.2" Text="Read Translated Line" />
+		</DisplayName>
+		<DisplayName ID="BrailleCraftOptions.BrailleDocInputEcho" Text="Braille document keyboard echo">
+			<HelpMsg>
+This setting determines how braille entry is echoed. The choices are same as normal keyboard echo, silent, speak characters, speak words, speak characters plus words.</HelpMsg>
+		<DisplayName ID="BrailleCraftOptions.BrailleDocInputEcho.0" Text="Same as normal keyboard echo" />
+		<DisplayName ID="BrailleCraftOptions.BrailleDocInputEcho.1" Text="Silent" />
+		<DisplayName ID="BrailleCraftOptions.BrailleDocInputEcho.2" Text="Speak characters" />
+		<DisplayName ID="BrailleCraftOptions.BrailleDocInputEcho.3" Text="Speak Words" />
+		<DisplayName ID="BrailleCraftOptions.BrailleDocInputEcho.4" Text="Speak characters plus words" />
+		</DisplayName>
+		<DisplayName ID="BrailleCraftOptions.SpeakBrailleCharsAsLocalBrailleSigns" Text="Speak Braille Chars As English Braille Signs">
+			<HelpMsg>
+Leave this option on to have braille characters spoken as English braille signs. Turn it off to have braille characters spoken as the representing characters. The default is on.</HelpMsg>
+		</DisplayName>
+		<DisplayName ID="BrailleCraftOptions.AnnounceStyleChanges" Text="Announce Style Changes">
+			<HelpMsg>
+When this option is on, JAWS announces the new style when the style changes as you move the cursor.</HelpMsg>
+		</DisplayName>
+		<DisplayName ID="BrailleCraftOptions.AnnounceForcedLineSkips" Text="Announce Forced Line Skips">
+			<HelpMsg>
+When this is on, JAWS tells you when the cursor skips over one or more lines as it moves through the text.</HelpMsg>
+		</DisplayName>
+		<DisplayName ID="BrailleCraftOptions.ShowRequestedStatusInfoOnBrailleDisplay" Text="Show Requested Status Info On Braille Display">
+			<HelpMsg>
+Leave this option off if you are using a braille display and want requested status info, such as the current location, spoken only and not displayed on your braille display. Turn it on to have requested status info both spoken and shown on your braille display when you are using one. The default is off.</HelpMsg>
+		</DisplayName>
+		<DisplayName ID="BrailleCraftOptions.SpeakPrintLinesByWord" Text="Speak Print Lines By Word in Coded View">
+			<HelpMsg>
+Turn this option on to hear lines word by word in Coded View, to hear codes and styles better. Keep it off to hear lines in the usual way. The default setting is off, but give it a try.</HelpMsg>
+		</DisplayName>
+		<DisplayName ID="BrailleCraftOptions.UseStatusLineForUnicodeValues" Text="Use Status Line For Unicode Values">
+			<HelpMsg>
+Turn this option on if the Unicode value given by JAWS without this setting is different from the one on the status line. This is useful in some languages. It is off by default.</HelpMsg>
+		</DisplayName>
+</DisplayNameDefinitions>
+</LocalizableDefinitions>

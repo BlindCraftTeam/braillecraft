@@ -1,13 +1,13 @@
 [package]
 name = "bm-shell"
-description = "BrailleMaker desktop shell (Tauri 2): window, menu bar, installers."
+description = "BrailleCraft desktop shell (Tauri 2): window, menu bar, installers."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 
 [[bin]]
-name = "braillemaker"
+name = "braillecraft"
 path = "src/main.rs"
 
 [build-dependencies]

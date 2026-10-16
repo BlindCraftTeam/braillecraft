@@ -1,4 +1,4 @@
-//! Compares BrailleMaker's own table sources with the binary tables they were recreated from, line by line over a
+//! Compares BrailleCraft's own table sources with the binary tables they were recreated from, line by line over a
 //! corpus, and reports every line that translates differently.
 //!
 //! Usage: table_equivalence FOLDER RULES SCAN SOURCE.bmt CORPUS
@@ -18,7 +18,7 @@ fn main() {
     let (folder, rules, scan, source, corpus) = (&a[1], &a[2], &a[3], &a[4], &a[5]);
     let reference = Translator::open(folder, rules, scan).expect("binary tables");
     let text = std::fs::read_to_string(source).expect("table source");
-    // Ours: the table source with BrailleMaker's own character table; the reference: the binary tables with theirs.
+    // Ours: the table source with BrailleCraft's own character table; the reference: the binary tables with theirs.
     let ours = Translator::from_source(&text).unwrap_or_else(|e| panic!("{e}"));
     let lines = std::fs::read_to_string(corpus).expect("corpus");
     // EQ_SIDE=reference or EQ_SIDE=ours translates with one side only (to find which side a slow line belongs to).

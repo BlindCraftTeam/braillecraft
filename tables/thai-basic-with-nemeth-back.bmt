@@ -1,4 +1,4 @@
-# The rules of thaicb.btb and gendxb.sct, recreated as BrailleMaker table source.
+# The rules of thaicb.btb and gendxb.sct, recreated as BrailleCraft table source.
 table "Thai - basic with Nemeth, braille to print"
 default-char 42
 raw 0

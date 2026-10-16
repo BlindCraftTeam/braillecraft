@@ -1,4 +1,4 @@
-# The rules of bhoacp.btb and gendxp.sct, recreated as BrailleMaker table source.
+# The rules of bhoacp.btb and gendxp.sct, recreated as BrailleCraft table source.
 table "Bhojpuri - basic with Nemeth, print to braille"
 default-char 42
 raw 0

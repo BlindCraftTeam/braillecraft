@@ -1,4 +1,4 @@
-# The rules of slvacb.btb and gendxb.sct, recreated as BrailleMaker table source.
+# The rules of slvacb.btb and gendxb.sct, recreated as BrailleCraft table source.
 table "Slovenian - basic, braille to print"
 default-char 42
 raw 0

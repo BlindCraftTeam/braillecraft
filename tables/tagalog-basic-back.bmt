@@ -1,4 +1,4 @@
-# The rules of tlaacb.btb and gendxb.sct, recreated as BrailleMaker table source.
+# The rules of tlaacb.btb and gendxb.sct, recreated as BrailleCraft table source.
 table "Tagalog - basic, braille to print"
 default-char 42
 raw 0

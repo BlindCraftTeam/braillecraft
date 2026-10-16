@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- The BrailleMaker application bundle: the program, its icon, and the print (.dxp) and braille (.dxb) document
+<!-- The BrailleCraft application bundle: the program, its icon, and the print (.dxp) and braille (.dxb) document
      types it owns, each with its own icon. @VERSION@ is filled in by build-app.sh. -->
 <plist version="1.0">
 <dict>
   <key>CFBundleName</key>
-  <string>BrailleMaker</string>
+  <string>BrailleCraft</string>
   <key>CFBundleDisplayName</key>
-  <string>BrailleMaker</string>
+  <string>BrailleCraft</string>
   <key>CFBundleIdentifier</key>
-  <string>net.jb11.braillemaker</string>
+  <string>net.jb11.braillecraft</string>
   <key>CFBundleExecutable</key>
-  <string>braillemaker-desktop</string>
+  <string>braillecraft-desktop</string>
   <key>CFBundleIconFile</key>
-  <string>braillemaker</string>
+  <string>braillecraft</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
@@ -34,7 +34,7 @@
   <array>
     <dict>
       <key>CFBundleTypeName</key>
-      <string>BrailleMaker Print Document</string>
+      <string>BrailleCraft Print Document</string>
       <key>CFBundleTypeRole</key>
       <string>Editor</string>
       <key>LSHandlerRank</key>
@@ -43,12 +43,12 @@
       <string>print-document</string>
       <key>LSItemContentTypes</key>
       <array>
-        <string>net.jb11.braillemaker.print-document</string>
+        <string>net.jb11.braillecraft.print-document</string>
       </array>
     </dict>
     <dict>
       <key>CFBundleTypeName</key>
-      <string>BrailleMaker Braille Document</string>
+      <string>BrailleCraft Braille Document</string>
       <key>CFBundleTypeRole</key>
       <string>Editor</string>
       <key>LSHandlerRank</key>
@@ -57,7 +57,7 @@
       <string>braille-document</string>
       <key>LSItemContentTypes</key>
       <array>
-        <string>net.jb11.braillemaker.braille-document</string>
+        <string>net.jb11.braillecraft.braille-document</string>
       </array>
     </dict>
   </array>
@@ -65,9 +65,9 @@
   <array>
     <dict>
       <key>UTTypeIdentifier</key>
-      <string>net.jb11.braillemaker.print-document</string>
+      <string>net.jb11.braillecraft.print-document</string>
       <key>UTTypeDescription</key>
-      <string>BrailleMaker Print Document</string>
+      <string>BrailleCraft Print Document</string>
       <key>UTTypeConformsTo</key>
       <array>
         <string>public.data</string>
@@ -84,9 +84,9 @@
     </dict>
     <dict>
       <key>UTTypeIdentifier</key>
-      <string>net.jb11.braillemaker.braille-document</string>
+      <string>net.jb11.braillecraft.braille-document</string>
       <key>UTTypeDescription</key>
-      <string>BrailleMaker Braille Document</string>
+      <string>BrailleCraft Braille Document</string>
       <key>UTTypeConformsTo</key>
       <array>
         <string>public.data</string>

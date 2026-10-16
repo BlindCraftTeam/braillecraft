@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The BrailleCraft document types: print documents (.dxp) and braille documents (.dxb). -->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-braillecraft-print">
+    <comment>BrailleCraft print document</comment>
+    <icon name="application-x-braillecraft-print"/>
+    <glob pattern="*.dxp"/>
+  </mime-type>
+  <mime-type type="application/x-braillecraft-braille">
+    <comment>BrailleCraft braille document</comment>
+    <icon name="application-x-braillecraft-braille"/>
+    <glob pattern="*.dxb"/>
+  </mime-type>
+</mime-info>

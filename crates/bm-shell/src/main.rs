@@ -1,4 +1,4 @@
-//! BrailleMaker desktop shell.
+//! BrailleCraft desktop shell.
 //!
 //! The menu bar (menu.rs) follows the menu table item for item; each command is sent to the page (ui/) as a "menu"
 //! event and carried out there. The page reports back the open documents (listed at the end of the View menu)
@@ -45,7 +45,7 @@ fn main() {
         .setup(|app| {
             match table_folder(app) {
                 Some(dir) => bm_louis::set_table_folder(&dir)?,
-                None => eprintln!("BrailleMaker: liblouis tables not found; translation will fail"),
+                None => eprintln!("BrailleCraft: liblouis tables not found; translation will fail"),
             }
             menu::install(app.handle())?;
             Ok(())
@@ -59,5 +59,5 @@ fn main() {
             louis_version
         ])
         .run(tauri::generate_context!())
-        .expect("BrailleMaker could not start");
+        .expect("BrailleCraft could not start");
 }

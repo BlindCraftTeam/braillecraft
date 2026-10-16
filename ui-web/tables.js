@@ -1168,7 +1168,7 @@ export const MENUS = [
    },
    {
     "id": 3206,
-    "label": "&New in BrailleMaker 0.1",
+    "label": "&New in BrailleCraft 0.1",
     "shortcut": "",
     "kind": "normal"
    },
@@ -1183,7 +1183,7 @@ export const MENUS = [
    },
    {
     "id": 3211,
-    "label": "&About BrailleMaker...",
+    "label": "&About BrailleCraft...",
     "shortcut": "",
     "kind": "normal"
    }
@@ -1192,7 +1192,7 @@ export const MENUS = [
 ];
 export const DIALOGS = {
  "1016": {
-  "title": "About BrailleMaker",
+  "title": "About BrailleCraft",
   "w": 290,
   "h": 227,
   "panel": false,
@@ -1212,7 +1212,7 @@ export const DIALOGS = {
    },
    {
     "class": "wxStaticText",
-    "label": "BrailleMaker for Windows, Linux and Mac",
+    "label": "BrailleCraft for Windows, Linux and Mac",
     "style": "wxST_NO_AUTORESIZE",
     "x": 4,
     "y": 8,
@@ -1351,7 +1351,7 @@ export const DIALOGS = {
    },
    {
     "class": "wxStaticText",
-    "label": "the BrailleMaker translation engine and its tables",
+    "label": "the BrailleCraft translation engine and its tables",
     "style": "wxST_NO_AUTORESIZE",
     "x": 4,
     "y": 142,
@@ -8448,7 +8448,7 @@ export const DIALOGS = {
   ]
  },
  "1054": {
-  "title": "BrailleMaker",
+  "title": "BrailleCraft",
   "w": 190,
   "h": 83,
   "panel": false,
@@ -9073,7 +9073,7 @@ export const DIALOGS = {
    },
    {
     "class": "wxStaticText",
-    "label": "You have one or more JAWS® installations without the most up-to-date script files for BrailleMaker.  Installing the most recent script files (included with BrailleMaker) will help BrailleMaker to work better with JAWS.",
+    "label": "You have one or more JAWS® installations without the most up-to-date script files for BrailleCraft.  Installing the most recent script files (included with BrailleCraft) will help BrailleCraft to work better with JAWS.",
     "x": 8,
     "y": 8,
     "w": 176,
@@ -9086,7 +9086,7 @@ export const DIALOGS = {
    },
    {
     "class": "wxStaticText",
-    "label": "Would you like to install the script files?  (Any existing BrailleMaker script files will be backed up.)",
+    "label": "Would you like to install the script files?  (Any existing BrailleCraft script files will be backed up.)",
     "x": 8,
     "y": 47,
     "w": 176,
@@ -9264,7 +9264,7 @@ export const DIALOGS = {
   ]
  },
  "1061": {
-  "title": "BrailleMaker Autosave Recovery Wizard",
+  "title": "BrailleCraft Autosave Recovery Wizard",
   "w": 220,
   "h": 182,
   "panel": false,
@@ -10201,7 +10201,7 @@ export const DIALOGS = {
   ]
  },
  "28000": {
-  "title": "BrailleMaker",
+  "title": "BrailleCraft",
   "w": 212,
   "h": 202,
   "panel": false,
@@ -10261,7 +10261,7 @@ export const DIALOGS = {
   ]
  },
  "30008": {
-  "title": "BrailleMaker",
+  "title": "BrailleCraft",
   "w": 212,
   "h": 202,
   "panel": false,
@@ -10321,7 +10321,7 @@ export const DIALOGS = {
   ]
  },
  "30070": {
-  "title": "BrailleMaker",
+  "title": "BrailleCraft",
   "w": 240,
   "h": 62,
   "panel": false,
@@ -10413,7 +10413,7 @@ export const DIALOGS = {
    },
    {
     "class": "wxStaticText",
-    "label": "BrailleMaker",
+    "label": "BrailleCraft",
     "style": "wxST_NO_AUTORESIZE",
     "x": 8,
     "y": 1,
@@ -10632,7 +10632,7 @@ export const DIALOGS = {
    },
    {
     "class": "wxStaticText",
-    "label": "(BrailleMaker will prompt if this is blank)",
+    "label": "(BrailleCraft will prompt if this is blank)",
     "style": "wxST_NO_AUTORESIZE",
     "x": 94,
     "y": 86,
@@ -11669,7 +11669,7 @@ export const DIALOGS = {
    },
    {
     "class": "wxStaticText",
-    "label": "If you want to add interline Print and Braille capabilities to BrailleMaker using your Enabling Technologies Braille Embosser please contact:",
+    "label": "If you want to add interline Print and Braille capabilities to BrailleCraft using your Enabling Technologies Braille Embosser please contact:",
     "x": 5,
     "y": 100,
     "w": 270,

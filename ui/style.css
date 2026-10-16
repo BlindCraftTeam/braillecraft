@@ -1,4 +1,4 @@
-/* BrailleMaker: the look of a desktop braille program (system font, window colours, sunken edit area,
+/* BrailleCraft: the look of a desktop braille program (system font, window colours, sunken edit area,
    status line, standard dialogs). Colours are tokens; every text pair meets WCAG 2.2 AA in both colour schemes.
    Controls are at least 24 px high (WCAG 2.2 target size). */
 :root {
@@ -104,8 +104,8 @@ body {
 /* View, Print Font: the ASCII characters. Braille Font and SimBraille Font: the cells, drawn by the braille fonts
    (fonts/), which map each ASCII braille character to its dot pattern. The text itself never changes. */
 #doc.print-font { font: 20px/1.25 "Courier New", Courier, "Liberation Mono", "DejaVu Sans Mono", monospace; }
-#doc.braille-font { font: 40px/1.1 "BrailleMaker Braille", "Courier New", monospace; }
-#doc.simbraille-font { font: 40px/1.1 "BrailleMaker SimBraille", "Courier New", monospace; }
+#doc.braille-font { font: 40px/1.1 "BrailleCraft Braille", "Courier New", monospace; }
+#doc.simbraille-font { font: 40px/1.1 "BrailleCraft SimBraille", "Courier New", monospace; }
 
 /* View, Translated Line: the one-line yellow bar. Braille is drawn in the font chosen in Global, Default Views. */
 #translated-line {
@@ -117,8 +117,8 @@ body {
   white-space: pre;
   overflow: hidden;
 }
-#translated-line.braille { font: 30px/28px "BrailleMaker Braille", "Courier New", monospace; }
-#translated-line.simbraille { font: 30px/28px "BrailleMaker SimBraille", "Courier New", monospace; }
+#translated-line.braille { font: 30px/28px "BrailleCraft Braille", "Courier New", monospace; }
+#translated-line.simbraille { font: 30px/28px "BrailleCraft SimBraille", "Courier New", monospace; }
 
 /* The status line: Current Style, Page, Line, Column in sunken boxes with bold text. */
 .status-line {

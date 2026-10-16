@@ -1,5 +1,5 @@
-//! BrailleMaker, the desktop program: a native main window holding the document windows, the menu bar, the status
-//! line and native dialogs (wxWidgets through wxDragon). Translation runs through the BrailleMaker engine with the
+//! BrailleCraft, the desktop program: a native main window holding the document windows, the menu bar, the status
+//! line and native dialogs (wxWidgets through wxDragon). Translation runs through the BrailleCraft engine with the
 //! tables shipped beside the program (translation.rs).
 
 mod app;
@@ -31,7 +31,7 @@ fn resource_dir(installed: &str, source: &str, marker: &str) -> Option<PathBuf> 
     [
         dir.join(installed),
         dir.join("../Resources").join(installed),
-        dir.join("../share/braillemaker").join(installed),
+        dir.join("../share/braillecraft").join(installed),
         Path::new(env!("CARGO_MANIFEST_DIR")).join(source),
     ]
     .into_iter()
@@ -41,7 +41,7 @@ fn resource_dir(installed: &str, source: &str, marker: &str) -> Option<PathBuf> 
 /// The braille fonts (ui/fonts) are registered for this program only; they need no installing.
 fn load_fonts() -> usize {
     let Some(dir) = resource_dir("fonts", "../../ui/fonts", "encodings.json") else {
-        eprintln!("BrailleMaker: braille fonts not found");
+        eprintln!("BrailleCraft: braille fonts not found");
         return 0;
     };
     let mut loaded = 0;
@@ -52,7 +52,7 @@ fn load_fonts() -> usize {
             if add_font(&p) {
                 loaded += 1;
             } else {
-                eprintln!("BrailleMaker: could not load {}", p.display());
+                eprintln!("BrailleCraft: could not load {}", p.display());
             }
         }
     }
@@ -108,29 +108,29 @@ fn main() {
         match resource_dir("tables", "../../tables", "index.tsv") {
             Some(dir) => {
                 if let Err(e) = translation::load(&dir) {
-                    eprintln!("BrailleMaker: {e}");
+                    eprintln!("BrailleCraft: {e}");
                 }
             }
-            None => eprintln!("BrailleMaker: translation tables not found; translation will fail"),
+            None => eprintln!("BrailleCraft: translation tables not found; translation will fail"),
         }
         match resource_dir("templates", "../../templates", "index.tsv") {
             Some(dir) => {
                 if let Err(e) = translation::load_templates(&dir) {
-                    eprintln!("BrailleMaker: {e}");
+                    eprintln!("BrailleCraft: {e}");
                 }
             }
-            None => eprintln!("BrailleMaker: document templates not found; styles will not be used"),
+            None => eprintln!("BrailleCraft: document templates not found; styles will not be used"),
         }
         match resource_dir("embossers", "../../embossers", "embossers.txt") {
             Some(dir) => {
                 if let Err(e) = embosser::load(&dir) {
-                    eprintln!("BrailleMaker: {e}");
+                    eprintln!("BrailleCraft: {e}");
                 }
             }
-            None => eprintln!("BrailleMaker: embosser models not found; embossing will not be offered"),
+            None => eprintln!("BrailleCraft: embosser models not found; embossing will not be offered"),
         }
         if let Err(e) = dlg::load_resources() {
-            eprintln!("BrailleMaker: {e}");
+            eprintln!("BrailleCraft: {e}");
         }
         // The settings kept from earlier runs, before the menus are built from them.
         let mut settings = app::Settings::default();
@@ -139,7 +139,7 @@ fn main() {
             translation::set_region(region);
         }
 
-        let frame = MDIParentFrame::builder().with_title("BrailleMaker").with_size(Size::new(1000, 720)).build();
+        let frame = MDIParentFrame::builder().with_title("BrailleCraft").with_size(Size::new(1000, 720)).build();
         let menus = menu::install(&frame);
 
         app::set(app::App {
@@ -157,7 +157,7 @@ fn main() {
         });
         // Windows: the JAWS script set shipped beside the program is offered for installing first.
         #[cfg(windows)]
-        if let Some(dir) = resource_dir("jaws", "../../scripts/jaws", "braillemaker-desktop.jss") {
+        if let Some(dir) = resource_dir("jaws", "../../scripts/jaws", "braillecraft-desktop.jss") {
             commands::jaws_start_up(&dir);
         }
 

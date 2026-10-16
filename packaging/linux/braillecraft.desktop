@@ -1,0 +1,20 @@
+[Desktop Entry]
+Type=Application
+Name=BrailleCraft
+GenericName=Braille Translator
+Comment=Braille translation, formatting and embossing
+Exec=braillecraft %F
+Icon=braillecraft
+Terminal=false
+Categories=Office;Accessibility;
+MimeType=application/x-braillecraft-print;application/x-braillecraft-braille;
+Keywords=braille;embosser;translation;BRF;
+Actions=Print;Emboss;
+
+[Desktop Action Print]
+Name=Print with BrailleCraft
+Exec=braillecraft -print %F
+
+[Desktop Action Emboss]
+Name=Emboss with BrailleCraft
+Exec=braillecraft -braille %F

@@ -1,4 +1,4 @@
-# The rules of amel1001.btb and amedxp.sct, recreated as BrailleMaker table source.
+# The rules of amel1001.btb and amedxp.sct, recreated as BrailleCraft table source.
 table "English (BANA Pre-UEB Textbook DE) - BANA, print to braille"
 default-char 42
 raw 0

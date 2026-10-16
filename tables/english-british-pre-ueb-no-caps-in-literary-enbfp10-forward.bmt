@@ -1,4 +1,4 @@
-# The rules of enbfp10.btb and enbdxp.sct, recreated as BrailleMaker table source.
+# The rules of enbfp10.btb and enbdxp.sct, recreated as BrailleCraft table source.
 table "English (British Pre-UEB) - no caps in literary, print to braille"
 default-char 42
 raw 0

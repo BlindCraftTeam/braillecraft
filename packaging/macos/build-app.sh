@@ -1,6 +1,6 @@
 #!/bin/bash
 # Builds the macOS application bundle and disk image of the native program from its folder (the CI's
-# dist/BrailleMaker): BrailleMaker.app with the program in Contents/MacOS, its fonts, tables, templates and embosser
+# dist/BrailleCraft): BrailleCraft.app with the program in Contents/MacOS, its fonts, tables, templates and embosser
 # models in Contents/Resources (the program finds them there), the program and document icons made from the
 # iconsets, and a .dmg holding the bundle beside a link to Applications. The fonts stay inside the bundle: the
 # program registers them for itself (main.rs), so nothing is installed system-wide. Runs on macOS (iconutil, hdiutil).
@@ -14,17 +14,17 @@ out=$(cd "$3" && pwd)
 here=$(cd "$(dirname "$0")" && pwd)
 icons=$(cd "$here/../icons" && pwd)
 stage=$(mktemp -d)
-app=$stage/BrailleMaker.app
+app=$stage/BrailleCraft.app
 
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 sed "s/@VERSION@/$version/g" "$here/Info.plist" > "$app/Contents/Info.plist"
 plutil -lint "$app/Contents/Info.plist"
 printf 'APPL????' > "$app/Contents/PkgInfo"
-install -m 755 "$dist/braillemaker-desktop" "$app/Contents/MacOS/braillemaker-desktop"
+install -m 755 "$dist/braillecraft-desktop" "$app/Contents/MacOS/braillecraft-desktop"
 for d in fonts tables templates embossers; do
   cp -R "$dist/$d" "$app/Contents/Resources/$d"
 done
-for name in braillemaker print-document braille-document; do
+for name in braillecraft print-document braille-document; do
   iconutil -c icns "$icons/$name.iconset" -o "$app/Contents/Resources/$name.icns"
 done
 
@@ -34,7 +34,7 @@ codesign --force --deep --sign - "$app"
 mkdir -p "$stage/dmg"
 cp -R "$app" "$stage/dmg/"
 ln -s /Applications "$stage/dmg/Applications"
-hdiutil create -volname "BrailleMaker $version" -srcfolder "$stage/dmg" -ov -format UDZO \
-  "$out/BrailleMaker-$version-$(uname -m).dmg"
+hdiutil create -volname "BrailleCraft $version" -srcfolder "$stage/dmg" -ov -format UDZO \
+  "$out/BrailleCraft-$version-$(uname -m).dmg"
 rm -rf "$stage"
 ls -la "$out"

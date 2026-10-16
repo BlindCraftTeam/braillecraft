@@ -1,4 +1,4 @@
-# The rules of fruncp.btb and frudxp.sct, recreated as BrailleMaker table source.
+# The rules of fruncp.btb and frudxp.sct, recreated as BrailleCraft table source.
 table "Francais 2006 - abrege, print to braille"
 default-char 42
 raw 0

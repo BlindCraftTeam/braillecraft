@@ -1,4 +1,4 @@
-"""Turns a decoded menu resource (menus.txt) and accelerator table (accelerators.txt) into the BrailleMaker menu
+"""Turns a decoded menu resource (menus.txt) and accelerator table (accelerators.txt) into the BrailleCraft menu
 bar table (crates/bm-desktop/src/menu_table.rs).
 
 Usage: python3 -I menus_to_rust.py <menus.txt> <accelerators.txt> <out.rs>
@@ -13,10 +13,10 @@ import sys
 
 # Left out: the Macro menu (shown only when macros are defined; the main window shows File Edit View Layout Table
 # Document Global Help), Python Options (Python macros), and the licensing, registration and companion-program
-# items, which have no counterpart in BrailleMaker.
+# items, which have no counterpart in BrailleCraft.
 LEAVE_OUT_MENUS = {"&Macro"}
 LEAVE_OUT_IDS = {3110, 3208, 3209, 3212}
-RELABEL = {3206: "&New in BrailleMaker 0.1", 3211: "&About BrailleMaker..."}
+RELABEL = {3206: "&New in BrailleCraft 0.1", 3211: "&About BrailleCraft..."}
 
 # Items shown with a check mark. Highlight: "while it is active a check mark (tick mark) appears next to it on the
 # Edit menu" (manual, Edit: Highlight). View: "a tick mark (check mark) will appear to the left of some items on this

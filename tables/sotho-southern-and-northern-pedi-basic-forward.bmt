@@ -1,4 +1,4 @@
-# The rules of sotucp.btb and enudxp.sct, recreated as BrailleMaker table source.
+# The rules of sotucp.btb and enudxp.sct, recreated as BrailleCraft table source.
 table "Sotho (Southern and Northern (Pedi)) - basic, print to braille"
 default-char 42
 raw 0

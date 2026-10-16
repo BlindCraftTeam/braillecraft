@@ -1,4 +1,4 @@
-# The rules of kuracp.btb and enudxp.sct, recreated as BrailleMaker table source.
+# The rules of kuracp.btb and enudxp.sct, recreated as BrailleCraft table source.
 table "Kurdish - basic, print to braille"
 default-char 42
 raw 0

@@ -1,4 +1,4 @@
-# The rules of engun44.btb and gendxp.sct, recreated as BrailleMaker table source.
+# The rules of engun44.btb and gendxp.sct, recreated as BrailleCraft table source.
 table "engun44, print to braille"
 default-char 42
 raw 0

@@ -23,7 +23,7 @@
 //!
 //! The text is returned as running text (bm_core::doctext): codes marked 0x1C ... 0x1F as in the file, a hard space
 //! as U+00A0, every other byte its code page 437 character; brackets in the text stay text. Writing does the reverse
-//! and keeps the settings bytes a document was read with, so a document saved again keeps what BrailleMaker does not
+//! and keeps the settings bytes a document was read with, so a document saved again keeps what BrailleCraft does not
 //! use itself.
 
 use crate::DocumentKind;
@@ -50,7 +50,7 @@ pub struct DxDocument {
     pub styles: Vec<(String, String, String)>,
     /// The index value the file gives each style name (written back as read).
     pub style_index: Vec<u16>,
-    /// The 224-byte settings block as read, for writing back what BrailleMaker does not use itself.
+    /// The 224-byte settings block as read, for writing back what BrailleCraft does not use itself.
     pub settings: Vec<u8>,
     /// The name of the document's embosser setup (settings +88); empty for none.
     pub embosser: String,
@@ -126,7 +126,7 @@ const SECTION_SLOTS: [usize; 5] = [88, 98, 133, 143, 153];
 const EMBOSSER_SLOT: usize = 88;
 const EMBOSSER_KIND: u16 = 1;
 
-/// The settings block of a new document. Fields BrailleMaker sets itself (page numbering, body length, translated
+/// The settings block of a new document. Fields BrailleCraft sets itself (page numbering, body length, translated
 /// line, six-key entry, tables) are filled in when the document is written. The others:
 /// - +10 1 and +12 8: constants the reference writes (spec 05).
 /// - +16 2 and +30 1201: the values every sample holds; what the reference gives a new document is not traced
@@ -174,7 +174,7 @@ impl std::fmt::Display for DxError {
             DxError::NotADocument => write!(f, "The file is not a print or braille document (.dxp or .dxb)."),
             DxError::NewerVersion(v) => write!(
                 f,
-                "The document was saved in format version {v}; this version of BrailleMaker opens versions 0 and 1."
+                "The document was saved in format version {v}; this version of BrailleCraft opens versions 0 and 1."
             ),
             DxError::BodyOutOfRange => write!(f, "The document says its text is longer than the file."),
         }
@@ -401,7 +401,7 @@ pub fn older_table_names(tables: &[String; 4], in_force: impl Fn(&str) -> bool) 
 /// Writes a .dxp or .dxb file in the document's format version: 1, the version a document without embedded
 /// objects is saved in (spec 05-B), or 0, the older format, which differs only in that number (spec 04d-C; its table
 /// names come from older_table_names). The settings block the document was read with (new_settings for a new one)
-/// with BrailleMaker's own fields filled in, the body, and the styles.
+/// with BrailleCraft's own fields filled in, the body, and the styles.
 pub fn write(doc: &DxDocument) -> Vec<u8> {
     let body = body_bytes(&doc.text);
     let mut out = Vec::with_capacity(BODY + body.len() + 2048);

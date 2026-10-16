@@ -1,4 +1,4 @@
--braillemaker-template 1
+-braillecraft-template 1
 TranslationTables: SRPMCP+GENDXP/SRPMCB+GENDXB
 BraillePageNumbersEvenPages: LowerRight
 BraillePageNumbersOddPages: LowerRight

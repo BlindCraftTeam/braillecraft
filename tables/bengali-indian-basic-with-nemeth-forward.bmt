@@ -1,4 +1,4 @@
-# The rules of benacp.btb and gendxp.sct, recreated as BrailleMaker table source.
+# The rules of benacp.btb and gendxp.sct, recreated as BrailleCraft table source.
 table "Bengali (Indian) - basic with Nemeth, print to braille"
 default-char 42
 raw 0

@@ -1,4 +1,4 @@
-// BrailleMaker dialogs. Each entry follows the decoded dialog of the same purpose: the same title, controls, labels, groups, order and buttons. One renderer builds them all as modal <dialog>
+// BrailleCraft dialogs. Each entry follows the decoded dialog of the same purpose: the same title, controls, labels, groups, order and buttons. One renderer builds them all as modal <dialog>
 // elements with real labels, fieldsets for group boxes and Alt+letter access keys, as in a Windows dialog.
 "use strict";
 
@@ -346,17 +346,17 @@ const DIALOGS = {
   transcribersNote: { title: "Insert Transcriber's Note", width: 340, controls: [
     { k: "text", id: "note", label: "Note text:" },
   ] },
-  message: { title: "BrailleMaker", width: 340, controls: [
+  message: { title: "BrailleCraft", width: 340, controls: [
     { k: "static", id: "text", text: "" },
   ], buttons: [["ok", "OK"]] },
-  yesNo: { title: "BrailleMaker", width: 340, controls: [
+  yesNo: { title: "BrailleCraft", width: 340, controls: [
     { k: "static", id: "text", text: "" },
   ], buttons: [["yes", "&Yes"], ["no", "&No"]] },
-  saveChanges: { title: "BrailleMaker", width: 340, controls: [
+  saveChanges: { title: "BrailleCraft", width: 340, controls: [
     { k: "static", id: "text", text: "" },
   ], buttons: [["yes", "&Yes"], ["no", "&No"], ["cancel", "Cancel"]] },
-  about: { title: "About BrailleMaker", width: 380, controls: [
-    { k: "static", text: "BrailleMaker for Windows, Linux, Mac and the web" },
+  about: { title: "About BrailleCraft", width: 380, controls: [
+    { k: "static", text: "BrailleCraft for Windows, Linux, Mac and the web" },
     { k: "static", text: "Version 0.1.0" },
     { k: "static", text: "Copyright (c) 2026 Jeremiah Beasley." },
     { k: "static", text: "Braille translation by liblouis (LGPL), to be added in build stage 2." },
@@ -580,7 +580,7 @@ function showDialog(name, setup) {
 }
 
 // A message box, for notes and warnings.
-async function messageBox(text, title = "BrailleMaker") {
+async function messageBox(text, title = "BrailleCraft") {
   await showDialog("message", (parts, dialog) => {
     parts.text.textContent = text;
     dialog.querySelector(".caption").textContent = title;

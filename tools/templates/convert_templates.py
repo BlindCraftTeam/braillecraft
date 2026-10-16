@@ -1,4 +1,4 @@
-"""Writes BrailleMaker's document templates (templates/*.template and templates/index.tsv) from a folder of
+"""Writes BrailleCraft's document templates (templates/*.template and templates/index.tsv) from a folder of
 document settings templates in the older text form.
 
 Usage: python3 -I convert_templates.py <template folder> <out folder>
@@ -7,16 +7,16 @@ The templates are read from outside the repository. Each one is text: comment li
 them giving the template's name (the file name it was installed under, ending in ".dxt"); then a header line; then
 "Key: Value" settings; then "Styles:" and the styles (a name line and two indented lines of begin and end codes).
 
-What is written: the same settings and styles, line for line, under BrailleMaker's own header line, with the name
+What is written: the same settings and styles, line for line, under BrailleCraft's own header line, with the name
 line, the copyright lines and the rights lines left out (the name goes into the index). Other comments are kept.
 Each template's file name is its name in small letters with every run of other characters turned into "-".
-index.tsv lists, per template: the short code of the file it came from, the BrailleMaker file name, and the name.
+index.tsv lists, per template: the short code of the file it came from, the BrailleCraft file name, and the name.
 """
 import os
 import re
 import sys
 
-HEADER = "-braillemaker-template 1"
+HEADER = "-braillecraft-template 1"
 
 
 def slug(name):

@@ -108,7 +108,7 @@ pub struct Doc {
     pub view: View,
     pub hyphen: Hyphen,
     pub styles: Vec<Style>,
-    /// What the document file it was read from holds that BrailleMaker writes back as read: the 224-byte settings
+    /// What the document file it was read from holds that BrailleCraft writes back as read: the 224-byte settings
     /// block (empty for a new document), and the style names in the file's order with the index the file gives each.
     pub file_settings: Vec<u8>,
     pub file_styles: Vec<(String, u16)>,
@@ -123,7 +123,7 @@ pub struct Doc {
     /// embosser page layout (form, top and binding margins, interpoint, banner page, interline print).
     pub embosser: String,
     pub layout: crate::embosser::Layout,
-    /// The optional sections of the document file it was read from that BrailleMaker does not use itself, written
+    /// The optional sections of the document file it was read from that BrailleCraft does not use itself, written
     /// back as they were (their descriptor's place, kind and bytes).
     pub file_sections: Vec<(usize, u16, Vec<u8>)>,
 }
@@ -376,16 +376,16 @@ impl App {
         }
     }
 
-    /// The title bar: "BrailleMaker - [name -- New Print Document]". On Windows the system writes it from the
+    /// The title bar: "BrailleCraft - [name -- New Print Document]". On Windows the system writes it from the
     /// maximized document window's own title; elsewhere it is set here.
     pub fn set_title(&self) {
         let name = self.doc().map(|d| d.full_name());
         if cfg!(windows) {
-            self.frame.set_label("BrailleMaker");
+            self.frame.set_label("BrailleCraft");
         } else {
             match &name {
-                Some(n) => self.frame.set_label(&format!("BrailleMaker - [{n}]")),
-                None => self.frame.set_label("BrailleMaker"),
+                Some(n) => self.frame.set_label(&format!("BrailleCraft - [{n}]")),
+                None => self.frame.set_label("BrailleCraft"),
             }
         }
     }
@@ -505,7 +505,7 @@ impl App {
             character: char_field(&shown, pos, self.settings.verbose_labels),
             six_key: d.view.six_key,
             highlight: d.highlight_anchor.is_some(),
-            // A braille keyboard connection; BrailleMaker has none, so the mark is never shown.
+            // A braille keyboard connection; BrailleCraft has none, so the mark is never shown.
             keyboard: false,
         }
         .text();

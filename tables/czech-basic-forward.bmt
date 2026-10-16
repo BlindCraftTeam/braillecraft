@@ -1,4 +1,4 @@
-# The rules of csaacp.btb and gendxp.sct, recreated as BrailleMaker table source.
+# The rules of csaacp.btb and gendxp.sct, recreated as BrailleCraft table source.
 table "Czech - basic, print to braille"
 default-char 42
 raw 0

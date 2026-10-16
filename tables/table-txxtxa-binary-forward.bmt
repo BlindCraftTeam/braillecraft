@@ -1,4 +1,4 @@
-# The rules of txxtxa.btb and binary.sct, recreated as BrailleMaker table source.
+# The rules of txxtxa.btb and binary.sct, recreated as BrailleCraft table source.
 table "Print to print, for text export (binary scan)"
 default-char 63
 raw 0

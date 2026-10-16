@@ -11,7 +11,7 @@
 | note for a diagram, e.g., it should be used within a para.
 | linear style to get the proper format. (See RNIB Braillists'
 | Manual, UEB Edition, section 23.8.1.)
--braillemaker-template 1
+-braillecraft-template 1
 TranslationTables: ENUNCP+ENUDXP/ENUNCB+GENDXB
 BraillePageNumbersEvenPages: UpperRight
 BraillePageNumbersOddPages: UpperRight
