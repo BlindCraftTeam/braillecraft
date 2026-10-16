@@ -1001,9 +1001,10 @@ impl Embossers {
 
     /// The bytes of an embossing job: a document (`braille` or print) laid out `cells` by `lines`, the chosen pages (indexes, -1 for a
     /// blank page; empty for every page), `copies` times, through a setup and layout given as JSON. `encoding` is the
-    /// byte for each of the 64 cells in the setup's output encoding, or empty for North American English.
+    /// byte for each of the 64 cells in the setup's output encoding, or empty for North American English. `pass_sides` is
+    /// the braille pass's sides (spec 25 19.2): 0 every side, 1 the fronts, 2 the backs.
     #[allow(clippy::too_many_arguments)]
-    pub fn job(&self, setup: &str, layout: &str, text: &str, braille: bool, cells: u32, lines: u32, copies: u32, pages: Vec<i32>, encoding: Vec<u8>) -> Result<Vec<u8>, JsError> {
+    pub fn job(&self, setup: &str, layout: &str, text: &str, braille: bool, cells: u32, lines: u32, copies: u32, pages: Vec<i32>, encoding: Vec<u8>, pass_sides: u8) -> Result<Vec<u8>, JsError> {
         let (s, l) = parse(setup, layout)?;
         let model = find_model(&self.0, &s.model).ok_or_else(|| JsError::new("Embosser not found."))?;
         let laid = laid_out(text, cells, lines, braille);
@@ -1015,7 +1016,21 @@ impl Embossers {
         };
         let encoding = <[u8; 64]>::try_from(encoding.as_slice()).ok();
         let options = bc_core::emboss_setup::job_options(&s, model, &l, cells, lines, copies, encoding);
-        Ok(bc_core::emboss::job(&options, &sides, copies))
+        let which = match pass_sides {
+            1 => bc_core::emboss::Sides::Fronts,
+            2 => bc_core::emboss::Sides::Backs,
+            _ => bc_core::emboss::Sides::All,
+        };
+        Ok(bc_core::emboss::job_sides(&options, &sides, copies, which))
+    }
+
+    /// Whether a job through this setup and layout is embossed in two passes, fronts then backs (spec 25 19.1): a
+    /// ManualInterpoint model with interpoint on (the web File Emboss dialog leaves every pass flag set).
+    pub fn manual_interpoint(&self, setup: &str, layout: &str) -> Result<bool, JsError> {
+        let (s, l) = parse(setup, layout)?;
+        let Some(model) = find_model(&self.0, &s.model) else { return Ok(false) };
+        let options = bc_core::emboss_setup::job_options(&s, model, &l, 0, 0, 1, None);
+        Ok(model.flag("ManualInterpoint") && options.interpoint)
     }
 }
 
@@ -1260,7 +1275,7 @@ mod tests {
         let shown = "ab[l]\ncd[l]\nef";
         assert_eq!(page_of(shown, 40, 2, true, 12), 2);
         assert_eq!(page_of(shown, 40, 2, true, 1), 1);
-        let job = emb.job(&setup, layout, text, true, 40, 2, 1, vec![1], Vec::new()).ok().unwrap();
+        let job = emb.job(&setup, layout, text, true, 40, 2, 1, vec![1], Vec::new(), 0).ok().unwrap();
         assert!(job.starts_with(b"\x1bD"), "{:?}", String::from_utf8_lossy(&job));
         assert!(String::from_utf8_lossy(&job).contains("ef"));
         assert!(!String::from_utf8_lossy(&job).contains("ab"));

@@ -295,8 +295,25 @@ impl Writer<'_> {
     }
 }
 
+/// Which sides one braille pass sends (spec 25 19.2). A manual interpoint embosser takes the fronts on one pass and,
+/// after the stack is put back in, the backs on a second.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Sides {
+    All,
+    Fronts,
+    Backs,
+}
+
 /// The bytes of a job: `pages` (each a list of lines; None for a blank side) embossed `copies` times.
 pub fn job(o: &Options, pages: &[Option<Vec<String>>], copies: u32) -> Vec<u8> {
+    job_sides(o, pages, copies, Sides::All)
+}
+
+/// The bytes of one braille pass that sends `which` sides. As in the reference every side goes through the writer and
+/// the bytes of a side the pass does not send are dropped, so the line and page state runs on as in a whole job; the
+/// side flag turns over after each side through all the copies (Emb_Job_ClosePage). The start and end codes are sent
+/// on every pass.
+pub fn job_sides(o: &Options, pages: &[Option<Vec<String>>], copies: u32, which: Sides) -> Vec<u8> {
     let mut w = Writer { o, t: char_table(o), out: Vec::new(), held: false };
     w.out.extend_from_slice(&o.start);
     if o.end_of_page == 6 {
@@ -307,12 +324,28 @@ pub fn job(o: &Options, pages: &[Option<Vec<String>>], copies: u32) -> Vec<u8> {
         sides.push(None);
     }
     let copies = if o.copies_by_embosser { 1 } else { copies.max(1) };
+    let mut front = true;
+    let mut last_dropped = false;
     for _ in 0..copies {
         for (i, side) in sides.iter().enumerate() {
+            let start = w.out.len();
             w.side(*side, i % 2 == 0);
+            last_dropped = match which {
+                Sides::All => false,
+                Sides::Fronts => !front,
+                Sides::Backs => front,
+            };
+            if last_dropped {
+                w.out.truncate(start);
+            }
+            front = !front;
         }
     }
+    let start = w.out.len();
     w.release();
+    if last_dropped {
+        w.out.truncate(start);
+    }
     w.out.extend_from_slice(&o.end);
     if o.control_d {
         w.out.push(0x04);
@@ -620,6 +653,22 @@ mod tests {
         // Three pages: the back side has no binding margin padding, and a blank side makes up the last sheet.
         let out = job(&o, &[page(&["A"]), page(&["B"]), page(&["C"])], 1);
         assert_eq!(out, b" a\r\n\x0cb\r\n\x0c c\r\n\x0c  \r\n\x0c".to_vec());
+    }
+
+    #[test]
+    fn manual_interpoint_passes() {
+        let o = Options { cells: 10, lines: 3, binding: 1, interpoint: true, start: b"S".to_vec(), end: b"E".to_vec(), ..Options::default() };
+        let pages = [page(&["A"]), page(&["B"]), page(&["C"])];
+        // The first pass sends the fronts, the second the backs with the makeup side; start and end codes on both.
+        assert_eq!(job_sides(&o, &pages, 1, Sides::Fronts), b"S a\r\n\x0c c\r\n\x0cE".to_vec());
+        assert_eq!(job_sides(&o, &pages, 1, Sides::Backs), b"Sb\r\n\x0c  \r\n\x0cE".to_vec());
+        // With no makeup side the flag runs on through the copies: copy 2 starts on a back.
+        let o = Options { make_up_sides: false, ..o };
+        assert_eq!(job_sides(&o, &pages, 2, Sides::Fronts), b"S a\r\n\x0c c\r\n\x0cb\r\n\x0cE".to_vec());
+        assert_eq!(job_sides(&o, &pages, 2, Sides::Backs), b"Sb\r\n\x0c a\r\n\x0c c\r\n\x0cE".to_vec());
+        // A line end held back by end of page mode 1 goes with the side it belongs to.
+        let o = Options { end_of_page: 1, make_up_sides: true, ..o };
+        assert_eq!(job_sides(&o, &[page(&["A"]), page(&["B"])], 1, Sides::Backs), b"Sb\x0cE".to_vec());
     }
 
     #[test]

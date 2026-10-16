@@ -946,9 +946,9 @@ async function showDialog(rid, { title, setup, onOk, memory, after, closes = [] 
   return { result, d };
 }
 
-// A message box (the desktop program's message, yes_no and yes_no_cancel): OK, or Yes and No, or Yes, No and Cancel;
-// Escape answers No, or Cancel when there is one. Answers "ok", "no" or "cancel".
-async function messageBox(text, yesNo = false, cancel = false) {
+// A message box (the desktop program's message, yes_no, yes_no_cancel and ok_cancel): OK, or Yes and No, or Yes, No
+// and Cancel, or OK and Cancel; Escape answers No, or Cancel when there is one. Answers "ok", "no" or "cancel".
+async function messageBox(text, yesNo = false, cancel = false, okCancel = false) {
   const { dialog, form } = newDialog("BrailleCraft", "message");
   dialog.setAttribute("role", "alertdialog");
   const p = document.createElement("p");
@@ -959,7 +959,7 @@ async function messageBox(text, yesNo = false, cancel = false) {
   form.append(p);
   const buttons = document.createElement("div");
   buttons.className = "buttons";
-  const choices = !yesNo ? [["OK", "ok"]] : cancel ? [["Yes", "ok"], ["No", "no"], ["Cancel", "cancel"]] : [["Yes", "ok"], ["No", "cancel"]];
+  const choices = okCancel ? [["OK", "ok"], ["Cancel", "cancel"]] : !yesNo ? [["OK", "ok"]] : cancel ? [["Yes", "ok"], ["No", "no"], ["Cancel", "cancel"]] : [["Yes", "ok"], ["No", "cancel"]];
   for (const [label, value] of choices) {
     const b = document.createElement("button");
     b.type = "button";
@@ -978,6 +978,7 @@ async function messageBox(text, yesNo = false, cancel = false) {
 }
 const message = (text) => messageBox(text, false);
 const yesNo = (text) => messageBox(text, true);
+const okCancel = (text) => messageBox(text, false, false, true);
 // Yes, No or Cancel: true, false, or null for Cancel.
 const yesNoCancel = async (text) => ({ ok: true, no: false })[await messageBox(text, true, true)] ?? null;
 
@@ -1741,22 +1742,29 @@ async function emboss() {
     },
   });
   if (result !== "ok") return;
-  const bytes = cat.job(setupJson, layoutJson, storedText(), braille, doc.cells, doc.lines, job.copies, Int32Array.from(job.pages), await encodingCodes(setup.encoding));
+  // A ManualInterpoint embosser with interpoint on embosses the fronts, then after prompt 3761 the backs (spec 25 19):
+  // two braille passes, each a whole job (side 1 the fronts, 2 the backs; 0 every side).
+  const sides = cat.manual_interpoint(setupJson, layoutJson) ? [1, 2] : [0];
+  const codes = await encodingCodes(setup.encoding);
   const [kind, target] = Object.entries(setup.output)[0];
-  if (kind === "Port" && /^com/i.test(target) && "serial" in navigator) {
-    try {
-      await sendSerial(setup, bytes);
-      return;
-    } catch (err) {
-      if (err?.name === "NotFoundError") return; // no port was chosen
-      await message(String(err.message ?? err));
-      return;
+  for (const [n, side] of sides.entries()) {
+    if (n > 0 && !(await okCancel("Please re-insert the stack of embossed sheets to emboss the second side."))) return;
+    const bytes = cat.job(setupJson, layoutJson, storedText(), braille, doc.cells, doc.lines, job.copies, Int32Array.from(job.pages), codes, side);
+    if (kind === "Port" && /^com/i.test(target) && "serial" in navigator) {
+      try {
+        await sendSerial(setup, bytes);
+        continue;
+      } catch (err) {
+        if (err?.name === "NotFoundError") return; // no port was chosen
+        await message(String(err.message ?? err));
+        return;
+      }
     }
-  }
-  const named = kind === "File" && target.trim() ? target.trim().split(/[\\/]/).pop() : `${stem()}.brl`;
-  download(named, bytes);
-  if (kind !== "File") {
-    statusLine.textContent = `This browser cannot send to ${kind === "Printer" ? "a printer" : target}; the job was saved as ${named}.`;
+    const named = kind === "File" && target.trim() ? target.trim().split(/[\\/]/).pop() : `${stem()}.brl`;
+    download(named, bytes);
+    if (kind !== "File") {
+      statusLine.textContent = `This browser cannot send to ${kind === "Printer" ? "a printer" : target}; the job was saved as ${named}.`;
+    }
   }
 }
 

@@ -1446,6 +1446,8 @@ pub fn emboss_with(skip: Option<u32>) {
             })
             .collect()
     });
+    // A SuppressFeedPrompts setting that is not 0 skips the prompts between passes, as in the reference (spec 25 17.5).
+    let suppressed = crate::settings_store::get(crate::settings_store::ROOT, "SuppressFeedPrompts").is_some_and(|v| v.trim() != "0" && !v.trim().is_empty());
     // The ink pass first, to the setup's ink printer (spec 25 14.5 and 17): a printer that cannot be printed to ends
     // the job with message 2382, as a failed first pass does in the reference.
     if ink_pass {
@@ -1459,9 +1461,7 @@ pub fn emboss_with(skip: Option<u32>) {
                 return;
             }
         }
-        // Before the braille pass, prompt 3781 with OK and Cancel; Cancel ends the job. A SuppressFeedPrompts setting
-        // that is not 0 skips it, as in the reference (spec 25 17.5).
-        let suppressed = crate::settings_store::get(crate::settings_store::ROOT, "SuppressFeedPrompts").is_some_and(|v| v.trim() != "0" && !v.trim().is_empty());
+        // Before the braille pass, prompt 3781 with OK and Cancel; Cancel ends the job.
         if braille_pass && !suppressed && !ok_cancel("Place the printed copy in the Braille printer to emboss the document.") {
             return;
         }
@@ -1470,7 +1470,11 @@ pub fn emboss_with(skip: Option<u32>) {
         return;
     }
     let options = emb::job_options(&setup, &model, &layout, cells, lines, copies);
-    let bytes = bc_core::emboss::job(&options, &sides, copies);
+    // A ManualInterpoint embosser with interpoint on embosses the fronts, then after prompt 3761 the backs (spec 25
+    // 19): two braille passes, each a whole job to the same output; to a file the second pass replaces the first.
+    use bc_core::emboss::Sides;
+    let manual = model.flag("ManualInterpoint") && options.interpoint && flags & 8 != 0;
+    let passes: &[Sides] = if manual { &[Sides::Fronts, Sides::Backs] } else { &[Sides::All] };
     let target = match emb::target(&setup) {
         Some(t) => t,
         None => {
@@ -1489,8 +1493,15 @@ pub fn emboss_with(skip: Option<u32>) {
             bc_core::emboss_out::Target::File(path.into())
         }
     };
-    if let Err(e) = bc_core::emboss_out::send(&target, &name, &bytes) {
-        message(&e.message());
+    for (n, &which) in passes.iter().enumerate() {
+        if n > 0 && !suppressed && !ok_cancel("Please re-insert the stack of embossed sheets to emboss the second side.") {
+            return;
+        }
+        let bytes = bc_core::emboss::job_sides(&options, &sides, copies, which);
+        if let Err(e) = bc_core::emboss_out::send(&target, &name, &bytes) {
+            message(&e.message());
+            return;
+        }
     }
 }
 
