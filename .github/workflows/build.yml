@@ -91,6 +91,23 @@ jobs:
           if-no-files-found: error
           path: installers/*.msi
 
+      # The Linux packages of the native program (packaging/linux): .deb and .rpm with the same layout.
+      - name: Linux packages
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get install -y rpm dpkg-dev
+          version=$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)
+          bash packaging/linux/build-packages.sh dist/BrailleMaker $version installers
+
+      - uses: actions/upload-artifact@v7
+        if: runner.os == 'Linux'
+        with:
+          name: braillemaker-linux-packages
+          if-no-files-found: error
+          path: |
+            installers/*.deb
+            installers/*.rpm
+
   # The web build: the core as WebAssembly with its browser glue (wasm-bindgen at the version the workspace locks),
   # the web interface's menus and dialogs regenerated from the desktop program's tables (the run fails when the
   # committed copy differs), the braille fonts and the translation tables. The site is kept as a run artifact.

@@ -1,0 +1,20 @@
+[Desktop Entry]
+Type=Application
+Name=BrailleMaker
+GenericName=Braille Translator
+Comment=Braille translation, formatting and embossing
+Exec=braillemaker %F
+Icon=braillemaker
+Terminal=false
+Categories=Office;Accessibility;
+MimeType=application/x-braillemaker-print;application/x-braillemaker-braille;
+Keywords=braille;embosser;translation;BRF;
+Actions=Print;Emboss;
+
+[Desktop Action Print]
+Name=Print with BrailleMaker
+Exec=braillemaker -print %F
+
+[Desktop Action Emboss]
+Name=Emboss with BrailleMaker
+Exec=braillemaker -braille %F

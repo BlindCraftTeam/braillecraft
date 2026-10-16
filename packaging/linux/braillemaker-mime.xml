@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The BrailleMaker document types: print documents (.dxp) and braille documents (.dxb). -->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-braillemaker-print">
+    <comment>BrailleMaker print document</comment>
+    <icon name="application-x-braillemaker-print"/>
+    <glob pattern="*.dxp"/>
+  </mime-type>
+  <mime-type type="application/x-braillemaker-braille">
+    <comment>BrailleMaker braille document</comment>
+    <icon name="application-x-braillemaker-braille"/>
+    <glob pattern="*.dxb"/>
+  </mime-type>
+</mime-info>
