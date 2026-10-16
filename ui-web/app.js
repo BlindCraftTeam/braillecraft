@@ -40,6 +40,49 @@ async function engine(name) {
   return engines[name];
 }
 
+// The shipped table each rules table code is recreated as (tables/index.tsv: rules, scan, table, language), the
+// first line for a code chosen, as the desktop program's table set finds it.
+let tableIndex = null;
+async function tableFor(code) {
+  if (!tableIndex) {
+    tableIndex = new Map();
+    try {
+      const response = await fetch("tables/index.tsv");
+      for (const line of response.ok ? (await response.text()).split("\n") : []) {
+        const [rules, , table] = line.split("\t");
+        if (rules && !rules.startsWith("#") && table && !tableIndex.has(rules)) tableIndex.set(rules, table.trim());
+      }
+    } catch {
+      // No index: no table is found.
+    }
+  }
+  return tableIndex.get(code) ?? null;
+}
+
+// The engine for the document's own rules table: print-to-braille for a print document, braille-to-print for a
+// braille one (or `braille` given). Answers the engine (null when the table is not in this copy), the document's
+// file and the table code.
+async function documentEngine(braille = doc.kind === "braille") {
+  const file = await documentFile();
+  const code = file.tables[braille ? 2 : 0];
+  const name = await tableFor(code);
+  return { e: name ? await engine(name) : null, file, code };
+}
+
+// The translation table sets by language (tables/languages.tsv), for Document, Translation and Learning Tables.
+let languageList = null;
+async function languages() {
+  if (!languageList && core) {
+    try {
+      const response = await fetch("tables/languages.tsv");
+      if (response.ok) languageList = new core.LanguageList(await response.text());
+    } catch {
+      languageList = null;
+    }
+  }
+  return languageList;
+}
+
 // The embosser models (embossers/embossers.txt beside the page).
 let catalog = null;
 async function embossers() {
@@ -359,6 +402,8 @@ function refreshMenus() {
     1310: v.translated,
   };
   for (let id = 2901; id <= 2905; id++) marks[id] = (doc.hyphen ?? 2902) === id;
+  // Document, Translation and Learning Tables follow the document's tables (filled when the list has loaded).
+  refreshTableMenus();
   for (const [id, on] of Object.entries(marks)) {
     menubar.querySelector(`[data-id="${id}"]`)?.setAttribute("aria-checked", String(on));
   }
@@ -403,13 +448,15 @@ async function showTranslatedLine() {
     return;
   }
   lastLine = key;
-  const e = await engine(doc.kind === "print" ? "en-ueb-g2-forward" : "en-ueb-g2-back");
+  if (!core) return;
+  // The document's own tables, initial codes and styles, as the desktop program's translated line.
+  const { e, file } = await documentEngine();
   if (!e) {
     translated.textContent = "";
     return;
   }
   try {
-    translated.textContent = doc.kind === "print" ? fromNA(e.translate(text)) : e.translate(toNA(text));
+    translated.textContent = doc.kind === "print" ? fromNA(e.translate_document(text, file, doc.initialCodes ?? "")) : e.translate_document(toNA(text), file, doc.initialCodes ?? "");
   } catch (err) {
     translated.textContent = String(err.message ?? err);
   }
@@ -1346,7 +1393,7 @@ async function print() {
   if (result !== "ok") return;
   if (braille) store.set("print.interline", job.interline ? "1" : "0");
   const pages = JSON.parse(core.page_lines(editor.value, doc.cells, doc.lines, braille, Int32Array.from(job.pages)));
-  const back = job.interline ? await engine("en-ueb-g2-back") : null;
+  const back = job.interline ? await documentEngine(true) : null;
   const area = $("print-area");
   area.replaceChildren();
   // The pages print in the document's view font, at the Global, Fonts printed size unless that is set to be found.
@@ -1361,12 +1408,12 @@ async function print() {
         row.className = "printed-line";
         row.textContent = line || " ";
         page.append(row);
-        if (back && line.trim()) {
+        if (back?.e && line.trim()) {
           const ink = document.createElement("div");
           ink.className = "printed-ink";
           ink.style.fontFamily = faceOf("print")[0];
           try {
-            ink.textContent = back.translate(toNA(line.trimEnd()));
+            ink.textContent = back.e.translate_document(toNA(line.trimEnd()), back.file, doc.initialCodes ?? "");
           } catch {
             ink.textContent = "";
           }
@@ -1545,6 +1592,7 @@ fileInput.addEventListener("change", async () => {
   embosserDefaults();
   doc.printer = null;
   doc.hyphen = 2902;
+  doc.initialCodes = "";
   doc.dirty = false;
   if ((ext === "dxp" || ext === "dxb") && core) {
     try {
@@ -1584,16 +1632,37 @@ fileInput.addEventListener("change", async () => {
   applyView();
 });
 
+// File, Translate: a new document made from this one, as the desktop program does: the whole text through the
+// document's own rules table with its initial codes and styles; the new document keeps the tables, initial codes,
+// styles and page numbering, and a braille one takes 40 cells.
 async function translateDocument() {
-  const e = await engine(doc.kind === "print" ? "en-ueb-g2-forward" : "en-ueb-g2-back");
-  if (!e) {
+  if (!core) {
     statusLine.textContent = "Translation is not available in this copy of the web build.";
     return;
   }
-  editor.value = doc.kind === "print" ? fromNA(e.translate(editor.value)) : e.translate(toNA(editor.value));
-  doc.kind = doc.kind === "print" ? "braille" : "print";
-  doc.name = `${stem()}${doc.kind === "braille" ? ".dxb" : ".dxp"}`;
-  doc.file = null;
+  if (!editor.value.trim()) {
+    await message("The file that you are trying to translate is empty.");
+    return;
+  }
+  const toBraille = doc.kind === "print";
+  const { e, file, code } = await documentEngine();
+  if (!e) {
+    await message(`Translation failed: the table ${code} is not in this copy of the web build.`);
+    return;
+  }
+  let out;
+  try {
+    out = toBraille ? e.translate_document(editor.value, file, doc.initialCodes ?? "") : e.translate_document(toNA(editor.value), file, doc.initialCodes ?? "");
+  } catch (err) {
+    await message(`Translation failed: ${err.message ?? err}`);
+    return;
+  }
+  const untitled = !doc.saved && /^Untitled /.test(doc.name);
+  editor.value = toBraille ? fromNA(out) : out;
+  doc.kind = toBraille ? "braille" : "print";
+  doc.name = untitled ? `Untitled ${toBraille ? "Braille" : "Print"} Document 1` : `${stem()}${toBraille ? ".brf" : ".txt"}`;
+  doc.file = file.as_kind(toBraille, out);
+  if (toBraille) doc.cells = 40;
   doc.saved = false;
   doc.dirty = true;
   doc.view = newView(doc.kind === "braille");
@@ -1665,14 +1734,15 @@ function labelledRow(form, id, labelText, field) {
   return field;
 }
 
-// A choice from a list, the first chosen (the desktop program's single choice dialog): its index, or null.
-async function chooseFrom(title, prompt, items) {
+// A choice from a list, item `selected` chosen (the first unless given; the desktop program's single choice
+// dialog): its index, or null.
+async function chooseFrom(title, prompt, items, selected = 0) {
   let list;
   const ok = await ownDialog(title, (form) => {
     list = labelledRow(form, "choice-list", prompt, document.createElement("select"));
     list.size = Math.min(10, items.length);
     list.replaceChildren(...items.map((t) => new Option(t, t)));
-    list.selectedIndex = 0;
+    list.selectedIndex = selected;
   });
   return ok && list.selectedIndex >= 0 ? list.selectedIndex : null;
 }
@@ -2482,6 +2552,112 @@ function setHyphen(id) {
   refreshMenus();
 }
 
+// ------------------------------------------------------------------ Document, Translation and Learning Tables
+
+// The region Document, Translation Tables lists (a region bit, or all); Western Hemisphere at first, kept in the
+// browser as the desktop program keeps it.
+const region = () => Number(store.get("translation.region") ?? 1) >>> 0;
+const LANGUAGE_BASE = 9000;
+const COURSE_BASE = 9500;
+const COURSE_MAX = 10;
+
+// The menu items the program puts in a submenu at run time: removed, then `entries` put in before `before` (at
+// the end when null).
+function setDynamicItems(menu, entries, before, menuLabel) {
+  menu.querySelectorAll(":scope > li[data-dynamic]").forEach((li) => li.remove());
+  for (const entry of entries) {
+    const li = itemNode(entry, menuLabel, 2);
+    li.dataset.dynamic = "1";
+    menu.insertBefore(li, before);
+  }
+}
+
+// Document, Translation Tables: the region marked, and after the regions the languages listed for it (and the
+// document's own), the document's checked. Document, Learning Tables: its language's courses between Uncontracted
+// and Fully Contracted, the one in use (or a grade) checked; the submenu is available only when the language has
+// learning steps.
+async function refreshTableMenus() {
+  const list = await languages();
+  const regionItem = menubar.querySelector('[data-id="2701"]');
+  const learningItem = menubar.querySelector('[data-id="2801"]');
+  if (!list || !regionItem || !learningItem) return;
+  const r = region();
+  // The sixth region item's bit is all regions.
+  for (let i = 0; i < 6; i++) {
+    menubar.querySelector(`[data-id="${2701 + i}"]`)?.setAttribute("aria-checked", String(core.LanguageList.region_bit(i) === r));
+  }
+  const file = await documentFile();
+  const m = JSON.parse(list.menus(r, file.tables, doc.initialCodes ?? ""));
+  const tablesMenu = regionItem.closest("[role=menu]");
+  setDynamicItems(
+    tablesMenu,
+    m.languages.length ? [{ separator: true }, ...m.languages.map(([entry, name]) => ({ id: LANGUAGE_BASE + entry, label: name.replaceAll("&", "&&"), kind: "check" }))] : [],
+    null,
+    "Translation Tables",
+  );
+  if (m.active !== null) menubar.querySelector(`[data-id="${LANGUAGE_BASE + m.active}"]`)?.setAttribute("aria-checked", "true");
+  const learningMenu = learningItem.closest("[role=menu]");
+  const courses = m.courses.slice(0, COURSE_MAX).map((name, i) => ({ id: COURSE_BASE + i, label: `${name.replaceAll("&", "&&")}...`, kind: "check" }));
+  setDynamicItems(learningMenu, courses.length ? [{ separator: true }, ...courses, { separator: true }] : [], learningItem.parentElement.nextSibling, "Learning Tables");
+  const checked = typeof m.checked === "number" && m.checked < COURSE_MAX ? COURSE_BASE + m.checked : m.checked;
+  for (const item of learningMenu.querySelectorAll("[data-id]")) item.setAttribute("aria-checked", String(Number(item.dataset.id) === checked));
+  // The Learning Tables item itself is available only when the language has learning steps.
+  const parent = learningMenu.parentElement.querySelector(":scope > [role^=menuitem]");
+  if (m.hasSteps) parent.removeAttribute("aria-disabled");
+  else parent.setAttribute("aria-disabled", "true");
+}
+
+// Gives the document `tables` (when given) and initial codes changed by `initial`; the translated line follows.
+async function setDocumentTables(tables, initial) {
+  const file = await documentFile();
+  if (tables) file.set_tables(tables);
+  doc.initialCodes = initial(doc.initialCodes ?? "");
+  doc.dirty = true;
+  lastLine = null;
+  await refreshTableMenus();
+  showTranslatedLine();
+}
+
+// Document, Translation Tables, a region: the languages listed are that region's (and the document's own).
+async function setRegion(item) {
+  store.set("translation.region", String(core.LanguageList.region_bit(item)));
+  await refreshTableMenus();
+}
+
+// Document, Translation Tables, a language: the document takes that entry's four tables, and every grade code
+// leaves its initial codes.
+async function chooseLanguage(entry) {
+  const list = await languages();
+  if (!list) return;
+  await setDocumentTables(list.tables(entry), (i) => core.regrade(i, ""));
+}
+
+// Document, Learning Tables, Uncontracted or Fully Contracted: the document's language gives its four tables back
+// (a learning step in use ends), and the grade code in the initial codes changes to `code`.
+async function setGrade(code) {
+  const list = await languages();
+  if (!list) return;
+  const file = await documentFile();
+  const m = JSON.parse(list.menus(region(), file.tables, doc.initialCodes ?? ""));
+  await setDocumentTables(m.active !== null ? list.tables(m.active) : null, (i) => core.regrade(i, code));
+}
+
+// Document, Learning Tables, a learning course: a list of its steps; the step chosen takes the place of the
+// print-to-braille rules table, the language's other three tables staying.
+async function chooseLearningStep(course) {
+  const list = await languages();
+  if (!list) return;
+  const file = await documentFile();
+  const s = list.steps(file.tables, course);
+  if (!s) return;
+  const steps = JSON.parse(s);
+  const i = await chooseFrom(steps.title, "Learning step:", steps.names, steps.selected);
+  if (i === null) return;
+  const tables = [...steps.language];
+  tables[0] = steps.tables[i];
+  await setDocumentTables(tables, (codes) => codes);
+}
+
 // A Layout menu code item: its codes put in, or put around the selection.
 function insertCode(id) {
   const code = core ? core.menu_code(id) : "";
@@ -2512,6 +2688,7 @@ const COMMANDS = {
     doc.saved = false;
     doc.printer = null;
     doc.hyphen = 2902;
+    doc.initialCodes = "";
     doc.dirty = false;
     embosserDefaults();
     doc.view = newView(false);
@@ -2574,6 +2751,14 @@ const COMMANDS = {
   2601: () => embosserSetup(false),
   2602: () => printerSetup(false),
   2604: pageNumbering,
+  2701: () => setRegion(0),
+  2702: () => setRegion(1),
+  2703: () => setRegion(2),
+  2704: () => setRegion(3),
+  2705: () => setRegion(4),
+  2706: () => setRegion(5),
+  2801: () => setGrade("[g1l]"),
+  2802: () => setGrade("[g2u]"),
   2606: () => message(PLANNED_EBRAILLE),
   2608: addStyle,
   2609: modifyStyle,
@@ -2650,6 +2835,10 @@ async function run(id, menuLabel, itemLabel) {
     insertCode(id);
   } else if (id >= 2501 && id <= 2511) {
     await message(PLANNED_PICTURES);
+  } else if (id >= LANGUAGE_BASE && id < LANGUAGE_BASE + 400) {
+    await chooseLanguage(id - LANGUAGE_BASE);
+  } else if (id >= COURSE_BASE && id < COURSE_BASE + COURSE_MAX) {
+    await chooseLearningStep(id - COURSE_BASE);
   } else if (COMMANDS[id]) {
     await COMMANDS[id]();
   } else {
@@ -2760,7 +2949,7 @@ function itemsOf(menu) {
 
 function openMenu(item, focusFirst) {
   const menu = submenuOf(item);
-  if (!menu) {
+  if (!menu || item.getAttribute("aria-disabled") === "true") {
     return;
   }
   if (tops.includes(item)) {

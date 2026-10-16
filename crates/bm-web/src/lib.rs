@@ -29,6 +29,106 @@ impl Engine {
     pub fn translate(&self, text: &str) -> Result<String, JsError> {
         self.0.translate(&Shown::marked(text).to_running()).map(|out| Shown::from_running(&out).text).map_err(error)
     }
+
+    /// Translates a document's text (editor form) as the desktop program does: the document's initial codes in force
+    /// from the start and its styles looked up by the engine; the echo of the initial codes is left off the result.
+    pub fn translate_document(&self, text: &str, doc: &Document, initial: &str) -> Result<String, JsError> {
+        translate_document(&self.0, text, &doc.0, initial).map_err(error)
+    }
+}
+
+fn translate_document(tr: &Translator, text: &str, doc: &DxDocument, initial: &str) -> Result<String, bm_core::engine::EngineError> {
+    let lead = Shown::marked(initial).to_running();
+    let running = format!("{lead}{}", Shown::marked(text).to_running());
+    let out = tr.translate_marked(&running, Some(&style_table(doc)), None)?;
+    Ok(Shown::from_running(out.strip_prefix(lead.as_str()).unwrap_or(&out)).text)
+}
+
+/// A document's styles as the engine looks them up (the desktop program's own).
+fn style_table(doc: &DxDocument) -> bm_core::engine::StyleTable {
+    let bytes = |t: &str| -> Vec<u8> {
+        t.chars()
+            .filter(|&c| (c as u32) < 256)
+            .map(|c| match c {
+                bm_core::doctext::OPEN => 0x1c,
+                bm_core::doctext::CLOSE => 0x1f,
+                c => c as u8,
+            })
+            .collect()
+    };
+    bm_core::engine::StyleTable::new(doc.styles.iter().map(|s| (s.0.clone(), bytes(&s.1), bytes(&s.2))).collect())
+}
+
+/// The initial codes with every grade code taken out and `code` put at their end (Document, Learning Tables).
+#[wasm_bindgen]
+pub fn regrade(initial: &str, code: &str) -> String {
+    bm_core::table_list::regrade(initial, code)
+}
+
+/// The translation table sets by language (tables/languages.tsv), for Document, Translation Tables and Learning
+/// Tables.
+#[wasm_bindgen]
+pub struct LanguageList(bm_core::table_list::TableList);
+
+#[wasm_bindgen]
+impl LanguageList {
+    #[wasm_bindgen(constructor)]
+    pub fn new(text: &str) -> Result<LanguageList, JsError> {
+        bm_core::table_list::TableList::parse(text).map(LanguageList).map_err(|e| JsError::new(&e))
+    }
+
+    /// The region bit of a region item of Document, Translation Tables (0 Western Hemisphere to 4 Pacific); all
+    /// regions for any other.
+    pub fn region_bit(item: usize) -> u32 {
+        if item < 5 {
+            bm_core::table_list::TableList::region_bit(item)
+        } else {
+            bm_core::table_list::ALL_REGIONS
+        }
+    }
+
+    /// What the two menus show for a document with `tables` and `initial` codes, as the desktop program fills them,
+    /// as JSON: "languages" [[entry, name]...] listed for `region` (and the document's own), "active" its entry (or
+    /// null), "courses" the names of its language's learning courses, "hasSteps", and "checked" the item to mark in
+    /// Learning Tables: a course number, or 2801 (Uncontracted, when the initial codes hold a grade 1 code) or 2802.
+    pub fn menus(&self, region: u32, tables: Vec<String>, initial: &str) -> String {
+        let l = &self.0;
+        let used = <[String; 4]>::try_from(tables).ok().and_then(|t| l.entry_for(&t));
+        let languages: Vec<(usize, &str)> = l.listed(region, |e| used.map(|u| u.0) == Some(e)).into_iter().map(|e| (e, l.entries[e].name.as_str())).collect();
+        let (courses, has_steps, step) = match used {
+            Some((entry, step)) => (l.courses(entry), !l.entries[entry].steps.is_empty(), step),
+            None => (Vec::new(), false, None),
+        };
+        let checked = match step.and_then(|s| courses.iter().position(|c| c.steps.contains(&s))) {
+            Some(c) => serde_json::json!(c),
+            None if initial.contains("[g1") => serde_json::json!(2801),
+            None => serde_json::json!(2802),
+        };
+        let names: Vec<&str> = courses.iter().map(|c| c.name.as_str()).collect();
+        serde_json::json!({"languages": languages, "active": used.map(|u| u.0), "courses": names, "hasSteps": has_steps, "checked": checked})
+            .to_string()
+    }
+
+    /// The four tables of entry `entry`.
+    pub fn tables(&self, entry: usize) -> Vec<String> {
+        self.0.entries.get(entry).map(|e| e.tables.to_vec()).unwrap_or_default()
+    }
+
+    /// The learning steps of course `course` of the language of a document with `tables`, as JSON: "title"
+    /// ("course - Learning Tables"), "names", "tables" (each step's print-to-braille rules table) and "selected" (the
+    /// step the document uses, else the first); empty when there is no such course.
+    pub fn steps(&self, tables: Vec<String>, course: usize) -> String {
+        let l = &self.0;
+        let Some((entry, step)) = <[String; 4]>::try_from(tables).ok().and_then(|t| l.entry_for(&t)) else { return String::new() };
+        let courses = l.courses(entry);
+        let Some(c) = courses.get(course) else { return String::new() };
+        let e = &l.entries[entry];
+        let names: Vec<&str> = c.steps.iter().map(|&s| e.steps[s].name.as_str()).collect();
+        let step_tables: Vec<&str> = c.steps.iter().map(|&s| e.steps[s].table.as_str()).collect();
+        let selected = step.and_then(|s| c.steps.iter().position(|&x| x == s)).unwrap_or(0);
+        serde_json::json!({"title": format!("{} - Learning Tables", c.name), "names": names, "tables": step_tables, "selected": selected, "language": e.tables})
+            .to_string()
+    }
 }
 
 /// A print or braille document file (.dxp, .dxb), as the web interface shows it.
@@ -181,6 +281,25 @@ impl Document {
     #[wasm_bindgen(getter)]
     pub fn page_numbers(&self) -> Vec<u16> {
         self.0.page_numbering.to_vec()
+    }
+
+    /// The document takes four tables (Document, Translation Tables and Learning Tables).
+    pub fn set_tables(&mut self, tables: Vec<String>) {
+        if let Ok(t) = <[String; 4]>::try_from(tables) {
+            self.0.tables = t;
+        }
+    }
+
+    /// File, Translate's new document: this document's tables, styles and page numbering, as a braille document or
+    /// a print document, with `text` (editor form).
+    pub fn as_kind(&self, braille: bool, text: &str) -> Document {
+        Document(DxDocument {
+            kind: if braille { DocumentKind::Braille } else { DocumentKind::Print },
+            text: Shown::marked(text).to_running(),
+            embosser: String::new(),
+            layout: None,
+            ..self.0.clone()
+        })
     }
 
     pub fn set_page_numbers(&mut self, numbers: Vec<u16>) {
@@ -803,6 +922,28 @@ mod tests {
         assert!(job.starts_with(b"\x1bD"), "{:?}", String::from_utf8_lossy(&job));
         assert!(String::from_utf8_lossy(&job).contains("ef"));
         assert!(!String::from_utf8_lossy(&job).contains("ab"));
+    }
+
+    #[test]
+    fn a_document_translates_with_its_initial_codes_and_lists_its_language() {
+        let source = String::from_utf8(shipped("tables/en-ueb-g2-forward.bmt")).unwrap();
+        let tr = Translator::from_source(&source).unwrap();
+        let doc = new_document(false, "", "");
+        let contracted = translate_document(&tr, "The cat sat with the dog.", &doc.0, "").unwrap();
+        let uncontracted = translate_document(&tr, "The cat sat with the dog.", &doc.0, "[g1l]").unwrap();
+        assert_eq!(contracted, Engine(Translator::from_source(&source).unwrap()).translate("The cat sat with the dog.").ok().unwrap());
+        assert_ne!(contracted, uncontracted);
+        assert!(!uncontracted.contains("g1l"), "{uncontracted:?}");
+        let braille = doc.as_kind(true, ",! cat");
+        assert!(braille.braille() && braille.tables() == doc.tables() && braille.text() == ",! cat");
+        let list = LanguageList::new(&String::from_utf8(shipped("tables/languages.tsv")).unwrap()).ok().unwrap();
+        let menus: serde_json::Value = serde_json::from_str(&list.menus(LanguageList::region_bit(0), doc.tables(), "")).unwrap();
+        let active = menus["active"].as_u64().unwrap() as usize;
+        assert!(menus["languages"].as_array().unwrap().iter().any(|l| l[0].as_u64() == Some(active as u64)));
+        assert_eq!(menus["checked"], 2802);
+        let graded: serde_json::Value = serde_json::from_str(&list.menus(1, doc.tables(), &regrade("", "[g1l]"))).unwrap();
+        assert_eq!(graded["checked"], 2801);
+        assert_eq!(list.tables(active).len(), 4);
     }
 
     #[test]

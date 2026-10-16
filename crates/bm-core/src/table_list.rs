@@ -166,9 +166,28 @@ pub fn course_name(step: &str) -> String {
     s
 }
 
+/// The grade codes Document, Learning Tables takes out of a document's initial codes before it puts its own in.
+pub const GRADE_CODES: [&str; 10] = ["[g1]", "[g1l]", "[g1u]", "[g1.5]", "[g1.5l]", "[g1.5u]", "[g2]", "[g2l]", "[g2u]", "[vrn~inf]"];
+
+/// The initial codes with every grade code taken out and `code` put at their end.
+pub fn regrade(initial: &str, code: &str) -> String {
+    let mut out = initial.to_string();
+    for g in GRADE_CODES {
+        out = out.replace(g, "");
+    }
+    out.push_str(code);
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn regrade_puts_one_grade_code_last() {
+        assert_eq!(regrade("[g2][ind2]", "[g1l]"), "[ind2][g1l]");
+        assert_eq!(regrade("[g1l]", ""), "");
+    }
 
     fn shipped() -> TableList {
         TableList::read(format!("{}/../../tables/languages.tsv", env!("CARGO_MANIFEST_DIR"))).unwrap()

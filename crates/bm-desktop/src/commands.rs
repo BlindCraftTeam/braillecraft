@@ -2160,18 +2160,8 @@ fn printer_setup(global: bool) {
     });
 }
 
-/// The grade codes Document, Learning Tables takes out of the initial codes before it puts its own in.
-const GRADE_CODES: [&str; 10] = ["[g1]", "[g1l]", "[g1u]", "[g1.5]", "[g1.5l]", "[g1.5u]", "[g2]", "[g2l]", "[g2u]", "[vrn~inf]"];
-
-/// The initial codes with every grade code taken out and `code` put at their end.
-fn regrade(initial: &str, code: &str) -> String {
-    let mut out = initial.to_string();
-    for g in GRADE_CODES {
-        out = out.replace(g, "");
-    }
-    out.push_str(code);
-    out
-}
+/// Shared with the web build (bm_core::table_list).
+use bm_core::table_list::regrade;
 
 /// Gives the active document `tables` and initial codes changed by `initial`, then refreshes the menus and the
 /// translated line.
