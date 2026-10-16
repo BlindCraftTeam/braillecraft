@@ -155,11 +155,15 @@ def control(c, out, group_start):
             styles.append("wxLB_SORT")
         if "LBS_DISABLENOSCROLL" in f:
             styles.append("wxLB_ALWAYS_SB")
+    elif cls == "ComboBox" and "CBS_DROPDOWNLIST" in f:
+        # A drop-down list with no typing is a choice control: on Windows the same native drop-down list, on macOS
+        # the system's pop-up button, as a Mac program shows it.
+        wx = "wxChoice"
+        if "CBS_SORT" in f:
+            styles.append("wxCB_SORT")
     elif cls == "ComboBox":
         wx = "wxComboBox"
-        if "CBS_DROPDOWNLIST" in f:
-            styles.append("wxCB_READONLY")
-        elif "CBS_SIMPLE" in f:
+        if "CBS_SIMPLE" in f:
             styles.append("wxCB_SIMPLE")
         else:
             styles.append("wxCB_DROPDOWN")

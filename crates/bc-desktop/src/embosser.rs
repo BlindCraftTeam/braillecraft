@@ -382,7 +382,7 @@ pub fn edit(setup: &mut Setup, cat: &Catalog) -> bool {
     let device = &p[1];
     let advanced = p.last().expect("advanced page");
     let (g, dv, adv) = (handle(general), handle(device), handle(advanced));
-    if let Some(models) = general.win(5).and_then(|w| w.as_widget::<ComboBox>()) {
+    if let Some(models) = general.win(5).and_then(|w| w.as_widget::<Choice>()) {
         models.on_selection_changed(move |_| {
             let model = g.selected_text(5).unwrap_or_default();
             if model.starts_with('(') {
@@ -396,7 +396,7 @@ pub fn edit(setup: &mut Setup, cat: &Catalog) -> bool {
         });
     }
     // As in the reference, a change of Embosser Version or of Allow escape codes shows the page's groups again.
-    if let Some(versions) = device.win(5).and_then(|w| w.as_widget::<ComboBox>()) {
+    if let Some(versions) = device.win(5).and_then(|w| w.as_widget::<Choice>()) {
         let (g, dv) = (handle(general), handle(device));
         versions.on_selection_changed(move |_| refresh_device(&g, &dv));
     }

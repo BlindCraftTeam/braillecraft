@@ -582,8 +582,8 @@
       <pos>8,125d</pos>
       <size>40,9d</size>
     </object>
-    <object class="wxComboBox" name="c12">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c12">
+      <style>wxCB_SORT</style>
       <pos>50,124d</pos>
       <size>168,59d</size>
     </object>
@@ -649,8 +649,8 @@
       <pos>8,108d</pos>
       <size>40,9d</size>
     </object>
-    <object class="wxComboBox" name="c10">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c10">
+      <style>wxCB_SORT</style>
       <pos>50,107d</pos>
       <size>168,59d</size>
     </object>
@@ -1126,8 +1126,8 @@
       <pos>14,86d</pos>
       <size>50,9d</size>
     </object>
-    <object class="wxComboBox" name="c13">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c13">
+      <style>wxCB_SORT</style>
       <pos>65,85d</pos>
       <size>168,59d</size>
     </object>
@@ -1352,8 +1352,8 @@
       <pos>8,115d</pos>
       <size>109,9d</size>
     </object>
-    <object class="wxComboBox" name="c17">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c17">
+      <style>wxCB_SORT</style>
       <pos>117,114d</pos>
       <size>64,33d</size>
     </object>
@@ -1503,8 +1503,8 @@
       <pos>8,43d</pos>
       <size>90,9d</size>
     </object>
-    <object class="wxComboBox" name="c10">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c10">
+      <style>wxCB_SORT</style>
       <pos>100,42d</pos>
       <size>145,59d</size>
     </object>
@@ -1544,8 +1544,8 @@
       <pos>15,180d</pos>
       <size>50,9d</size>
     </object>
-    <object class="wxComboBox" name="c20">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c20">
+      <style>wxCB_SORT</style>
       <pos>67,178d</pos>
       <size>50,50d</size>
     </object>
@@ -1559,8 +1559,8 @@
       <pos>15,193d</pos>
       <size>50,9d</size>
     </object>
-    <object class="wxComboBox" name="c23">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c23">
+      <style>wxCB_SORT</style>
       <pos>67,191d</pos>
       <size>50,50d</size>
     </object>
@@ -1574,8 +1574,8 @@
       <pos>15,206d</pos>
       <size>50,9d</size>
     </object>
-    <object class="wxComboBox" name="c26">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c26">
+      <style>wxCB_SORT</style>
       <pos>67,204d</pos>
       <size>50,50d</size>
     </object>
@@ -1589,8 +1589,8 @@
       <pos>15,219d</pos>
       <size>50,9d</size>
     </object>
-    <object class="wxComboBox" name="c29">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c29">
+      <style>wxCB_SORT</style>
       <pos>67,217d</pos>
       <size>50,50d</size>
     </object>
@@ -1604,8 +1604,8 @@
       <pos>15,231d</pos>
       <size>50,9d</size>
     </object>
-    <object class="wxComboBox" name="c32">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c32">
+      <style>wxCB_SORT</style>
       <pos>67,229d</pos>
       <size>50,50d</size>
     </object>
@@ -1619,8 +1619,8 @@
       <pos>15,243d</pos>
       <size>50,9d</size>
     </object>
-    <object class="wxComboBox" name="c35">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c35">
+      <style>wxCB_SORT</style>
       <pos>67,241d</pos>
       <size>50,50d</size>
     </object>
@@ -1664,8 +1664,8 @@
       <pos>14,9d</pos>
       <size>90,59d</size>
     </object>
-    <object class="wxComboBox" name="c7">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c7">
+      <style>wxCB_SORT</style>
       <pos>105,8d</pos>
       <size>145,59d</size>
     </object>
@@ -1743,8 +1743,8 @@
       <pos>14,137d</pos>
       <size>90,9d</size>
     </object>
-    <object class="wxComboBox" name="c23">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c23">
+      <style>wxCB_SORT</style>
       <pos>105,136d</pos>
       <size>145,59d</size>
     </object>
@@ -2290,8 +2290,8 @@
       <pos>8,225d</pos>
       <size>236,9d</size>
     </object>
-    <object class="wxComboBox" name="c16">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c16">
+      <style>wxCB_SORT</style>
       <pos>8,234d</pos>
       <size>236,56d</size>
     </object>
@@ -2604,8 +2604,8 @@
       <pos>8,108d</pos>
       <size>40,9d</size>
     </object>
-    <object class="wxComboBox" name="c9">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c9">
+      <style>wxCB_SORT</style>
       <pos>50,107d</pos>
       <size>168,59d</size>
     </object>
@@ -2642,8 +2642,8 @@
       <pos>8,108d</pos>
       <size>40,9d</size>
     </object>
-    <object class="wxComboBox" name="c9">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c9">
+      <style>wxCB_SORT</style>
       <pos>50,107d</pos>
       <size>168,59d</size>
     </object>
@@ -3036,8 +3036,8 @@
       <pos>8,7d</pos>
       <size>50,9d</size>
     </object>
-    <object class="wxComboBox" name="c7">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c7">
+      <style>wxCB_SORT</style>
       <pos>70,6d</pos>
       <size>234,59d</size>
     </object>
@@ -3182,8 +3182,8 @@
       <pos>8,184d</pos>
       <size>89,9d</size>
     </object>
-    <object class="wxComboBox" name="c38">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c38">
+      <style>wxCB_SORT</style>
       <pos>97,182d</pos>
       <size>52,59d</size>
     </object>
@@ -3193,8 +3193,8 @@
       <pos>163,184d</pos>
       <size>89,9d</size>
     </object>
-    <object class="wxComboBox" name="c40">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c40">
+      <style>wxCB_SORT</style>
       <pos>252,182d</pos>
       <size>52,94d</size>
     </object>
@@ -3204,8 +3204,8 @@
       <pos>8,200d</pos>
       <size>89,9d</size>
     </object>
-    <object class="wxComboBox" name="c42">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c42">
+      <style>wxCB_SORT</style>
       <pos>97,199d</pos>
       <size>52,59d</size>
     </object>
@@ -3364,8 +3364,8 @@
       <pos>2,85d</pos>
       <size>72,9d</size>
     </object>
-    <object class="wxComboBox" name="c9">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c9">
+      <style>wxCB_SORT</style>
       <pos>82,84d</pos>
       <size>131,40d</size>
     </object>
@@ -3598,8 +3598,8 @@
       <pos>16,112d</pos>
       <size>36,8d</size>
     </object>
-    <object class="wxComboBox" name="c1137">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c1137">
+      <style>wxCB_SORT</style>
       <pos>64,110d</pos>
       <size>160,160d</size>
     </object>
@@ -3608,8 +3608,8 @@
       <pos>16,132d</pos>
       <size>36,8d</size>
     </object>
-    <object class="wxComboBox" name="c1138">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c1138">
+      <style>wxCB_SORT</style>
       <pos>64,130d</pos>
       <size>160,160d</size>
     </object>
@@ -3818,8 +3818,8 @@
       <pos>8,4d</pos>
       <size>85,9d</size>
     </object>
-    <object class="wxComboBox" name="c5">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c5">
+      <style>wxCB_SORT</style>
       <pos>94,3d</pos>
       <size>176,187d</size>
     </object>
@@ -3839,8 +3839,8 @@
       <pos>8,30d</pos>
       <size>85,9d</size>
     </object>
-    <object class="wxComboBox" name="c9">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c9">
+      <style>wxCB_SORT</style>
       <pos>94,29d</pos>
       <size>176,33d</size>
     </object>
@@ -3849,8 +3849,8 @@
       <pos>8,30d</pos>
       <size>85,12d</size>
     </object>
-    <object class="wxComboBox" name="c11">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c11">
+      <style>wxCB_SORT</style>
       <pos>94,29d</pos>
       <size>176,75d</size>
     </object>
@@ -3870,13 +3870,13 @@
       <pos>10,75d</pos>
       <size>83,9d</size>
     </object>
-    <object class="wxComboBox" name="c16">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c16">
+      <style>wxCB_SORT</style>
       <pos>94,50d</pos>
       <size>176,59d</size>
     </object>
-    <object class="wxComboBox" name="c17">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c17">
+      <style>wxCB_SORT</style>
       <pos>94,62d</pos>
       <size>176,59d</size>
     </object>
@@ -3901,8 +3901,8 @@
       <pos>10,117d</pos>
       <size>72,9d</size>
     </object>
-    <object class="wxComboBox" name="c23">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c23">
+      <style>wxCB_SORT</style>
       <pos>82,116d</pos>
       <size>42,59d</size>
     </object>
@@ -3912,8 +3912,8 @@
       <pos>140,117d</pos>
       <size>57,9d</size>
     </object>
-    <object class="wxComboBox" name="c25">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c25">
+      <style>wxCB_SORT</style>
       <pos>197,116d</pos>
       <size>72,59d</size>
     </object>
@@ -3923,8 +3923,8 @@
       <pos>10,129d</pos>
       <size>72,9d</size>
     </object>
-    <object class="wxComboBox" name="c27">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c27">
+      <style>wxCB_SORT</style>
       <pos>82,128d</pos>
       <size>42,59d</size>
     </object>
@@ -3934,8 +3934,8 @@
       <pos>140,129d</pos>
       <size>57,9d</size>
     </object>
-    <object class="wxComboBox" name="c29">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c29">
+      <style>wxCB_SORT</style>
       <pos>197,128d</pos>
       <size>72,59d</size>
     </object>
@@ -3945,8 +3945,8 @@
       <pos>10,141d</pos>
       <size>72,9d</size>
     </object>
-    <object class="wxComboBox" name="c31">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c31">
+      <style>wxCB_SORT</style>
       <pos>82,140d</pos>
       <size>92,59d</size>
     </object>
@@ -3960,8 +3960,8 @@
       <pos>8,18d</pos>
       <size>85,9d</size>
     </object>
-    <object class="wxComboBox" name="c5">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c5">
+      <style>wxCB_SORT</style>
       <pos>95,17d</pos>
       <size>177,59d</size>
     </object>
@@ -4026,8 +4026,8 @@
       <pos>8,66d</pos>
       <size>150,9d</size>
     </object>
-    <object class="wxComboBox" name="c18">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c18">
+      <style>wxCB_SORT</style>
       <pos>160,65d</pos>
       <size>35,11d</size>
     </object>
@@ -4124,8 +4124,8 @@
       <pos>8,119d</pos>
       <size>90,9d</size>
     </object>
-    <object class="wxComboBox" name="c37">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c37">
+      <style>wxCB_SORT</style>
       <pos>100,118d</pos>
       <size>142,59d</size>
     </object>
@@ -4135,8 +4135,8 @@
       <pos>8,131d</pos>
       <size>90,9d</size>
     </object>
-    <object class="wxComboBox" name="c39">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c39">
+      <style>wxCB_SORT</style>
       <pos>100,130d</pos>
       <size>142,59d</size>
     </object>
@@ -4146,8 +4146,8 @@
       <pos>8,143d</pos>
       <size>90,9d</size>
     </object>
-    <object class="wxComboBox" name="c41">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c41">
+      <style>wxCB_SORT</style>
       <pos>100,142d</pos>
       <size>142,59d</size>
     </object>
@@ -4171,8 +4171,8 @@
       <pos>8,60d</pos>
       <size>25,9d</size>
     </object>
-    <object class="wxComboBox" name="c46">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c46">
+      <style>wxCB_SORT</style>
       <pos>35,59d</pos>
       <size>45,100d</size>
     </object>
@@ -4230,8 +4230,8 @@
       <pos>5,1d</pos>
       <size>146,9d</size>
     </object>
-    <object class="wxComboBox" name="c5">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c5">
+      <style>wxCB_SORT</style>
       <pos>5,1d</pos>
       <size>146,40d</size>
     </object>
@@ -4372,8 +4372,8 @@
       <pos>10,55d</pos>
       <size>90,9d</size>
     </object>
-    <object class="wxComboBox" name="c12">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c12">
+      <style>wxCB_SORT</style>
       <pos>100,54d</pos>
       <size>170,59d</size>
     </object>
@@ -4383,8 +4383,8 @@
       <pos>10,67d</pos>
       <size>90,9d</size>
     </object>
-    <object class="wxComboBox" name="c14">
-      <style>wxCB_READONLY|wxCB_SORT</style>
+    <object class="wxChoice" name="c14">
+      <style>wxCB_SORT</style>
       <pos>100,66d</pos>
       <size>170,59d</size>
     </object>

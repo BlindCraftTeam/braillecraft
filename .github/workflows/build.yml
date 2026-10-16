@@ -86,7 +86,7 @@ jobs:
           BC_LAYOUT_CHECK=layout/layout.txt $run $exe || true
           grep " found$" layout/layout.txt | grep -v ": 0 found" || true
           if [ "$RUNNER_OS" = macOS ]; then
-            for p in 10001 10002 10003 10004; do
+            for p in 10001 10002 10003 10004 1032 1017; do
               BC_LAYOUT_SHOW=$p $exe & pid=$!
               sleep 6
               screencapture -x layout/sheet-$p.png || true

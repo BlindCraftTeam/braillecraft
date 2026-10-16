@@ -133,7 +133,10 @@ impl Dlg {
         let row = margin.height * 2 + book.height;
         let mut x = margin.width + book.width;
         let mut height = 0;
-        for cid in [2, 1] {
+        // From the right: Cancel then OK (OK on the left of Cancel), as Windows places them; on macOS OK is at the
+        // right with Cancel beside it, as Mac programs place them.
+        let order = if cfg!(target_os = "macos") { [1, 2] } else { [2, 1] };
+        for cid in order {
             if let Some(b) = sheet.win(cid) {
                 let s = b.get_size();
                 x -= s.width;
@@ -175,6 +178,9 @@ impl Dlg {
             self.fit_short_fields();
             self.plain_ok_cancel();
             self.wire_label_mnemonics();
+        }
+        if cfg!(target_os = "macos") {
+            self.mac_button_order();
         }
         let mut factor = 1.0f64;
         let mut several_lines = Vec::new();
@@ -227,6 +233,20 @@ impl Dlg {
             }
         }
         self.cover_controls();
+    }
+
+    /// macOS places Cancel to the left of OK, OK at the right (the reference's Mac version does the same). Where a
+    /// dialog has OK left of Cancel in one row, the two change places: the right one keeps its right edge.
+    fn mac_button_order(&self) {
+        let (Some(ok), Some(cancel)) = (self.win(1), self.win(2)) else { return };
+        let (op, os, cp, cs) = (ok.get_position(), ok.get_size(), cancel.get_position(), cancel.get_size());
+        let same_row = (op.y - cp.y).abs() <= os.height / 2;
+        if !same_row || op.x >= cp.x {
+            return;
+        }
+        let right = cp.x + cs.width;
+        ok.move_window(right - os.width, op.y);
+        cancel.move_window(op.x, cp.y);
     }
 
     /// The dialog's own margin: 4 dialog units.
@@ -309,7 +329,7 @@ impl Dlg {
             match kind {
                 Ctl::Text => w.as_widget::<TextCtrl>().map(|c| c.on_key_down(handler)),
                 Ctl::List => w.as_widget::<ListBox>().map(|c| c.on_key_down(handler)),
-                Ctl::Combo => w.as_widget::<ComboBox>().map(|c| c.on_key_down(handler)),
+                Ctl::Combo => w.as_widget::<Choice>().map(|c| c.on_key_down(handler)),
                 Ctl::Check => w.as_widget::<CheckBox>().map(|c| c.on_key_down(handler)),
                 Ctl::Radio => w.as_widget::<RadioButton>().map(|c| c.on_key_down(handler)),
                 _ => w.as_widget::<Button>().map(|c| c.on_key_down(handler)),
@@ -494,13 +514,15 @@ impl Dlg {
                 if let Some(t) = chosen {
                     l.set_string_selection(t, true);
                 }
-            } else if let Some(c) = w.as_widget::<ComboBox>() {
+            } else if let Some(c) = w.as_widget::<Choice>() {
                 c.clear();
                 for i in items {
                     c.append(i);
                 }
                 if let Some(t) = chosen {
-                    c.set_string_selection(t);
+                    if let Some(at) = (0..c.get_count()).find(|n| c.get_string(*n).as_deref() == Some(*t)) {
+                        c.set_selection(at);
+                    }
                 }
             }
         }
@@ -517,7 +539,7 @@ impl Dlg {
         if let Some(l) = w.as_widget::<ListBox>() {
             l.get_selection()
         } else {
-            w.as_widget::<ComboBox>()?.get_selection()
+            w.as_widget::<Choice>()?.get_selection()
         }
     }
 
@@ -526,7 +548,7 @@ impl Dlg {
         if let Some(l) = w.as_widget::<ListBox>() {
             l.get_string_selection()
         } else {
-            w.as_widget::<ComboBox>()?.get_string_selection()
+            w.as_widget::<Choice>()?.get_string_selection()
         }
     }
 
@@ -534,7 +556,7 @@ impl Dlg {
         if let Some(w) = self.win(cid) {
             if let Some(l) = w.as_widget::<ListBox>() {
                 l.set_selection(index, true);
-            } else if let Some(c) = w.as_widget::<ComboBox>() {
+            } else if let Some(c) = w.as_widget::<Choice>() {
                 c.set_selection(index);
             }
         }
@@ -698,6 +720,13 @@ pub fn layout_check(path: &str) {
 
 /// Layout check, the picture (BC_LAYOUT_SHOW=<page id>): the setup sheet with that one page, shown and left open.
 pub fn layout_show(page: i32) {
+    if !(10000..=10004).contains(&page) {
+        // Any other dialog, shown as it opens.
+        let d = Dlg::open(&crate::app::frame(), page, None);
+        d.dialog.show(true);
+        d.dialog.raise();
+        return;
+    }
     let name = match page {
         10001 => "General",
         10002 => "Device Settings",
