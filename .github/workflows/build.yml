@@ -82,7 +82,7 @@ jobs:
           mkdir -p layout/pictures
           exe=dist/BrailleCraft/braillecraft-desktop${{ runner.os == 'Windows' && '.exe' || '' }}
           if [ "$RUNNER_OS" = Linux ]; then
-            sudo apt-get install -y xvfb x11-apps imagemagick openbox > /dev/null
+            sudo apt-get install -y xvfb x11-apps imagemagick openbox xdotool > /dev/null
             Xvfb :99 -screen 0 1280x900x24 > /dev/null 2>&1 &
             export DISPLAY=:99
             sleep 2
@@ -92,10 +92,20 @@ jobs:
           fi
           BC_LAYOUT_CHECK=layout/layout.txt $exe || true
           grep " found$" layout/layout.txt | grep -v ": 0 found" || true
+          # A picture is taken once the program's window is showing (on Linux; a fixed wait left most pictures
+          # black there), else after a fixed wait.
+          shown() {
+            if [ "$RUNNER_OS" = Linux ]; then
+              timeout 20 xdotool search --sync --onlyvisible --classname braillecraft-desktop > /dev/null 2>&1 || true
+              sleep 2
+            else
+              sleep "$1"
+            fi
+          }
           ids="$(grep -o 'name="dlg[0-9]*"' ui-native/dialogs.xrc | tr -dc '0-9\n' | grep -v -x -E '1000[0-4]') 10001 10002 10003 10004"
           for p in $ids; do
             BC_LAYOUT_SHOW=$p $exe & pid=$!
-            sleep 4
+            shown 4
             case "$RUNNER_OS" in
               macOS) screencapture -x layout/pictures/$p.png || true ;;
               Linux) xwd -root -silent | convert xwd:- layout/pictures/$p.png || true ;;
@@ -108,7 +118,7 @@ jobs:
           # for each dialog a command opens.
           for c in 1101 1103 1111 1112 1211 1215 1409 1416 1501 2601 2602 2604 2608 2609 2612 3101 3102 3104 3105 3106 3107 3108 3109 3111 3113 3114 3115 3117 3211; do
             BC_LAYOUT_RUN=$c $exe & pid=$!
-            sleep 5
+            shown 5
             case "$RUNNER_OS" in
               macOS) screencapture -x layout/pictures/cmd-$c.png || true ;;
               Linux) xwd -root -silent | convert xwd:- layout/pictures/cmd-$c.png || true ;;
