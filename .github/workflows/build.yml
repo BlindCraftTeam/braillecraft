@@ -82,7 +82,7 @@ jobs:
           mkdir -p layout/pictures
           exe=dist/BrailleCraft/braillecraft-desktop${{ runner.os == 'Windows' && '.exe' || '' }}
           if [ "$RUNNER_OS" = Linux ]; then
-            sudo apt-get install -y xvfb x11-apps imagemagick openbox xdotool > /dev/null
+            sudo apt-get install -y xvfb x11-apps x11-utils imagemagick openbox xdotool > /dev/null
             Xvfb :99 -screen 0 1280x900x24 > /dev/null 2>&1 &
             export DISPLAY=:99
             sleep 2
@@ -101,10 +101,22 @@ jobs:
           tail -n 3 layout/layout.txt || true
           grep " found$" layout/layout.txt | grep -v ": 0 found" || true
           # A picture is taken once the program's window is showing (on Linux; a fixed wait left most pictures
-          # black there), else after a fixed wait.
+          # black there), else after a fixed wait. On Linux each start is recorded in layout/starts.txt (how long
+          # the window took, whether the program was still running, how many program windows existed) and the
+          # program's messages are kept in layout/logs, because most windows there never showed within 20 seconds
+          # (run 38899662545) while the same steps show every window at once on a Debian 13 machine.
+          mkdir -p layout/logs
+          if [ "$RUNNER_OS" = Linux ]; then
+            # The runner has no session bus, so the GTK accessibility bridge printed a bus error at each start.
+            export NO_AT_BRIDGE=1
+          fi
           shown() {
             if [ "$RUNNER_OS" = Linux ]; then
-              timeout 20 xdotool search --sync --onlyvisible --classname braillecraft-desktop > /dev/null 2>&1 || true
+              s=$(date +%s)
+              timeout 20 xdotool search --sync --onlyvisible --classname braillecraft-desktop > /dev/null 2>&1; rc=$?
+              alive=no; kill -0 $pid 2> /dev/null && alive=yes
+              wins=$(xwininfo -root -tree 2> /dev/null | grep -c -i braillecraft || true)
+              echo "$2 search=$rc after $(( $(date +%s) - s ))s running=$alive windows=$wins" >> layout/starts.txt
               sleep 2
             else
               sleep "$1"
@@ -112,8 +124,8 @@ jobs:
           }
           ids="$(grep -o 'name="dlg[0-9]*"' ui-native/dialogs.xrc | tr -dc '0-9\n' | grep -v -x -E '1000[0-4]') 10001 10002 10003 10004"
           for p in $ids; do
-            BC_LAYOUT_SHOW=$p $exe & pid=$!
-            shown 4
+            BC_LAYOUT_SHOW=$p $exe 2> layout/logs/$p.txt & pid=$!
+            shown 4 $p
             case "$RUNNER_OS" in
               macOS) screencapture -x layout/pictures/$p.png || true ;;
               Linux) xwd -root -silent | convert xwd:- layout/pictures/$p.png || true ;;
@@ -125,8 +137,8 @@ jobs:
           # The same dialogs as their menu commands open them, filled as they are in use (BC_LAYOUT_RUN): one command
           # for each dialog a command opens.
           for c in 1101 1103 1111 1112 1215 1218 1409 1416 1501 2601 2602 2604 2608 2609 2612 3101 3102 3104 3105 3106 3107 3108 3109 3111 3113 3114 3115 3117 3211; do
-            BC_LAYOUT_RUN=$c $exe & pid=$!
-            shown 5
+            BC_LAYOUT_RUN=$c $exe 2> layout/logs/cmd-$c.txt & pid=$!
+            shown 5 cmd-$c
             case "$RUNNER_OS" in
               macOS) screencapture -x layout/pictures/cmd-$c.png || true ;;
               Linux) xwd -root -silent | convert xwd:- layout/pictures/cmd-$c.png || true ;;
