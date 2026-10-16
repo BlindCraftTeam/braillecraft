@@ -215,6 +215,20 @@ fn main() {
         // runs in place of the start-up Embosser Setup, so its dialog is filled as it is in use.
         let run_for_picture: Option<i32> = std::env::var("BC_LAYOUT_RUN").ok().and_then(|c| c.parse().ok());
         let started = std::rc::Rc::new(std::cell::Cell::new(false));
+        if let Some(cmd) = run_for_picture {
+            // A program started from a build machine's shell is not always made the active one (macOS), so the
+            // command also runs two seconds after start-up if the main window has not become active by then.
+            let timer = wxdragon::timer::Timer::new(&frame);
+            let started = started.clone();
+            timer.on_tick(move |_| {
+                if !started.replace(true) {
+                    commands::run(cmd, false);
+                }
+            });
+            timer.start(2000, true);
+            // Kept for the life of the program, which a picture run ends by being stopped.
+            std::mem::forget(timer);
+        }
         frame.on_activate(move |e| {
             if let WindowEventData::Activate(a) = &e {
                 if a.is_active() && !started.replace(true) {
