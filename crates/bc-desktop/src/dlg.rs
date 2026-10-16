@@ -86,6 +86,11 @@ fn label_lines(w: &dyn WxWidget, text: &str, width: i32) -> i32 {
 
 /// Loads the dialog resources; call once at start.
 pub fn load_resources() -> Result<(), String> {
+    // The static text class the About box's texts use (reached by Tab while a screen reader runs); the call also keeps
+    // the class in the program, as only the resource names it.
+    if !unsafe { wxdragon_sys::wxd_ReaderStaticText_Registered() } {
+        return Err("the WxdReaderStaticText class is not registered".into());
+    }
     let res = XmlResource::get();
     res.init_all_handlers();
     res.load_from_string(XRC)

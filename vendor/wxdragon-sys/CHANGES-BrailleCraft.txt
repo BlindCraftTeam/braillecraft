@@ -12,5 +12,12 @@ Changes, all in cpp/include/core/wxd_print.h and cpp/src/print.cpp, marked "Adde
 - wxd_Printout_GetPaperRectPixels: the paper's rectangle in printer pixels, so margins are measured from the paper's
   edge.
 
+Also added, in cpp/include/core/wxd_reader_static_text.h and cpp/src/reader_static_text.cpp (listed in
+cpp/CMakeLists.txt and included from cpp/include/wxdragon.h):
+- WxdReaderStaticText: a wxStaticText that accepts focus, and so is reached by Tab, on Windows while the system's
+  screen reader flag (SPI_GETSCREENREADER) is on and the text is not empty; dialog resources name it with
+  subclass="WxdReaderStaticText".
+- wxd_ReaderStaticText_Registered: whether that class is registered; called once at start-up so the class is kept.
+
 The Rust bindings are generated from the header when the crate builds, so no Rust file changed.
 The workspace Cargo.toml uses this copy through [patch.crates-io].

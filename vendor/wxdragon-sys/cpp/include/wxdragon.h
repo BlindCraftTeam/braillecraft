@@ -132,6 +132,9 @@ extern "C" {
 // Printing
 #include "core/wxd_print.h"
 
+// Added for BrailleCraft: the static text Tab reaches while a screen reader runs
+#include "core/wxd_reader_static_text.h"
+
 // Sound support
 #include "core/wxd_sound.h"
 

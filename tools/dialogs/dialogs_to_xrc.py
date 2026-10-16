@@ -38,6 +38,9 @@ ABOUT_TEXT = {
     18: "the BrailleCraft translation engine and its tables",
     19: "Copyright (c) 2026 Jeremiah Beasley.",
 }
+# About's texts 7 to 14 are reached by Tab while a screen reader runs (re/spec/04f): they are written as the static
+# text class that accepts focus then (vendor/wxdragon-sys, WxdReaderStaticText).
+READER_TAB_STOPS = {(ABOUT, n) for n in range(7, 15)}
 
 
 # Titles and texts that name another program are replaced.
@@ -108,7 +111,7 @@ def common(c, out, indent):
         out.append('%s<enabled>0</enabled>' % indent)
 
 
-def control(c, out, group_start):
+def control(c, out, group_start, rid=None):
     f = c["style_flags"]
     cls = c["class"]
     ind = "      "
@@ -177,7 +180,10 @@ def control(c, out, group_start):
             styles.append("wxCB_SORT")
     else:
         wx = "wxStaticText"  # an unknown class is shown as its text so nothing is silently dropped
-    out.append('    <object class="%s" name="%s">' % (wx, name_of(c)))
+    if wx == "wxStaticText" and (rid, c["id"]) in READER_TAB_STOPS:
+        out.append('    <object class="%s" name="%s" subclass="WxdReaderStaticText">' % (wx, name_of(c)))
+    else:
+        out.append('    <object class="%s" name="%s">' % (wx, name_of(c)))
     if wx in ("wxButton", "wxCheckBox", "wxRadioButton", "wxStaticBox", "wxStaticText"):
         out.append('%s<label>%s</label>' % (ind, label(c["text"] if isinstance(c["text"], str) else "")))
     elif wx == "wxTextCtrl" and isinstance(c["text"], str) and c["text"]:
@@ -239,7 +245,7 @@ def main():
             if is_box(c):
                 continue
             start = is_radio(c) and ("WS_GROUP" in c["style_flags"] or previous is None or not is_radio(previous))
-            control(c, out, start)
+            control(c, out, start, rid)
             previous = c
         out.append('  </object>')
         written += 1

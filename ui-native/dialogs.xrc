@@ -11,43 +11,43 @@
       <pos>231,209d</pos>
       <size>52,12d</size>
     </object>
-    <object class="wxStaticText" name="c7">
+    <object class="wxStaticText" name="c7" subclass="WxdReaderStaticText">
       <label>BrailleCraft for Windows, Linux and Mac</label>
       <style>wxST_NO_AUTORESIZE</style>
       <pos>4,8d</pos>
       <size>281,9d</size>
     </object>
-    <object class="wxStaticText" name="c8">
+    <object class="wxStaticText" name="c8" subclass="WxdReaderStaticText">
       <label>Version %s</label>
       <style>wxST_NO_AUTORESIZE</style>
       <pos>4,18d</pos>
       <size>281,9d</size>
     </object>
-    <object class="wxStaticText" name="c10">
+    <object class="wxStaticText" name="c10" subclass="WxdReaderStaticText">
       <label></label>
       <style>wxST_NO_AUTORESIZE</style>
       <pos>4,38d</pos>
       <size>281,9d</size>
     </object>
-    <object class="wxStaticText" name="c11">
+    <object class="wxStaticText" name="c11" subclass="WxdReaderStaticText">
       <label></label>
       <style>wxST_NO_AUTORESIZE</style>
       <pos>4,48d</pos>
       <size>281,9d</size>
     </object>
-    <object class="wxStaticText" name="c12">
+    <object class="wxStaticText" name="c12" subclass="WxdReaderStaticText">
       <label></label>
       <style>wxST_NO_AUTORESIZE</style>
       <pos>4,58d</pos>
       <size>281,9d</size>
     </object>
-    <object class="wxStaticText" name="c13">
+    <object class="wxStaticText" name="c13" subclass="WxdReaderStaticText">
       <label></label>
       <style>wxST_NO_AUTORESIZE</style>
       <pos>4,68d</pos>
       <size>281,9d</size>
     </object>
-    <object class="wxStaticText" name="c14">
+    <object class="wxStaticText" name="c14" subclass="WxdReaderStaticText">
       <label></label>
       <style>wxST_NO_AUTORESIZE</style>
       <pos>4,78d</pos>
