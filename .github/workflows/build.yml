@@ -22,18 +22,12 @@ jobs:
           - name: linux
             os: ubuntu-22.04
             rust_targets: ""
-            tauri_args: ""
-            bundle_dir: target/release/bundle
           - name: windows
             os: windows-latest
             rust_targets: ""
-            tauri_args: ""
-            bundle_dir: target/release/bundle
           - name: macos
             os: macos-latest
             rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
-            tauri_args: --target universal-apple-darwin
-            bundle_dir: target/universal-apple-darwin/release/bundle
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
@@ -77,21 +71,25 @@ jobs:
           if-no-files-found: error
           path: dist/BrailleMaker
 
-      - name: Build installers
-        working-directory: crates/bm-shell
-        run: npx -y @tauri-apps/cli@2.12.3 build ${{ matrix.tauri_args }}
+      # The Windows installer of the native program (packaging/windows, WiX Toolset 5), laid out as the reference
+      # program's installer (re/spec/26-installer.md).
+      - name: Windows installer
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          dotnet tool install --global wix --version 5.0.2
+          wix extension add -g WixToolset.UI.wixext/5.0.2 WixToolset.Util.wixext/5.0.2
+          version=$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)
+          python packaging/windows/fonts_fragment.py dist/BrailleMaker/fonts > fonts.wxs
+          mkdir -p installers
+          wix build packaging/windows/braillemaker.wxs fonts.wxs -arch x64 -ext WixToolset.UI.wixext -ext WixToolset.Util.wixext -d Version=$version -bindpath dist=dist/BrailleMaker -bindpath icons=packaging/icons -o installers/BrailleMaker-$version-x64.msi
 
       - uses: actions/upload-artifact@v7
+        if: runner.os == 'Windows'
         with:
-          name: braillemaker-${{ matrix.name }}
+          name: braillemaker-windows-installer
           if-no-files-found: error
-          path: |
-            ${{ matrix.bundle_dir }}/msi/*.msi
-            ${{ matrix.bundle_dir }}/nsis/*.exe
-            ${{ matrix.bundle_dir }}/dmg/*.dmg
-            ${{ matrix.bundle_dir }}/deb/*.deb
-            ${{ matrix.bundle_dir }}/rpm/*.rpm
-            ${{ matrix.bundle_dir }}/appimage/*.AppImage
+          path: installers/*.msi
 
   # The web build: the core as WebAssembly with its browser glue (wasm-bindgen at the version the workspace locks),
   # the web interface's menus and dialogs regenerated from the desktop program's tables (the run fails when the

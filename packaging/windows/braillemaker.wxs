@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The BrailleMaker installer for Windows (WiX Toolset 5), as the reference program's installer is laid out
+  (re/spec/26-installer.md): a per-machine install, administrative rights required; the program with its tables,
+  templates, embosser models and fonts; the braille fonts installed for every program; the JAWS scripts; Start menu
+  and desktop shortcuts; the print and braille document types with their icons and the Open, Print and Emboss
+  verbs; older versions removed on upgrade; and a check box on the last page to start BrailleMaker.
+
+  Built in CI (.github/workflows/build.yml):
+    wix build packaging/windows/braillemaker.wxs fonts.wxs -arch x64 -ext WixToolset.UI.wixext
+      -ext WixToolset.Util.wixext -d Version=<version> -bindpath dist=<program folder> -bindpath icons=packaging/icons
+  fonts.wxs is written by packaging/windows/fonts_fragment.py from the program folder's fonts.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+  <Package Name="BrailleMaker" Manufacturer="BrailleMaker" Version="$(Version)" UpgradeCode="{6C1E8B9A-3F4D-4E27-9B6A-2D5C8F1A7E43}" Scope="perMachine" Language="1033">
+    <SummaryInformation Description="BrailleMaker braille translation and embossing" />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of BrailleMaker is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Icon Id="BrailleMakerIcon" SourceFile="!(bindpath.icons)\braillemaker.ico" />
+    <Property Id="ARPPRODUCTICON" Value="BrailleMakerIcon" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="BrailleMaker">
+        <Directory Id="IconsFolder" Name="icons" />
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="MenuFolder" Name="BrailleMaker" />
+    </StandardDirectory>
+    <StandardDirectory Id="DesktopFolder" />
+
+    <!-- The program itself, named so the shortcuts and the document verbs can point at it. Its file keeps the name
+         braillemaker-desktop.exe: JAWS finds its scripts by the program's file name. -->
+    <Component Id="ProgramExe" Directory="INSTALLFOLDER">
+      <File Id="BrailleMakerExe" Source="!(bindpath.dist)\braillemaker-desktop.exe" KeyPath="yes" />
+    </Component>
+
+    <!-- Everything else in the program folder: the fonts the program loads itself, the tables, templates and
+         embosser models. The JAWS scripts are their own feature. -->
+    <ComponentGroup Id="ProgramFiles" Directory="INSTALLFOLDER">
+      <Files Include="!(bindpath.dist)\**">
+        <Exclude Files="!(bindpath.dist)\braillemaker-desktop.exe" />
+        <Exclude Files="!(bindpath.dist)\jaws\**" />
+      </Files>
+    </ComponentGroup>
+    <ComponentGroup Id="JawsScripts" Directory="INSTALLFOLDER" Subdirectory="jaws">
+      <Files Include="!(bindpath.dist)\jaws\**" />
+    </ComponentGroup>
+
+    <!-- The document types: .dxp print documents and .dxb braille documents, each with its icon and the verbs the
+         reference program gives them, in its order. -->
+    <Component Id="DocumentTypes" Directory="IconsFolder">
+      <File Id="PrintDocumentIco" Source="!(bindpath.icons)\print-document.ico" KeyPath="yes" />
+      <File Id="BrailleDocumentIco" Source="!(bindpath.icons)\braille-document.ico" />
+      <ProgId Id="BrailleMaker.dxp" Description="BrailleMaker Print Document" Icon="PrintDocumentIco" Advertise="no">
+        <Extension Id="dxp">
+          <Verb Id="open" Command="&amp;Open with BrailleMaker" TargetFile="BrailleMakerExe" Argument="&quot;%1&quot;" Sequence="1" />
+          <Verb Id="print" Command="&amp;Print with BrailleMaker" TargetFile="BrailleMakerExe" Argument="/print &quot;%1&quot;" Sequence="2" />
+          <Verb Id="emboss" Command="&amp;Emboss with BrailleMaker" TargetFile="BrailleMakerExe" Argument="/braille &quot;%1&quot;" Sequence="3" />
+        </Extension>
+      </ProgId>
+      <ProgId Id="BrailleMaker.dxb" Description="BrailleMaker Braille Document" Icon="BrailleDocumentIco" Advertise="no">
+        <Extension Id="dxb">
+          <Verb Id="open" Command="&amp;Open with BrailleMaker" TargetFile="BrailleMakerExe" Argument="&quot;%1&quot;" Sequence="1" />
+          <Verb Id="emboss" Command="&amp;Emboss with BrailleMaker" TargetFile="BrailleMakerExe" Argument="/braille &quot;%1&quot;" Sequence="2" />
+          <Verb Id="print" Command="&amp;Print with BrailleMaker" TargetFile="BrailleMakerExe" Argument="/simulate &quot;%1&quot;" Sequence="3" />
+        </Extension>
+      </ProgId>
+    </Component>
+
+    <Component Id="StartMenuShortcut" Directory="MenuFolder">
+      <Shortcut Id="StartMenuBrailleMaker" Name="BrailleMaker" Target="[#BrailleMakerExe]" WorkingDirectory="INSTALLFOLDER" Icon="BrailleMakerIcon" />
+      <RemoveFolder Id="RemoveMenuFolder" On="uninstall" />
+      <RegistryValue Root="HKLM" Key="Software\BrailleMaker" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+    <Component Id="DesktopShortcut" Directory="DesktopFolder">
+      <Shortcut Id="DesktopBrailleMaker" Name="BrailleMaker" Target="[#BrailleMakerExe]" WorkingDirectory="INSTALLFOLDER" Icon="BrailleMakerIcon" />
+      <RegistryValue Root="HKLM" Key="Software\BrailleMaker" Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
+    <Feature Id="Program" Title="BrailleMaker" Description="The program, its translation tables, templates and embosser models." Level="1" AllowAbsent="no" Display="expand" ConfigurableDirectory="INSTALLFOLDER">
+      <ComponentRef Id="ProgramExe" />
+      <ComponentGroupRef Id="ProgramFiles" />
+      <ComponentRef Id="DocumentTypes" />
+      <ComponentRef Id="StartMenuShortcut" />
+      <Feature Id="Fonts" Title="Braille Fonts" Description="The braille and simulated braille fonts, for every program on this computer." Level="1">
+        <ComponentGroupRef Id="SystemFonts" />
+      </Feature>
+      <Feature Id="Jaws" Title="JAWS Scripts" Description="The BrailleMaker scripts for JAWS; BrailleMaker offers to put them in each JAWS version's settings when it starts." Level="1">
+        <ComponentGroupRef Id="JawsScripts" />
+      </Feature>
+      <Feature Id="Desktop" Title="Desktop Shortcut" Description="A shortcut to BrailleMaker on the desktop." Level="1">
+        <ComponentRef Id="DesktopShortcut" />
+      </Feature>
+    </Feature>
+
+    <!-- The installer's pages: Welcome, the feature tree (Typical or Custom choices, with the folder), Ready,
+         progress, and the last page with the check box to start BrailleMaker. -->
+    <ui:WixUI Id="WixUI_FeatureTree" InstallDirectory="INSTALLFOLDER" />
+    <UI>
+      <!-- The licence page waits for the licence text (queue line 14): Welcome goes straight to the features. -->
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="CustomizeDlg" Order="9" Condition="NOT Installed" />
+      <Publish Dialog="CustomizeDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="9" Condition="NOT Installed" />
+      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchBrailleMaker" Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND NOT Installed" />
+    </UI>
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Start BrailleMaker" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+    <Property Id="WixShellExecTarget" Value="[#BrailleMakerExe]" />
+    <CustomAction Id="LaunchBrailleMaker" BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)" DllEntry="WixShellExec" Impersonate="yes" />
+  </Package>
+</Wix>
