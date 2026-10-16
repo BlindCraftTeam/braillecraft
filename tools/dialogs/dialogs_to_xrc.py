@@ -46,7 +46,7 @@ TEXTS = {
     (1036, 12): "Allow embedded codes, eg. [[*pg*]]",
     (1037, 16): '<a href="www.example.com">www.example.com</a>',
     (1060, 12): "",
-    # Install JAWS Scripts: the same texts as crates/bm-desktop/src/jaws_install.rs.
+    # Install JAWS Scripts: the same texts as crates/bc-desktop/src/jaws_install.rs.
     (1058, 6): "You have one or more JAWS® installations without the most up-to-date script files for "
                "BrailleCraft.  Installing the most recent script files (included with BrailleCraft) will help "
                "BrailleCraft to work better with JAWS.",

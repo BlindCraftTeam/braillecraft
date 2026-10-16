@@ -1,4 +1,4 @@
-// BrailleCraft main window. The menu bar (crates/bm-shell/src/menu.rs) follows the menu table; each command arrives
+// BrailleCraft main window. The menu bar (crates/bc-shell/src/menu.rs) follows the menu table; each command arrives
 // here as a "menu" event and is carried out by COMMANDS below. Commands that need parts not built yet (the
 // translator, the BrailleCraft file format, printing and embossing) say so in a message box that names the build
 // step that brings them. In a plain browser, with no native menu, the shortcuts are bound to the keyboard.
@@ -6,11 +6,11 @@
 
 const tauri = window.__TAURI__ || null;
 const invoke = (cmd, args) => (tauri && tauri.core ? tauri.core.invoke(cmd, args).catch(() => {}) : Promise.resolve());
-// A shell call whose result or error matters (translation). Without the desktop shell, window.BM_TRANSLATOR may
+// A shell call whose result or error matters (translation). Without the desktop shell, window.BC_TRANSLATOR may
 // stand in (used by the page tests); otherwise translation is not available.
 async function shellCall(cmd, args) {
   if (tauri && tauri.core) return tauri.core.invoke(cmd, args);
-  if (window.BM_TRANSLATOR && window.BM_TRANSLATOR[cmd]) return window.BM_TRANSLATOR[cmd](args);
+  if (window.BC_TRANSLATOR && window.BC_TRANSLATOR[cmd]) return window.BC_TRANSLATOR[cmd](args);
   throw new Error("Translation runs in the BrailleCraft desktop program.");
 }
 

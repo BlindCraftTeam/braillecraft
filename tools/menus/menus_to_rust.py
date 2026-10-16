@@ -1,5 +1,5 @@
 """Turns a decoded menu resource (menus.txt) and accelerator table (accelerators.txt) into the BrailleCraft menu
-bar table (crates/bm-desktop/src/menu_table.rs).
+bar table (crates/bc-desktop/src/menu_table.rs).
 
 Usage: python3 -I menus_to_rust.py <menus.txt> <accelerators.txt> <out.rs>
 

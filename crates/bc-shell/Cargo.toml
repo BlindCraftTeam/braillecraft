@@ -1,0 +1,19 @@
+[package]
+name = "bc-shell"
+description = "BrailleCraft desktop shell (Tauri 2): window, menu bar, installers."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "braillecraft"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+bc-louis = { path = "../bc-louis" }

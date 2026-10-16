@@ -1,0 +1,18 @@
+[package]
+name = "bc-desktop"
+description = "BrailleCraft desktop program: native windows, menus and dialogs (wxWidgets through wxDragon)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "braillecraft-desktop"
+path = "src/main.rs"
+
+[dependencies]
+wxdragon = { version = "=0.9.22", features = ["xrc"] }
+wxdragon-sys = { version = "=0.9.22", features = ["xrc"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+bc-core = { path = "../bc-core" }

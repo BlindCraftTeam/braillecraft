@@ -1,5 +1,5 @@
 // BrailleCraft web build: the desktop program's menus and dialogs (ui-web/tables.js, generated from the desktop's own
-// tables), a document editor with the translated line and status line, and the core (bm-web, WebAssembly) for
+// tables), a document editor with the translated line and status line, and the core (bc-web, WebAssembly) for
 // documents, translation, embosser setups and embossing.
 
 import { MENUS, DIALOGS } from "./tables.js";
@@ -14,11 +14,11 @@ const statusLine = $("status");
 let core = null;
 const engines = {};
 
-// The core's browser glue (pkg/bm_web.js) is made by wasm-bindgen when the site is built; without it the page
+// The core's browser glue (pkg/bc_web.js) is made by wasm-bindgen when the site is built; without it the page
 // still opens, edits, saves text and shows every menu and dialog.
 async function loadCore() {
   try {
-    const m = await import("./pkg/bm_web.js");
+    const m = await import("./pkg/bc_web.js");
     await m.default();
     core = m;
   } catch {
@@ -453,7 +453,7 @@ function caretLine() {
   return { line, column, text: editor.value.split("\n")[line - 1] ?? "", start, end: end < 0 ? editor.value.length : end };
 }
 
-// The status line, as the desktop program shows it (bm_core::status): the current style, Page, Line and Column on the
+// The status line, as the desktop program shows it (bc_core::status): the current style, Page, Line and Column on the
 // laid-out pages (left out in coded view), the character at the caret, and Keys.
 function showStatus() {
   if (!core) {
@@ -531,7 +531,7 @@ editor.addEventListener("keyup", (e) => {
 });
 
 editor.addEventListener("input", () => {
-  // The codes follow the edit (bm_core::doctext, as in the desktop program); a code that lost a bracket goes as a
+  // The codes follow the edit (bc_core::doctext, as in the desktop program); a code that lost a bracket goes as a
   // whole, last first, and that change comes back here.
   if (core) {
     const remains = core.editor_edit(editor.value);

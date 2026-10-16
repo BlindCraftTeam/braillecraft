@@ -87,18 +87,18 @@ macOS asks too (System Settings, Privacy and Security, "Open Anyway").
 Requires Rust 1.80 or later, CMake and a C++ compiler; wxWidgets is built from source as part of the build. On Linux
 the GTK 3, OpenGL and fontconfig development packages are needed as well (the workflow lists the packages it
 installs). Tests that check translation against the full table set read the tables from the folder named by
-`BM_TABLES`.
+`BC_TABLES`.
 
 ```
-cargo build --release -p bm-desktop     # the desktop program: target/release/braillecraft-desktop
+cargo build --release -p bc-desktop     # the desktop program: target/release/braillecraft-desktop
 cargo test --workspace
 ```
 
 The web build:
 
 ```
-cargo build --release -p bm-web --target wasm32-unknown-unknown
-wasm-bindgen --target web --no-typescript --out-dir site/pkg target/wasm32-unknown-unknown/release/bm_web.wasm
+cargo build --release -p bc-web --target wasm32-unknown-unknown
+wasm-bindgen --target web --no-typescript --out-dir site/pkg target/wasm32-unknown-unknown/release/bc_web.wasm
 ```
 
 then copy `ui-web`, the fonts, the tables, the templates and the embosser models into `site` as the workflow's web
@@ -109,9 +109,9 @@ step does. The installers are made by the scripts in `packaging` (WiX 5 on Windo
 
 | Path | What it is |
 |---|---|
-| `crates/bm-core` | The core library: documents, the translation engine and its table compiler, page layout, file formats, printing and embossing data. No user interface. |
-| `crates/bm-desktop` | The desktop program (wxWidgets through wxDragon): main window, menus, dialogs, translated line, status line. Builds `braillecraft-desktop`. |
-| `crates/bm-web` | The core for the browser (WebAssembly). |
+| `crates/bc-core` | The core library: documents, the translation engine and its table compiler, page layout, file formats, printing and embossing data. No user interface. |
+| `crates/bc-desktop` | The desktop program (wxWidgets through wxDragon): main window, menus, dialogs, translated line, status line. Builds `braillecraft-desktop`. |
+| `crates/bc-web` | The core for the browser (WebAssembly). |
 | `ui-web` | The web interface: menus and dialogs generated from the desktop program's tables. |
 | `ui-native` | The desktop dialogs as XRC resources. |
 | `tables` | The translation tables in BrailleCraft's own source format, with `index.tsv` and `languages.tsv`. |
@@ -122,7 +122,7 @@ step does. The installers are made by the scripts in `packaging` (WiX 5 on Windo
 | `packaging` | Icons and the installers for Windows, macOS and Linux. |
 | `tools` | The generators for menus, dialogs, fonts, icons, templates, language lists and the web tables. |
 | `vendor/wxdragon-sys` | wxDragon's wxWidgets binding with the printing functions BrailleCraft needs added. |
-| `crates/bm-shell`, `crates/bm-louis`, `ui` | An earlier desktop shell (Tauri) and its liblouis binding; not part of the downloads. |
+| `crates/bc-shell`, `crates/bc-louis`, `ui` | An earlier desktop shell (Tauri) and its liblouis binding; not part of the downloads. |
 | `.github/workflows/build.yml` | Builds, tests and packages everything on every push to main. |
 
 ## Notes

@@ -2,10 +2,10 @@
 """Writes ui-web/tables.js, the menus and dialogs of the web build, from the desktop program's own generated tables,
 so the two programs show the same menus and dialogs:
 
-- the menus from crates/bm-desktop/src/menu_table.rs (items, shortcuts after a tab, separators, submenus, check and
+- the menus from crates/bc-desktop/src/menu_table.rs (items, shortcuts after a tab, separators, submenus, check and
   radio items);
 - the dialogs from ui-native/dialogs.xrc (titles, sizes, each control's text, place, size, style, default and hidden
-  state) and crates/bm-desktop/src/dialog_table.rs (the controls in tab order with their kind).
+  state) and crates/bc-desktop/src/dialog_table.rs (the controls in tab order with their kind).
 
 Run from the repository root: python3 tools/web/make_web_tables.py
 """
@@ -14,8 +14,8 @@ import json
 import re
 import xml.etree.ElementTree as ET
 
-MENU_RS = "crates/bm-desktop/src/menu_table.rs"
-DIALOG_RS = "crates/bm-desktop/src/dialog_table.rs"
+MENU_RS = "crates/bc-desktop/src/menu_table.rs"
+DIALOG_RS = "crates/bc-desktop/src/dialog_table.rs"
 XRC = "ui-native/dialogs.xrc"
 OUT = "ui-web/tables.js"
 
