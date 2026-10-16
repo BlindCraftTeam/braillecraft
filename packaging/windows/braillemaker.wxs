@@ -106,6 +106,13 @@
     </UI>
     <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Start BrailleMaker" />
     <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+    <!-- As the reference installer does (re/spec/26-installer.md section 26.6): when the installing user has no
+         embosser setup yet, the last page says the program will set up the embossers; the program itself opens
+         Embosser Setup at start-up in that case. The program is started with no arguments. -->
+    <Property Id="EMBOSSERSETUPS">
+      <RegistrySearch Id="EmbosserSetupsSearch" Root="HKCU" Key="Software\BrailleMaker\BrailleMaker\Embosser" Name="Setups" Type="raw" />
+    </Property>
+    <SetProperty Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Start BrailleMaker to set up your embossers" Before="CostFinalize" Sequence="ui" Condition="NOT EMBOSSERSETUPS OR EMBOSSERSETUPS = &quot;[]&quot;" />
     <Property Id="WixShellExecTarget" Value="[#BrailleMakerExe]" />
     <CustomAction Id="LaunchBrailleMaker" BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)" DllEntry="WixShellExec" Impersonate="yes" />
   </Package>
