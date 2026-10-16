@@ -195,7 +195,61 @@ const european = () => !/^en-US$/i.test(navigator.language || "en-US");
 
 // ------------------------------------------------------------------ the document
 
-const doc = { kind: "print", name: "Untitled Print Document 1", file: null, translatedLine: true };
+// Global settings, as the desktop program keeps them; the defaults are the reference program's (spec 18).
+const DEFAULT_VIEWS = {
+  translated_font: "print",
+  print_full_page: false,
+  print_codes: false,
+  print_translated: false,
+  braille_font: "print",
+  braille_full_page: false,
+  braille_codes: false,
+  braille_translated: true,
+  six_key: true,
+};
+const DEFAULT_FONTS = {
+  print_face: "Courier New",
+  print_size: 12,
+  braille_size: 18,
+  status_face: "Segoe UI",
+  status_size: 12,
+  print_auto: true,
+  print_output_size: 12,
+  braille_output_size: 18,
+};
+const DEFAULT_SHORTCUTS = {
+  grade0: "[cz]",
+  flush_right_leader: '[fr;p~"]',
+  cbc: "[cb]",
+  new_line: "[<]",
+  new_page: "[pg]",
+  new_ref_page: "[lea]",
+  page_nav: 0,
+  control_page_nav: 1,
+};
+const settings = {
+  views: { ...DEFAULT_VIEWS, ...store.json("views.default", {}) },
+  fonts: { ...DEFAULT_FONTS, ...store.json("fonts", {}) },
+  shortcuts: { ...DEFAULT_SHORTCUTS, ...store.json("shortcuts", {}) },
+  encoding: store.get("encoding") || "north-american",
+  uia: store.get("uia") === "1",
+  verbose: store.get("verbose") === "1",
+  sixKeySet: store.get("sixkey.set") || "fdsjkl",
+};
+
+// A new document's view, from Global, Default Views.
+function newView(braille) {
+  const v = settings.views;
+  return {
+    font: braille ? v.braille_font : "print",
+    full_page: braille ? v.braille_full_page : v.print_full_page,
+    codes: braille ? v.braille_codes : v.print_codes,
+    translated: braille ? v.braille_translated : v.print_translated,
+    six_key: braille && v.six_key,
+  };
+}
+
+const doc = { kind: "print", name: "Untitled Print Document 1", file: null, view: newView(false) };
 
 // A new document takes the default embosser setup and layout, as in the desktop program.
 function embosserDefaults() {
@@ -215,8 +269,89 @@ function showTitle() {
   const title = `BrailleMaker - [${doc.name} -- ${kindName()}]`;
   $("doc-title").textContent = title;
   document.title = title;
-  editor.classList.toggle("braille", doc.kind === "braille");
-  translated.classList.toggle("braille", doc.kind === "print");
+}
+
+// ------------------------------------------------------------------ the shown encoding, fonts and the view
+
+// The braille encoding documents are shown in (Global, Internationalization), once encodings.json is read.
+let currentEncoding = null;
+async function loadEncoding() {
+  const all = await encodings();
+  currentEncoding = all.find((e) => e.id === settings.encoding) ?? all.find((e) => e.id === "north-american") ?? null;
+}
+const encodingNow = () => currentEncoding ?? { id: "north-american", name: "North American English", cells: [] };
+const naCells = () => encodingTable?.find((e) => e.id === "north-american")?.cells ?? [];
+
+// Braille is kept, translated, saved and embossed in North American ASCII braille, whatever encoding it is shown in;
+// these convert the shown text to it and back, codes keeping their text.
+function toNA(text) {
+  const e = encodingNow();
+  return core && e.id !== "north-american" && e.cells.length ? core.convert_braille(text, JSON.stringify(e.cells), JSON.stringify(naCells())) : text;
+}
+function fromNA(text) {
+  const e = encodingNow();
+  return core && e.id !== "north-american" && e.cells.length ? core.convert_braille(text, JSON.stringify(naCells()), JSON.stringify(e.cells)) : text;
+}
+
+// The character the shown encoding gives a cell (dot pattern), Unicode braille when it lists none.
+function cellChar(pattern) {
+  return [...(encodingNow().cells[pattern] ?? "")][0] ?? String.fromCodePoint(0x2800 + pattern);
+}
+
+// The braille fonts of the shown encoding ("BrailleMaker Braille North American English" and its SimBraille),
+// loaded from fonts/ beside the page when first used.
+const facesAdded = new Set();
+function brailleFamily(kind) {
+  const e = encodingNow();
+  const family = `BrailleMaker ${kind} ${e.name}`;
+  if (!facesAdded.has(family) && "FontFace" in window) {
+    facesAdded.add(family);
+    const face = new FontFace(family, `url("fonts/BrailleMaker-${kind}-${e.id}.ttf")`);
+    document.fonts.add(face);
+    face.load().catch(() => {});
+  }
+  return family;
+}
+
+// A view font's CSS family and point size (Global, Fonts).
+function faceOf(font) {
+  const f = settings.fonts;
+  if (font === "print") return [`"${f.print_face}", monospace`, f.print_size];
+  return [`"${brailleFamily(font === "braille" ? "Braille" : "SimBraille")}", monospace`, f.braille_size];
+}
+
+// The document's view applied: its font (sized so one whole page fits the window in Full-Page view), the translated
+// line's font (Global, Default Views, for print documents; the print font for braille documents) and whether it
+// shows, the status line's font, and the View menu's marks.
+function applyView() {
+  const v = doc.view;
+  let [face, size] = faceOf(v.font);
+  if (v.full_page) {
+    const byHeight = Math.floor((editor.clientHeight * 72) / 96 / (doc.lines + 1));
+    const byWidth = Math.floor((((editor.clientWidth * 72) / 96) * 10) / 6 / (doc.cells + 1));
+    size = Math.max(4, Math.min(byHeight, byWidth));
+  }
+  editor.style.fontFamily = face;
+  editor.style.fontSize = `${size}pt`;
+  const [lineFace, lineSize] = faceOf(doc.kind === "print" ? settings.views.translated_font : "print");
+  translated.style.fontFamily = lineFace;
+  translated.style.fontSize = `${lineSize}pt`;
+  $("translated-section").hidden = !v.translated;
+  statusLine.style.fontFamily = `"${settings.fonts.status_face}", system-ui, sans-serif`;
+  statusLine.style.fontSize = `${settings.fonts.status_size}pt`;
+  refreshMenus();
+  lastLine = null;
+  showStatus();
+  showTranslatedLine();
+}
+
+// The View menu's check marks follow the document's view.
+function refreshMenus() {
+  const v = doc.view;
+  const marks = { 1301: v.full_page, 1303: v.font === "print", 1304: v.font === "braille", 1305: v.font === "simbraille", 1307: v.six_key, 1309: v.codes, 1310: v.translated };
+  for (const [id, on] of Object.entries(marks)) {
+    menubar.querySelector(`[data-id="${id}"]`)?.setAttribute("aria-checked", String(on));
+  }
 }
 
 function caretLine() {
@@ -226,14 +361,22 @@ function caretLine() {
   return { line, column, text: editor.value.split("\n")[line - 1] ?? "" };
 }
 
+// The status line, as the desktop program shows it (bm_core::status): the current style, Page, Line and Column on the
+// laid-out pages (left out in coded view), the character at the caret, and Keys.
 function showStatus() {
-  const { line, column } = caretLine();
-  statusLine.textContent = `Current Style: None  Line:${line}  Column:${column}`;
+  if (!core) {
+    const { line, column } = caretLine();
+    statusLine.textContent = `Current Style: None  Line:${line}  Column:${column}`;
+    return;
+  }
+  // As in the desktop program, the text as it is shown (in the shown encoding) is laid out.
+  const status = core.status_line(editor.value, doc.cells, doc.lines, doc.kind === "braille", editor.selectionStart, doc.view.codes, settings.verbose, doc.view.six_key);
+  if (statusLine.textContent !== status) statusLine.textContent = status;
 }
 
 let lastLine = null;
 async function showTranslatedLine() {
-  if (!doc.translatedLine) {
+  if (!doc.view.translated) {
     return;
   }
   const { line, text } = caretLine();
@@ -248,11 +391,38 @@ async function showTranslatedLine() {
     return;
   }
   try {
-    translated.textContent = e.translate(text);
+    translated.textContent = doc.kind === "print" ? fromNA(e.translate(text)) : e.translate(toNA(text));
   } catch (err) {
     translated.textContent = String(err.message ?? err);
   }
 }
+
+// Six-key entry (View, Six-Key Entry, braille documents): the six keys of Global, View Preferences are dots 1 to 6;
+// the keys down together make a chord, entered as its cell when the last of them comes up.
+const sixDown = new Set();
+let chord = 0;
+const sixKeyDot = (e) => (e.key.length === 1 ? settings.sixKeySet.indexOf(e.key.toLowerCase()) : -1);
+editor.addEventListener("keydown", (e) => {
+  if (doc.kind !== "braille" || !doc.view.six_key || e.ctrlKey || e.altKey || e.metaKey) return;
+  const dot = sixKeyDot(e);
+  if (dot >= 0) {
+    e.preventDefault();
+    sixDown.add(dot);
+    chord |= 1 << dot;
+  }
+});
+editor.addEventListener("keyup", (e) => {
+  if (doc.kind !== "braille" || !doc.view.six_key) return;
+  const dot = sixKeyDot(e);
+  if (dot < 0) return;
+  sixDown.delete(dot);
+  if (sixDown.size === 0 && chord !== 0) {
+    const c = cellChar(chord);
+    chord = 0;
+    editor.setRangeText(c, editor.selectionStart, editor.selectionEnd, "end");
+    editor.dispatchEvent(new Event("input"));
+  }
+});
 
 editor.addEventListener("input", () => {
   showStatus();
@@ -479,6 +649,27 @@ function dialogHelpers(controls) {
       const el = get(id);
       if (el) (el.closest(".row") ?? el).hidden = true;
     },
+    // Every field's value, for the dialogs that remember what was chosen last (the desktop program's dialog memory).
+    values() {
+      const out = [];
+      for (const [id, el] of controls) {
+        if (el.tagName === "INPUT" && (el.type === "checkbox" || el.type === "radio")) out.push([id, el.checked]);
+        else if (el.tagName === "INPUT") out.push([id, el.value]);
+        else if (el.tagName === "SELECT") out.push([id, this.selected(id)]);
+      }
+      return out;
+    },
+    restore(values) {
+      for (const [id, v] of values ?? []) {
+        const el = get(id);
+        if (!el) continue;
+        if (typeof v === "boolean") el.checked = v;
+        else if (el.tagName === "SELECT") {
+          const i = [...el.options].findIndex((o) => o.text === v);
+          if (i >= 0) el.selectedIndex = i;
+        } else el.value = v;
+      }
+    },
   };
 }
 
@@ -572,8 +763,10 @@ function focusFirst(container) {
   first?.focus();
 }
 
-// Dialog `rid` shown modally: `setup` fills it, `onOk` checks it. Answers how it was closed and its helpers.
-async function showDialog(rid, { title, setup, onOk } = {}) {
+// Dialog `rid` shown modally: `setup` fills it, `onOk` checks it. With `memory`, the values chosen last are put back
+// after `setup` and kept on OK, as the desktop program's settings dialogs do. Answers how it was closed and its
+// helpers.
+async function showDialog(rid, { title, setup, onOk, memory, after } = {}) {
   const { dialog, form } = newDialog(title ?? DIALOGS[rid].title, `dlg${rid}`);
   const { controls, keys } = buildControls(rid, form);
   const d = dialogHelpers(controls);
@@ -582,9 +775,13 @@ async function showDialog(rid, { title, setup, onOk } = {}) {
   $("dialogs").append(dialog);
   const closed = closedPromise(dialog);
   setup?.(d);
+  if (memory !== undefined) d.restore(store.json(`dialog.${rid}.${memory}`, null));
+  after?.(d);
   dialog.showModal();
   focusFirst(form);
-  return { result: await closed, d };
+  const result = await closed;
+  if (result === "ok" && memory !== undefined) store.set(`dialog.${rid}.${memory}`, JSON.stringify(d.values()));
+  return { result, d };
 }
 
 // A message box (the desktop program's message and yes_no): OK, or Yes and No; Escape answers No.
@@ -1115,7 +1312,9 @@ async function print() {
   const back = job.interline ? await engine("en-ueb-g2-back") : null;
   const area = $("print-area");
   area.replaceChildren();
-  area.classList.toggle("braille", braille);
+  // The pages print in the document's view font, at the Global, Fonts printed size unless that is set to be found.
+  area.style.fontFamily = faceOf(doc.view.font)[0];
+  area.style.fontSize = settings.fonts.print_auto ? "" : `${doc.view.font === "print" ? settings.fonts.print_output_size : settings.fonts.braille_output_size}pt`;
   for (let copy = 0; copy < job.copies; copy++) {
     for (const lines of pages) {
       const page = document.createElement("section");
@@ -1128,8 +1327,9 @@ async function print() {
         if (back && line.trim()) {
           const ink = document.createElement("div");
           ink.className = "printed-ink";
+          ink.style.fontFamily = faceOf("print")[0];
           try {
-            ink.textContent = back.translate(line.trimEnd());
+            ink.textContent = back.translate(toNA(line.trimEnd()));
           } catch {
             ink.textContent = "";
           }
@@ -1216,7 +1416,7 @@ async function emboss() {
     },
   });
   if (result !== "ok") return;
-  const bytes = cat.job(setupJson, layoutJson, editor.value, braille, doc.cells, doc.lines, job.copies, Int32Array.from(job.pages), await encodingCodes(setup.encoding));
+  const bytes = cat.job(setupJson, layoutJson, storedText(), braille, doc.cells, doc.lines, job.copies, Int32Array.from(job.pages), await encodingCodes(setup.encoding));
   const [kind, target] = Object.entries(setup.output)[0];
   if (kind === "Port" && /^com/i.test(target) && "serial" in navigator) {
     try {
@@ -1251,7 +1451,7 @@ fileInput.addEventListener("change", async () => {
     try {
       const d = core.read_document(bytes);
       doc.kind = d.braille ? "braille" : "print";
-      editor.value = d.text;
+      editor.value = d.braille ? fromNA(d.text) : d.text;
       doc.file = d;
       doc.saved = true;
       // The document's own embosser setup and page layout, as the file keeps them (spec 25 section 10); cells and
@@ -1271,16 +1471,18 @@ fileInput.addEventListener("change", async () => {
     }
   } else {
     doc.kind = ext === "brf" || ext === "brl" ? "braille" : "print";
-    editor.value = new TextDecoder("latin1").decode(bytes);
+    const read = new TextDecoder("latin1").decode(bytes);
+    editor.value = doc.kind === "braille" ? fromNA(read) : read;
     doc.file = null;
     doc.saved = false;
   }
   doc.name = file.name;
+  // A document opens in its kind's default view; a document file keeps whether its translated line shows.
+  doc.view = newView(doc.kind === "braille");
+  if (doc.file) doc.view.translated = doc.file.translated_line;
   showTitle();
-  lastLine = null;
   editor.focus();
-  showStatus();
-  showTranslatedLine();
+  applyView();
 });
 
 async function translateDocument() {
@@ -1289,17 +1491,20 @@ async function translateDocument() {
     statusLine.textContent = "Translation is not available in this copy of the web build.";
     return;
   }
-  editor.value = e.translate(editor.value);
+  editor.value = doc.kind === "print" ? fromNA(e.translate(editor.value)) : e.translate(toNA(editor.value));
   doc.kind = doc.kind === "print" ? "braille" : "print";
   doc.name = `${stem()}${doc.kind === "braille" ? ".dxb" : ".dxp"}`;
   doc.file = null;
   doc.saved = false;
+  doc.view = newView(doc.kind === "braille");
   showTitle();
-  lastLine = null;
-  showTranslatedLine();
+  applyView();
 }
 
 // ------------------------------------------------------------------ File, Save and Save As
+
+// The document's text as files keep it: braille in North American ASCII braille, whatever encoding it is shown in.
+const storedText = () => (doc.kind === "braille" ? toNA(editor.value) : editor.value);
 
 // The Save As file types, in the reference program's order for each kind of document (spec 04d-B); the first is
 // chosen when the dialog opens, every time.
@@ -1381,7 +1586,7 @@ async function documentFile() {
 // its embosser setup name and layout, then takes that file as its own.
 async function writeDocument(name, version) {
   const file = await documentFile();
-  const bytes = file.save_version(editor.value, doc.embosser, doc.layout.form ? JSON.stringify(doc.layout) : "", doc.cells, doc.lines, version);
+  const bytes = file.save_version(storedText(), doc.embosser, doc.layout.form ? JSON.stringify(doc.layout) : "", doc.cells, doc.lines, version);
   download(name, bytes);
   doc.file = core.read_document(bytes);
   doc.name = name;
@@ -1415,8 +1620,9 @@ async function formattedBytes(braille) {
   } else {
     codes = [];
   }
-  // The document is shown in North American ASCII braille in the web build.
-  return core.formatted_braille(editor.value, doc.cells, doc.lines, JSON.stringify(na.cells), Uint32Array.from(codes));
+  // Each character goes to its cell through the encoding the document is shown in.
+  const shownCells = encodingNow().cells.length ? encodingNow().cells : na.cells;
+  return core.formatted_braille(editor.value, doc.cells, doc.lines, JSON.stringify(shownCells), Uint32Array.from(codes));
 }
 
 // File, Save As: the name and type chosen, then the file written as that type and saved by the browser. A name
@@ -1458,13 +1664,13 @@ async function saveAs() {
         break;
       case "coded":
         bytes = core.coded(
-          editor.value,
+          storedText(),
           await fetchBytes(`tables/rule-scripts/${braille ? "coded-braille" : "coded-text"}.rules`),
           await fetchBytes("tables/rule-scripts/coded-wrap.rules"),
         );
         break;
       case "refreshable":
-        bytes = (await documentFile()).refreshable(editor.value);
+        bytes = (await documentFile()).refreshable(storedText());
         break;
       default:
         bytes = core.latex(
@@ -1495,6 +1701,174 @@ async function save(asNew) {
   await saveAs();
 }
 
+// ------------------------------------------------------------------ View and Global
+
+function setView(change) {
+  change(doc.view);
+  applyView();
+}
+
+const FONT_FACES = ["print", "braille", "simbraille"];
+
+// Global, Default Views (dialog 1033): the view new documents of each kind take.
+async function defaultViews() {
+  const v = settings.views;
+  let chosen = null;
+  await showDialog(1033, {
+    setup(d) {
+      d.setRadio([7, 8, 9], Math.max(0, FONT_FACES.indexOf(v.translated_font)));
+      d.setChecked(10, v.print_full_page);
+      d.setChecked(11, v.print_codes);
+      d.setChecked(12, v.print_translated);
+      d.setRadio([14, 15, 16], Math.max(0, FONT_FACES.indexOf(v.braille_font)));
+      d.setChecked(17, v.braille_full_page);
+      d.setChecked(18, v.braille_codes);
+      d.setChecked(19, v.braille_translated);
+      d.setChecked(20, v.six_key);
+    },
+    onOk(d) {
+      chosen = {
+        translated_font: FONT_FACES[d.radio([7, 8, 9]) ?? 0],
+        print_full_page: d.checked(10),
+        print_codes: d.checked(11),
+        print_translated: d.checked(12),
+        braille_font: FONT_FACES[d.radio([14, 15, 16]) ?? 0],
+        braille_full_page: d.checked(17),
+        braille_codes: d.checked(18),
+        braille_translated: d.checked(19),
+        six_key: d.checked(20),
+      };
+      return true;
+    },
+  });
+  if (!chosen) return;
+  settings.views = chosen;
+  store.set("views.default", JSON.stringify(chosen));
+  applyView();
+}
+
+// Global, Internationalization (dialog 1051): the braille encoding documents are shown in. Braille documents keep
+// their cells: their text is rewritten in the new encoding's characters; codes keep theirs.
+async function internationalization() {
+  const all = await encodings();
+  const current = settings.encoding;
+  const { result, d } = await showDialog(1051, {
+    memory: "",
+    setup(d) {
+      d.setItems(7, ["English"], 0);
+      d.setItems(10, all.map((e) => e.name), all.findIndex((e) => e.id === current));
+      d.setRadio([11, 12], 0);
+      d.setChecked(14, settings.uia);
+      d.setRadio([15, 16], 0);
+    },
+  });
+  if (result !== "ok") return;
+  settings.uia = d.checked(14);
+  store.set("uia", settings.uia ? "1" : "0");
+  const chosen = all.find((e) => e.name === d.selected(10));
+  if (!chosen || chosen.id === current) return;
+  if (doc.kind === "braille" && core) {
+    editor.value = core.convert_braille(editor.value, JSON.stringify(encodingNow().cells), JSON.stringify(chosen.cells));
+  }
+  settings.encoding = chosen.id;
+  store.set("encoding", chosen.id);
+  currentEncoding = chosen;
+  applyView();
+}
+
+// Global, Fonts (dialog 1049): the print font, the braille fonts' size, printed output sizes and the status line font.
+async function globalFonts() {
+  const f = settings.fonts;
+  const faces = ["Courier New", "Consolas", "Arial", "Times New Roman", "Verdana"];
+  const status = ["Segoe UI", "Arial", "Courier New", "Verdana"];
+  const { result, d } = await showDialog(1049, {
+    setup(d) {
+      d.setItems(7, faces, Math.max(0, faces.indexOf(f.print_face)));
+      d.setText(9, String(f.print_size));
+      d.setText(11, String(f.braille_size));
+      // Printed output (spec 24, 2c): auto-determine the point size, or the print font's and the braille fonts' sizes.
+      d.setChecked(12, f.print_auto);
+      d.setText(14, String(f.print_output_size));
+      d.setText(16, String(f.braille_output_size));
+      d.setItems(18, status, Math.max(0, status.indexOf(f.status_face)));
+      d.setText(20, String(f.status_size));
+    },
+  });
+  if (result !== "ok") return;
+  const within = (n, lo, hi) => n !== null && n >= lo && n <= hi;
+  f.print_auto = d.checked(12);
+  if (within(d.number(14), 1, 72)) f.print_output_size = d.number(14);
+  if (within(d.number(16), 1, 72)) f.braille_output_size = d.number(16);
+  if (d.selected(7)) f.print_face = d.selected(7);
+  if (within(d.number(9), 6, 72)) f.print_size = d.number(9);
+  if (within(d.number(11), 6, 72)) f.braille_size = d.number(11);
+  if (within(d.number(20), 6, 36)) f.status_size = d.number(20);
+  if (d.selected(18)) f.status_face = d.selected(18);
+  store.set("fonts", JSON.stringify(f));
+  applyView();
+}
+
+// Global, View Preferences (dialog 1034): verbose labels (the status line's character field gives the character's
+// Unicode value) and the six keys of six-key entry.
+async function viewPreferences() {
+  const { result, d } = await showDialog(1034, {
+    memory: "",
+    setup(d) {
+      d.setText(7, "0");
+      d.setChecked(9, settings.verbose);
+      d.setItems(17, ["Hide All", "Hide Idle", "Show All"], 0);
+      d.setText(19, settings.sixKeySet);
+    },
+  });
+  if (result !== "ok") return;
+  settings.verbose = d.checked(9);
+  store.set("verbose", settings.verbose ? "1" : "0");
+  showStatus();
+  const keys = d.text(19);
+  if ([...keys].length !== 6) {
+    await message(
+      'You must type exactly six keys in as the "Six-Key Key Set."  The keys you type represent, in order, what you will type for Dots 1, 2, 3, 4, 5, and 6 when entering braille by six-key chording.',
+    );
+    return;
+  }
+  settings.sixKeySet = keys.toLowerCase();
+  store.set("sixkey.set", settings.sixKeySet);
+}
+
+// Global, Shortcut Preferences (dialog 1022): the codes the editor's shortcut keys insert and the page keys' moves.
+async function shortcutPreferences() {
+  const s = settings.shortcuts;
+  let chosen = null;
+  await showDialog(1022, {
+    setup(d) {
+      d.setText(7, s.grade0);
+      d.setText(9, s.flush_right_leader);
+      d.setText(11, s.cbc);
+      d.setText(13, s.new_line);
+      d.setText(15, s.new_page);
+      d.setText(17, s.new_ref_page);
+      d.setRadio([19, 20, 21], Math.min(s.page_nav, 2));
+      d.setRadio([23, 24, 25], Math.min(s.control_page_nav, 2));
+    },
+    onOk(d) {
+      chosen = {
+        grade0: d.text(7),
+        flush_right_leader: d.text(9),
+        cbc: d.text(11),
+        new_line: d.text(13),
+        new_page: d.text(15),
+        new_ref_page: d.text(17),
+        page_nav: d.radio([19, 20, 21]) ?? s.page_nav,
+        control_page_nav: d.radio([23, 24, 25]) ?? s.control_page_nav,
+      };
+      return true;
+    },
+  });
+  if (!chosen) return;
+  settings.shortcuts = chosen;
+  store.set("shortcuts", JSON.stringify(chosen));
+}
+
 const COMMANDS = {
   1101: () => {
     doc.kind = "print";
@@ -1502,9 +1876,11 @@ const COMMANDS = {
     doc.file = null;
     doc.saved = false;
     embosserDefaults();
+    doc.view = newView(false);
     editor.value = "";
     showTitle();
     editor.focus();
+    applyView();
   },
   1102: () => fileInput.click(),
   1105: () => save(false),
@@ -1512,14 +1888,66 @@ const COMMANDS = {
   1109: translateDocument,
   1111: print,
   1112: emboss,
-  1310: () => {
-    doc.translatedLine = !doc.translatedLine;
-    $("translated-section").hidden = !doc.translatedLine;
-    lastLine = null;
-    showTranslatedLine();
+  1301: () => setView((v) => (v.full_page = !v.full_page)),
+  1303: () => setView((v) => (v.font = "print")),
+  1304: () => setView((v) => (v.font = "braille")),
+  1305: () => setView((v) => (v.font = "simbraille")),
+  1307: async () => {
+    if (doc.kind !== "braille" && !doc.view.six_key) {
+      await message("Six-key entry is for braille documents.");
+      return;
+    }
+    setView((v) => (v.six_key = !v.six_key));
   },
+  1309: () => setView((v) => (v.codes = !v.codes)),
+  1310: () => setView((v) => (v.translated = !v.translated)),
   2601: () => embosserSetup(false),
   3101: () => embosserSetup(true),
+  3104: () => showDialog(1060, { memory: "", setup: (d) => (d.setChecked(10, true), d.setText(12, ""), d.setText(14, "05:00")) }),
+  3105: defaultViews,
+  3106: internationalization,
+  3107: globalFonts,
+  3108: viewPreferences,
+  3109: shortcutPreferences,
+  3111: () => showDialog(1023),
+  3113: () =>
+    showDialog(1037, {
+      memory: "",
+      setup(d) {
+        d.setItems(7, ["Text Only", "URLs Only", "Both Text and URLs", "Structured Hyperlinks"], 0);
+        d.setItems(23, ["Mark with asterisk (*)", "Ignore", "Output Unicode value"], 0);
+        d.setChecked(26, true);
+      },
+    }),
+  3114: () => showDialog(1035, { memory: "", setup: (d) => (d.setChecked(13, true), d.setText(16, "0.25"), d.setChecked(18, true)) }),
+  3115: () =>
+    showDialog(1036, {
+      memory: "",
+      setup: (d) => d.setItems(10, ["Ignore", "Mark from Word document", "Treat hard page breaks as print page breaks", "Use publishers' <ipp no=#> reference page tags"], 0),
+    }),
+  3116: () => message("The PDF importer and its options are built in step 9 of the plan."),
+  3117: () =>
+    showDialog(1045, {
+      memory: "",
+      setup(d) {
+        d.setRadio([8, 9, 10, 11, 12], 2);
+        d.setRadio([14, 15, 16, 17, 18], 4);
+        d.setRadio([20, 21, 22, 23, 24], 0);
+        d.setRadio([26, 27, 28, 29, 30], 0);
+        d.setRadio([32, 33, 34, 35], 0);
+        d.setRadio([37, 38, 39, 40], 0);
+        d.setText(42, "25");
+        d.setText(44, "40");
+      },
+      // "When this is checked, most of the other controls on the dialog are disabled" (the manual).
+      after(d) {
+        const apply = () => {
+          for (let c = 7; c <= 44; c++) d.enable(c, !d.checked(6));
+        };
+        d.get(6)?.addEventListener("change", apply);
+        apply();
+      },
+    }),
   3211: () => showDialog(1016),
 };
 
@@ -1554,10 +1982,11 @@ function itemNode(entry, menuLabel, level) {
   }
   const item = document.createElement("div");
   item.tabIndex = -1;
+  if (entry.id) item.dataset.id = entry.id;
   const kind = entry.kind === "check" ? "menuitemcheckbox" : entry.kind === "radio" ? "menuitemradio" : "menuitem";
   item.setAttribute("role", kind);
   if (kind !== "menuitem") {
-    item.setAttribute("aria-checked", entry.id === 1310 ? "true" : "false");
+    item.setAttribute("aria-checked", "false");
   }
   const text = document.createElement("span");
   const label = entry.label;
@@ -1779,9 +2208,10 @@ document.addEventListener("keydown", (e) => {
 
 showTitle();
 showStatus();
+applyView();
 loadCore().then(async () => {
-  lastLine = null;
-  showTranslatedLine();
+  await loadEncoding();
+  applyView();
   if (core) {
     await embosserSetupAtStart();
   }

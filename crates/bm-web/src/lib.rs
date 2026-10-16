@@ -54,6 +54,12 @@ impl Document {
         self.0.tables.to_vec()
     }
 
+    /// Whether the document's translated line shows, as the file keeps it.
+    #[wasm_bindgen(getter)]
+    pub fn translated_line(&self) -> bool {
+        self.0.translated_line
+    }
+
     /// The name of the document's embosser setup, empty for none.
     #[wasm_bindgen(getter)]
     pub fn embosser(&self) -> String {
@@ -216,6 +222,57 @@ pub fn latex(text: &str, table: &str, script: &[u8]) -> Result<Vec<u8>, JsError>
         None => dxfile::body_bytes(&running),
     };
     bm_core::rule_script::RuleScript::from_bytes(script, None).map_err(error)?.run(&middle).map_err(error)
+}
+
+/// Braille text (editor form) from one encoding to another, cell for cell, as Global, Internationalization changes
+/// the encoding of braille documents; the codes keep their text. `from` and `to` are JSON lists of the 64 cells'
+/// characters as each encoding lists them ("aA" for a cell shown as a or A); a Unicode braille cell is a cell too, and
+/// a cell with no character in `to` is written as Unicode braille.
+#[wasm_bindgen]
+pub fn convert_braille(text: &str, from: &str, to: &str) -> Result<String, JsError> {
+    let from: Vec<String> = serde_json::from_str(from).map_err(error)?;
+    let to: Vec<String> = serde_json::from_str(to).map_err(error)?;
+    let convert = |c: char| {
+        let cell = match c as u32 {
+            n @ 0x2800..=0x283F => Some((n - 0x2800) as usize),
+            _ => from.iter().position(|s| s.contains(c)),
+        };
+        match cell {
+            Some(p) => to.get(p).and_then(|s| s.chars().next()).unwrap_or_else(|| char::from_u32(0x2800 + p as u32).unwrap_or(' ')),
+            None => c,
+        }
+    };
+    let shown = Shown::marked(text);
+    let chars: Vec<char> = shown.text.chars().collect();
+    let mut out = String::with_capacity(shown.text.len());
+    let mut at = 0;
+    for &(start, end) in &shown.codes {
+        out.extend(chars[at.min(start)..start].iter().map(|&c| convert(c)));
+        out.extend(&chars[start..end.min(chars.len())]);
+        at = end;
+    }
+    out.extend(chars[at.min(chars.len())..].iter().map(|&c| convert(c)));
+    Ok(out)
+}
+
+/// The status line for the caret at `position` of a document (editor form) laid out `cells` by `lines`, as the
+/// desktop program shows it: the current style, Page, Line and Column on the laid-out pages (left out in coded view,
+/// `codes`), the character at the caret (with its Unicode value when `verbose`), and Keys.
+#[allow(clippy::too_many_arguments)]
+#[wasm_bindgen]
+pub fn status_line(text: &str, cells: u32, lines: u32, braille: bool, position: usize, codes: bool, verbose: bool, six_key: bool) -> String {
+    use bm_core::status::{char_field, style_text, StatusLine};
+    let shown = Shown::marked(text);
+    let pos = position as i64;
+    StatusLine {
+        style: style_text(&shown, pos),
+        location: (!codes).then(|| bm_core::format::locate(&laid_out(text, cells, lines, braille), position)),
+        character: char_field(&shown, pos, verbose),
+        six_key,
+        highlight: false,
+        keyboard: false,
+    }
+    .text()
 }
 
 /// The page (from 1) on which a character position of a document laid out `cells` by `lines` falls.
@@ -487,6 +544,14 @@ mod tests {
             let back = read_document(&bytes).ok().unwrap();
             assert_eq!((back.text(), back.embosser(), back.braille()), ("The dog.".to_string(), "Everest".to_string(), false));
         }
+    }
+
+    #[test]
+    fn the_status_line_reads_as_the_desktop_one() {
+        let text = "[es~h1.]ab[ee~h1.]\ncd";
+        assert_eq!(status_line(text, 40, 25, true, 8, false, false, false), "Current Style: h1.  Page:1  Line:1  Column:1  a  Keys:1");
+        assert_eq!(status_line(text, 40, 25, true, 8, true, true, true), "Current Style: h1.  a {U+0061}  Keys:6");
+        assert!(status_line(text, 40, 25, true, 21, false, false, false).ends_with("(end)  Keys:1"));
     }
 
     #[test]

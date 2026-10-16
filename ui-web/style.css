@@ -208,8 +208,7 @@ dialog p.message { margin: 0; max-width: 36rem; white-space: pre-wrap; }
 #print-area { display: none; }
 @media print {
   body > :not(#print-area) { display: none !important; }
-  #print-area { display: block; color: #000; background: #fff; }
-  .printed-page { break-after: page; font: 12pt/1.35 monospace; }
+  #print-area { display: block; color: #000; background: #fff; font-family: monospace; font-size: 12pt; }
+  .printed-page { break-after: page; line-height: 1.35; }
   .printed-line, .printed-ink { white-space: pre; }
-  #print-area.braille .printed-line { font-family: "BrailleMaker Braille", monospace; }
 }

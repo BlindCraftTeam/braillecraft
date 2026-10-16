@@ -16,6 +16,7 @@ pub mod format;
 pub mod lbf;
 pub mod range;
 pub mod rule_script;
+pub mod status;
 pub mod table_list;
 pub mod templates;
 
