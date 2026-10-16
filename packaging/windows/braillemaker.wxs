@@ -49,8 +49,8 @@
     </ComponentGroup>
 
     <!-- The document types: .dxp print documents and .dxb braille documents, each with its icon and the verbs the
-         reference program gives them, in its order. -->
-    <Component Id="DocumentTypes" Directory="IconsFolder">
+         reference program gives them. Two unversioned files, so the component has a fixed id of its own. -->
+    <Component Id="DocumentTypes" Directory="IconsFolder" Guid="F2035C1E-C8E2-4BDF-A3AA-8DD2EFEA2062">
       <File Id="PrintDocumentIco" Source="!(bindpath.icons)\print-document.ico" KeyPath="yes" />
       <File Id="BrailleDocumentIco" Source="!(bindpath.icons)\braille-document.ico" />
       <ProgId Id="BrailleMaker.dxp" Description="BrailleMaker Print Document" Icon="PrintDocumentIco" Advertise="no">
