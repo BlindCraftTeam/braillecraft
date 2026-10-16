@@ -82,7 +82,7 @@ jobs:
           mkdir -p layout/pictures
           exe=dist/BrailleCraft/braillecraft-desktop${{ runner.os == 'Windows' && '.exe' || '' }}
           if [ "$RUNNER_OS" = Linux ]; then
-            sudo apt-get install -y xvfb x11-apps x11-utils imagemagick openbox xdotool > /dev/null
+            sudo apt-get install -y xvfb x11-apps x11-utils imagemagick openbox xdotool gdb > /dev/null
             Xvfb :99 -screen 0 1280x900x24 > /dev/null 2>&1 &
             export DISPLAY=:99
             sleep 2
@@ -110,7 +110,27 @@ jobs:
             # The runner has no session bus, so the GTK accessibility bridge printed a bus error at each start.
             export NO_AT_BRIDGE=1
             { echo "window manager: $(pgrep -a openbox || echo none)"; echo "xdotool: $(xdotool version 2>&1 || true)"; } >> layout/starts.txt
+            # Only every sixth start showed its window in run 38929914931; the others kept running with one program
+            # window (no frame) for 20 seconds and printed nothing. What a start that has not shown is waiting on is
+            # recorded before it is stopped: each thread's kernel wait, a backtrace of every thread (first three
+            # only), and the session bus state, with the clock time of each start.
+            mkdir -p layout/waits
+            nwait=0
           fi
+          waiting() {
+            {
+              echo "== $2 at $(date +%T)"
+              for t in /proc/$1/task/*; do echo "thread $(basename $t) $(cat $t/comm 2> /dev/null) state=$(awk '{print $3}' $t/stat 2> /dev/null) wchan=$(cat $t/wchan 2> /dev/null)"; done
+              echo "bus env: ${DBUS_SESSION_BUS_ADDRESS:-unset}"
+              echo "bus processes: $(pgrep -a dbus | tr '\n' ';' || true)"
+              echo "root bus property: $(xprop -root 2> /dev/null | grep -i dbus || echo none)"
+              echo "program windows:"; xwininfo -root -tree 2> /dev/null | grep -i braillecraft || true
+            } >> layout/waits/summary.txt
+            if [ $nwait -lt 3 ]; then
+              timeout 60 sudo gdb -p $1 -batch -ex "thread apply all bt" > layout/waits/$2-bt.txt 2>&1 || true
+            fi
+            nwait=$((nwait + 1))
+          }
           shown() {
             if [ "$RUNNER_OS" = Linux ]; then
               s=$(date +%s)
@@ -119,7 +139,8 @@ jobs:
               timeout 20 xdotool search --sync --onlyvisible --classname braillecraft-desktop > /dev/null 2>&1 || rc=$?
               alive=no; kill -0 $pid 2> /dev/null && alive=yes
               wins=$(xwininfo -root -tree 2> /dev/null | grep -c -i braillecraft || true)
-              echo "$2 search=$rc after $(( $(date +%s) - s ))s running=$alive windows=$wins" >> layout/starts.txt
+              echo "$2 at $(date -d @$s +%T) search=$rc after $(( $(date +%s) - s ))s running=$alive windows=$wins" >> layout/starts.txt
+              if [ $rc -ne 0 ] && [ $alive = yes ]; then waiting $pid $2; fi
               sleep 2
             else
               sleep "$1"
