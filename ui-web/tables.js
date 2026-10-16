@@ -2591,8 +2591,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 50,
     "y": 124,
     "w": 168,
@@ -2744,8 +2744,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 50,
     "y": 107,
     "w": 168,
@@ -3897,8 +3897,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 65,
     "y": 85,
     "w": 168,
@@ -4463,8 +4463,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 117,
     "y": 114,
     "w": 64,
@@ -4808,8 +4808,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 100,
     "y": 42,
     "w": 145,
@@ -4939,8 +4939,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 67,
     "y": 178,
     "w": 50,
@@ -4978,8 +4978,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 67,
     "y": 191,
     "w": 50,
@@ -5017,8 +5017,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 67,
     "y": 204,
     "w": 50,
@@ -5056,8 +5056,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 67,
     "y": 217,
     "w": 50,
@@ -5095,8 +5095,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 67,
     "y": 229,
     "w": 50,
@@ -5134,8 +5134,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 67,
     "y": 241,
     "w": 50,
@@ -5206,8 +5206,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 105,
     "y": 8,
     "w": 145,
@@ -5423,8 +5423,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 105,
     "y": 136,
     "w": 145,
@@ -6765,8 +6765,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 8,
     "y": 234,
     "w": 236,
@@ -7541,8 +7541,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 50,
     "y": 107,
     "w": 168,
@@ -7629,8 +7629,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 50,
     "y": 107,
     "w": 168,
@@ -8541,8 +8541,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 70,
     "y": 6,
     "w": 234,
@@ -8945,8 +8945,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 97,
     "y": 182,
     "w": 52,
@@ -8972,8 +8972,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 252,
     "y": 182,
     "w": 52,
@@ -8999,8 +8999,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 97,
     "y": 199,
     "w": 52,
@@ -9385,8 +9385,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 82,
     "y": 84,
     "w": 131,
@@ -9892,8 +9892,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 64,
     "y": 110,
     "w": 160,
@@ -9918,8 +9918,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 64,
     "y": 130,
     "w": 160,
@@ -10448,8 +10448,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 94,
     "y": 3,
     "w": 176,
@@ -10501,8 +10501,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 94,
     "y": 29,
     "w": 176,
@@ -10527,8 +10527,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 94,
     "y": 29,
     "w": 176,
@@ -10593,8 +10593,8 @@ export const DIALOGS = {
     "kind": "radio"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 94,
     "y": 50,
     "w": 176,
@@ -10606,8 +10606,8 @@ export const DIALOGS = {
     "kind": "combo"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 94,
     "y": 62,
     "w": 176,
@@ -10685,8 +10685,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 82,
     "y": 116,
     "w": 42,
@@ -10712,8 +10712,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 197,
     "y": 116,
     "w": 72,
@@ -10739,8 +10739,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 82,
     "y": 128,
     "w": 42,
@@ -10766,8 +10766,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 197,
     "y": 128,
     "w": 72,
@@ -10793,8 +10793,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 82,
     "y": 140,
     "w": 92,
@@ -10828,8 +10828,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 95,
     "y": 17,
     "w": 177,
@@ -10998,8 +10998,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 160,
     "y": 65,
     "w": 35,
@@ -11248,8 +11248,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 100,
     "y": 118,
     "w": 142,
@@ -11275,8 +11275,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 100,
     "y": 130,
     "w": 142,
@@ -11302,8 +11302,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 100,
     "y": 142,
     "w": 142,
@@ -11367,8 +11367,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 35,
     "y": 59,
     "w": 45,
@@ -11484,8 +11484,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 5,
     "y": 1,
     "w": 146,
@@ -11859,8 +11859,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 100,
     "y": 54,
     "w": 170,
@@ -11886,8 +11886,8 @@ export const DIALOGS = {
     "kind": "static"
    },
    {
-    "class": "wxComboBox",
-    "style": "wxCB_READONLY|wxCB_SORT",
+    "class": "wxChoice",
+    "style": "wxCB_SORT",
     "x": 100,
     "y": 66,
     "w": 170,
