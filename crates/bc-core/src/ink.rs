@@ -106,13 +106,17 @@ impl Placement {
     }
 }
 
-/// One run of cells of a braille line: a word, as the reference walks a line for its ink (spec 25 17.4).
+/// One run of cells of a braille line, as the reference walks a line for its ink (spec 25 20.2).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Run {
     /// The cell it starts at, from 0.
     pub start: usize,
     /// Its cells as North American ASCII braille.
     pub cells: String,
+    /// For a run of document text, the span of the document's text it was laid out from (start, end); None for cells
+    /// the formatter made, and for a run whose last cell has no place in the text (an added hyphen), whose ink is
+    /// then made from its cells (spec 25 20.3).
+    pub source: Option<(usize, usize)>,
 }
 
 impl Run {
@@ -126,18 +130,87 @@ impl Run {
     }
 }
 
-/// The runs of a braille line given as North American ASCII braille: each stretch of cells between blank cells.
+/// The runs of a braille line with no place in the document's text (all of it made by the formatter).
 pub fn runs(line: &str) -> Vec<Run> {
-    let mut out: Vec<Run> = Vec::new();
-    let mut current: Option<Run> = None;
-    for (i, c) in line.chars().enumerate() {
-        if c == ' ' {
-            out.extend(current.take());
-        } else {
-            current.get_or_insert_with(|| Run { start: i, cells: String::new() }).cells.push(c);
+    runs_mapped(line, &[], |_| None)
+}
+
+/// The runs of a braille line given as North American ASCII braille, with each cell's position in the document's text
+/// (`sources`, the layout's map; shorter or empty for none), as the reference makes them (spec 25 20.2): a run starts at a cell that is not blank and goes on across single blank cells; it ends before
+/// two blank cells or a blank cell at the line end, and where the cells go from having a place in the text to having
+/// none or back (a hyphen as the line's last cell excepted). The layout gives the blank between two words no place
+/// of its own, so a single blank between two placed cells counts as placed, as the text's own space does in the
+/// reference. `end_of` gives the end of the text a cell came from (its position plus the length of what it
+/// translates), which ends a run's span.
+pub fn runs_mapped(line: &str, sources: &[Option<usize>], end_of: impl Fn(usize) -> Option<usize>) -> Vec<Run> {
+    let cells: Vec<char> = line.chars().collect();
+    let n = cells.len();
+    let source = |i: usize| sources.get(i).copied().flatten();
+    let placed = |i: usize| {
+        if cells[i] != ' ' {
+            return source(i).is_some();
         }
+        let before = (0..i).rev().find(|&k| cells[k] != ' ');
+        let after = (i + 1..n).find(|&k| cells[k] != ' ');
+        matches!((before, after), (Some(b), Some(a)) if source(b).is_some() && source(a).is_some())
+    };
+    let mut out = Vec::new();
+    let mut i = 0;
+    loop {
+        while i < n && cells[i] == ' ' {
+            i += 1;
+        }
+        if i >= n {
+            return out;
+        }
+        let (start, state) = (i, placed(i));
+        let mut j = i + 1;
+        while j < n {
+            if cells[j] == ' ' && (j + 1 >= n || cells[j + 1] == ' ') {
+                break;
+            }
+            let hyphen_at_end = j == n - 1 && cells[j] == '-';
+            if placed(j) != state && !hyphen_at_end {
+                break;
+            }
+            j += 1;
+        }
+        // The span runs from the first cell's place to the end of what the last cell came from; with no place for
+        // either, or an end before the start, the run's ink comes from its cells.
+        let span = match (source(start), source(j - 1).and_then(&end_of)) {
+            (Some(s), Some(e)) if state && e >= s => Some((s, e)),
+            _ => None,
+        };
+        out.push(Run { start, cells: cells[start..j].iter().collect(), source: span });
+        i = j;
     }
-    out.extend(current);
+}
+
+/// The ink text of a back-translation with codes (spec 25 20.4): a [d~text] code gives its text and one
+/// space, a [q~text] code its text; a code whose name begins with # or >, or with taa, tab or tas and no letter after,
+/// gives two spaces; any other code gives nothing.
+pub fn without_codes(shown: &crate::doctext::Shown) -> String {
+    let chars: Vec<char> = shown.text.chars().collect();
+    let mut out = String::new();
+    let mut at = 0;
+    for &(from, to) in &shown.codes {
+        out.extend(&chars[at.min(chars.len())..from.min(chars.len())]);
+        let name: String = chars[(from + 1).min(to)..to.saturating_sub(1).max(from + 1)].iter().collect();
+        let lower = name.to_ascii_lowercase();
+        let tab_like = name.len() > 3
+            && (lower.starts_with("taa") || lower.starts_with("tab") || lower.starts_with("tas"))
+            && name.chars().nth(3).is_some_and(|c| c.is_ascii() && !c.is_ascii_alphabetic());
+        if let Some(text) = lower.strip_prefix("d~").map(|_| &name[2..]) {
+            out.push_str(text);
+            out.push(' ');
+        } else if let Some(text) = lower.strip_prefix("q~").map(|_| &name[2..]) {
+            out.push_str(text);
+        } else if name.starts_with('#') || name.starts_with('>') || tab_like {
+            out.push_str("  ");
+        }
+        at = to;
+    }
+    out.extend(&chars[at.min(chars.len())..]);
     out
 }
 
@@ -153,14 +226,15 @@ pub struct Item {
 }
 
 /// The ink of one braille page (`back` for an interpoint back page) whose lines (from 0) are given as North American
-/// ASCII braille: each line's runs, each given its print by `print` (the back-translation of the run's cells,
-/// without a trailing space; it is given the line number and the run) unless it is a fill row; each run's text ends
-/// in a space, as the reference sends it (spec 25 17.4).
-pub fn page_items(lines: &[String], place: &Placement, back: bool, mut print: impl FnMut(usize, &Run) -> String) -> Vec<Item> {
+/// ASCII braille, each with its runs (from `runs_mapped`, or `runs` for none): each run given its print by `print`
+/// (it is given the line number and the run: the back-translation of the run's span of document text, or of its cells
+/// for a run with no span), except that a run with no span that is a fill row gives full stops; each run's text ends
+/// in a space, as the reference sends it (spec 25 17.4 and 20.3).
+pub fn page_items(lines: &[Vec<Run>], place: &Placement, back: bool, mut print: impl FnMut(usize, &Run) -> String) -> Vec<Item> {
     let mut items = Vec::new();
     for (n, line) in lines.iter().enumerate() {
-        for run in runs(line) {
-            let text = match run.fill() {
+        for run in line.iter().cloned() {
+            let text = match run.fill().filter(|_| run.source.is_none()) {
                 Some(dots) => dots,
                 None => format!("{} ", print(n, &run).trim_end()),
             };
@@ -222,15 +296,44 @@ mod tests {
 
     #[test]
     fn a_line_splits_into_runs_and_fill_rows_become_full_stops() {
-        let r = runs("  ,! cat \"\"\"\" ..");
-        assert_eq!(r.iter().map(|r| (r.start, r.cells.as_str())).collect::<Vec<_>>(), vec![(2, ",!"), (5, "cat"), (9, "\"\"\"\""), (14, "..")]);
-        assert_eq!(r[2].fill().as_deref(), Some("...."));
-        assert_eq!(r[3].fill().as_deref(), Some(".."));
-        assert_eq!(r[1].fill(), None);
-        assert_eq!(Run { start: 0, cells: "\"".into() }.fill(), None);
+        // A run goes on across one blank and ends before two.
+        let r = runs("  ,! cat  \"\"\"\"  ..");
+        assert_eq!(r.iter().map(|r| (r.start, r.cells.as_str())).collect::<Vec<_>>(), vec![(2, ",! cat"), (10, "\"\"\"\""), (16, "..")]);
+        assert_eq!(r[1].fill().as_deref(), Some("...."));
+        assert_eq!(r[2].fill().as_deref(), Some(".."));
+        assert_eq!(r[0].fill(), None);
+        assert_eq!(Run { start: 0, cells: "\"".into(), source: None }.fill(), None);
         let p = Placement { vshift: 576, form_width: 85, ..Placement::default() };
-        let items = page_items(&["  ,! cat".to_string(), String::new(), "\"\"\"\"".to_string()], &p, false, |_, r| if r.cells == ",!" { "The".into() } else { r.cells.to_uppercase() });
-        assert_eq!(items.iter().map(|i| (i.x, i.top, i.text.as_str())).collect::<Vec<_>>(), vec![(720 + 2 * 346, 0, "The "), (720 + 5 * 346, 0, "CAT "), (720, 1152, "....")]);
+        let lines = [runs("  ,! cat"), Vec::new(), runs("\"\"\"\"")];
+        let items = page_items(&lines, &p, false, |_, r| if r.cells == ",! cat" { "The cat".into() } else { r.cells.to_uppercase() });
+        assert_eq!(items.iter().map(|i| (i.x, i.top, i.text.as_str())).collect::<Vec<_>>(), vec![(720 + 2 * 346, 0, "The cat "), (720, 1152, "....")]);
         assert_eq!(items[0].width, 85 * 144);
+    }
+
+    #[test]
+    fn runs_follow_the_text_places() {
+        // "  ,! cat sat4" laid out from text "The cat sat." at 0; the indent has no place.
+        let sources = [None, None, Some(0), Some(1), None, Some(4), Some(5), Some(6), None, Some(8), Some(9), Some(10), Some(11)];
+        let end_of = |p: usize| Some(p + if p == 1 { 3 } else { 1 });
+        let r = runs_mapped("  ,! cat sat4", &sources, end_of);
+        assert_eq!(r.iter().map(|r| (r.start, r.cells.as_str(), r.source)).collect::<Vec<_>>(), vec![(2, ",! cat sat4", Some((0, 12)))]);
+        // A page number the formatter added starts a run of its own; a placed run before it ends there.
+        let sources = [Some(0), Some(1), None, None, None];
+        let r = runs_mapped("ab #a", &sources, |p| Some(p + 1));
+        assert_eq!(r.iter().map(|r| (r.start, r.cells.as_str(), r.source)).collect::<Vec<_>>(), vec![(0, "ab", Some((0, 2))), (3, "#a", None)]);
+        // A hyphen the formatter added at the line end stays in the run, and its ink then comes from the cells.
+        let sources = [Some(0), Some(1), None];
+        let r = runs_mapped("ab-", &sources, |p| Some(p + 1));
+        assert_eq!(r.iter().map(|r| (r.cells.as_str(), r.source)).collect::<Vec<_>>(), vec![("ab-", None)]);
+        // A placed fill row is text, not full stops.
+        let lines = [runs_mapped("\"\"\"", &[Some(0), Some(1), Some(2)], |p| Some(p + 1))];
+        let items = page_items(&lines, &Placement::default(), false, |_, _| "quoted".into());
+        assert_eq!(items[0].text, "quoted ");
+    }
+
+    #[test]
+    fn codes_in_ink_text() {
+        let s = crate::doctext::Shown::marked("a[d~xy]b[q~z]c[tab3]d[#1]e[pg]f");
+        assert_eq!(without_codes(&s), "axy bzc  d  ef");
     }
 }

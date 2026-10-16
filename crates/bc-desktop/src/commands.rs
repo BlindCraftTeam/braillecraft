@@ -1545,18 +1545,43 @@ fn ink_job(
         let doc = &a.docs[i];
         let enc = a.encoding();
         let styles = translation::style_table(&doc.styles);
+        // The document's text, which the layout's map points into (spec 25 20.1).
+        let text = doc.shown();
+        let chars: Vec<char> = text.text.chars().collect();
+        let code_start = |p: usize| text.codes.iter().any(|c| c.0 == p);
         chosen
             .iter()
             .zip(sides)
             .enumerate()
             .map(|(k, (page, side))| {
                 let (Some(p), Some(lines)) = (page, side) else { return Vec::new() };
-                let shown: Vec<Vec<char>> = pages[*p].lines.iter().map(|l| l.text.chars().collect()).collect();
+                let page = &pages[*p];
+                let shown: Vec<Vec<char>> = page.lines.iter().map(|l| l.text.chars().collect()).collect();
+                // The end of the text a cell came from: the next place any cell of the page has, but not past a
+                // space or a code. INFERENCE: the reference counts the cell's own item (spec 25 20.3); the layout
+                // here keeps only each cell's start.
+                let mut places: Vec<usize> = page.lines.iter().flat_map(|l| l.sources.iter().flatten().copied()).collect();
+                places.sort_unstable();
+                places.dedup();
+                let end_of = |p: usize| {
+                    let next = places.iter().copied().find(|&q| q > p).unwrap_or(chars.len());
+                    let stop = (p + 1..next).find(|&q| chars[q].is_whitespace() || code_start(q)).unwrap_or(next);
+                    Some(stop.min(chars.len()))
+                };
+                let runs: Vec<Vec<ink::Run>> = lines
+                    .iter()
+                    .enumerate()
+                    .map(|(n, line)| ink::runs_mapped(line, page.lines.get(n).map_or(&[][..], |l| &l.sources[..]), &end_of))
+                    .collect();
                 let back = layout.interpoint && (k + 1) % 2 == 0;
-                ink::page_items(lines, &place, back, |n, run| {
-                    // The run's cells as the document shows them, for its back-translation.
-                    let text: String = shown.get(n).map(|l| l.iter().skip(run.start).take(run.cells.chars().count()).collect()).unwrap_or_default();
-                    translation::back(&doc.tables[2], &Shown::plain(&text), &doc.initial_codes, enc, &styles).map(|s| s.text).unwrap_or_default()
+                ink::page_items(&runs, &place, back, |n, run| {
+                    // A run of document text: the back-translation of its span of the text, codes and all; else the
+                    // run's cells as the document shows them (spec 25 20.3). Codes then give their ink text (20.4).
+                    let source = match run.source {
+                        Some((s, e)) => text.slice(s, e),
+                        None => Shown::plain(&shown.get(n).map(|l| l.iter().skip(run.start).take(run.cells.chars().count()).collect::<String>()).unwrap_or_default()),
+                    };
+                    translation::back(&doc.tables[2], &source, &doc.initial_codes, enc, &styles).map(|s| ink::without_codes(&s)).unwrap_or_default()
                 })
             })
             .collect()
