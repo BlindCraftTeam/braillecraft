@@ -114,12 +114,14 @@ jobs:
           python3 tools/web/make_web_tables.py
           git diff --exit-code ui-web/tables.js
           cargo build --release -p bm-web --target wasm32-unknown-unknown
-          mkdir -p site/fonts site/tables site/embossers
+          mkdir -p site/fonts site/tables/rule-scripts site/embossers
           wasm-bindgen --target web --no-typescript --out-dir site/pkg target/wasm32-unknown-unknown/release/bm_web.wasm
           cp ui-web/* site/
           cp ui/fonts/*.ttf ui/fonts/encodings.json site/fonts/
-          cp tables/en-ueb-g2-forward.bmt tables/en-ueb-g2-back.bmt site/tables/
+          cp tables/en-ueb-g2-forward.bmt tables/en-ueb-g2-back.bmt tables/table-txxtxa-binary-forward.bmt site/tables/
+          cp tables/rule-scripts/*.rules site/tables/rule-scripts/
           cp embossers/embossers.txt site/embossers/
+          cp -r templates site/templates
 
       - uses: actions/upload-artifact@v7
         with:

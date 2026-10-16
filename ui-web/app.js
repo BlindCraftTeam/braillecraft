@@ -60,21 +60,26 @@ async function embossers() {
   return catalog;
 }
 
-// The output encodings (fonts/encodings.json): the byte sent for each of the 64 cells in an encoding, empty for
-// North American English, which the byte pipeline sends itself; a character above one byte is sent as a space.
+// The braille encodings (fonts/encodings.json), in their listed order.
 let encodingTable = null;
-async function encodingCodes(name) {
-  if (/^north american english$/i.test(name ?? "")) {
-    return new Uint8Array(0);
-  }
+async function encodings() {
   if (!encodingTable) {
     try {
-      encodingTable = await (await fetch("fonts/encodings.json")).json();
+      encodingTable = (await (await fetch("fonts/encodings.json")).json()).sort((a, b) => a.order - b.order);
     } catch {
       encodingTable = [];
     }
   }
-  const enc = encodingTable.find((e) => e.name.toLowerCase() === (name ?? "").toLowerCase());
+  return encodingTable;
+}
+
+// The output encodings: the byte sent for each of the 64 cells in an encoding, empty for North American English,
+// which the byte pipeline sends itself; a character above one byte is sent as a space.
+async function encodingCodes(name) {
+  if (/^north american english$/i.test(name ?? "")) {
+    return new Uint8Array(0);
+  }
+  const enc = (await encodings()).find((e) => e.name.toLowerCase() === (name ?? "").toLowerCase());
   if (!enc) {
     return new Uint8Array(0);
   }
@@ -85,6 +90,33 @@ async function encodingCodes(name) {
     codes[p] = c <= 0xff ? c : 0x20;
   }
   return codes;
+}
+
+// The template File, New gives a document (the built-in default, "English (UEB) - basic"): its text, read once
+// from templates/ beside the page.
+let defaultTemplate = null;
+async function templateText() {
+  if (defaultTemplate === null) {
+    try {
+      const index = await (await fetch("templates/index.tsv")).text();
+      const row = index
+        .split("\n")
+        .map((l) => l.split("\t"))
+        .find((c) => (c[2] ?? "").trim() === "English (UEB) - basic");
+      defaultTemplate = row ? await (await fetch(`templates/${row[1]}.template`)).text() : "";
+    } catch {
+      defaultTemplate = "";
+    }
+  }
+  return defaultTemplate;
+}
+
+async function fetchBytes(path) {
+  const response = await fetch(path);
+  if (!response.ok) {
+    throw new Error(`${path} was not found.`);
+  }
+  return new Uint8Array(await response.arrayBuffer());
 }
 
 // ------------------------------------------------------------------ kept settings
@@ -1213,6 +1245,7 @@ fileInput.addEventListener("change", async () => {
       doc.kind = d.braille ? "braille" : "print";
       editor.value = d.text;
       doc.file = d;
+      doc.saved = true;
       // The document's own embosser setup and page layout, as the file keeps them (spec 25 section 10); cells and
       // lines are taken by a braille document.
       if (d.embosser) doc.embosser = d.embosser;
@@ -1232,6 +1265,7 @@ fileInput.addEventListener("change", async () => {
     doc.kind = ext === "brf" || ext === "brl" ? "braille" : "print";
     editor.value = new TextDecoder("latin1").decode(bytes);
     doc.file = null;
+    doc.saved = false;
   }
   doc.name = file.name;
   showTitle();
@@ -1251,24 +1285,206 @@ async function translateDocument() {
   doc.kind = doc.kind === "print" ? "braille" : "print";
   doc.name = `${stem()}${doc.kind === "braille" ? ".dxb" : ".dxp"}`;
   doc.file = null;
+  doc.saved = false;
   showTitle();
   lastLine = null;
   showTranslatedLine();
 }
 
-function save(asBrf) {
-  if (asBrf && core) {
-    download(`${stem()}.brf`, core.layout_braille(editor.value, doc.cells, doc.lines));
-  } else if (doc.file) {
-    // The setup name and layout go back into the file, as the desktop program saves them.
-    try {
-      download(doc.name, doc.file.save_with(editor.value, doc.embosser, doc.layout.form ? JSON.stringify(doc.layout) : "", doc.cells, doc.lines));
-    } catch {
-      download(doc.name, doc.file.save(editor.value));
-    }
-  } else {
-    download(`${stem()}.txt`, editor.value, "text/plain");
+// ------------------------------------------------------------------ File, Save and Save As
+
+// The Save As file types, in the reference program's order for each kind of document (spec 04d-B); the first is
+// chosen when the dialog opens, every time.
+const SAVE_TYPES = {
+  braille: [
+    ["Braille document (*.dxb)", "dxb", "document"],
+    ["Braille document, older format (*.dxb)", "dxb", "older"],
+    ["Formatted braille (*.brf)", "brf", "formatted"],
+    ["Coded braille (*.bru)", "bru", "coded"],
+    ["Refreshable braille (*.lbf)", "lbf", "refreshable"],
+  ],
+  print: [
+    ["Print document (*.dxp)", "dxp", "document"],
+    ["Print document, older format (*.dxp)", "dxp", "older"],
+    ["Formatted text (*.prf)", "prf", "formatted"],
+    ["Coded text (*.txt)", "txt", "coded"],
+    ["LaTeX (*.tex)", "tex", "latex"],
+  ],
+};
+
+// A small dialog of the web build's own (the desktop program uses the system's file and choice dialogs here):
+// labelled rows that `fill` adds to the form, OK and Cancel. Answers whether OK closed it.
+async function ownDialog(title, fill) {
+  const { dialog, form } = newDialog(title, `own-${title.replace(/\W+/g, "-").toLowerCase()}`);
+  fill(form);
+  const buttons = document.createElement("div");
+  buttons.className = "buttons";
+  const ok = document.createElement("button");
+  ok.type = "submit";
+  ok.className = "default";
+  ok.textContent = "OK";
+  const cancel = document.createElement("button");
+  cancel.type = "button";
+  cancel.textContent = "Cancel";
+  cancel.addEventListener("click", () => dialog.close("cancel"));
+  buttons.append(ok, cancel);
+  form.append(buttons);
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    dialog.close("ok");
+  });
+  $("dialogs").append(dialog);
+  const closed = closedPromise(dialog);
+  dialog.showModal();
+  focusFirst(form);
+  return (await closed) === "ok";
+}
+
+function labelledRow(form, id, labelText, field) {
+  const row = document.createElement("div");
+  row.className = "row";
+  const label = document.createElement("label");
+  label.htmlFor = id;
+  label.textContent = labelText;
+  field.id = id;
+  row.append(label, field);
+  form.append(row);
+  return field;
+}
+
+// A choice from a list, the first chosen (the desktop program's single choice dialog): its index, or null.
+async function chooseFrom(title, prompt, items) {
+  let list;
+  const ok = await ownDialog(title, (form) => {
+    list = labelledRow(form, "choice-list", prompt, document.createElement("select"));
+    list.size = Math.min(10, items.length);
+    list.replaceChildren(...items.map((t) => new Option(t, t)));
+    list.selectedIndex = 0;
+  });
+  return ok && list.selectedIndex >= 0 ? list.selectedIndex : null;
+}
+
+// The document's file: the one it was read from or last saved as, else a new one from the default template.
+async function documentFile() {
+  return doc.file ?? core.new_document(doc.kind === "braille", editor.value, await templateText());
+}
+
+// Writes the document as a document file (.dxp or .dxb) in format `version` (1, or 0 for the older format), with
+// its embosser setup name and layout, then takes that file as its own.
+async function writeDocument(name, version) {
+  const file = await documentFile();
+  const bytes = file.save_version(editor.value, doc.embosser, doc.layout.form ? JSON.stringify(doc.layout) : "", doc.cells, doc.lines, version);
+  download(name, bytes);
+  doc.file = core.read_document(bytes);
+  doc.name = name;
+  doc.saved = true;
+  showTitle();
+}
+
+// Formatted braille (.brf): the encoding of the file chosen from "12.4 Compatible (CAPS)", the national encodings
+// and "Unicode Braille Patterns", the first chosen every time (spec 04d-B (a), (f)). Formatted text (.prf): the code
+// page chosen (spec 04d-E). Answers the bytes, or null when cancelled.
+async function formattedBytes(braille) {
+  if (!braille) {
+    const pages = core.code_pages();
+    const i = await chooseFrom("Formatted text", "Code page of the file:", pages);
+    return i === null ? null : core.formatted_text(editor.value, doc.cells, doc.lines, pages[i]);
   }
+  const all = await encodings();
+  const na = all.find((e) => e.id === "north-american");
+  const i = await chooseFrom("Formatted braille", "Braille encoding of the file:", ["12.4 Compatible (CAPS)", ...all.map((e) => e.name), "Unicode Braille Patterns"]);
+  if (i === null) return null;
+  const first = (enc, p) => [...(enc?.cells[p] ?? "")][0];
+  let codes;
+  if (i === 0) {
+    // North American ASCII braille in capitals; a character outside ASCII is written '#'.
+    codes = [...Array(64).keys()].map((p) => {
+      const c = (first(na, p) ?? " ").toUpperCase().codePointAt(0);
+      return c < 128 ? c : 0x23;
+    });
+  } else if (i <= all.length) {
+    codes = [...Array(64).keys()].map((p) => first(all[i - 1], p)?.codePointAt(0) ?? 0x2800 + p);
+  } else {
+    codes = [];
+  }
+  // The document is shown in North American ASCII braille in the web build.
+  return core.formatted_braille(editor.value, doc.cells, doc.lines, JSON.stringify(na.cells), Uint32Array.from(codes));
+}
+
+// File, Save As: the name and type chosen, then the file written as that type and saved by the browser. A name
+// typed with the extension of another type gives the first type with that extension.
+async function saveAs() {
+  const braille = doc.kind === "braille";
+  const types = SAVE_TYPES[braille ? "braille" : "print"];
+  let nameField;
+  let typeField;
+  const ok = await ownDialog("Save As", (form) => {
+    nameField = labelledRow(form, "save-name", "File name:", document.createElement("input"));
+    nameField.type = "text";
+    nameField.value = `${stem()}.${types[0][1]}`;
+    typeField = labelledRow(form, "save-type", "Save as type:", document.createElement("select"));
+    typeField.replaceChildren(...types.map(([label]) => new Option(label, label)));
+    typeField.selectedIndex = 0;
+    // Choosing a type changes the extension of the name, as file dialogs do.
+    typeField.addEventListener("change", () => {
+      nameField.value = nameField.value.replace(/(\.[^.\\/]*)?$/, `.${types[typeField.selectedIndex][1]}`);
+    });
+  });
+  if (!ok || !nameField.value.trim()) return;
+  let name = nameField.value.trim().split(/[\\/]/).pop();
+  const filter = types[typeField.selectedIndex];
+  const typed = /\.([^.]+)$/.exec(name)?.[1]?.toLowerCase();
+  const type = typed && typed !== filter[1] ? types.find((t) => t[1] === typed) ?? filter : filter;
+  if (typed !== type[1]) {
+    name = `${name.replace(/\.[^.]*$/, "")}.${type[1]}`;
+  }
+  try {
+    let bytes;
+    switch (type[2]) {
+      case "document":
+        return await writeDocument(name, 1);
+      case "older":
+        return await writeDocument(name, 0);
+      case "formatted":
+        bytes = await formattedBytes(braille);
+        break;
+      case "coded":
+        bytes = core.coded(
+          editor.value,
+          await fetchBytes(`tables/rule-scripts/${braille ? "coded-braille" : "coded-text"}.rules`),
+          await fetchBytes("tables/rule-scripts/coded-wrap.rules"),
+        );
+        break;
+      case "refreshable":
+        bytes = (await documentFile()).refreshable(editor.value);
+        break;
+      default:
+        bytes = core.latex(
+          editor.value,
+          new TextDecoder().decode(await fetchBytes("tables/table-txxtxa-binary-forward.bmt")),
+          await fetchBytes("tables/rule-scripts/latex.rules"),
+        );
+    }
+    // The document itself keeps its own file and name.
+    if (bytes) download(name, bytes);
+  } catch (err) {
+    await message(String(err.message ?? err));
+  }
+}
+
+// File, Save: a document read from or saved as a document file (.dxp, .dxb) is saved as that file again; any other
+// is asked about (Save As).
+async function save(asNew) {
+  if (!core) {
+    download(`${stem()}.txt`, editor.value, "text/plain");
+    return;
+  }
+  const own = doc.kind === "braille" ? "dxb" : "dxp";
+  if (!asNew && doc.saved && doc.name.toLowerCase().endsWith(`.${own}`)) {
+    await writeDocument(doc.name, 1);
+    return;
+  }
+  await saveAs();
 }
 
 const COMMANDS = {
@@ -1276,6 +1492,7 @@ const COMMANDS = {
     doc.kind = "print";
     doc.name = "Untitled Print Document 1";
     doc.file = null;
+    doc.saved = false;
     embosserDefaults();
     editor.value = "";
     showTitle();
@@ -1283,7 +1500,7 @@ const COMMANDS = {
   },
   1102: () => fileInput.click(),
   1105: () => save(false),
-  1106: () => save(doc.kind === "braille"),
+  1106: () => save(true),
   1109: translateDocument,
   1111: print,
   1112: emboss,

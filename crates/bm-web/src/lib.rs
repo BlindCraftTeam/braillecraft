@@ -86,7 +86,14 @@ impl Document {
     /// As `save`, with the document's embosser setup name and page layout (JSON as `embosser_layout` gives it, the
     /// layout written only when it names a form), as the desktop program saves them.
     pub fn save_with(&self, text: &str, embosser: &str, layout: &str, cells: u32, lines: u32) -> Result<Vec<u8>, JsError> {
-        let mut doc = DxDocument { text: Shown::marked(text).to_running(), embosser: embosser.to_string(), ..self.0.clone() };
+        self.save_version(text, embosser, layout, cells, lines, 1)
+    }
+
+    /// As `save_with`, in file format `version`: 1, or 0 for the older format, which names the print-to-braille
+    /// tables by their older names where they have them (spec 04d-C; a web document has no initial codes in force).
+    pub fn save_version(&self, text: &str, embosser: &str, layout: &str, cells: u32, lines: u32, version: u16) -> Result<Vec<u8>, JsError> {
+        let tables = if version == 0 { dxfile::older_table_names(&self.0.tables, |_| false) } else { self.0.tables.clone() };
+        let mut doc = DxDocument { text: Shown::marked(text).to_running(), embosser: embosser.to_string(), version, tables, ..self.0.clone() };
         if !layout.is_empty() {
             let l: Layout = serde_json::from_str(layout).map_err(error)?;
             if !l.form.is_empty() {
@@ -106,6 +113,109 @@ impl Document {
         }
         Ok(dxfile::write(&doc))
     }
+
+    /// Save As refreshable braille (.lbf): `text` (editor form) with the document's styles (bm_core::lbf).
+    pub fn refreshable(&self, text: &str) -> Vec<u8> {
+        bm_core::lbf::write(&Shown::marked(text).to_running(), &self.0.styles)
+    }
+}
+
+/// A new document from a template's text, as File, New makes one in the desktop program: the template's four
+/// tables, page numbering and styles, `text` (editor form) as its text. The built-in default template's tables when
+/// the template names none.
+#[wasm_bindgen]
+pub fn new_document(braille: bool, text: &str, template: &str) -> Document {
+    use bm_core::templates;
+    let styles = templates::styles(template)
+        .entries()
+        .map(|(name, begin, end)| (name.to_string(), Shown::marked(&begin).to_running(), Shown::marked(&end).to_running()))
+        .collect();
+    Document(DxDocument {
+        kind: if braille { DocumentKind::Braille } else { DocumentKind::Print },
+        version: 1,
+        page_numbering: templates::page_numbers(template),
+        translated_line: true,
+        six_key: false,
+        tables: templates::tables(template).unwrap_or_else(|| ["enuncp", "enudxp", "enuncb", "gendxb"].map(String::from)),
+        text: Shown::marked(text).to_running(),
+        styles,
+        style_index: Vec::new(),
+        settings: Vec::new(),
+        embosser: String::new(),
+        sections: Vec::new(),
+        layout: None,
+    })
+}
+
+/// The code pages Save As offers for formatted text, the first chosen every time (spec 04d-E).
+#[wasm_bindgen]
+pub fn code_pages() -> Vec<String> {
+    bm_core::codepages::NAMES.iter().map(|s| s.to_string()).collect()
+}
+
+/// Save As formatted text (.prf): a print document laid out `cells` by `lines`, its formatted text in `code_page`; a
+/// character the code page cannot hold is written '#', a hard space as a space (spec 04d-B, 04d-F).
+#[wasm_bindgen]
+pub fn formatted_text(text: &str, cells: u32, lines: u32, code_page: &str) -> Vec<u8> {
+    let pages = laid_out(text, cells, lines, false);
+    bm_core::codepages::encode(code_page, &bm_core::format::formatted_text(&pages).replace('\u{a0}', " "))
+}
+
+/// Save As formatted braille (.brf): a braille document laid out `cells` by `lines` (spec 04d-B). Each line loses its
+/// trailing spaces; each character goes to its cell through `shown_cells` (JSON: the 64 cells' characters as the
+/// shown encoding lists them, "aA" for a cell shown as a or A), a space and a hard space being the blank cell and a
+/// character with no cell written '*'; each cell is written as `codes` gives it (one code point per cell, written as
+/// one byte when it is 0 to 255 and '#' otherwise), or as Unicode braille in UTF-8 when `codes` is empty; CR LF ends
+/// each line and a form feed each page.
+#[wasm_bindgen]
+pub fn formatted_braille(text: &str, cells: u32, lines: u32, shown_cells: &str, codes: Vec<u32>) -> Result<Vec<u8>, JsError> {
+    let shown: Vec<String> = serde_json::from_str(shown_cells).map_err(error)?;
+    let cell_of = |c: char| shown.iter().position(|s| s.contains(c));
+    let mut out = Vec::new();
+    for page in laid_out(text, cells, lines, true) {
+        for line in &page.lines {
+            for c in line.text.trim_end_matches(' ').chars() {
+                let cell = if c == ' ' || c == '\u{a0}' { Some(0) } else { cell_of(c) };
+                match cell {
+                    Some(p) if codes.is_empty() => {
+                        let mut buf = [0u8; 4];
+                        out.extend_from_slice(char::from_u32(0x2800 + p as u32).unwrap_or(' ').encode_utf8(&mut buf).as_bytes());
+                    }
+                    Some(p) => out.push(codes.get(p).copied().filter(|c| *c <= 0xFF).map_or(b'#', |c| c as u8)),
+                    None => out.push(b'*'),
+                }
+            }
+            out.extend_from_slice(b"\r\n");
+        }
+        out.push(0x0C);
+    }
+    Ok(out)
+}
+
+/// Save As coded braille (.bru) or coded text (.txt): the body as the document file stores it through the coding
+/// script (`script`, coded-braille.rules or coded-text.rules) and the line wrapping script (`wrap`,
+/// coded-wrap.rules), as the reference program makes these files (spec 04d-C, spec 20).
+#[wasm_bindgen]
+pub fn coded(text: &str, script: &[u8], wrap: &[u8]) -> Result<Vec<u8>, JsError> {
+    use bm_core::rule_script::{run_all, RuleScript};
+    let body = dxfile::body_bytes(&Shown::marked(text).to_running());
+    let mut scripts = [RuleScript::from_bytes(script, None).map_err(error)?, RuleScript::from_bytes(wrap, None).map_err(error)?];
+    run_all(&mut scripts, &body).map_err(error)
+}
+
+/// Save As LaTeX (.tex) for a print document (spec 22): the text through the text export table (`table`, the
+/// source of table-txxtxa-binary-forward.bmt; when it cannot be used, the body as the document file stores it goes
+/// on unchanged), then the LaTeX rule script (`script`, latex.rules).
+#[wasm_bindgen]
+pub fn latex(text: &str, table: &str, script: &[u8]) -> Result<Vec<u8>, JsError> {
+    let running = Shown::marked(text).to_running();
+    let translated = Translator::from_source(table).ok().and_then(|t| t.translate_marked(&running, None, None).ok());
+    // The engine writes bytes; its text holds one character per byte.
+    let middle: Vec<u8> = match translated {
+        Some(s) => s.chars().map(|c| c as u32 as u8).collect(),
+        None => dxfile::body_bytes(&running),
+    };
+    bm_core::rule_script::RuleScript::from_bytes(script, None).map_err(error)?.run(&middle).map_err(error)
 }
 
 /// The page (from 1) on which a character position of a document laid out `cells` by `lines` falls.
@@ -327,6 +437,56 @@ mod tests {
         assert_eq!((read.text(), read.embosser()), (",! cat".to_string(), "Index Everest-D V5".to_string()));
         let again = read_document(&read.save(",! dog")).ok().unwrap();
         assert_eq!(again.text(), ",! dog");
+    }
+
+    fn shipped(path: &str) -> Vec<u8> {
+        std::fs::read(format!("{}/../../{path}", env!("CARGO_MANIFEST_DIR"))).unwrap()
+    }
+
+    #[test]
+    fn coded_and_latex_match_the_desktop_path() {
+        use bm_core::rule_script::{run_all, RuleScript};
+        let folder = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tables");
+        let text = "[p]The cat [hds2]sat[hde] here.[l]\nNext line.";
+        for (braille, script) in [(true, "coded-braille.rules"), (false, "coded-text.rules")] {
+            let web = coded(text, &shipped(&format!("tables/rule-scripts/{script}")), &shipped("tables/rule-scripts/coded-wrap.rules")).ok().unwrap();
+            let mut scripts = [RuleScript::open(&folder.join("rule-scripts").join(script)).unwrap(), RuleScript::open(&folder.join("rule-scripts/coded-wrap.rules")).unwrap()];
+            let desktop = run_all(&mut scripts, &dxfile::body_bytes(&Shown::marked(text).to_running())).unwrap();
+            assert_eq!(web, desktop, "braille {braille}");
+            assert!(!web.is_empty());
+        }
+        let table = String::from_utf8(shipped("tables/table-txxtxa-binary-forward.bmt")).unwrap();
+        let web = latex(text, &table, &shipped("tables/rule-scripts/latex.rules")).ok().unwrap();
+        let set = bm_core::engine::TableSet::open(&folder).unwrap();
+        let running = Shown::marked(text).to_running();
+        let middle: Vec<u8> = set.translator_with_scan("txxtxa", "binary").unwrap().translate_marked(&running, None, None).unwrap().chars().map(|c| c as u32 as u8).collect();
+        let desktop = RuleScript::open(&folder.join("rule-scripts/latex.rules")).unwrap().run(&middle).unwrap();
+        assert_eq!(web, desktop);
+        assert!(String::from_utf8_lossy(&web).contains("cat"), "{}", String::from_utf8_lossy(&web));
+    }
+
+    #[test]
+    fn formatted_braille_writes_cells_in_the_chosen_encoding() {
+        let na: Vec<String> = bm_core::emboss::NA_CELLS.iter().map(|&b| format!("{}{}", (b as char).to_ascii_lowercase(), b as char)).collect();
+        let shown = serde_json::to_string(&na).unwrap();
+        let caps: Vec<u32> = bm_core::emboss::NA_CELLS.iter().map(|&b| u32::from(b)).collect();
+        // A page is written whole: its 25 lines, blank ones too, then a form feed.
+        let out = formatted_braille("ab c", 40, 25, &shown, caps).ok().unwrap();
+        assert!(out.starts_with(b"AB C\r\n\r\n"));
+        assert_eq!((out.windows(2).filter(|w| w == b"\r\n").count(), out.last()), (25, Some(&0x0c)));
+        let unicode = String::from_utf8(formatted_braille("ab", 40, 25, &shown, Vec::new()).ok().unwrap()).unwrap();
+        assert!(unicode.starts_with("\u{2801}\u{2803}\r\n"), "{unicode:?}");
+    }
+
+    #[test]
+    fn a_new_document_from_the_default_template_saves_in_both_formats() {
+        let template = String::from_utf8(shipped("templates/english-ueb-basic.template")).unwrap_or_default();
+        let doc = new_document(false, "The cat.", &template);
+        for version in [1, 0] {
+            let bytes = doc.save_version("The dog.", "Everest", "", 40, 25, version).ok().unwrap();
+            let back = read_document(&bytes).ok().unwrap();
+            assert_eq!((back.text(), back.embosser(), back.braille()), ("The dog.".to_string(), "Everest".to_string(), false));
+        }
     }
 
     #[test]
