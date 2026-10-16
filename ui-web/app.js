@@ -69,6 +69,37 @@ async function documentEngine(braille = doc.kind === "braille") {
   return { e: name ? await engine(name) : null, file, code };
 }
 
+// Translates `text` (editor form, braille in North American braille) with engine `e`, the document's file `file`
+// and its initial codes, with the language switches of the table list, as the desktop program does. A switch asks
+// for a table the page has not fetched yet: it is fetched and the text translated again, until nothing new is
+// asked for; a table not in this copy stays on the current table, as an unknown code does.
+async function translateText(e, text, file, braille) {
+  const initial = doc.initialCodes ?? "";
+  const list = await languages();
+  if (!list) return e.translate_document(text, file, initial);
+  for (let pass = 0; ; pass++) {
+    const out = e.translate_document_with(text, file, initial, list, braille);
+    const missing = list.missing();
+    if (!missing.length || pass >= 8) return out;
+    for (const code of missing) {
+      const name = await tableFor(code);
+      let source = null;
+      try {
+        const response = name ? await fetch(`tables/${name}.bmt`) : null;
+        source = response?.ok ? await response.text() : null;
+      } catch {
+        source = null;
+      }
+      try {
+        if (source) list.add_table(code, source);
+        else list.add_absent(code);
+      } catch {
+        list.add_absent(code);
+      }
+    }
+  }
+}
+
 // The translation table sets by language (tables/languages.tsv), for Document, Translation and Learning Tables.
 let languageList = null;
 async function languages() {
@@ -456,7 +487,7 @@ async function showTranslatedLine() {
     return;
   }
   try {
-    translated.textContent = doc.kind === "print" ? fromNA(e.translate_document(text, file, doc.initialCodes ?? "")) : e.translate_document(toNA(text), file, doc.initialCodes ?? "");
+    translated.textContent = doc.kind === "print" ? fromNA(await translateText(e, text, file, false)) : await translateText(e, toNA(text), file, true);
   } catch (err) {
     translated.textContent = String(err.message ?? err);
   }
@@ -1413,7 +1444,7 @@ async function print() {
           ink.className = "printed-ink";
           ink.style.fontFamily = faceOf("print")[0];
           try {
-            ink.textContent = back.e.translate_document(toNA(line.trimEnd()), back.file, doc.initialCodes ?? "");
+            ink.textContent = await translateText(back.e, toNA(line.trimEnd()), back.file, true);
           } catch {
             ink.textContent = "";
           }
@@ -1652,7 +1683,7 @@ async function translateDocument() {
   }
   let out;
   try {
-    out = toBraille ? e.translate_document(editor.value, file, doc.initialCodes ?? "") : e.translate_document(toNA(editor.value), file, doc.initialCodes ?? "");
+    out = toBraille ? await translateText(e, editor.value, file, false) : await translateText(e, toNA(editor.value), file, true);
   } catch (err) {
     await message(`Translation failed: ${err.message ?? err}`);
     return;

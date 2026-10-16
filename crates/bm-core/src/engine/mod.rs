@@ -36,7 +36,7 @@ mod writer;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-pub use callbacks::{LanguageSource, Languages, StyleTable};
+pub use callbacks::{LanguageSource, Languages, LoadedTables, StyleTable};
 pub use scan_table::{Font, ScanTable};
 pub use table::RuleTable;
 pub use tableset::{TableEntry, TableSet};
@@ -165,6 +165,11 @@ impl Translator {
 
     pub fn rule_table(&self) -> &RuleTable {
         &self.rules
+    }
+
+    /// The rule table, shared (for a language switch to it).
+    pub fn rules(&self) -> Rc<RuleTable> {
+        self.rules.clone()
     }
 
     /// Translates a text.

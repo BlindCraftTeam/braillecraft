@@ -1,7 +1,8 @@
 //! What the engine asks of the document around it: the codes a style stands for, and which tables a language code
 //! switches to.
 
-use std::collections::HashMap;
+use std::cell::RefCell;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
@@ -141,6 +142,47 @@ pub enum LanguageSource {
     Folder(PathBuf),
     /// The tables shipped with BrailleMaker, compiled from their sources.
     Shipped(Rc<TableSet>),
+    /// Rule tables already loaded, by rules table code (the web build, which fetches tables as they are needed). A
+    /// code asked for and not loaded is noted, so the caller can load it and translate again.
+    Loaded(Rc<RefCell<LoadedTables>>),
+}
+
+/// The rule tables of `LanguageSource::Loaded`.
+#[derive(Default)]
+pub struct LoadedTables {
+    tables: HashMap<String, Rc<RuleTable>>,
+    /// Codes known to have no table; they are not noted again.
+    absent: HashSet<String>,
+    missing: Vec<String>,
+}
+
+impl LoadedTables {
+    /// Keeps the rule table for a rules table code.
+    pub fn add(&mut self, code: &str, table: Rc<RuleTable>) {
+        self.tables.insert(code.to_lowercase(), table);
+    }
+
+    /// Notes that a rules table code has no table: a switch to it stays on the current table, as when the code is
+    /// unknown.
+    pub fn add_absent(&mut self, code: &str) {
+        self.absent.insert(code.to_lowercase());
+    }
+
+    /// The codes asked for since the last call that are neither loaded nor known to be absent.
+    pub fn take_missing(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.missing)
+    }
+
+    fn get(&mut self, code: &str) -> Option<Rc<RuleTable>> {
+        let key = code.to_lowercase();
+        if let Some(t) = self.tables.get(&key) {
+            return Some(t.clone());
+        }
+        if !self.absent.contains(&key) && !self.missing.contains(&key) {
+            self.missing.push(key);
+        }
+        None
+    }
 }
 
 /// Language codes to table pairs. The program's own way (`from_list`): the code is looked up exactly in the
@@ -239,6 +281,7 @@ impl Languages {
                 Ok(Some(Rc::new(RuleTable::read(&super::read_file(&path)?)?)))
             }
             LanguageSource::Shipped(set) => Ok(Some(set.translator(&btb)?.rules.clone())),
+            LanguageSource::Loaded(loaded) => Ok(loaded.borrow_mut().get(&btb)),
         }
     }
 }

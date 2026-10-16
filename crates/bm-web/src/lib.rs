@@ -4,7 +4,7 @@
 
 use bm_core::doctext::Shown;
 use bm_core::dxfile::{self, DxDocument};
-use bm_core::engine::Translator;
+use bm_core::engine::{LanguageSource, Languages, Translator};
 use bm_core::printer_setup::{parse_margin, PrinterSetup, PAPERS};
 use bm_core::DocumentKind;
 use wasm_bindgen::prelude::*;
@@ -33,14 +33,23 @@ impl Engine {
     /// Translates a document's text (editor form) as the desktop program does: the document's initial codes in force
     /// from the start and its styles looked up by the engine; the echo of the initial codes is left off the result.
     pub fn translate_document(&self, text: &str, doc: &Document, initial: &str) -> Result<String, JsError> {
-        translate_document(&self.0, text, &doc.0, initial).map_err(error)
+        translate_document(&self.0, text, &doc.0, initial, None).map_err(error)
+    }
+
+    /// As `translate_document`, with the language switches of the table list, from the tables the list has loaded
+    /// (`LanguageList::add_table`); a table asked for and not loaded is given by `LanguageList::missing`, to be
+    /// loaded before translating again.
+    pub fn translate_document_with(&self, text: &str, doc: &Document, initial: &str, list: &LanguageList, braille_document: bool) -> Result<String, JsError> {
+        let mut languages = Languages::from_list(&list.0, LanguageSource::Loaded(list.1.clone()));
+        languages.print_document = !braille_document;
+        translate_document(&self.0, text, &doc.0, initial, Some(&languages)).map_err(error)
     }
 }
 
-fn translate_document(tr: &Translator, text: &str, doc: &DxDocument, initial: &str) -> Result<String, bm_core::engine::EngineError> {
+fn translate_document(tr: &Translator, text: &str, doc: &DxDocument, initial: &str, languages: Option<&Languages>) -> Result<String, bm_core::engine::EngineError> {
     let lead = Shown::marked(initial).to_running();
     let running = format!("{lead}{}", Shown::marked(text).to_running());
-    let out = tr.translate_marked(&running, Some(&style_table(doc)), None)?;
+    let out = tr.translate_marked(&running, Some(&style_table(doc)), languages)?;
     Ok(Shown::from_running(out.strip_prefix(lead.as_str()).unwrap_or(&out)).text)
 }
 
@@ -68,13 +77,13 @@ pub fn regrade(initial: &str, code: &str) -> String {
 /// The translation table sets by language (tables/languages.tsv), for Document, Translation Tables and Learning
 /// Tables.
 #[wasm_bindgen]
-pub struct LanguageList(bm_core::table_list::TableList);
+pub struct LanguageList(bm_core::table_list::TableList, std::rc::Rc<std::cell::RefCell<bm_core::engine::LoadedTables>>);
 
 #[wasm_bindgen]
 impl LanguageList {
     #[wasm_bindgen(constructor)]
     pub fn new(text: &str) -> Result<LanguageList, JsError> {
-        bm_core::table_list::TableList::parse(text).map(LanguageList).map_err(|e| JsError::new(&e))
+        bm_core::table_list::TableList::parse(text).map(|l| LanguageList(l, Default::default())).map_err(|e| JsError::new(&e))
     }
 
     /// The region bit of a region item of Document, Translation Tables (0 Western Hemisphere to 4 Pacific); all
@@ -107,6 +116,23 @@ impl LanguageList {
         let names: Vec<&str> = courses.iter().map(|c| c.name.as_str()).collect();
         serde_json::json!({"languages": languages, "active": used.map(|u| u.0), "courses": names, "hasSteps": has_steps, "checked": checked})
             .to_string()
+    }
+
+    /// Loads the table a rules table code is recreated as (a shipped .bmt file's text), for language switches.
+    pub fn add_table(&self, code: &str, source: &str) -> Result<(), JsError> {
+        let table = Translator::from_source(source).map_err(error)?.rules();
+        self.1.borrow_mut().add(code, table);
+        Ok(())
+    }
+
+    /// Notes that a rules table code has no table here; a switch to it stays on the current table.
+    pub fn add_absent(&self, code: &str) {
+        self.1.borrow_mut().add_absent(code);
+    }
+
+    /// The rules table codes language switches asked for, since the last call, that are not loaded.
+    pub fn missing(&self) -> Vec<String> {
+        self.1.borrow_mut().take_missing()
     }
 
     /// The four tables of entry `entry`.
@@ -929,8 +955,8 @@ mod tests {
         let source = String::from_utf8(shipped("tables/en-ueb-g2-forward.bmt")).unwrap();
         let tr = Translator::from_source(&source).unwrap();
         let doc = new_document(false, "", "");
-        let contracted = translate_document(&tr, "The cat sat with the dog.", &doc.0, "").unwrap();
-        let uncontracted = translate_document(&tr, "The cat sat with the dog.", &doc.0, "[g1l]").unwrap();
+        let contracted = translate_document(&tr, "The cat sat with the dog.", &doc.0, "", None).unwrap();
+        let uncontracted = translate_document(&tr, "The cat sat with the dog.", &doc.0, "[g1l]", None).unwrap();
         assert_eq!(contracted, Engine(Translator::from_source(&source).unwrap()).translate("The cat sat with the dog.").ok().unwrap());
         assert_ne!(contracted, uncontracted);
         assert!(!uncontracted.contains("g1l"), "{uncontracted:?}");
@@ -944,6 +970,33 @@ mod tests {
         let graded: serde_json::Value = serde_json::from_str(&list.menus(1, doc.tables(), &regrade("", "[g1l]"))).unwrap();
         assert_eq!(graded["checked"], 2801);
         assert_eq!(list.tables(active).len(), 4);
+    }
+
+    #[test]
+    fn a_language_switch_asks_for_its_table_then_uses_it() {
+        let source = String::from_utf8(shipped("tables/en-ueb-g2-forward.bmt")).unwrap();
+        let e = Engine(Translator::from_source(&source).unwrap());
+        let doc = new_document(false, "", "");
+        let list = LanguageList::new(&String::from_utf8(shipped("tables/languages.tsv")).unwrap()).ok().unwrap();
+        let text = "the [lnb~qip]the[lnb] the";
+        let first = translate_document(&e.0, text, &doc.0, "", Some(&web_languages(&list, false))).unwrap();
+        assert_eq!(list.missing(), vec!["qipacp".to_string()]);
+        list.add_table("qipacp", &String::from_utf8(shipped("tables/ipa-basic-forward.bmt")).unwrap()).ok().unwrap();
+        let second = translate_document(&e.0, text, &doc.0, "", Some(&web_languages(&list, false))).unwrap();
+        assert!(list.missing().is_empty());
+        assert_ne!(first, second, "{first:?}");
+        // A code with no table is noted once; then the switch stays on the current table without asking again.
+        let fresh = LanguageList::new(&String::from_utf8(shipped("tables/languages.tsv")).unwrap()).ok().unwrap();
+        fresh.add_absent("qipacp");
+        let stayed = translate_document(&e.0, text, &doc.0, "", Some(&web_languages(&fresh, false))).unwrap();
+        assert!(fresh.missing().is_empty());
+        assert_eq!(stayed, first);
+    }
+
+    fn web_languages(list: &LanguageList, braille: bool) -> Languages {
+        let mut l = Languages::from_list(&list.0, LanguageSource::Loaded(list.1.clone()));
+        l.print_document = !braille;
+        l
     }
 
     #[test]
