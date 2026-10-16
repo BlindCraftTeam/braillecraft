@@ -545,6 +545,14 @@ function newDialog(titleText, idBase) {
   const form = document.createElement("form");
   form.method = "dialog";
   dialog.append(form);
+  // Return in a list presses the default button, as in the desktop program's dialogs (a browser submits a form
+  // only from a text field).
+  form.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.altKey && !e.ctrlKey && e.target.tagName === "SELECT") {
+      e.preventDefault();
+      form.requestSubmit();
+    }
+  });
   return { dialog, form };
 }
 
