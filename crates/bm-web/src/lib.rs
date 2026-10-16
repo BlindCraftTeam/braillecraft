@@ -5,6 +5,7 @@
 use bm_core::doctext::Shown;
 use bm_core::dxfile::{self, DxDocument};
 use bm_core::engine::Translator;
+use bm_core::printer_setup::{parse_margin, PrinterSetup, PAPERS};
 use bm_core::DocumentKind;
 use wasm_bindgen::prelude::*;
 
@@ -502,6 +503,76 @@ pub fn setup_lists() -> String {
     .to_string()
 }
 
+/// A kept Printer Setup (its settings text; empty for the defaults).
+fn printer_setup_of(text: &str) -> PrinterSetup {
+    PrinterSetup::from_text(text).unwrap_or_default()
+}
+
+/// Printer Setup (dialog 1071) filled from a kept setup, as JSON: the papers in the box's sorted order (a paper not
+/// in the list is added by its size), the chosen one, the orientation, the four margins as shown (left, top, right,
+/// bottom), and the formatted page size.
+#[wasm_bindgen]
+pub fn printer_setup_view(setup: &str) -> String {
+    let s = printer_setup_of(setup);
+    let mut papers: Vec<String> = PAPERS.iter().map(|p| p.0.to_string()).collect();
+    let name = s.paper_name();
+    if !papers.contains(&name) {
+        papers.push(name.clone());
+    }
+    papers.sort();
+    let margins: Vec<String> = s.margins.iter().map(|m| s.margin_text(*m)).collect();
+    serde_json::json!({"papers": papers, "paper": name, "landscape": s.landscape, "margins": margins, "lines": s.lines, "chars": s.chars})
+        .to_string()
+}
+
+/// The setup as Printer Setup's OK reads it: the paper by name, the orientation, and the margins as typed (the unit
+/// becomes millimetres when the left margin is typed in them). The new settings text, or the reference message when
+/// a margin is not a number of 0 or more.
+#[wasm_bindgen]
+pub fn printer_setup_read(setup: &str, paper: &str, landscape: bool, margins: Vec<String>) -> Result<String, JsError> {
+    read_printer_setup(setup, paper, landscape, &margins).map_err(|m| JsError::new(m))
+}
+
+fn read_printer_setup(setup: &str, paper: &str, landscape: bool, margins: &[String]) -> Result<String, &'static str> {
+    let mut s = printer_setup_of(setup);
+    if let Some(p) = PAPERS.iter().find(|p| p.0 == paper) {
+        s.paper = (p.1, p.2);
+    }
+    s.landscape = landscape;
+    let read: Option<Vec<i32>> = margins.iter().map(|m| parse_margin(m, s.metric)).collect();
+    match read {
+        Some(m) if m.len() == 4 => {
+            s.margins = [m[0], m[1], m[2], m[3]];
+            s.metric = margins[0].to_lowercase().contains("mm");
+            Ok(s.to_text())
+        }
+        _ => Err("Each margin must be a number of 0 or more, in inches (for example 1\") or in millimetres (for example 25 mm)."),
+    }
+}
+
+/// Keeps the formatted page size in a setup (Global, Printer Setup): lines 5 to 160 and characters 10 to 100;
+/// a value out of range is left as it was.
+#[wasm_bindgen]
+pub fn printer_setup_page(setup: &str, lines: u32, chars: u32) -> String {
+    let mut s = printer_setup_of(setup);
+    if (5..=160).contains(&lines) {
+        s.lines = lines;
+    }
+    if (10..=100).contains(&chars) {
+        s.chars = chars;
+    }
+    s.to_text()
+}
+
+/// The page rule the browser prints with for a setup: the paper size turned by the orientation, and the margins.
+#[wasm_bindgen]
+pub fn printer_page_css(setup: &str) -> String {
+    let s = printer_setup_of(setup);
+    let (w, h) = if s.landscape { (s.paper.1, s.paper.0) } else { (s.paper.0, s.paper.1) };
+    let m = s.margins.map(|t| format!("{}in", t as f64 / 1000.0));
+    format!("@page {{ size: {}mm {}mm; margin: {} {} {} {}; }}", w as f64 / 10.0, h as f64 / 10.0, m[1], m[2], m[3], m[0])
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -641,5 +712,19 @@ mod tests {
         assert!(job.starts_with(b"\x1bD"), "{:?}", String::from_utf8_lossy(&job));
         assert!(String::from_utf8_lossy(&job).contains("ef"));
         assert!(!String::from_utf8_lossy(&job).contains("ab"));
+    }
+
+    #[test]
+    fn printer_setup_fills_reads_and_prints() {
+        let view: serde_json::Value = serde_json::from_str(&printer_setup_view("")).unwrap();
+        assert_eq!((view["paper"].as_str(), view["margins"][0].as_str(), view["lines"].as_u64()), (Some("Letter (8.5 x 11 inches)"), Some("1\""), Some(54)));
+        let m = |v: [&str; 4]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        let a4 = read_printer_setup("", "A4 (210 x 297 mm)", true, &m(["25.4 mm", "1", "1", "0.5\""])).unwrap();
+        let s = PrinterSetup::from_text(&a4).unwrap();
+        assert_eq!((s.paper, s.landscape, s.margins, s.metric), ((2100, 2970), true, [1000, 1000, 1000, 500], true));
+        assert!(read_printer_setup("", "A4 (210 x 297 mm)", false, &m(["x", "1", "1", "1"])).is_err());
+        assert_eq!(printer_page_css(&a4), "@page { size: 297mm 210mm; margin: 1in 1in 0.5in 1in; }");
+        let paged = PrinterSetup::from_text(&printer_setup_page(&a4, 40, 200)).unwrap();
+        assert_eq!((paged.lines, paged.chars), (40, 65));
     }
 }

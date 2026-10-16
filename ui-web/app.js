@@ -1356,8 +1356,67 @@ async function print() {
       area.append(page);
     }
   }
+  // The page size and margins of the document's Printer Setup, else the program's.
+  const page = document.createElement("style");
+  page.textContent = core.printer_page_css(printerSetupOf(false));
+  document.head.append(page);
   window.print();
+  page.remove();
   area.replaceChildren();
+}
+
+// ------------------------------------------------------------------ Printer Setup (dialog 1071)
+
+// The kept setup (its settings text): the document's own when it has one, else the program's (Global, Printer
+// Setup), as in the desktop program.
+const printerSetupOf = (global) => (!global && doc.printer) || store.get("printer.setup") || "";
+
+// Document, Printer Setup and Global, Printer Setup (dialog 1071, spec 24 2b): the paper, orientation and margins,
+// and the formatted page size. A print document takes its lines per page and characters per line from here; a
+// braille document takes its page size from Embosser Setup, so the two fields are shown but not changed here.
+// The browser chooses the printer in its own print dialog, so Printer... says so (web build).
+async function printerSetup(global) {
+  const braille = !global && doc.kind === "braille";
+  let setup = printerSetupOf(global);
+  const view = JSON.parse(core.printer_setup_view(setup));
+  const [lines, chars] = global ? [view.lines, view.chars] : [doc.lines, doc.cells];
+  const margins = [1155, 1156, 1157, 1158];
+  const { result, d } = await showDialog(1071, {
+    title: global ? "Global: Printer Setup..." : "Document: Printer Setup...",
+    setup(d) {
+      d.setItems(1137, view.papers, view.papers.indexOf(view.paper));
+      d.setItems(1138, ["Automatically Select"], 0);
+      d.setRadio([1056, 1057], view.landscape ? 1 : 0);
+      margins.forEach((c, i) => d.setText(c, view.margins[i]));
+      d.setText(2003, String(lines));
+      d.setText(2005, String(chars));
+      d.enable(2003, !braille);
+      d.enable(2005, !braille);
+      d.get(1026)?.addEventListener("click", () => message("In the browser, the printer and its own settings are chosen in the browser's print dialog when you print."));
+      d.get(1038)?.addEventListener("click", () => message(PLANNED_HELP));
+    },
+    async onOk(d) {
+      try {
+        setup = core.printer_setup_read(setup, d.selected(1137) ?? "", d.radio([1056, 1057]) === 1, margins.map((c) => d.text(c)));
+        return true;
+      } catch (e) {
+        await message(e.message);
+        return false;
+      }
+    },
+  });
+  if (result !== "ok") return;
+  const [newLines, newChars] = [d.number(2003), d.number(2005)];
+  if (global) {
+    store.set("printer.setup", core.printer_setup_page(setup, newLines ?? 0, newChars ?? 0));
+  } else {
+    if (doc.kind === "print") {
+      if (newLines !== null && newLines >= 5 && newLines <= 160) doc.lines = newLines;
+      if (newChars !== null && newChars >= 10 && newChars <= 100) doc.cells = newChars;
+    }
+    doc.printer = setup;
+  }
+  applyView();
 }
 
 // ------------------------------------------------------------------ File Emboss (dialog 1039)
@@ -1464,6 +1523,7 @@ fileInput.addEventListener("change", async () => {
   const bytes = new Uint8Array(await file.arrayBuffer());
   const ext = file.name.split(".").pop().toLowerCase();
   embosserDefaults();
+  doc.printer = null;
   if ((ext === "dxp" || ext === "dxb") && core) {
     try {
       const d = core.read_document(bytes);
@@ -2236,6 +2296,7 @@ const COMMANDS = {
     doc.name = "Untitled Print Document 1";
     doc.file = null;
     doc.saved = false;
+    doc.printer = null;
     embosserDefaults();
     doc.view = newView(false);
     editor.value = "";
@@ -2290,7 +2351,9 @@ const COMMANDS = {
   1309: () => setView((v) => (v.codes = !v.codes)),
   1310: () => setView((v) => (v.translated = !v.translated)),
   2601: () => embosserSetup(false),
+  2602: () => printerSetup(false),
   3101: () => embosserSetup(true),
+  3102: () => printerSetup(true),
   3104: () => showDialog(1060, { memory: "", setup: (d) => (d.setChecked(10, true), d.setText(12, ""), d.setText(14, "05:00")) }),
   3105: defaultViews,
   3106: internationalization,
