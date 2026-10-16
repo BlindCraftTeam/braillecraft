@@ -1049,6 +1049,8 @@ async function editSetup(setup, cat) {
   general.hide(8);
   general.hide(9);
   fill(setup, true);
+  const transend = pages.some(([rid]) => rid === 10003) ? built[2].d : null;
+  if (transend) fillTranSend(transend, setup, lists);
   general.get(5).addEventListener("change", () => {
     const model = general.selected(5) ?? "";
     if (!model.startsWith("(")) {
@@ -1075,7 +1077,7 @@ async function editSetup(setup, cat) {
     const out = general.radio([13, 14, 15]);
     s.output =
       out === 0
-        ? { Printer: (general.selected(16) ?? "").startsWith("(") ? "" : general.selected(16) ?? "" }
+        ? { Printer: general.selected(16) ?? "" }
         : out === 2
           ? { File: general.text(18).trim() }
           : { Port: general.selected(17) ?? "lpt1" };
@@ -1107,6 +1109,7 @@ async function editSetup(setup, cat) {
     s.one_at_a_time = advanced.checked(20);
     s.text_delay = Math.max(0, advanced.number(22) ?? 0);
     s.control_delay = Math.max(0, advanced.number(24) ?? 0);
+    if (transend) readTranSend(transend, s, lists);
     answer = s;
     return true;
   });
@@ -1119,6 +1122,29 @@ async function editSetup(setup, cat) {
   return (await closed) === "ok" ? answer : null;
 }
 
+// The TranSend SE page (sheet page 10003) showing `s` (spec 25 section 14). A browser cannot list the system's
+// printers or fonts, so lists 6 and 8 hold the setup's own ink printer and font (web build); the printer choice, the
+// font size and the two ink adjustments are as in the desktop program.
+function fillTranSend(d, s, lists) {
+  d.setItems(5, lists.transendFilters, Math.min(s.transend_filter, 2));
+  d.setItems(6, s.ink_printer ? [s.ink_printer] : [], 0);
+  d.setItems(8, s.interline_font ? [s.interline_font] : [], 0);
+  d.setRadio([10, 11, 12], Math.min(s.transend_font_size, 2));
+  d.setText(15, String(s.ink_adjust_h));
+  d.setText(17, String(s.ink_adjust_v));
+}
+
+// The TranSend SE page's values read into `s`: a list with nothing chosen leaves the value as it was; an adjustment
+// that is not a whole number is stored as 0, as in the desktop program.
+function readTranSend(d, s, lists) {
+  s.transend_filter = d.chosenIn(5, lists.transendFilters) ?? s.transend_filter;
+  s.ink_printer = d.selected(6) ?? s.ink_printer;
+  s.interline_font = d.selected(8) ?? s.interline_font;
+  s.transend_font_size = d.radio([10, 11, 12]) ?? s.transend_font_size;
+  s.ink_adjust_h = d.number(15) ?? 0;
+  s.ink_adjust_v = d.number(17) ?? 0;
+}
+
 // Shows setup `s` on the sheet's pages; the model list is filled only when `models` is set.
 function fillSheet(general, device, advanced, s, cat, lists, models) {
   if (models) {
@@ -1129,12 +1155,13 @@ function fillSheet(general, device, advanced, s, cat, lists, models) {
   const forms = JSON.parse(cat.forms(s.model));
   general.setItems(11, forms.map((f) => f.name), forms.findIndex((f) => f.id === s.form));
   general.enable(11, forms.length > 0);
-  general.setItems(16, ["(default printer)"], 0);
-  general.setItems(17, lists.ports, 0);
+  // A browser cannot list the system's printers, so the printer list holds the setup's own printer when it has one
+  // (web build); the reference adds no entry of its own to this list (spec 25 14.6).
   const [kind, value] = Object.entries(s.output)[0];
+  general.setItems(16, kind === "Printer" && value ? [value] : [], 0);
+  general.setItems(17, lists.ports, 0);
   if (kind === "Printer") {
     general.setRadio([13, 14, 15], 0);
-    if (value) general.setItems(16, [value], 0);
   } else if (kind === "Port") {
     general.setRadio([13, 14, 15], 1);
     const i = lists.ports.indexOf(value);

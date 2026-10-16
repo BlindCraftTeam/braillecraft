@@ -19,14 +19,32 @@ use crate::settings_store;
 
 thread_local! {
     static CATALOG: RefCell<Option<Result<Catalog, String>>> = const { RefCell::new(None) };
+    static TRANSEND: RefCell<TranSendPrinters> = RefCell::new(TranSendPrinters::default());
 }
 
-/// Reads the embosser models from `folder` (embossers.txt, and myembossers.txt beside it if present).
+/// Reads the embosser models from `folder` (embossers.txt, and myembossers.txt beside it if present), and the
+/// printers the TranSend SE page offers (transend-printers.txt; without it, or when it is not such a list, the
+/// supported and compatible choices offer no printer, as the reference's empty lists do).
 pub fn load(folder: &Path) -> Result<usize, String> {
     let r = Catalog::read(&folder.join("embossers.txt"), Some(&folder.join("myembossers.txt")));
     let n = r.as_ref().map(|c| c.models.len()).map_err(Clone::clone);
     CATALOG.with(|c| *c.borrow_mut() = Some(r));
+    let list = std::fs::read_to_string(folder.join("transend-printers.txt"))
+        .ok()
+        .and_then(|t| bc_core::emboss_setup::transend_printers(&t))
+        .unwrap_or_default();
+    TRANSEND.with(|t| *t.borrow_mut() = list);
     n
+}
+
+/// The system's printers that TranSend SE printer choice `filter` lets the ink printer list show, by name in the
+/// system's order (spec 25 14.8 item 6).
+fn ink_printers(filter: usize) -> Vec<String> {
+    let printers = bc_core::emboss_out::printers();
+    TRANSEND.with(|t| {
+        let list = t.borrow();
+        printers.into_iter().filter(|p| list.allows(filter, &p.driver)).map(|p| p.name).collect()
+    })
 }
 
 /// Runs `f` with the embosser models, or the reason they could not be read (embossing is then disabled).
@@ -38,7 +56,7 @@ pub fn with_catalog<R>(f: impl FnOnce(Result<&Catalog, &str>) -> R) -> R {
     })
 }
 
-pub use bc_core::emboss_setup::{find_model, form_name, form_name_with_prefix, Layout, Output, Setup, BAUDS, CASES, HANDSHAKING, LINE_ENDS, PAGE_ENDS, PARITIES, PORTS, VERSIONS};
+pub use bc_core::emboss_setup::{find_model, form_name, form_name_with_prefix, Layout, Output, Setup, TranSendPrinters, BAUDS, CASES, HANDSHAKING, LINE_ENDS, PAGE_ENDS, PARITIES, PORTS, TRANSEND_FILTERS, VERSIONS};
 
 /// Whether new setups take the European order of default forms (spec 25 12.3): the reference tests the user locale's
 /// country code; here the region of the system's language (its canonical name, such as en_GB: the user locale on
@@ -196,15 +214,21 @@ fn fill_sheet(general: &Dlg, device: &Dlg, advanced: &Dlg, s: &Setup, cat: &Cata
     let chosen = model.and_then(|m| m.forms.iter().position(|f| f.id == s.form)).map(|i| i as u32);
     general.set_items(11, &form_refs, chosen);
     general.enable(11, !form_refs.is_empty());
-    general.set_items(16, &["(default printer)"], Some(0));
+    // The system's printers, which the list sorts, with no entry of its own (spec 25 14.6): the stored printer is
+    // chosen, else the first; with no printer the list stays empty.
+    let printers: Vec<String> = bc_core::emboss_out::printers().into_iter().map(|p| p.name).collect();
+    let printer_refs: Vec<&str> = printers.iter().map(String::as_str).collect();
+    let stored = match &s.output {
+        Output::Printer(p) => printer_refs.iter().position(|x| x == p).map(|i| i as u32),
+        _ => None,
+    };
+    general.set_items(16, &printer_refs, stored);
+    if stored.is_none() && !printer_refs.is_empty() {
+        general.select(16, 0);
+    }
     general.set_items(17, PORTS, Some(0));
     match &s.output {
-        Output::Printer(p) => {
-            general.set_radio(&[13, 14, 15], 0);
-            if !p.is_empty() {
-                general.set_items(16, &[p.as_str()], Some(0));
-            }
-        }
+        Output::Printer(_) => general.set_radio(&[13, 14, 15], 0),
         Output::Port(p) => {
             general.set_radio(&[13, 14, 15], 1);
             if let Some(i) = PORTS.iter().position(|x| x == p) {
@@ -251,6 +275,45 @@ fn fill_sheet(general: &Dlg, device: &Dlg, advanced: &Dlg, s: &Setup, cat: &Cata
     advanced.set_checked(20, s.one_at_a_time);
     advanced.set_text(22, &s.text_delay.to_string());
     advanced.set_text(24, &s.control_delay.to_string());
+}
+
+/// The TranSend SE page (sheet page 10003) showing `s` (spec 25 section 14): the printer choice (5), the printers it
+/// lets the list show (6) with the setup's ink printer chosen, every font (8) with the interline font chosen, the
+/// font size (10 to 12) and the two ink adjustments (15, 17). A stored printer or font the system no longer has is
+/// left unchosen, as in the reference.
+fn fill_transend(page: &Dlg, s: &Setup) {
+    page.set_items(5, TRANSEND_FILTERS, Some(s.transend_filter.min(2) as u32));
+    fill_ink_printers(page, s.transend_filter, &s.ink_printer);
+    let fonts = crate::print::font_names();
+    let font_refs: Vec<&str> = fonts.iter().map(String::as_str).collect();
+    page.set_items(8, &font_refs, font_refs.iter().position(|f| *f == s.interline_font).map(|i| i as u32));
+    page.set_radio(&[10, 11, 12], s.transend_font_size.min(2));
+    page.set_text(15, &s.ink_adjust_h.to_string());
+    page.set_text(17, &s.ink_adjust_v.to_string());
+}
+
+/// List 6 of the TranSend SE page: the system's printers that printer choice `filter` lets it show, in the system's
+/// order, with `chosen` chosen when it is among them.
+fn fill_ink_printers(page: &Dlg, filter: usize, chosen: &str) {
+    let names = ink_printers(filter);
+    let refs: Vec<&str> = names.iter().map(String::as_str).collect();
+    page.set_items(6, &refs, refs.iter().position(|n| *n == chosen).map(|i| i as u32));
+}
+
+/// The TranSend SE page's values read into `s`. The reference stores each value as it changes, so a list with
+/// nothing chosen leaves the stored value as it was; an adjustment that is not a whole number is stored as 0, as
+/// the reference's reading of a number field gives.
+fn read_transend(page: &Dlg, s: &mut Setup) {
+    s.transend_filter = page.chosen_in(5, TRANSEND_FILTERS).unwrap_or(s.transend_filter);
+    if let Some(p) = page.selected_text(6) {
+        s.ink_printer = p;
+    }
+    if let Some(f) = page.selected_text(8) {
+        s.interline_font = f;
+    }
+    s.transend_font_size = page.radio(&[10, 11, 12]).unwrap_or(s.transend_font_size);
+    s.ink_adjust_h = page.number(15).and_then(|n| i32::try_from(n).ok()).unwrap_or(0);
+    s.ink_adjust_v = page.number(17).and_then(|n| i32::try_from(n).ok()).unwrap_or(0);
 }
 
 /// The setup sheet (dialogs 10000 to 10004): `setup` shown, changed on OK. Returns false when cancelled. Choosing a
@@ -333,6 +396,17 @@ fn refresh_device(general: &Dlg, device: &Dlg) {
     });
 }
 
+/// The TranSend SE page filled from a new setup of the first model with TranSend, for the layout check's picture.
+pub fn layout_transend_page(page: &Dlg) {
+    with_catalog(|cat| {
+        if let Ok(cat) = cat {
+            if let Some(name) = cat.names().into_iter().find(|n| find_model(cat, n).is_some_and(|m| m.flag("TranSend"))) {
+                fill_transend(page, &new_setup(cat, &name));
+            }
+        }
+    });
+}
+
 /// The setup sheet for `setup`, filled: its pages are General, Device Settings, TranSend SE (when `transend`) and
 /// Advanced.
 fn build_sheet(setup: &Setup, cat: &Catalog, transend: bool) -> (Dlg, Vec<Dlg>) {
@@ -349,6 +423,9 @@ fn build_sheet(setup: &Setup, cat: &Catalog, transend: bool) -> (Dlg, Vec<Dlg>) 
     p[0].hide(8);
     p[0].hide(9);
     fill_sheet(&p[0], &p[1], p.last().expect("advanced page"), setup, cat, true);
+    if transend {
+        fill_transend(&p[2], setup);
+    }
     (sheet, p)
 }
 
@@ -397,6 +474,17 @@ pub fn edit(setup: &mut Setup, cat: &Catalog) -> bool {
     let general = &p[0];
     let device = &p[1];
     let advanced = p.last().expect("advanced page");
+    let transend_page = if transend { p.get(2) } else { None };
+    // A new printer choice shows the printers it allows, keeping the printer chosen when it is still among them.
+    if let Some(page) = transend_page {
+        if let Some(filter) = page.win(5).and_then(|w| w.as_widget::<Choice>()) {
+            let tp = handle(page);
+            filter.on_selection_changed(move |_| {
+                let chosen = tp.selected_text(6).unwrap_or_default();
+                fill_ink_printers(&tp, tp.chosen_in(5, TRANSEND_FILTERS).unwrap_or(0), &chosen);
+            });
+        }
+    }
     let (g, dv, adv) = (handle(general), handle(device), handle(advanced));
     if let Some(models) = general.win(5).and_then(|w| w.as_widget::<Choice>()) {
         models.on_selection_changed(move |_| {
@@ -443,7 +531,7 @@ pub fn edit(setup: &mut Setup, cat: &Catalog) -> bool {
             }
         }
         s.output = match general.radio(&[13, 14, 15]) {
-            Some(0) => Output::Printer(general.selected_text(16).filter(|p| !p.starts_with('(')).unwrap_or_default()),
+            Some(0) => Output::Printer(general.selected_text(16).unwrap_or_default()),
             Some(2) => Output::File(general.text(18).trim().to_string()),
             _ => Output::Port(general.selected_text(17).unwrap_or_else(|| "lpt1".into())),
         };
@@ -475,6 +563,9 @@ pub fn edit(setup: &mut Setup, cat: &Catalog) -> bool {
         s.one_at_a_time = advanced.checked(20);
         s.text_delay = advanced.number(22).unwrap_or(0).max(0) as u32;
         s.control_delay = advanced.number(24).unwrap_or(0).max(0) as u32;
+        if let Some(page) = transend_page {
+            read_transend(page, &mut s);
+        }
         *setup = s;
         break true;
     };

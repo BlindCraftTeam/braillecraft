@@ -1,0 +1,41 @@
+| The printers the TranSend SE page of the embosser setup offers for interline ink print.
+| Lines starting with a bar and a space are notes. A blank line ends the list.
+| The next line marks the file as this list and must stay as it is.
+-TranSendSE 1
+| Supported printers: a printer is offered under Choose a Supported Printer when its driver
+| name is one of these (spaces, ESC/P2 and ESC/P left out of both, case ignored).
+Supported:
+Epson FX-850
+Epson FX-870
+Epson FX-880
+Epson FX-890
+EPSON FX-890 ESC/P
+Epson FX-1170
+Epson FX-1180
+Epson FX-2170
+Epson FX-2180
+Epson FX-2190
+EPSON FX-2190 ESC/P
+EPSON FX-2190II ESC/P
+EPSON FX-2190 Ver 2.0
+Epson LQ-570
+Epson LQ-590
+Epson LQ-670
+Epson LQ-800
+Epson LQ-850
+Epson LQ-860
+Epson LQ-870
+Epson LQ-950
+Epson LQ-1170
+Epson LQ-2170
+Epson LQ-2180
+Epson LQ-2180 ESC/P 2
+EPSON LX-300+ /II
+EPSON LX-300+II ESC/P
+| Compatible printers: a printer is offered under Choose a Supported or Compatible Printer
+| when its driver name has the same name as one of these with a number at least as high
+| (Epson EX-820 matches Epson EX-800).
+Compatible:
+Epson EX-800
+Epson FX-800
+Epson LQ-510

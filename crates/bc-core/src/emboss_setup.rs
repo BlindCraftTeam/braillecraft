@@ -66,6 +66,156 @@ pub struct Setup {
     pub one_at_a_time: bool,
     pub text_delay: u32,
     pub control_delay: u32,
+    /// TranSend SE page (spec 25 section 14): which printers the ink printer list shows (0 supported, 1 supported or
+    /// compatible, 2 any printer), the ink printer, the interline print font, its size (0 small, 1 large interline,
+    /// 2 large overlapped), and the horizontal and vertical ink adjustments in hundredths of an inch. A setup kept
+    /// before these existed takes the defaults the reference gives a new setup (spec 25 14.1).
+    #[serde(default)]
+    pub transend_filter: usize,
+    #[serde(default)]
+    pub ink_printer: String,
+    #[serde(default = "default_interline_font")]
+    pub interline_font: String,
+    #[serde(default)]
+    pub transend_font_size: usize,
+    #[serde(default)]
+    pub ink_adjust_h: i32,
+    #[serde(default)]
+    pub ink_adjust_v: i32,
+}
+
+/// The interline print font a new setup takes (spec 25 14.1).
+fn default_interline_font() -> String {
+    "Arial".into()
+}
+
+/// The TranSend SE page's printer choices, as the reference lists them (strings 10268 to 10270), in the order of
+/// TranSendSEFilter's values.
+pub const TRANSEND_FILTERS: &[&str] = &["Choose a Supported Printer:", "Choose a Supported or Compatible Printer:", "Choose any Printer:"];
+
+/// The printers the TranSend SE page offers (embossers/transend-printers.txt), each kept as compared: spaces,
+/// "ESC/P2" and "ESC/P" left out (spec 25 14.8 item 1).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct TranSendPrinters {
+    pub supported: Vec<String>,
+    pub compatible: Vec<String>,
+}
+
+/// A printer or driver name as the list compares it: every space, then every "ESC/P2", then every "ESC/P" left out,
+/// in that order and with case kept (spec 25 14.8 item 1).
+pub fn transend_normalize(name: &str) -> String {
+    name.replace(' ', "").replace("ESC/P2", "").replace("ESC/P", "")
+}
+
+/// A name split as the compatible test splits it: each run of digits stands as one "#" in the text part, and every
+/// digit of the name joins into one number (spec 25 14.8 item 2).
+fn split_number(name: &str) -> (String, u64) {
+    let (mut text, mut number, mut in_digits) = (String::new(), 0u64, false);
+    for c in name.chars() {
+        if c.is_ascii_digit() {
+            if !in_digits {
+                text.push('#');
+            }
+            number = number.wrapping_mul(10).wrapping_add(u64::from(c as u8 - b'0'));
+            in_digits = true;
+        } else {
+            text.push(c);
+            in_digits = false;
+        }
+    }
+    (text, number)
+}
+
+/// One line of the list file as the reference reads it (spec 25 14.8 item 4): a bar and a space, or a bar at the
+/// line end, ends the line there; two bars are one bar; a bar and three digits are the character of that code; a bar
+/// and anything else is a bar and the character after it is dropped. Trailing spaces and a carriage return are
+/// left off. None when the line holds only a note (it is passed over).
+fn transend_line(raw: &str) -> Option<String> {
+    let raw = raw.strip_suffix('\r').unwrap_or(raw);
+    let chars: Vec<char> = raw.chars().collect();
+    let (mut out, mut i, mut noted) = (String::new(), 0, false);
+    while i < chars.len() {
+        if chars[i] != '|' {
+            out.push(chars[i]);
+            i += 1;
+            continue;
+        }
+        match chars.get(i + 1) {
+            None | Some(' ') => {
+                noted = true;
+                break;
+            }
+            Some('|') => {
+                out.push('|');
+                i += 2;
+            }
+            Some(_) if chars.len() >= i + 4 && chars[i + 1..i + 4].iter().all(|c| c.is_ascii_digit()) => {
+                let code: u32 = chars[i + 1..i + 4].iter().collect::<String>().parse().unwrap_or(256);
+                if let Some(c) = char::from_u32(code).filter(|_| code <= 255) {
+                    out.push(c);
+                }
+                i += 4;
+            }
+            Some(_) => {
+                out.push('|');
+                i += 2;
+            }
+        }
+    }
+    let out = out.trim_end_matches(' ').to_string();
+    if noted && out.is_empty() {
+        None
+    } else {
+        Some(out)
+    }
+}
+
+/// Reads the list file: its first line that is not a note must be "-TranSendSE 1"; then "Supported:" and
+/// "Compatible:" (compared as names are, ignoring case) start their lists, and every other line is an entry of the
+/// list last started; a blank line ends the reading (spec 25 14.7 item 1 and 14.8 items 1 and 4). None when the file
+/// is not such a list.
+pub fn transend_printers(text: &str) -> Option<TranSendPrinters> {
+    let mut lines = text.split('\n').filter_map(transend_line);
+    if lines.next()?.trim() != "-TranSendSE 1" {
+        return None;
+    }
+    let mut list = TranSendPrinters::default();
+    let mut current: Option<&mut Vec<String>> = None;
+    for line in lines {
+        if line.is_empty() {
+            break;
+        }
+        let name = transend_normalize(&line);
+        if name.eq_ignore_ascii_case("Supported:") {
+            current = Some(&mut list.supported);
+        } else if name.eq_ignore_ascii_case("Compatible:") {
+            current = Some(&mut list.compatible);
+        } else if let Some(l) = current.as_mut() {
+            l.push(name);
+        }
+    }
+    Some(list)
+}
+
+impl TranSendPrinters {
+    /// Whether the printer choice `filter` lets the ink printer list show a printer with driver `driver` (spec 25
+    /// 14.8 item 6): 0 when its name is a supported one ignoring case; 1 when it has the text part of a compatible
+    /// one ignoring case with a number at least that one's (the supported list is not looked at, as in the
+    /// reference); 2 always.
+    pub fn allows(&self, filter: usize, driver: &str) -> bool {
+        let name = transend_normalize(driver);
+        match filter {
+            0 => self.supported.iter().any(|s| s.eq_ignore_ascii_case(&name)),
+            1 => {
+                let (text, number) = split_number(&name);
+                self.compatible.iter().any(|c| {
+                    let (ct, cn) = split_number(c);
+                    ct.eq_ignore_ascii_case(&text) && cn <= number
+                })
+            }
+            _ => true,
+        }
+    }
 }
 
 /// The ports Write to Port lists.
@@ -229,6 +379,12 @@ impl Setup {
             one_at_a_time: flag("OneByOne"),
             text_delay: number("AdditionalDelay", 0) as u32,
             control_delay: number("ControlDelay", 0) as u32,
+            transend_filter: 0,
+            ink_printer: String::new(),
+            interline_font: default_interline_font(),
+            transend_font_size: 0,
+            ink_adjust_h: 0,
+            ink_adjust_v: 0,
         }
     }
 
@@ -450,5 +606,49 @@ mod tests {
         assert_eq!(check(model, &layout, 60, 25), Check::DoesNotFit);
         layout.form = "zz".into();
         assert_eq!(check(model, &layout, 40, 25), Check::FormNotDefined);
+    }
+
+    #[test]
+    fn a_setup_kept_before_the_transend_values_takes_their_defaults() {
+        let cat = catalog();
+        let s = Setup::for_model(&cat, "Index Everest-D V5", false);
+        let mut json: serde_json::Value = serde_json::to_value(&s).unwrap();
+        for key in ["transend_filter", "ink_printer", "interline_font", "transend_font_size", "ink_adjust_h", "ink_adjust_v"] {
+            json.as_object_mut().unwrap().remove(key);
+        }
+        let old: Setup = serde_json::from_value(json).unwrap();
+        assert_eq!((old.transend_filter, old.ink_printer.as_str(), old.interline_font.as_str()), (0, "", "Arial"));
+        assert_eq!((old.transend_font_size, old.ink_adjust_h, old.ink_adjust_v), (0, 0, 0));
+    }
+
+    #[test]
+    fn the_shipped_transend_list_matches_as_the_reference_does() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../embossers/transend-printers.txt");
+        let list = transend_printers(&std::fs::read_to_string(path).unwrap()).unwrap();
+        assert_eq!((list.supported.len(), list.compatible.len()), (27, 3));
+        // The worked results of spec 25 14.8: (driver, filter 0, filter 1).
+        for (driver, supported, compatible) in [
+            ("Epson EX-820", false, true),
+            ("EPSON LX-300+II ESC/P", true, false),
+            ("Epson LQ-2180 ESC/P 2", true, true),
+            ("EPSON FX-890 ESC/P", true, true),
+            ("Epson FX-2190", true, true),
+            ("HP LaserJet 4", false, false),
+        ] {
+            assert_eq!(list.allows(0, driver), supported, "{driver} supported");
+            assert_eq!(list.allows(1, driver), compatible, "{driver} compatible");
+            assert!(list.allows(2, driver), "{driver} any");
+        }
+        // A lower model number than the compatible entry is not compatible.
+        assert!(!list.allows(1, "Epson EX-700"));
+    }
+
+    #[test]
+    fn the_transend_list_reader_keeps_the_references_line_rules() {
+        let text = "| note\r\n-TranSendSE 1\r\nSupported:\r\nEpson A-1 | a note after the name\r\nBar||Name\r\n\r\nEpson B-2\r\n";
+        let list = transend_printers(text).unwrap();
+        // A note after a name is left off, two bars are one bar, and the blank line ends the reading.
+        assert_eq!(list.supported, vec!["EpsonA-1".to_string(), "Bar|Name".to_string()]);
+        assert_eq!(transend_printers("Supported:\nEpson A-1\n"), None);
     }
 }

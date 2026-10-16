@@ -4231,7 +4231,6 @@
       <size>146,9d</size>
     </object>
     <object class="wxChoice" name="c5">
-      <style>wxCB_SORT</style>
       <pos>5,1d</pos>
       <size>146,40d</size>
     </object>

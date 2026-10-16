@@ -3,6 +3,7 @@
 #include <wx/print.h>
 #include <wx/printdlg.h>
 #include <wx/paper.h>
+#include <wx/fontenum.h>
 #include <cstring>
 #include "../include/wxdragon.h"
 
@@ -108,6 +109,23 @@ extern "C" void wxd_PrintData_Assign(wxd_PrintData_t* self, wxd_PrintData_t* oth
 
 extern "C" void wxd_PrintData_SetPrinterName(wxd_PrintData_t* self, const char* name) {
     reinterpret_cast<wxPrintData*>(self)->SetPrinterName(wxString::FromUTF8(name ? name : ""));
+}
+
+extern "C" int wxd_FontEnumerator_GetFacenames(char* buffer, int buffer_len) {
+    wxString all;
+    const wxArrayString names = wxFontEnumerator::GetFacenames();
+    for (size_t i = 0; i < names.GetCount(); i++) {
+        if (i > 0) all += "\n";
+        all += names[i];
+    }
+    const wxScopedCharBuffer utf8 = all.utf8_str();
+    int needed = (int)utf8.length();
+    if (buffer && buffer_len > 0) {
+        int n = needed < buffer_len - 1 ? needed : buffer_len - 1;
+        memcpy(buffer, utf8.data(), n);
+        buffer[n] = '\0';
+    }
+    return needed;
 }
 
 extern "C" int wxd_PrintData_GetPrinterName(wxd_PrintData_t* self, char* buffer, int buffer_len) {

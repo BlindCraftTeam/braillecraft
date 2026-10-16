@@ -8,6 +8,9 @@ WXD_EXPORTED wxd_PrintData_t* wxd_PrintData_Create();
 WXD_EXPORTED void wxd_PrintData_Destroy(wxd_PrintData_t* self);
 WXD_EXPORTED bool wxd_PrintData_IsOk(wxd_PrintData_t* self);
 // Added for BrailleCraft (see CHANGES-BrailleCraft.txt).
+// The system's font face names (wxFontEnumerator::GetFacenames), in the order the system gives them, one per line,
+// as UTF-8; returns the length the whole text needs, writing at most buffer_len - 1 bytes and a terminating 0.
+WXD_EXPORTED int wxd_FontEnumerator_GetFacenames(char* buffer, int buffer_len);
 WXD_EXPORTED void wxd_PrintData_Assign(wxd_PrintData_t* self, wxd_PrintData_t* other);
 WXD_EXPORTED void wxd_PrintData_SetPrinterName(wxd_PrintData_t* self, const char* name);
 WXD_EXPORTED int wxd_PrintData_GetPrinterName(wxd_PrintData_t* self, char* buffer, int buffer_len);

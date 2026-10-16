@@ -207,9 +207,91 @@ fn send_to_printer(name: &str, title: &str, bytes: &[u8]) -> Result<(), Failure>
     }
 }
 
+/// A printer the system has: its name and its driver. On Windows the driver is the printer's driver name, as the
+/// reference reads it (spec 25 14.1); elsewhere it is the printer's make and model as CUPS reports it, up to the
+/// " - " CUPS puts before the driver's own name ("Epson LQ-590 - CUPS+Gutenprint v5.3.4" is "Epson LQ-590"), which
+/// is BrailleCraft's stand-in for the driver name.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Printer {
+    pub name: String,
+    pub driver: String,
+}
+
+/// The system's local and connected printers in the order the system gives them (spec 25 14.1 and 14.6: the
+/// reference lists EnumPrinters local and connections, level 2).
+#[cfg(windows)]
+pub fn printers() -> Vec<Printer> {
+    use windows_sys::Win32::Graphics::Printing::{EnumPrintersW, PRINTER_ENUM_CONNECTIONS, PRINTER_ENUM_LOCAL, PRINTER_INFO_2W};
+    fn text(p: *const u16) -> String {
+        if p.is_null() {
+            return String::new();
+        }
+        let mut n = 0;
+        unsafe {
+            while *p.add(n) != 0 {
+                n += 1;
+            }
+            String::from_utf16_lossy(std::slice::from_raw_parts(p, n))
+        }
+    }
+    let flags = PRINTER_ENUM_LOCAL | PRINTER_ENUM_CONNECTIONS;
+    let (mut needed, mut count) = (0u32, 0u32);
+    unsafe { EnumPrintersW(flags, std::ptr::null(), 2, std::ptr::null_mut(), 0, &mut needed, &mut count) };
+    if needed == 0 {
+        return Vec::new();
+    }
+    // A buffer of PRINTER_INFO_2W records followed by their strings, aligned for the records.
+    let mut buf = vec![0u64; (needed as usize).div_ceil(8)];
+    if unsafe { EnumPrintersW(flags, std::ptr::null(), 2, buf.as_mut_ptr().cast(), needed, &mut needed, &mut count) } == 0 {
+        return Vec::new();
+    }
+    let infos = unsafe { std::slice::from_raw_parts(buf.as_ptr().cast::<PRINTER_INFO_2W>(), count as usize) };
+    infos.iter().map(|i| Printer { name: text(i.pPrinterName), driver: text(i.pDriverName) }).collect()
+}
+
+/// The system's printers as CUPS lists them (lpstat -e), each with its make and model (lpoptions -p).
+#[cfg(not(windows))]
+pub fn printers() -> Vec<Printer> {
+    let Ok(out) = Command::new("lpstat").arg("-e").stderr(Stdio::null()).output() else { return Vec::new() };
+    if !out.status.success() {
+        return Vec::new();
+    }
+    String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .map(str::trim)
+        .filter(|n| !n.is_empty())
+        .map(|name| {
+            let options = Command::new("lpoptions").args(["-p", name]).stderr(Stdio::null()).output();
+            let model = options.ok().filter(|o| o.status.success()).map(|o| make_and_model(&String::from_utf8_lossy(&o.stdout))).unwrap_or_default();
+            let driver = model.split(" - ").next().unwrap_or("").trim().to_string();
+            Printer { name: name.to_string(), driver }
+        })
+        .collect()
+}
+
+/// The printer-make-and-model value in lpoptions output (name=value pairs separated by spaces, a value with spaces
+/// in single quotes), or "" when it is not there.
+pub fn make_and_model(options: &str) -> String {
+    let key = "printer-make-and-model=";
+    let Some(at) = options.find(key) else { return String::new() };
+    let rest = &options[at + key.len()..];
+    match rest.strip_prefix('\'') {
+        Some(quoted) => quoted.split('\'').next().unwrap_or("").to_string(),
+        None => rest.split_whitespace().next().unwrap_or("").replace("\\ ", " "),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn make_and_model_from_lpoptions() {
+        let out = "copies=1 device-uri=usb://EPSON/LQ-590 printer-info='LQ 590' printer-make-and-model='Epson LQ-590 - CUPS+Gutenprint v5.3.4' printer-state=3";
+        assert_eq!(make_and_model(out), "Epson LQ-590 - CUPS+Gutenprint v5.3.4");
+        assert_eq!(make_and_model("printer-make-and-model=Generic printer-state=3"), "Generic");
+        assert_eq!(make_and_model("copies=1 printer-state=3"), "");
+    }
 
     #[test]
     fn file_output_holds_the_bytes() {

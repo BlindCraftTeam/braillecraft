@@ -1,6 +1,7 @@
 wxdragon-sys 0.9.22 (crates.io, MIT OR Apache-2.0), vendored for BrailleCraft.
 
 Changes, all in cpp/include/core/wxd_print.h and cpp/src/print.cpp, marked "Added for BrailleCraft":
+- wxd_FontEnumerator_GetFacenames: the system's font face names (wxFontEnumerator), one per line.
 - wxd_PrintData_Assign: copy one print data object into another.
 - wxd_PrintData_SetPrinterName / wxd_PrintData_GetPrinterName: the chosen printer.
 - wxd_PrintData_SetPaperSizeTenthsMM / wxd_PrintData_GetPaperSizeTenthsMM: the paper, by its size (a standard

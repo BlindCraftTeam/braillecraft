@@ -11485,7 +11485,6 @@ export const DIALOGS = {
    },
    {
     "class": "wxChoice",
-    "style": "wxCB_SORT",
     "x": 5,
     "y": 1,
     "w": 146,

@@ -1033,13 +1033,13 @@ pub fn a4_region_of(region: &str) -> bool {
 }
 
 /// The choice lists of the embosser setup sheet, as JSON: ports, bauds, parities, handshaking, versions, line ends,
-/// page ends and letter cases.
+/// page ends, letter cases and the TranSend SE printer choices.
 #[wasm_bindgen]
 pub fn setup_lists() -> String {
     use bc_core::emboss_setup::*;
     serde_json::json!({
         "ports": PORTS, "bauds": BAUDS, "parities": PARITIES, "handshaking": HANDSHAKING, "versions": VERSIONS,
-        "lineEnds": LINE_ENDS, "pageEnds": PAGE_ENDS, "cases": CASES,
+        "lineEnds": LINE_ENDS, "pageEnds": PAGE_ENDS, "cases": CASES, "transendFilters": TRANSEND_FILTERS,
     })
     .to_string()
 }

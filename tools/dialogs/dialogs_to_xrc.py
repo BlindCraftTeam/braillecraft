@@ -60,6 +60,12 @@ TEXTS = {
 }
 
 
+# Lists whose resource asks for sorting but which the reference fills by inserting each item at a set place
+# (CB_INSERTSTRING), which keeps the order given: the TranSend SE printer choice keeps Supported, Supported or
+# Compatible, any printer, the order of the values it stands for (re/spec/25-emboss.md section 14.7 item 6).
+UNSORTED = {(10003, 5)}
+
+
 def name_of(c):
     return {1: "wxID_OK", 2: "wxID_CANCEL"}.get(c["id"], "c%d" % c["id"])
 
@@ -202,6 +208,8 @@ def main():
         if rid in SKIP or "controls" not in d:
             continue
         controls = [dict(c, text=TEXTS[(rid, c["id"])]) if (rid, c["id"]) in TEXTS else c for c in d["controls"]]
+        controls = [dict(c, style_flags=[f for f in c["style_flags"] if f not in ("CBS_SORT", "LBS_SORT")])
+                    if (rid, c["id"]) in UNSORTED else c for c in controls]
         title = TITLES.get(rid, d["title"] or "BrailleCraft")
         if rid == ABOUT:
             title = "About BrailleCraft"

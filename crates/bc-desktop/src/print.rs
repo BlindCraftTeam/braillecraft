@@ -24,6 +24,21 @@ use bc_core::format::Page;
 /// What Printer Setup keeps, shared with the web build (bc_core::printer_setup).
 pub use bc_core::printer_setup::{parse_margin, PrinterSetup, PAPERS};
 
+// ------------------------------------------------------------------ fonts
+
+/// The system's font face names in the order the system gives them (wxFontEnumerator); the TranSend SE page lists
+/// them as the reference lists every font family of the screen (spec 25 14.1).
+pub fn font_names() -> Vec<String> {
+    let n = unsafe { ffi::wxd_FontEnumerator_GetFacenames(std::ptr::null_mut(), 0) };
+    if n <= 0 {
+        return Vec::new();
+    }
+    let mut buf = vec![0u8; n as usize + 1];
+    unsafe { ffi::wxd_FontEnumerator_GetFacenames(buf.as_mut_ptr() as *mut _, buf.len() as i32) };
+    buf.truncate(n as usize);
+    String::from_utf8_lossy(&buf).lines().filter(|l| !l.is_empty()).map(str::to_string).collect()
+}
+
 // ------------------------------------------------------------------ print data
 
 /// A wxWidgets print data object (printer, paper, orientation, and the driver's own settings).

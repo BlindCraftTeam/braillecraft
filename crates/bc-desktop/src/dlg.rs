@@ -853,6 +853,9 @@ pub fn layout_show(page: i32) {
     if page == 10002 {
         crate::embosser::layout_device_page(&pages[0]);
     }
+    if page == 10003 {
+        crate::embosser::layout_transend_page(&pages[0]);
+    }
     sheet.dialog.show(true);
     sheet.dialog.raise();
 }
