@@ -1,0 +1,190 @@
+/* BrailleMaker web build: a desktop program's look in the browser - the system font, compact controls at the
+   WCAG 2.2 target size, visible keyboard focus, and colours with AA contrast in light and dark. */
+
+:root {
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --muted: #4d4d4d;
+  --line: #767676;
+  --face: #f0f0f0;
+  --accent: #0b57d0;
+  --accent-fg: #ffffff;
+  --focus: #0b57d0;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e1e;
+    --fg: #f2f2f2;
+    --muted: #c8c8c8;
+    --line: #8a8a8a;
+    --face: #2b2b2b;
+    --accent: #8ab4f8;
+    --accent-fg: #0b0b0b;
+    --focus: #8ab4f8;
+  }
+}
+
+/* North American ASCII braille shown as braille cells (the program's own font). */
+@font-face {
+  font-family: "BrailleMaker Braille";
+  src: url("fonts/BrailleMaker-Braille-north-american.ttf") format("truetype");
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: menu;
+  font-size: 1rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.skip {
+  position: absolute;
+  left: 0.5rem;
+  top: -3rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+.skip:focus { top: 0.5rem; }
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* The menu bar. */
+header { border-bottom: 1px solid var(--line); background: var(--face); }
+#menubar {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+#menubar > li { position: relative; }
+[role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"] {
+  display: flex;
+  justify-content: space-between;
+  gap: 2rem;
+  min-height: 24px;
+  padding: 0.25rem 0.75rem;
+  color: var(--fg);
+  cursor: default;
+  white-space: nowrap;
+}
+#menubar > li > [role="menuitem"] { display: block; padding: 0.25rem 0.6rem; }
+[role="menuitem"]:focus, [role="menuitemcheckbox"]:focus, [role="menuitemradio"]:focus,
+[role="menuitem"][aria-expanded="true"] {
+  background: var(--accent);
+  color: var(--accent-fg);
+  outline: none;
+}
+[role="menu"] {
+  position: absolute;
+  z-index: 10;
+  min-width: 14rem;
+  margin: 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 30%);
+}
+[role="menu"] [role="menu"] { left: 100%; top: -0.3rem; }
+[role="separator"] { margin: 0.25rem 0; border-top: 1px solid var(--line); }
+[role="menu"][hidden] { display: none; }
+.shortcut { color: inherit; }
+.mark { display: inline-block; width: 1.2rem; }
+.mn { text-decoration: underline; }
+
+/* The document window. */
+main { padding: 0.5rem; }
+h1 { font-size: 1rem; font-weight: normal; margin: 0 0 0.25rem; }
+#editor {
+  display: block;
+  width: 100%;
+  min-height: 60vh;
+  padding: 0.5rem;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--fg);
+  font: 1.1rem/1.4 monospace;
+  resize: vertical;
+}
+#editor.braille { font-family: "BrailleMaker Braille", monospace; }
+#translated {
+  display: block;
+  min-height: 1.6rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--line);
+  border-top: 0;
+  font: 1.1rem monospace;
+}
+#translated.braille { font-family: "BrailleMaker Braille", monospace; }
+#translated-section[hidden] { display: none; }
+#status {
+  margin: 0;
+  padding: 0.25rem 0.5rem;
+  border-top: 1px solid var(--line);
+  font-weight: bold;
+}
+
+/* Dialogs: the reference program's controls in its order, flowing so they fit any window. */
+dialog {
+  max-width: min(42rem, calc(100vw - 1rem));
+  padding: 0;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--fg);
+}
+dialog::backdrop { background: rgb(0 0 0 / 35%); }
+dialog h2 {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+  background: var(--face);
+  border-bottom: 1px solid var(--line);
+}
+dialog form { padding: 0.75rem; display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+dialog fieldset { border: 1px solid var(--line); padding: 0.5rem; margin: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 0.4rem; align-self: stretch; }
+dialog form > .buttons { align-self: stretch; }
+dialog legend { padding: 0 0.25rem; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; }
+.row > label { min-width: 10rem; }
+dialog input[type="text"], dialog select, dialog textarea {
+  min-height: 24px;
+  padding: 0.15rem 0.3rem;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  max-width: 100%;
+}
+dialog select[size] { min-width: 14rem; }
+dialog p.text { margin: 0; color: var(--fg); }
+.buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; }
+button {
+  min-height: 24px;
+  min-width: 5rem;
+  padding: 0.2rem 0.75rem;
+  border: 1px solid var(--line);
+  background: var(--face);
+  color: var(--fg);
+  font: inherit;
+}
+button.default { border: 2px solid var(--accent); }
+button:disabled, input:disabled, select:disabled { opacity: 0.6; }

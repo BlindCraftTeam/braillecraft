@@ -92,3 +92,36 @@ jobs:
             ${{ matrix.bundle_dir }}/deb/*.deb
             ${{ matrix.bundle_dir }}/rpm/*.rpm
             ${{ matrix.bundle_dir }}/appimage/*.AppImage
+
+  # The web build: the core as WebAssembly with its browser glue (wasm-bindgen at the version the workspace locks),
+  # the web interface's menus and dialogs regenerated from the desktop program's tables (the run fails when the
+  # committed copy differs), the braille fonts and the translation tables. The site is kept as a run artifact.
+  web:
+    name: web
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Web build
+        run: |
+          cargo install wasm-bindgen-cli --version 0.2.129 --locked
+          python3 tools/web/make_web_tables.py
+          git diff --exit-code ui-web/tables.js
+          cargo build --release -p bm-web --target wasm32-unknown-unknown
+          mkdir -p site/fonts site/tables
+          wasm-bindgen --target web --no-typescript --out-dir site/pkg target/wasm32-unknown-unknown/release/bm_web.wasm
+          cp ui-web/* site/
+          cp ui/fonts/*.ttf site/fonts/
+          cp tables/en-ueb-g2-forward.bmt tables/en-ueb-g2-back.bmt site/tables/
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: braillemaker-web
+          if-no-files-found: error
+          path: site

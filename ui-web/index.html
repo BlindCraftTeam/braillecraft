@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BrailleMaker</title>
+<link rel="stylesheet" href="style.css">
+<script type="module" src="app.js"></script>
+</head>
+<body>
+<a class="skip" href="#editor">Skip to the document</a>
+<header>
+  <nav aria-label="Menu bar">
+    <ul id="menubar" role="menubar" aria-label="BrailleMaker"></ul>
+  </nav>
+</header>
+<main>
+  <h1 id="doc-title">BrailleMaker - [Untitled Print Document 1]</h1>
+  <label for="editor" class="visually-hidden">Document</label>
+  <textarea id="editor" spellcheck="false" autocomplete="off"></textarea>
+  <section id="translated-section" aria-labelledby="translated-label">
+    <h2 id="translated-label" class="visually-hidden">Translated line</h2>
+    <output id="translated" aria-live="polite"></output>
+  </section>
+  <p id="status" role="status"></p>
+</main>
+<div id="dialogs"></div>
+<input type="file" id="file-input" aria-label="Open a document" hidden accept=".dxp,.dxb,.brf,.brl,.txt">
+</body>
+</html>
