@@ -19,6 +19,7 @@
 //!   are 10-byte descriptors of optional sections after the styles (u16 kind, u32 file offset, u32 length; all zero
 //!   for a section that is absent): +88 kind 1 is the name of the document's embosser setup, NUL terminated; the
 //!   others (the extra block and its second copy, embedded objects) are kept as they are read and written back.
+//! - Settings +108 to +128 hold the document's embosser page layout (DxLayout, spec 25 section 10).
 //!
 //! The text is returned as running text (bm_core::doctext): codes marked 0x1C ... 0x1F as in the file, a hard space
 //! as U+00A0, every other byte its code page 437 character; brackets in the text stay text. Writing does the reverse
@@ -55,6 +56,68 @@ pub struct DxDocument {
     pub embosser: String,
     /// The other optional sections as read: their descriptor's place in the settings block, kind and bytes.
     pub sections: Vec<(usize, u16, Vec<u8>)>,
+    /// The document's embosser page layout (settings +108); None when the file holds none.
+    pub layout: Option<DxLayout>,
+}
+
+/// The embosser page layout a document keeps in 21 bytes at settings +108 (spec 25 section 10): u16 lines per page,
+/// top margin, cells per line, binding margin; u8 interpoint, banner page, interline, a byte of unknown meaning; the
+/// paper form name in 9 bytes.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct DxLayout {
+    pub lines: u16,
+    pub top_margin: u16,
+    pub cells: u16,
+    pub binding: u16,
+    pub interpoint: bool,
+    pub banner: u8,
+    /// 0 off, 1 ink and braille, 2 braille-only pass (read back as 1, as the reference loader does).
+    pub interline: u8,
+    /// Byte +11, meaning unknown (spec 25 10.3); kept as read.
+    pub unknown: u8,
+    /// The form name, at most 9 characters.
+    pub form: String,
+}
+
+const LAYOUT_AT: usize = 108;
+const LAYOUT_LEN: usize = 21;
+
+/// The layout in a settings block. As the reference loader takes it (spec 25 10.1): only when lines, cells and the
+/// form name's first byte are all non-zero; interpoint and interline come back as 0 or 1.
+fn read_layout(s: &[u8]) -> Option<DxLayout> {
+    let b = &s[LAYOUT_AT..LAYOUT_AT + LAYOUT_LEN];
+    let at = |i: usize| u16::from_be_bytes([b[i], b[i + 1]]);
+    if at(0) == 0 || at(4) == 0 || b[12] == 0 {
+        return None;
+    }
+    Some(DxLayout {
+        lines: at(0),
+        top_margin: at(2),
+        cells: at(4),
+        binding: at(6),
+        interpoint: b[8] != 0,
+        banner: b[9],
+        interline: u8::from(b[10] != 0),
+        unknown: b[11],
+        form: b[12..21].iter().take_while(|&&c| c != 0).map(|&c| cp437(c)).collect(),
+    })
+}
+
+/// The 21 bytes the reference writer stores for a layout (spec 25 10.1: big-endian, the form name's first 9 bytes,
+/// no terminator).
+fn layout_bytes(l: &DxLayout) -> [u8; LAYOUT_LEN] {
+    let mut b = [0u8; LAYOUT_LEN];
+    for (i, v) in [l.lines, l.top_margin, l.cells, l.binding].iter().enumerate() {
+        b[2 * i..2 * i + 2].copy_from_slice(&v.to_be_bytes());
+    }
+    b[8] = u8::from(l.interpoint);
+    b[9] = l.banner;
+    b[10] = l.interline;
+    b[11] = l.unknown;
+    for (j, c) in l.form.chars().take(9).enumerate() {
+        b[12 + j] = to_cp437(c);
+    }
+    b
 }
 
 /// The places of the optional section descriptors in the settings block (spec 05-B).
@@ -212,6 +275,7 @@ pub fn read(d: &[u8]) -> Result<DxDocument, DxError> {
         settings: d[HEADER..BODY].to_vec(),
         embosser,
         sections,
+        layout: read_layout(&d[HEADER..BODY]),
     })
 }
 
@@ -359,6 +423,10 @@ pub fn write(doc: &DxDocument) -> Vec<u8> {
         }
         s[32 + i * 8..40 + i * 8].copy_from_slice(&name);
     }
+    // The embosser layout; with none, the bytes stay as the document was read (zero for a new one).
+    if let Some(l) = &doc.layout {
+        s[LAYOUT_AT..LAYOUT_AT + LAYOUT_LEN].copy_from_slice(&layout_bytes(l));
+    }
     out.extend_from_slice(&s);
     out.extend_from_slice(&body);
     // The names as stored are sorted (spec 05-B (c)); a document read from a file keeps its order and index values,
@@ -493,6 +561,7 @@ mod tests {
             settings: Vec::new(),
             embosser: String::new(),
             sections: Vec::new(),
+            layout: None,
         };
         let bytes = write(&doc);
         assert_eq!(&bytes[..10], b"\xFFDSI\x00\x02\x00\x00\x00\x01");
@@ -531,6 +600,36 @@ mod tests {
         // Without a name the descriptor is zero.
         let none = write(&DxDocument { embosser: String::new(), sections: Vec::new(), ..back });
         assert!(none[at..at + 10].iter().all(|&b| b == 0));
+    }
+
+    #[test]
+    fn the_embosser_layout_is_kept_in_21_bytes_at_settings_108() {
+        let mut doc = read(&sample(0, b"abc")).unwrap();
+        assert_eq!(doc.layout, None);
+        doc.layout = Some(DxLayout {
+            lines: 25,
+            top_margin: 1,
+            cells: 40,
+            binding: 2,
+            interpoint: true,
+            banner: 1,
+            interline: 2,
+            unknown: 0,
+            form: "11_w".into(),
+        });
+        let bytes = write(&doc);
+        let at = HEADER + 108;
+        assert_eq!(&bytes[at..at + 21], b"\x00\x19\x00\x01\x00\x28\x00\x02\x01\x01\x02\x0011_w\0\0\0\0\0");
+        // Read back as the reference loader takes it: interline 2 comes back as 1.
+        let back = read(&bytes).unwrap();
+        assert_eq!(back.layout.as_ref().map(|l| (l.lines, l.cells, l.interline, l.form.as_str())), Some((25, 40, 1, "11_w")));
+        // A layout with no lines, no cells or no form name is not taken.
+        let mut zero_lines = bytes.clone();
+        zero_lines[at..at + 2].fill(0);
+        assert_eq!(read(&zero_lines).unwrap().layout, None);
+        let mut no_form = bytes.clone();
+        no_form[at + 12] = 0;
+        assert_eq!(read(&no_form).unwrap().layout, None);
     }
 
     #[test]

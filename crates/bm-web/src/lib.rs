@@ -120,6 +120,7 @@ mod tests {
             settings: Vec::new(),
             embosser: "Index Everest-D V5".into(),
             sections: Vec::new(),
+            layout: None,
         };
         let read = read_document(&dxfile::write(&doc)).ok().unwrap();
         assert!(read.braille());

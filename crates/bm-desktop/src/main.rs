@@ -174,6 +174,18 @@ fn main() {
             wxdragon::call_after(Box::new(commands::exit_program));
         });
 
+        // Global, Embosser Setup at start-up when no embosser is set up, once the main window is first active: a
+        // dialog opened before that is stacked under the main window by the window manager, out of reach.
+        let started = std::rc::Rc::new(std::cell::Cell::new(false));
+        frame.on_activate(move |e| {
+            if let WindowEventData::Activate(a) = &e {
+                if a.is_active() && !started.replace(true) {
+                    wxdragon::call_after(Box::new(commands::embosser_setup_at_start));
+                }
+                a.event.skip(true);
+            }
+        });
+
         let key = documents::new_document(app::DocKind::Print, None, &bm_core::doctext::Shown::default());
         app::with(|a| {
             if let Some(i) = a.index_of(key) {

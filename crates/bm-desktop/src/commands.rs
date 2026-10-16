@@ -608,6 +608,22 @@ fn open_dx_document(path: &Path) {
             if !doc.embosser.is_empty() {
                 d.embosser = doc.embosser.clone();
             }
+            // Its embosser page layout, when the file holds one (spec 25 section 10); cells and lines are taken by a
+            // braille document, as Document, Embosser Setup sets them.
+            if let Some(l) = &doc.layout {
+                d.layout = crate::embosser::Layout {
+                    form: l.form.clone(),
+                    top_margin: u32::from(l.top_margin),
+                    binding: u32::from(l.binding),
+                    interpoint: l.interpoint,
+                    banner: l.banner != 0,
+                    interline: u32::from(l.interline),
+                };
+                if braille {
+                    d.cells = u32::from(l.cells);
+                    d.lines = u32::from(l.lines);
+                }
+            }
             d.view.translated = doc.translated_line;
             d.view.six_key = braille && doc.six_key;
             d.page_numbers = doc.page_numbering;
@@ -814,6 +830,18 @@ fn write_document(key: u64, path: &Path, version: u16) -> bool {
             settings: d.file_settings.clone(),
             embosser: d.embosser.clone(),
             sections: d.file_sections.clone(),
+            // The embosser page layout; byte +11 (meaning unknown) is kept as the file had it.
+            layout: Some(&d.layout).filter(|l| !l.form.is_empty()).map(|l| bm_core::dxfile::DxLayout {
+                lines: d.lines.min(u32::from(u16::MAX)) as u16,
+                top_margin: l.top_margin.min(u32::from(u16::MAX)) as u16,
+                cells: d.cells.min(u32::from(u16::MAX)) as u16,
+                binding: l.binding.min(u32::from(u16::MAX)) as u16,
+                interpoint: l.interpoint,
+                banner: u8::from(l.banner),
+                interline: l.interline.min(2) as u8,
+                unknown: d.file_settings.get(108 + 11).copied().unwrap_or(0),
+                form: l.form.clone(),
+            }),
         })
     }) else {
         return false;
@@ -1256,8 +1284,12 @@ fn emboss() {
     }) else {
         return;
     };
-    let Some(setup) = emb::load_setup(&setup_name) else {
-        message("Embosser not found.");
+    // The checks before a job, in the reference's order (spec 25 9.1): a setup chosen (2892), the document's paper
+    // size defined on that embosser (2364, the job stops), its layout fitting that paper (2362, a question).
+    // INFERENCE: a setup name that is no longer kept here is treated as no setup chosen.
+    const NO_SETUP: &str = "Before embossing this document, you must use Embosser Setup in the Document menu to choose an embosser.";
+    let Some(setup) = Some(&setup_name).filter(|n| !n.is_empty()).and_then(|n| emb::load_setup(n)) else {
+        message(NO_SETUP);
         return;
     };
     let ready = emb::with_catalog(|cat| match cat {
@@ -1271,6 +1303,25 @@ fn emboss() {
             return;
         }
     };
+    let (shown_setup, shown_form) = (setup.shown_name(), emb::form_name(&layout.form));
+    let Some(form) = model.forms.iter().find(|f| f.id == layout.form) else {
+        message(&format!(
+            "This document is set to use a paper size (\"{shown_form}\") that is not defined on its assigned embosser (\"{shown_setup}\").  You must fix this in the \"Document: Embosser Settings\" dialogue before embossing the document; you should choose an embosser and paper size capable of fitting {lines} lines of {cells} cells to avoid reformatting the document."
+        ));
+        return;
+    };
+    // INFERENCE: the reference's fit test (dxemb_form_validate_settings) was not decoded; this is the rule the
+    // Embosser Setup dialog keeps: cells and binding margin share the form's line, lines and top margin its page,
+    // on the interline page when interline print is on and the form gives one.
+    let (max_cells, max_lines) = if layout.interline != 0 { form.interline.map(|i| i.0).unwrap_or(form.maximum) } else { form.maximum };
+    let fits = cells + layout.binding <= max_cells && lines + layout.top_margin <= max_lines;
+    if !fits
+        && !yes_no(&format!(
+            "This document is set for a braille layout that won't fit properly on its assigned embosser (\"{shown_setup}\") and paper size (\"{shown_form}\").  You should fix this in the \"Document: Embosser Settings\" dialogue before embossing; you should choose an embosser and paper size capable of fitting {lines} lines of {cells} cells to avoid reformatting the document.  Do you want to emboss this anyway?"
+        ))
+    {
+        return;
+    }
     let pages = app::with(|a| {
         let shown = a.docs[i].shown();
         a.laid_out(i, &shown)
@@ -1850,6 +1901,14 @@ fn fill_setup_forms(d: &Dlg, form: &str) {
 /// Document / Global: Embosser Setup (dialog 1032, spec 25 section 2b). Document: the document's setup and its
 /// embosser page layout. Global: the default setup and the layout new documents take; New, Modify Embosser and
 /// Remove (shown in Global only) open the setup sheet and change the kept setups.
+/// At start-up, Global, Embosser Setup when no embosser is set up (spec 25 section 11: the reference opens it after its
+/// start-up autoprobe finds no embosser installed). The autoprobe of the Windows embosser driver is not built.
+pub fn embosser_setup_at_start() {
+    if crate::embosser::setup_names().is_empty() {
+        embosser_setup(true);
+    }
+}
+
 fn embosser_setup(global: bool) {
     use crate::embosser as emb;
     let doc = app::with(|a| a.doc().map(|d| (d.kind, d.cells, d.lines, d.embosser.clone(), d.layout.clone())));
