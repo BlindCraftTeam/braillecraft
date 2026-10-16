@@ -92,13 +92,18 @@ jobs:
           if-no-files-found: error
           path: installers/*.msi
 
-      # The Linux packages of the native program (packaging/linux): .deb and .rpm with the same layout.
+      # The Linux packages of the native program (packaging/linux): .deb and .rpm with the same layout, and an
+      # AppImage made with appimagetool 1.9.1 (checked against its published checksum).
       - name: Linux packages
         if: runner.os == 'Linux'
         run: |
           sudo apt-get install -y rpm dpkg-dev
           version=$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)
           bash packaging/linux/build-packages.sh dist/BrailleMaker $version installers
+          curl -fsSL -o appimagetool https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
+          echo "ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0  appimagetool" | sha256sum -c -
+          chmod 755 appimagetool
+          APPIMAGE_EXTRACT_AND_RUN=1 APPIMAGETOOL=$PWD/appimagetool bash packaging/linux/build-appimage.sh dist/BrailleMaker $version installers
 
       - uses: actions/upload-artifact@v7
         if: runner.os == 'Linux'
@@ -108,6 +113,7 @@ jobs:
           path: |
             installers/*.deb
             installers/*.rpm
+            installers/*.AppImage
 
       # The macOS application bundle and disk image of the native program (packaging/macos).
       - name: macOS disk image
