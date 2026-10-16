@@ -122,6 +122,27 @@ jobs:
           version=$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)
           bash packaging/macos/build-app.sh dist/BrailleCraft $version installers
 
+      # The program starts on macOS, from the plain folder and from the application in the disk image, loads its
+      # braille fonts and its tables, and writes formatted braille: a line of text saved as BRF on the command line.
+      # Any message about the fonts fails the step.
+      - name: macOS start check
+        if: runner.os == 'macOS'
+        timeout-minutes: 5
+        run: |
+          printf 'BrailleCraft start check.\n' > check.txt
+          check() {
+            rm -f check.brf
+            "$1" /brf:check.brf check.txt 2> err.txt || true
+            cat err.txt
+            if grep -i "^BrailleCraft:.*font" err.txt; then echo "font message from $1"; exit 1; fi
+            test -s check.brf || { echo "no BRF written by $1"; exit 1; }
+            cat check.brf
+          }
+          check dist/BrailleCraft/braillecraft-desktop
+          hdiutil attach installers/*.dmg -mountpoint /tmp/bcdmg -nobrowse
+          check /tmp/bcdmg/BrailleCraft.app/Contents/MacOS/braillecraft-desktop
+          hdiutil detach /tmp/bcdmg
+
       - uses: actions/upload-artifact@v7
         if: runner.os == 'macOS'
         with:

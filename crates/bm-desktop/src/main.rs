@@ -74,8 +74,41 @@ fn add_font(path: &Path) -> bool {
     unsafe { FcConfigAppFontAddFile(FcConfigGetCurrent(), c.as_ptr() as *const u8) != 0 }
 }
 
-/// Windows and macOS: wxWidgets registers the font for this process.
-#[cfg(not(target_os = "linux"))]
+/// On macOS wxWidgets registers no private fonts: it only accepts a font already in the bundle's Resources/Fonts
+/// folder named in Info.plist. The fonts are given to Core Text for this process instead, wherever they are (the
+/// application bundle or the plain program folder).
+#[cfg(target_os = "macos")]
+fn add_font(path: &Path) -> bool {
+    use std::ffi::c_void;
+    use std::os::unix::ffi::OsStrExt;
+    #[link(name = "CoreFoundation", kind = "framework")]
+    extern "C" {
+        fn CFURLCreateFromFileSystemRepresentation(allocator: *const c_void, buffer: *const u8, len: isize, is_directory: u8) -> *const c_void;
+        fn CFRelease(object: *const c_void);
+    }
+    #[link(name = "CoreText", kind = "framework")]
+    extern "C" {
+        fn CTFontManagerRegisterFontsForURL(url: *const c_void, scope: u32, error: *mut *const c_void) -> bool;
+    }
+    const PROCESS_SCOPE: u32 = 1;
+    let bytes = path.as_os_str().as_bytes();
+    unsafe {
+        let url = CFURLCreateFromFileSystemRepresentation(std::ptr::null(), bytes.as_ptr(), bytes.len() as isize, 0);
+        if url.is_null() {
+            return false;
+        }
+        let mut error: *const c_void = std::ptr::null();
+        let ok = CTFontManagerRegisterFontsForURL(url, PROCESS_SCOPE, &mut error);
+        if !error.is_null() {
+            CFRelease(error);
+        }
+        CFRelease(url);
+        ok
+    }
+}
+
+/// Windows: wxWidgets registers the font for this process.
+#[cfg(windows)]
 fn add_font(path: &Path) -> bool {
     Font::add_private_font(&path.to_string_lossy())
 }
