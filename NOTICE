@@ -1,0 +1,33 @@
+BrailleCraft
+Copyright (c) 2026 BlindCraft Team and the BrailleCraft contributors.
+Licensed under the MIT License or the Apache License, Version 2.0, at your option
+(LICENSE-MIT, LICENSE-APACHE).
+
+The BlindCraft name is a trademark of the BlindCraft Team. It is not open source and is not
+covered by the license above; its terms are in docs/brand/LICENSE-brand.txt.
+
+Third-party material
+
+This product bundles third-party material under its own licenses, listed below.
+
+wxWidgets 3.3.3 (https://www.wxwidgets.org/), built into the desktop program, is licensed under the
+wxWindows Library Licence, Version 3.1. Builds also include the libraries wxWidgets carries for
+images, text and compression (libjpeg, libpng, libtiff, zlib, expat, PCRE2, NanoSVG) where the
+system does not supply them, each under its own license; their texts are in the wxWidgets source
+(docs/licence.txt and the 3rdparty and src folders).
+
+vendor/wxdragon-sys is wxdragon-sys 0.9.22 (https://github.com/AllenDang/wxDragon), licensed under
+the MIT License or the Apache License 2.0, at your option. It was modified by the BrailleCraft
+contributors (2026); the changes are listed in vendor/wxdragon-sys/CHANGES-BrailleCraft.txt.
+
+The Rust crates the programs are built from (cargo dependencies) keep their own licenses, given in
+each crate's Cargo.toml; Cargo.lock lists the exact versions.
+
+The braille fonts (BrailleCraft Braille and BrailleCraft SimBraille, every encoding) are drawn by
+tools/fonts and are part of BrailleCraft under the license above. The translation tables in tables/
+and the data in crates/bc-desktop/data are part of BrailleCraft under the license above.
+
+crates/bc-louis holds liblouis (https://liblouis.io/), licensed under the GNU Lesser General Public
+License, version 2.1 or later; its tables keep their own notices. It is used only by crates/bc-shell,
+an earlier interface, and is not part of the BrailleCraft desktop or web programs. The changes made
+to it are listed in crates/bc-louis/vendor/CHANGES-BrailleCraft.txt.

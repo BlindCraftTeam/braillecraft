@@ -33,10 +33,10 @@ ABOUT_TEXT = {
     7: "BrailleCraft for Windows, Linux and Mac",
     8: "Version %s",
     15: "Designed, implemented, and tested by:",
-    16: "Jeremiah Beasley",
+    16: "the BlindCraft Team",
     17: "Braille translation:",
     18: "the BrailleCraft translation engine and its tables",
-    19: "Copyright (c) 2026 Jeremiah Beasley.",
+    19: "Copyright 2026 BlindCraft Team and BrailleCraft contributors",
 }
 # About's texts 7 to 14 are reached by Tab while a screen reader runs (re/spec/04f): they are written as the static
 # text class that accepts focus then (vendor/wxdragon-sys, WxdReaderStaticText).

@@ -23,6 +23,10 @@ install -m 755 "$dist/braillecraft-desktop" "$appdir/usr/bin/braillecraft-deskto
 for d in fonts tables templates embossers; do
   cp -r "$dist/$d" "$appdir/usr/share/braillecraft/$d"
 done
+# The licences and notices (MIT or Apache-2.0, NOTICE).
+for f in LICENSE-MIT LICENSE-APACHE NOTICE; do
+  install -m 644 "$dist/$f" "$appdir/usr/share/braillecraft/$f"
+done
 install -m 644 "$here/braillecraft.desktop" "$appdir/braillecraft.desktop"
 install -m 644 "$here/braillecraft.desktop" "$appdir/usr/share/applications/braillecraft.desktop"
 install -m 644 "$icons/braillecraft-256.png" "$appdir/braillecraft.png"

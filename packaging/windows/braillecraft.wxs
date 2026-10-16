@@ -9,10 +9,11 @@
   Built in CI (.github/workflows/build.yml):
     wix build packaging/windows/braillecraft.wxs fonts.wxs -arch x64 -ext WixToolset.UI.wixext
       -ext WixToolset.Util.wixext -d Version=<version> -bindpath dist=<program folder> -bindpath icons=packaging/icons
+      -bindpath licence=packaging/windows (license.rtf, the licence page)
   fonts.wxs is written by packaging/windows/fonts_fragment.py from the program folder's fonts.
 -->
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
-  <Package Name="BrailleCraft" Manufacturer="BrailleCraft" Version="$(Version)" UpgradeCode="{6C1E8B9A-3F4D-4E27-9B6A-2D5C8F1A7E43}" Scope="perMachine" Language="1033">
+  <Package Name="BrailleCraft" Manufacturer="BlindCraft Team" Version="$(Version)" UpgradeCode="{6C1E8B9A-3F4D-4E27-9B6A-2D5C8F1A7E43}" Scope="perMachine" Language="1033">
     <SummaryInformation Description="BrailleCraft braille translation and embossing" />
     <MajorUpgrade DowngradeErrorMessage="A newer version of BrailleCraft is already installed." />
     <MediaTemplate EmbedCab="yes" />
@@ -95,13 +96,12 @@
       </Feature>
     </Feature>
 
-    <!-- The installer's pages: Welcome, the feature tree (Typical or Custom choices, with the folder), Ready,
-         progress, and the last page with the check box to start BrailleCraft. -->
+    <!-- The installer's pages: Welcome, the licence (MIT or Apache-2.0, packaging/windows/license.rtf), the feature
+         tree (Typical or Custom choices, with the folder), Ready, progress, and the last page with the check box to
+         start BrailleCraft. -->
     <ui:WixUI Id="WixUI_FeatureTree" InstallDirectory="INSTALLFOLDER" />
+    <WixVariable Id="WixUILicenseRtf" Value="!(bindpath.licence)\license.rtf" />
     <UI>
-      <!-- The licence page waits for the licence text (queue line 14): Welcome goes straight to the features. -->
-      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="CustomizeDlg" Order="9" Condition="NOT Installed" />
-      <Publish Dialog="CustomizeDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="9" Condition="NOT Installed" />
       <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchBrailleCraft" Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND NOT Installed" />
     </UI>
     <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Start BrailleCraft" />

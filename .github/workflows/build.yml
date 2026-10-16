@@ -65,6 +65,7 @@ jobs:
           cp -r templates dist/BrailleCraft/templates
           cp -r embossers dist/BrailleCraft/embossers
           cp -r scripts/jaws dist/BrailleCraft/jaws
+          cp LICENSE-MIT LICENSE-APACHE NOTICE dist/BrailleCraft/
 
       - uses: actions/upload-artifact@v7
         with:
@@ -209,7 +210,7 @@ jobs:
           version=$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)
           python packaging/windows/fonts_fragment.py dist/BrailleCraft/fonts > fonts.wxs
           mkdir -p installers
-          wix build packaging/windows/braillecraft.wxs fonts.wxs -arch x64 -ext WixToolset.UI.wixext -ext WixToolset.Util.wixext -d Version=$version -bindpath "dist=$(cygpath -w "$PWD/dist/BrailleCraft")" -bindpath "icons=$(cygpath -w "$PWD/packaging/icons")" -o installers/BrailleCraft-$version-x64.msi
+          wix build packaging/windows/braillecraft.wxs fonts.wxs -arch x64 -ext WixToolset.UI.wixext -ext WixToolset.Util.wixext -d Version=$version -bindpath "dist=$(cygpath -w "$PWD/dist/BrailleCraft")" -bindpath "icons=$(cygpath -w "$PWD/packaging/icons")" -bindpath "licence=$(cygpath -w "$PWD/packaging/windows")" -o installers/BrailleCraft-$version-x64.msi
 
       - uses: actions/upload-artifact@v7
         if: runner.os == 'Windows'

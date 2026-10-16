@@ -5,6 +5,8 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [dependencies]
 # Multi-byte code pages for formatted text (Shift_JIS, GBK, EUC-KR, Big5, EUC-JP, ISO-2022-JP).

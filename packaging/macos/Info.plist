@@ -8,6 +8,8 @@
   <string>BrailleCraft</string>
   <key>CFBundleDisplayName</key>
   <string>BrailleCraft</string>
+  <key>NSHumanReadableCopyright</key>
+  <string>Copyright (c) 2026 BlindCraft Team and the BrailleCraft contributors. MIT or Apache-2.0.</string>
   <key>CFBundleIdentifier</key>
   <string>net.jb11.braillecraft</string>
   <key>CFBundleExecutable</key>

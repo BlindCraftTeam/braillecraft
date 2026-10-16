@@ -63,7 +63,9 @@ Name: braillecraft
 Version: $version
 Release: 1
 Summary: Braille translation, formatting and embossing
-License: Not yet chosen
+License: MIT OR Apache-2.0
+Vendor: BlindCraft Team
+URL: https://github.com/jeremiahbeasley/braillecraft
 BuildArch: x86_64
 AutoReqProv: yes
 %description

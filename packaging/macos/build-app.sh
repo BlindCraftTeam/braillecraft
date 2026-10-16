@@ -24,6 +24,10 @@ install -m 755 "$dist/braillecraft-desktop" "$app/Contents/MacOS/braillecraft-de
 for d in fonts tables templates embossers; do
   cp -R "$dist/$d" "$app/Contents/Resources/$d"
 done
+# The licences and notices (MIT or Apache-2.0, NOTICE).
+for f in LICENSE-MIT LICENSE-APACHE NOTICE; do
+  cp "$dist/$f" "$app/Contents/Resources/$f"
+done
 for name in braillecraft print-document braille-document; do
   iconutil -c icns "$icons/$name.iconset" -o "$app/Contents/Resources/$name.icns"
 done

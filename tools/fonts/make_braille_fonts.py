@@ -98,7 +98,8 @@ def build(table, shadow):
         "fullName": family,
         "psName": family.replace(" ", ""),
         "version": "Version 0.1",
-        "copyright": "Copyright 2026 Jeremiah Beasley",
+        "copyright": "Copyright 2026 BlindCraft Team and BrailleCraft contributors",
+        "licenseDescription": "MIT OR Apache-2.0, at your option (LICENSE-MIT, LICENSE-APACHE)",
         "description": f"Braille cells for the {table['name']} braille encoding. Source of the encoding: {table['source']}",
     })
     fb.setupOS2(sTypoAscender=ASCENT, sTypoDescender=-DESCENT, sTypoLineGap=0,

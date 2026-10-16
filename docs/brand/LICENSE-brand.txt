@@ -1,0 +1,41 @@
+BlindCraft brand: license
+
+The BlindCraft name, and any BlindCraft wordmark, mark or logo added to this directory (the
+"BlindCraft Marks"), are owned by the BlindCraft Team. They are trademarks and are NOT open source.
+They are not covered by BrailleCraft's MIT OR Apache-2.0 license, and nothing in that license, in
+NOTICE or in any other file of this repository grants any right to them.
+
+Permission
+
+The BlindCraft Team grants a limited, non-exclusive, non-transferable, revocable, royalty-free
+permission to use the BlindCraft Marks only:
+
+  1. as part of copies of this repository; and
+  2. within BrailleCraft itself, its documentation and its official builds, to identify BrailleCraft
+     as made by the BlindCraft Team and community.
+
+Conditions
+
+The permission holds only while every one of these is true:
+
+  - The marks are used exactly as supplied. Do not redraw, recolor, crop, stretch, rotate, animate,
+    outline or add effects to them, extract parts of them, or combine them with any other name, mark
+    or artwork.
+  - They are used only in the context of BrailleCraft, and only to say that the BlindCraft Team makes
+    it. They must never suggest that the BlindCraft Team made, sponsors, endorses, certifies or
+    supports any other product, service, fork, modified version, plug-in, organization or person.
+  - Neither the marks nor the BlindCraft name appear in the name, logo, icon, domain, social media
+    handle, app-store listing, advertising or marketing of anything other than BrailleCraft.
+
+Forks and modified versions
+
+If you distribute or publish a modified version of BrailleCraft, or any work derived from it, you
+must remove the BlindCraft Marks from it (or replace them with your own) and must not present it as
+a BlindCraft product. You may say, in plain text, that your work is based on BrailleCraft by the
+BlindCraft Team. A fork kept only to propose changes back to this repository may keep the marks
+unchanged.
+
+Everything else
+
+Any use not expressly permitted here needs prior written permission from the BlindCraft Team. The
+permission ends automatically for anyone who breaks these terms. All other rights are reserved.

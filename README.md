@@ -1,6 +1,6 @@
 # BrailleCraft
 
-BrailleCraft is a braille translation, formatting and embossing program for Windows, Linux and macOS, with the same
+BrailleCraft is made by the BlindCraft Team. It is a braille translation, formatting and embossing program for Windows, Linux and macOS, with the same
 program in a web browser. You write or open a print document, translate it to braille (or a braille document back to
 print), lay it out in braille pages, and print or emboss it. Every screen is built to work with a screen reader and
 the keyboard alone, and to meet WCAG 2.2 AA.
@@ -128,4 +128,15 @@ step does. The installers are made by the scripts in `packaging` (WiX 5 on Windo
 ## Notes
 
 - Commits carry the author's name only, with no generated-by or co-author lines.
-- The licence of BrailleCraft itself is still to be chosen by the owner.
+
+## License and credits
+
+BrailleCraft is dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option.
+Copyright (c) 2026 BlindCraft Team and the BrailleCraft contributors. Required notices are in [NOTICE](NOTICE).
+
+The BlindCraft name is a trademark of the BlindCraft Team and is not covered by the license above; its terms are in
+[docs/brand/LICENSE-brand.txt](docs/brand/LICENSE-brand.txt). A modified version may say, in plain text, that it is
+based on BrailleCraft by the BlindCraft Team.
+
+Third-party parts (wxWidgets, wxdragon and the libraries they carry) keep their own licenses, listed in
+[NOTICE](NOTICE). The braille fonts and the translation tables are part of BrailleCraft under the license above.

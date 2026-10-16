@@ -1324,7 +1324,7 @@ export const DIALOGS = {
    },
    {
     "class": "wxStaticText",
-    "label": "Jeremiah Beasley",
+    "label": "the BlindCraft Team",
     "x": 4,
     "y": 108,
     "w": 281,
@@ -1365,7 +1365,7 @@ export const DIALOGS = {
    },
    {
     "class": "wxStaticText",
-    "label": "Copyright (c) 2026 Jeremiah Beasley.",
+    "label": "Copyright 2026 BlindCraft Team and BrailleCraft contributors",
     "style": "wxST_NO_AUTORESIZE",
     "x": 4,
     "y": 156,

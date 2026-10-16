@@ -7,7 +7,9 @@ exclude = ["vendor"]
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.80"
-authors = ["Jeremiah Beasley <jbeasley@jb11.net>"]
+authors = ["BlindCraft Team"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/jeremiahbeasley/braillecraft"
 
 # wxdragon-sys 0.9.22 with the printing functions BrailleCraft needs added (vendor/wxdragon-sys/CHANGES-BrailleCraft.txt).
 [patch.crates-io]

@@ -60,7 +60,7 @@
       <size>281,9d</size>
     </object>
     <object class="wxStaticText" name="c16">
-      <label>Jeremiah Beasley</label>
+      <label>the BlindCraft Team</label>
       <pos>4,108d</pos>
       <size>281,27d</size>
     </object>
@@ -77,7 +77,7 @@
       <size>281,9d</size>
     </object>
     <object class="wxStaticText" name="c19">
-      <label>Copyright (c) 2026 Jeremiah Beasley.</label>
+      <label>Copyright 2026 BlindCraft Team and BrailleCraft contributors</label>
       <style>wxST_NO_AUTORESIZE</style>
       <pos>4,156d</pos>
       <size>281,9d</size>

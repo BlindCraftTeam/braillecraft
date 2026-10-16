@@ -358,7 +358,7 @@ const DIALOGS = {
   about: { title: "About BrailleCraft", width: 380, controls: [
     { k: "static", text: "BrailleCraft for Windows, Linux, Mac and the web" },
     { k: "static", text: "Version 0.1.0" },
-    { k: "static", text: "Copyright (c) 2026 Jeremiah Beasley." },
+    { k: "static", text: "Copyright 2026 BlindCraft Team and BrailleCraft contributors" },
     { k: "static", text: "Braille translation by liblouis (LGPL), to be added in build stage 2." },
   ], buttons: [["ok", "OK"]] },
 };
