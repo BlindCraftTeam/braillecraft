@@ -105,6 +105,7 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
         printer: None,
         embosser: crate::embosser::default_setup().unwrap_or_default(),
         layout: crate::embosser::default_layout().0,
+        file_sections: Vec::new(),
     };
     app::with(|a| {
         child_set_title(&doc.frame, &doc.full_name());

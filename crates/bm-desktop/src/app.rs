@@ -123,6 +123,9 @@ pub struct Doc {
     /// embosser page layout (form, top and binding margins, interpoint, banner page, interline print).
     pub embosser: String,
     pub layout: crate::embosser::Layout,
+    /// The optional sections of the document file it was read from that BrailleMaker does not use itself, written
+    /// back as they were (their descriptor's place, kind and bytes).
+    pub file_sections: Vec<(usize, u16, Vec<u8>)>,
 }
 
 impl Doc {

@@ -15,8 +15,10 @@
 //!   none in the second), then the strings, NUL terminated. The first block holds the style names, sorted, with a u16
 //!   index for each; the second holds two strings per style, its beginning codes and its ending codes, codes written
 //!   0x1C code 0x1F.
-//! - Settings +64 to +87 are the Table of Contents settings (spec 05-B (d)); the rest of the 224 bytes are optional
-//!   section descriptors, all zero in a document without optional sections.
+//! - Settings +64 to +87 are the Table of Contents settings (spec 05-B (d)). Settings +88, +98, +133, +143 and +153
+//!   are 10-byte descriptors of optional sections after the styles (u16 kind, u32 file offset, u32 length; all zero
+//!   for a section that is absent): +88 kind 1 is the name of the document's embosser setup, NUL terminated; the
+//!   others (the extra block and its second copy, embedded objects) are kept as they are read and written back.
 //!
 //! The text is returned as running text (bm_core::doctext): codes marked 0x1C ... 0x1F as in the file, a hard space
 //! as U+00A0, every other byte its code page 437 character; brackets in the text stay text. Writing does the reverse
@@ -49,7 +51,17 @@ pub struct DxDocument {
     pub style_index: Vec<u16>,
     /// The 224-byte settings block as read, for writing back what BrailleMaker does not use itself.
     pub settings: Vec<u8>,
+    /// The name of the document's embosser setup (settings +88); empty for none.
+    pub embosser: String,
+    /// The other optional sections as read: their descriptor's place in the settings block, kind and bytes.
+    pub sections: Vec<(usize, u16, Vec<u8>)>,
 }
+
+/// The places of the optional section descriptors in the settings block (spec 05-B).
+const SECTION_SLOTS: [usize; 5] = [88, 98, 133, 143, 153];
+/// The descriptor of the embosser setup name, and its kind.
+const EMBOSSER_SLOT: usize = 88;
+const EMBOSSER_KIND: u16 = 1;
 
 /// The settings block of a new document. Fields BrailleMaker sets itself (page numbering, body length, translated
 /// line, six-key entry, tables) are filled in when the document is written. The others:
@@ -170,6 +182,23 @@ pub fn read(d: &[u8]) -> Result<DxDocument, DxError> {
         })
         .collect();
     let (styles, style_index) = read_styles(d, BODY + length).unwrap_or_default();
+    // The optional sections the descriptors point to; one that lies outside the file is left out.
+    let mut embosser = String::new();
+    let mut sections = Vec::new();
+    for slot in SECTION_SLOTS {
+        let at = s + slot;
+        let kind = u16_at(d, at);
+        let (offset, len) = (u32_at(d, at + 2) as usize, u32_at(d, at + 6) as usize);
+        if kind == 0 && offset == 0 && len == 0 {
+            continue;
+        }
+        let Some(bytes) = d.get(offset..offset + len) else { continue };
+        if slot == EMBOSSER_SLOT && kind == EMBOSSER_KIND {
+            embosser = bytes.iter().take_while(|&&b| b != 0).map(|&b| cp437(b)).collect();
+        } else {
+            sections.push((slot, kind, bytes.to_vec()));
+        }
+    }
     Ok(DxDocument {
         kind,
         version,
@@ -181,6 +210,8 @@ pub fn read(d: &[u8]) -> Result<DxDocument, DxError> {
         styles,
         style_index,
         settings: d[HEADER..BODY].to_vec(),
+        embosser,
+        sections,
     })
 }
 
@@ -342,6 +373,25 @@ pub fn write(doc: &DxDocument) -> Vec<u8> {
     write_block(&mut out, Some(&index), &styles.iter().map(|s| codes_bytes(&s.0)).collect::<Vec<_>>());
     let codes: Vec<Vec<u8>> = styles.iter().flat_map(|s| [codes_bytes(&s.1), codes_bytes(&s.2)]).collect();
     write_block(&mut out, None, &codes);
+    // The optional sections after the styles, each with its descriptor pointing at where it now lies.
+    let mut sections: Vec<(usize, u16, Vec<u8>)> = doc.sections.iter().filter(|s| s.0 != EMBOSSER_SLOT).cloned().collect();
+    if !doc.embosser.is_empty() {
+        let mut name: Vec<u8> = doc.embosser.chars().map(to_cp437).collect();
+        name.push(0);
+        sections.push((EMBOSSER_SLOT, EMBOSSER_KIND, name));
+    }
+    sections.sort_by_key(|s| s.0);
+    for slot in SECTION_SLOTS {
+        out[HEADER + slot..HEADER + slot + 10].fill(0);
+    }
+    for (slot, kind, bytes) in sections {
+        let at = HEADER + slot;
+        let offset = out.len() as u32;
+        out[at..at + 2].copy_from_slice(&kind.to_be_bytes());
+        out[at + 2..at + 6].copy_from_slice(&offset.to_be_bytes());
+        out[at + 6..at + 10].copy_from_slice(&(bytes.len() as u32).to_be_bytes());
+        out.extend_from_slice(&bytes);
+    }
     out
 }
 
@@ -441,6 +491,8 @@ mod tests {
             styles: vec![("para.".into(), "\x1cp\x1f".into(), String::new()), ("bold".into(), "\x1ccs~b\x1f".into(), "\x1cce~b\x1f".into())],
             style_index: Vec::new(),
             settings: Vec::new(),
+            embosser: String::new(),
+            sections: Vec::new(),
         };
         let bytes = write(&doc);
         assert_eq!(&bytes[..10], b"\xFFDSI\x00\x02\x00\x00\x00\x01");
@@ -459,6 +511,26 @@ mod tests {
         let old = write(&DxDocument { version: 0, ..back.clone() });
         assert_eq!(old[9], 0);
         assert_eq!(old[10..], bytes[10..]);
+    }
+
+    #[test]
+    fn embosser_name_and_other_sections_are_kept() {
+        let mut doc = read(&sample(0, b"abc")).unwrap();
+        doc.embosser = "Index Everest-D V5".into();
+        doc.sections = vec![(98, 3, b"extra".to_vec())];
+        let bytes = write(&doc);
+        // The name section comes first after the styles, NUL terminated, with its descriptor at settings +88.
+        let at = HEADER + 88;
+        assert_eq!(u16_at(&bytes, at), 1);
+        let (offset, len) = (u32_at(&bytes, at + 2) as usize, u32_at(&bytes, at + 6) as usize);
+        assert_eq!(&bytes[offset..offset + len], b"Index Everest-D V5\0");
+        let back = read(&bytes).unwrap();
+        assert_eq!(back.embosser, "Index Everest-D V5");
+        assert_eq!(back.sections, vec![(98, 3, b"extra".to_vec())]);
+        assert_eq!(write(&back), bytes);
+        // Without a name the descriptor is zero.
+        let none = write(&DxDocument { embosser: String::new(), sections: Vec::new(), ..back });
+        assert!(none[at..at + 10].iter().all(|&b| b == 0));
     }
 
     #[test]

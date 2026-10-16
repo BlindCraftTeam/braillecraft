@@ -603,6 +603,11 @@ fn open_dx_document(path: &Path) {
             }
             d.file_styles = doc.styles.iter().map(|s| s.0.clone()).zip(doc.style_index.iter().copied()).collect();
             d.file_settings = doc.settings.clone();
+            d.file_sections = doc.sections.clone();
+            // The document's own embosser setup, by name, as the file keeps it.
+            if !doc.embosser.is_empty() {
+                d.embosser = doc.embosser.clone();
+            }
             d.view.translated = doc.translated_line;
             d.view.six_key = braille && doc.six_key;
             d.page_numbers = doc.page_numbering;
@@ -807,6 +812,8 @@ fn write_document(key: u64, path: &Path, version: u16) -> bool {
             style_index: if same { d.file_styles.iter().map(|f| f.1).collect() } else { Vec::new() },
             styles,
             settings: d.file_settings.clone(),
+            embosser: d.embosser.clone(),
+            sections: d.file_sections.clone(),
         })
     }) else {
         return false;
@@ -827,6 +834,7 @@ fn write_document(key: u64, path: &Path, version: u16) -> bool {
             d.file_settings = bytes[10..234].to_vec();
             // As written: read back, the file gives its own order and index values.
             if let Ok(back) = bm_core::dxfile::read(&bytes) {
+                d.file_sections = back.sections.clone();
                 d.file_styles = back.styles.iter().map(|s| s.0.clone()).zip(back.style_index.iter().copied()).collect();
                 d.styles = back
                     .styles
