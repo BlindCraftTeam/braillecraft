@@ -1523,8 +1523,28 @@ pub fn emboss_with(skip: Option<u32>) {
         if n > 0 && !suppressed && !ok_cancel("Please re-insert the stack of embossed sheets to emboss the second side.") {
             return;
         }
-        let bytes = bc_core::emboss::job_sides(&options, &sides, copies, which);
-        if let Err(e) = bc_core::emboss_out::send(&target, &name, &bytes) {
+        // A port that is an FTDI device is written through the FTDI library (spec 25 21.1); the Typewriter driver
+        // sends messages with the embosser's status and answer around each (21.2). To any other output the
+        // Typewriter messages go as their bytes, without the status and answer: the reference waits there for
+        // answers from a device it never opened, so that part is BrailleCraft's own.
+        let ftdi = match &target {
+            bc_core::emboss_out::Target::Port { name, .. } if crate::ftdi::is_device(name) => Some(name.clone()),
+            _ => None,
+        };
+        let sent = if options.typewriter {
+            let messages = bc_core::emboss::typewriter_job(&options, &sides, copies, which);
+            match &ftdi {
+                Some(device) => crate::ftdi::send_typewriter(device, &messages),
+                None => bc_core::emboss_out::send(&target, &name, &messages.concat()),
+            }
+        } else {
+            let bytes = bc_core::emboss::job_sides(&options, &sides, copies, which);
+            match &ftdi {
+                Some(device) => crate::ftdi::send(device, &bytes),
+                None => bc_core::emboss_out::send(&target, &name, &bytes),
+            }
+        };
+        if let Err(e) = sent {
             message(&e.message());
             return;
         }

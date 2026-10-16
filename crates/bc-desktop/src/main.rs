@@ -12,6 +12,7 @@ mod dlg;
 mod documents;
 mod embosser;
 mod encodings;
+mod ftdi;
 #[cfg(windows)]
 mod jaws_install;
 mod menu;

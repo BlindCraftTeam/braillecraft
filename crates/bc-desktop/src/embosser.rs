@@ -310,7 +310,7 @@ fn fill_sheet(general: &Dlg, device: &Dlg, advanced: &Dlg, s: &Setup, cat: &Cata
 /// setup's `port` is chosen, else LPT1; either is found without regard to case, and one the list does not hold
 /// gives its first port.
 fn fill_ports(general: &Dlg, model: Option<&Model>, port: Option<&str>) {
-    let ports = bc_core::emboss_setup::ports(model);
+    let ports = bc_core::emboss_setup::ports_with(model, &crate::ftdi::devices());
     let refs: Vec<&str> = ports.iter().map(String::as_str).collect();
     let want = port.unwrap_or("LPT1");
     let chosen = refs.iter().position(|p| p.eq_ignore_ascii_case(want)).or((!refs.is_empty()).then_some(0));
@@ -547,6 +547,8 @@ fn has_transend(model: Option<&Model>) -> bool {
 /// pages take the new model's values, the port list follows the model's ports, the TranSend SE tab is added or taken
 /// away, and the output, the serial settings and the TranSend SE values stay as they were.
 pub fn edit(setup: &mut Setup, cat: &Catalog) -> bool {
+    // The FTDI devices are listed once as the sheet opens, as the reference builds its port lists (spec 25 16.1).
+    crate::ftdi::refresh();
     let (sheet, p) = build_sheet(setup, cat);
     let general = &p[0];
     let device = &p[1];
@@ -585,7 +587,7 @@ pub fn edit(setup: &mut Setup, cat: &Catalog) -> bool {
     }
     // The ports the list was last made from: the reference makes it again only when the model's kinds of port
     // change, and then leaves nothing in it chosen (spec 25 16.1).
-    let last_ports = std::rc::Rc::new(std::cell::RefCell::new(bc_core::emboss_setup::ports(opened)));
+    let last_ports = std::rc::Rc::new(std::cell::RefCell::new(bc_core::emboss_setup::ports_with(opened, &crate::ftdi::devices())));
     let pages: Vec<Dlg> = p.iter().map(handle).collect();
     // The model the pages show (the form list holds its forms), and the setup the sheet opened with.
     let shown_model = std::rc::Rc::new(std::cell::RefCell::new(setup.model.clone()));
@@ -606,7 +608,7 @@ pub fn edit(setup: &mut Setup, cat: &Catalog) -> bool {
                     }
                     None => show_device(&pages[1], None, 0, false),
                 }
-                let ports = bc_core::emboss_setup::ports(model);
+                let ports = bc_core::emboss_setup::ports_with(model, &crate::ftdi::devices());
                 if *last_ports.borrow() != ports {
                     let refs: Vec<&str> = ports.iter().map(String::as_str).collect();
                     pages[0].set_items(17, &refs, None);
@@ -669,7 +671,7 @@ fn read_sheet(p: &[Dlg], base: &Setup, cat: &Catalog, model: &str) -> Setup {
         // reference stores the target name only when a port is chosen (spec 25 16.3).
         _ => Output::Port(general.selected_text(17).unwrap_or_else(|| match &base.output {
             Output::Port(p) => p.clone(),
-            _ => bc_core::emboss_setup::ports(find_model(cat, model)).into_iter().next().unwrap_or_default(),
+            _ => bc_core::emboss_setup::ports_with(find_model(cat, model), &crate::ftdi::devices()).into_iter().next().unwrap_or_default(),
         })),
     };
     s.serial_init = general.checked(21);

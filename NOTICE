@@ -23,6 +23,10 @@ contributors (2026); the changes are listed in vendor/wxdragon-sys/CHANGES-Brail
 The Rust crates the programs are built from (cargo dependencies) keep their own licenses, given in
 each crate's Cargo.toml; Cargo.lock lists the exact versions.
 
+The FTDI D2XX library (ftd2xx) is not part of BrailleCraft and is not bundled. The desktop program
+loads it at run time where the FTDI driver has installed it, to reach embossers connected through
+an FTDI USB device; it is FTDI's own software under FTDI's license.
+
 The braille fonts (BrailleCraft Braille and BrailleCraft SimBraille, every encoding) are drawn by
 tools/fonts and are part of BrailleCraft under the license above. The translation tables in tables/
 and the data in crates/bc-desktop/data are part of BrailleCraft under the license above.

@@ -220,10 +220,11 @@ impl TranSendPrinters {
 
 /// The ports Write to Port lists for `model`, as the reference builds the list (spec 25 16.1): lpt1 to lpt3 unless
 /// the model has NoParallel, com1 to com9 unless it has NoSerial. YesUSB adds the reference's USB list, which is
-/// always empty, so it adds nothing. YesFTDI adds the reference's list of FTDI devices, which comes from the FTDI
-/// library (ftd2xx) and is empty without it; BrailleCraft does not load that library, so nothing is added. The names
-/// are lower case as the reference stores them, in the order the list shows them (it sorts). No model, no ports.
-pub fn ports(model: Option<&Model>) -> Vec<String> {
+/// always empty, so it adds nothing. YesFTDI adds the FTDI devices by their descriptions (spec 25 16.2), which the
+/// caller reads from the FTDI library (ftd2xx) where it is installed; without it there are none. The port names are
+/// lower case as the reference stores them; the list is in the order the reference's sorted list shows it, without
+/// regard to case. No model, no ports.
+pub fn ports_with(model: Option<&Model>, ftdi: &[String]) -> Vec<String> {
     let Some(m) = model else { return Vec::new() };
     let mut out = Vec::new();
     if !m.flag("NoSerial") {
@@ -232,7 +233,22 @@ pub fn ports(model: Option<&Model>) -> Vec<String> {
     if !m.flag("NoParallel") {
         out.extend((1..=3).map(|n| format!("lpt{n}")));
     }
+    if m.flag("YesFTDI") {
+        out.extend(ftdi.iter().filter(|d| !d.is_empty()).cloned());
+    }
+    out.sort_by_key(|p| p.to_lowercase());
     out
+}
+
+/// The ports for `model` with no FTDI devices (the web build, and tests).
+pub fn ports(model: Option<&Model>) -> Vec<String> {
+    ports_with(model, &[])
+}
+
+/// Whether the port name `name` is one of the FTDI devices `ftdi`: equal to a description, without regard to case
+/// (spec 25 21.1).
+pub fn is_ftdi(name: &str, ftdi: &[String]) -> bool {
+    ftdi.iter().any(|d| d.eq_ignore_ascii_case(name.trim()))
 }
 pub const BAUDS: &[&str] = &["110", "300", "600", "1200", "2400", "4800", "9600", "14400", "19200", "38400", "57600", "115200"];
 pub const PARITIES: &[&str] = &["No parity", "Even parity", "Odd parity", "Mark parity"];
@@ -629,6 +645,9 @@ pub fn job_options(s: &Setup, model: &Model, layout: &Layout, cells: u32, lines:
         control_z: model.flag("ControlZ"),
         close_sync: Vec::new(),
         copies_by_embosser: index && level >= 4 && copies > 1,
+        typewriter: driver == "Emb_Typewriter_EmbosserDriver",
+        form_lines: form.map_or(lines + layout.top_margin, |f| f.maximum.1),
+        page_wrap: model.flag("PageWrap"),
     }
 }
 
@@ -731,6 +750,12 @@ mod tests {
         // NoSerial and NoParallel: none, as with no model.
         assert!(ports(find_model(&cat, "Enabling Trident")).is_empty());
         assert!(ports(None).is_empty());
+        // YesFTDI with NoSerial and NoParallel: the FTDI descriptions only, sorted without regard to case; a model
+        // without YesFTDI never shows them.
+        let ftdi = vec!["eBrailler Cosmo".to_string(), "Another FT232R".to_string()];
+        assert_eq!(ports_with(find_model(&cat, "EBrailler Cosmo"), &ftdi), vec!["Another FT232R", "eBrailler Cosmo"]);
+        assert_eq!(ports_with(find_model(&cat, "JTR Corporation ESA-2000"), &ftdi), all[..9].to_vec());
+        assert!(is_ftdi("EBRAILLER COSMO", &ftdi) && !is_ftdi("com1", &ftdi));
     }
 
     #[test]

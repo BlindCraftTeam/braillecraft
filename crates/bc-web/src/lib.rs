@@ -1021,6 +1021,10 @@ impl Embossers {
             2 => bc_core::emboss::Sides::Backs,
             _ => bc_core::emboss::Sides::All,
         };
+        // The Typewriter driver's messages go as their bytes: a browser has no FTDI library (spec 25 21).
+        if options.typewriter {
+            return Ok(bc_core::emboss::typewriter_job(&options, &sides, copies, which).concat());
+        }
         Ok(bc_core::emboss::job_sides(&options, &sides, copies, which))
     }
 

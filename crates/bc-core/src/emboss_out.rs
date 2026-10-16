@@ -70,6 +70,45 @@ pub fn send(target: &Target, title: &str, bytes: &[u8]) -> Result<(), Failure> {
     }
 }
 
+/// A two-way connection to an embosser that answers, such as an FTDI device (spec 25 21.1).
+pub trait Link {
+    /// Writes all of `bytes`.
+    fn write_all(&mut self, bytes: &[u8]) -> Result<(), Failure>;
+    /// Reads one byte, waiting for it.
+    fn read_byte(&mut self) -> Result<u8, Failure>;
+}
+
+const ACK: u8 = 0x06;
+const NAK: u8 = 0x15;
+
+/// Sends the Typewriter driver's messages (emboss::typewriter_job) over `link` as the reference's writer does (spec
+/// 25 21.2): before each message the status check (command 7; the embosser answers ACK and two bytes, asked again
+/// until both are 0; any other first byte ends the job), then the message, then its answer (bytes read until ACK; NAK
+/// ends the job). A failed answer gives the port message.
+pub fn typewriter_send(link: &mut dyn Link, messages: &[Vec<u8>]) -> Result<(), Failure> {
+    for m in messages {
+        loop {
+            link.write_all(&[0x00, 0x07, 0xFF])?;
+            if link.read_byte()? != ACK {
+                return Err(Failure::Port);
+            }
+            let (a, b) = (link.read_byte()?, link.read_byte()?);
+            if a == 0 && b == 0 {
+                break;
+            }
+        }
+        link.write_all(m)?;
+        loop {
+            match link.read_byte()? {
+                ACK => break,
+                NAK => return Err(Failure::Port),
+                _ => {}
+            }
+        }
+    }
+    Ok(())
+}
+
 /// The device a port name stands for. On Windows the names are the system's own; elsewhere lptN is the Nth parallel
 /// printer device, comN the Nth serial device and usb the first USB printer device.
 pub fn port_device(name: &str) -> Option<PathBuf> {
@@ -284,6 +323,36 @@ pub fn make_and_model(options: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// An embosser that answers from a script of bytes and records what it was sent.
+    struct Scripted {
+        answers: std::collections::VecDeque<u8>,
+        sent: Vec<u8>,
+    }
+    impl Link for Scripted {
+        fn write_all(&mut self, bytes: &[u8]) -> Result<(), Failure> {
+            self.sent.extend_from_slice(bytes);
+            Ok(())
+        }
+        fn read_byte(&mut self) -> Result<u8, Failure> {
+            self.answers.pop_front().ok_or(Failure::Port)
+        }
+    }
+
+    #[test]
+    fn typewriter_handshake() {
+        // Busy once (ACK 0 1), then ready (ACK 0 0), the line, then a stray byte and ACK.
+        let mut e = Scripted { answers: [6, 0, 1, 6, 0, 0, 9, 6].into_iter().collect(), sent: Vec::new() };
+        let line = vec![0x00, 0x08, 0x01, 0xFF];
+        typewriter_send(&mut e, &[line.clone()]).unwrap();
+        let status = [0x00, 0x07, 0xFF];
+        assert_eq!(e.sent, [&status[..], &status[..], &line[..]].concat());
+        // A first status byte that is not ACK ends the job; so does a NAK answer.
+        let mut e = Scripted { answers: [0x15].into_iter().collect(), sent: Vec::new() };
+        assert_eq!(typewriter_send(&mut e, &[line.clone()]), Err(Failure::Port));
+        let mut e = Scripted { answers: [6, 0, 0, 0x15].into_iter().collect(), sent: Vec::new() };
+        assert_eq!(typewriter_send(&mut e, &[line]), Err(Failure::Port));
+    }
 
     #[test]
     fn make_and_model_from_lpoptions() {

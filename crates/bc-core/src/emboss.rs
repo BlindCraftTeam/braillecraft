@@ -53,6 +53,11 @@ pub struct Options {
     pub close_sync: Vec<u8>,
     /// The embosser makes the copies itself: the pages are sent once.
     pub copies_by_embosser: bool,
+    /// The Typewriter driver (spec 25 section 21): the job goes as messages (typewriter_job), not as a byte stream.
+    pub typewriter: bool,
+    /// The form's line count and the model's PageWrap, which the Typewriter driver's page end looks at.
+    pub form_lines: u32,
+    pub page_wrap: bool,
 }
 
 impl Default for Options {
@@ -79,6 +84,9 @@ impl Default for Options {
             control_z: false,
             close_sync: Vec::new(),
             copies_by_embosser: false,
+            typewriter: false,
+            form_lines: 25,
+            page_wrap: false,
         }
     }
 }
@@ -357,6 +365,84 @@ pub fn job_sides(o: &Options, pages: &[Option<Vec<String>>], copies: u32, which:
     w.out
 }
 
+/// One Typewriter message: 0x00, the command, the line's cells as dot patterns (at most 62), 0xFF (spec 25 21.2).
+fn typewriter_message(command: u8, line: &str) -> Vec<u8> {
+    let mut m = vec![0x00, command];
+    for c in line.chars().take(62) {
+        let dots = match c {
+            '\u{2800}'..='\u{28ff}' => (c as u32 & 0x3f) as u8,
+            // Letters in either case, and the high forms of @ [ \ ] ^ (` { | } ~), are the same cells.
+            _ => {
+                let c = match c {
+                    '`' => '@',
+                    '{' => '[',
+                    '|' => '\\',
+                    '}' => ']',
+                    '~' => '^',
+                    c => c.to_ascii_uppercase(),
+                };
+                NA_CELLS.iter().position(|&b| char::from(b) == c).unwrap_or(0) as u8
+            }
+        };
+        m.push(dots);
+    }
+    m.push(0xff);
+    m
+}
+
+/// The messages of one braille pass for the Typewriter driver (the EBrailler Cosmo, spec 25 section 21): each is sent
+/// as one write, with the status check before it and the answer after it. A side: a blank line for each top margin
+/// line, each line of text (blank lines too, trailing ones left off), then the page end by the End of Page setting:
+/// 2, blank lines until three past the form's lines; 4, nothing; else command 10 when the model does not wrap pages
+/// or the page is not full. No job start bytes; the custom end codes, if any, go as a last message.
+pub fn typewriter_job(o: &Options, pages: &[Option<Vec<String>>], copies: u32, which: Sides) -> Vec<Vec<u8>> {
+    let blank = || typewriter_message(0x08, "");
+    let mut out = Vec::new();
+    let copies = copies.max(1);
+    let mut front = true;
+    for _ in 0..copies {
+        for page in pages {
+            let mut side = Vec::new();
+            for _ in 0..o.top_margin {
+                side.push(blank());
+            }
+            let lines: &[String] = page.as_deref().unwrap_or(&[]);
+            let last = lines.iter().rposition(|l| !l.trim().is_empty()).map_or(0, |n| n + 1);
+            for l in &lines[..last] {
+                side.push(typewriter_message(0x08, l.trim_end()));
+            }
+            let mut used = o.top_margin + last as u32;
+            match o.end_of_page {
+                2 => {
+                    while used < o.form_lines + 3 {
+                        side.push(blank());
+                        used += 1;
+                    }
+                }
+                4 => {}
+                _ => {
+                    if !o.page_wrap || used < o.form_lines {
+                        side.push(typewriter_message(0x0a, ""));
+                    }
+                }
+            }
+            let send = match which {
+                Sides::All => true,
+                Sides::Fronts => front,
+                Sides::Backs => !front,
+            };
+            if send {
+                out.extend(side);
+            }
+            front = !front;
+        }
+    }
+    if !o.end.is_empty() {
+        out.push(o.end.clone());
+    }
+    out
+}
+
 /// What the Index job start is built from (spec 25 section 8.1).
 #[derive(Debug, Clone, Default)]
 pub struct IndexStart {
@@ -561,6 +647,27 @@ pub fn enabling_start(e: &EnablingStart) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn typewriter_messages() {
+        let o = Options { typewriter: true, form_lines: 26, page_wrap: true, top_margin: 1, ..Options::default() };
+        let pages = vec![Some(vec!["ab".to_string(), "`".to_string(), String::new()])];
+        let m = typewriter_job(&o, &pages, 1, Sides::All);
+        assert_eq!(
+            m,
+            vec![
+                vec![0x00, 0x08, 0xff],             // top margin: a blank line
+                vec![0x00, 0x08, 0x01, 0x03, 0xff], // a = dot 1, b = dots 1 2
+                vec![0x00, 0x08, 0x08, 0xff],       // ` (high @) = dot 4
+                vec![0x00, 0x0a, 0xff],             // a page not full: command 10
+            ]
+        );
+        // A full page on a model that wraps pages gets no command 10; End of Page 2 fills to three past the form.
+        let full = vec![Some(vec!["a".to_string(); 25])];
+        assert_eq!(typewriter_job(&o, &full, 1, Sides::All).len(), 26);
+        let fill = Options { end_of_page: 2, ..o.clone() };
+        assert_eq!(typewriter_job(&fill, &full, 1, Sides::All).len(), 29);
+    }
 
     /// ESC D and the Index fields after it.
     fn esc_d(fields: &[u8]) -> Vec<u8> {
