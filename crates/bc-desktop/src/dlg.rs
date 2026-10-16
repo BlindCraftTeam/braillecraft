@@ -47,8 +47,9 @@ const HIDDEN_AT_START: &[(i32, i32)] = &[(1034, 13), (10003, 19), (10003, 22)];
 /// The room a macOS text field keeps inside its width beside the text it wraps (the text cell's padding, both
 /// sides; this program's allowance, a little more than Cocoa's own so a line never wraps where the count did not).
 const MAC_TEXT_INSET: i32 = 6;
-/// The padding a macOS label keeps beside text it shows on one line (two pixels each side).
-const MAC_ONE_LINE_PADDING: i32 = 4;
+/// The room a macOS label needs beside text it shows on one line: none (the CI pictures show labels sized to their
+/// own best width drawn whole on one line, Table Properties among them).
+const MAC_ONE_LINE_PADDING: i32 = 0;
 
 /// The number of lines `text` takes when its words are wrapped to `width` in `w`'s font (its own line breaks kept).
 fn wrapped_lines(w: &dyn WxWidget, text: &str, width: i32) -> i32 {
@@ -73,8 +74,7 @@ fn wrapped_lines(w: &dyn WxWidget, text: &str, width: i32) -> i32 {
 /// the text into by itself (see fit_labels).
 fn label_lines(w: &dyn WxWidget, text: &str, width: i32) -> i32 {
     if cfg!(target_os = "macos") {
-        // A label sized to its own text (its best width) holds it on one line: the field's best width is the text and
-        // its two-pixel padding each side.
+        // A label as wide as its text holds it on one line (see MAC_ONE_LINE_PADDING).
         if !text.contains('\n') && w.get_text_extent(text).width + MAC_ONE_LINE_PADDING <= width {
             return 1;
         }
@@ -906,7 +906,8 @@ fn report_layout(d: &Dlg, name: &str, out: &mut String) {
             let needed = label_lines(&w, &label, s.width) * line;
             if !label.trim().is_empty() && needed > s.height + 1 {
                 found += 1;
-                let _ = writeln!(out, "{name}: {cid} {kind:?} {},{} {}x{} text needs {needed} high, cut", p.x, p.y, s.width, s.height);
+                let wide = w.get_text_extent(&label).width;
+                let _ = writeln!(out, "{name}: {cid} {kind:?} {},{} {}x{} text {wide} wide needs {needed} high, cut", p.x, p.y, s.width, s.height);
             }
         }
         if let Some((x, y, w, h)) = drawn(&w, *kind) {
