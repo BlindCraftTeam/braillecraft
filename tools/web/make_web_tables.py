@@ -20,6 +20,7 @@ XRC = "ui-native/dialogs.xrc"
 OUT = "ui-web/tables.js"
 
 KINDS = {"Normal": "normal", "Check": "check", "Radio": "radio"}
+INPUT_CLASSES = {"wxTextCtrl": "text", "wxComboBox": "combo", "wxChoice": "combo", "wxListBox": "list"}
 
 
 def rust_string(s):
@@ -105,6 +106,10 @@ def dialogs():
             e = by_id.get(cid)
             if e is None:
                 continue
+            # A control the table lists as static that the dialog file builds as a field (the text to find in Find and
+            # Replace) is that field, as the desktop program shows it.
+            if kind == "static" and e.get("class") in INPUT_CLASSES:
+                kind = INPUT_CLASSES[e["class"]]
             e = dict(e, id=cid, kind=kind)
             listed.append(e)
         out[rid] = {"title": obj.findtext("title") or "", "w": w, "h": h, "panel": obj.get("class") == "wxPanel", "controls": listed}

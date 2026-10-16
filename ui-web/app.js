@@ -774,6 +774,8 @@ function focusFirst(container) {
     (el) => !el.disabled && !el.closest("[hidden]"),
   );
   first?.focus();
+  // A text field a dialog opens on has its text selected, as in the desktop program's dialogs: typing replaces it.
+  if (first?.tagName === "INPUT" && first.type === "text") first.select();
 }
 
 // Dialog `rid` shown modally: `setup` fills it, `onOk` checks it. With `memory`, the values chosen last are put back

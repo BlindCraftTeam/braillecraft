@@ -1787,7 +1787,7 @@ export const DIALOGS = {
     "hidden": false,
     "enabled": true,
     "id": 7,
-    "kind": "static"
+    "kind": "text"
    },
    {
     "class": "wxCheckBox",
@@ -1939,7 +1939,7 @@ export const DIALOGS = {
     "hidden": false,
     "enabled": true,
     "id": 7,
-    "kind": "static"
+    "kind": "text"
    },
    {
     "class": "wxStaticText",
@@ -1965,7 +1965,7 @@ export const DIALOGS = {
     "hidden": false,
     "enabled": true,
     "id": 9,
-    "kind": "static"
+    "kind": "text"
    },
    {
     "class": "wxCheckBox",
@@ -2117,7 +2117,7 @@ export const DIALOGS = {
     "hidden": false,
     "enabled": true,
     "id": 7,
-    "kind": "static"
+    "kind": "text"
    },
    {
     "class": "wxStaticText",
@@ -2143,7 +2143,7 @@ export const DIALOGS = {
     "hidden": false,
     "enabled": true,
     "id": 9,
-    "kind": "static"
+    "kind": "text"
    },
    {
     "class": "wxStaticText",
@@ -2169,7 +2169,7 @@ export const DIALOGS = {
     "hidden": false,
     "enabled": true,
     "id": 11,
-    "kind": "static"
+    "kind": "text"
    },
    {
     "class": "wxStaticText",
@@ -2195,7 +2195,7 @@ export const DIALOGS = {
     "hidden": false,
     "enabled": true,
     "id": 13,
-    "kind": "static"
+    "kind": "text"
    },
    {
     "class": "wxStaticText",
@@ -2221,7 +2221,7 @@ export const DIALOGS = {
     "hidden": false,
     "enabled": true,
     "id": 15,
-    "kind": "static"
+    "kind": "text"
    },
    {
     "class": "wxStaticText",
@@ -2247,7 +2247,7 @@ export const DIALOGS = {
     "hidden": false,
     "enabled": true,
     "id": 17,
-    "kind": "static"
+    "kind": "text"
    },
    {
     "class": "wxStaticBox",
@@ -2627,7 +2627,7 @@ export const DIALOGS = {
     "hidden": false,
     "enabled": false,
     "id": 14,
-    "kind": "static"
+    "kind": "text"
    },
    {
     "class": "wxStaticText",
@@ -2653,7 +2653,7 @@ export const DIALOGS = {
     "hidden": false,
     "enabled": false,
     "id": 16,
-    "kind": "static"
+    "kind": "text"
    }
   ]
  },
@@ -2780,7 +2780,7 @@ export const DIALOGS = {
     "hidden": false,
     "enabled": false,
     "id": 12,
-    "kind": "static"
+    "kind": "text"
    },
    {
     "class": "wxStaticText",
@@ -2806,7 +2806,7 @@ export const DIALOGS = {
     "hidden": false,
     "enabled": false,
     "id": 14,
-    "kind": "static"
+    "kind": "text"
    }
   ]
  },
@@ -3200,7 +3200,7 @@ export const DIALOGS = {
     "hidden": false,
     "enabled": true,
     "id": 7,
-    "kind": "static"
+    "kind": "text"
    },
    {
     "class": "wxStaticBox",
@@ -3326,7 +3326,7 @@ export const DIALOGS = {
     "hidden": false,
     "enabled": true,
     "id": 7,
-    "kind": "static"
+    "kind": "text"
    },
    {
     "class": "wxStaticBox",
@@ -6862,7 +6862,7 @@ export const DIALOGS = {
     "hidden": false,
     "enabled": true,
     "id": 9,
-    "kind": "static"
+    "kind": "text"
    },
    {
     "class": "wxStaticText",
@@ -6888,7 +6888,7 @@ export const DIALOGS = {
     "hidden": false,
     "enabled": true,
     "id": 11,
-    "kind": "static"
+    "kind": "text"
    },
    {
     "class": "wxStaticText",
@@ -8876,7 +8876,7 @@ export const DIALOGS = {
     "hidden": false,
     "enabled": true,
     "id": 32,
-    "kind": "static"
+    "kind": "text"
    },
    {
     "class": "wxStaticText",
@@ -8902,7 +8902,7 @@ export const DIALOGS = {
     "hidden": false,
     "enabled": true,
     "id": 34,
-    "kind": "static"
+    "kind": "text"
    },
    {
     "class": "wxStaticText",
@@ -8928,7 +8928,7 @@ export const DIALOGS = {
     "hidden": false,
     "enabled": true,
     "id": 36,
-    "kind": "static"
+    "kind": "text"
    },
    {
     "class": "wxStaticText",
@@ -9035,7 +9035,7 @@ export const DIALOGS = {
     "hidden": false,
     "enabled": true,
     "id": 44,
-    "kind": "static"
+    "kind": "text"
    }
   ]
  },
