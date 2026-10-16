@@ -3,6 +3,7 @@
 //! tables shipped beside the program (translation.rs).
 
 mod app;
+mod bell;
 mod codes;
 mod command_line;
 mod commands;

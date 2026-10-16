@@ -1281,8 +1281,8 @@ pub fn print_with(skip: Option<u32>) {
         let f = &a.settings.fonts;
         // INFERENCE (spec 24, unknown 2): the page text prints in the document's current view font.
         let size = (!f.print_auto).then_some(if doc.view.font == ViewFont::Print { f.print_output_size } else { f.braille_output_size });
-        let line_numbers = braille
-            && a.memory.get(1034, "").is_some_and(|v| v.iter().any(|(c, val)| matches!((c, val), (10, Value::Flag(true)))));
+        // Line numbers (spec 24 3d): a braille document, the setting on, and not in coded view.
+        let line_numbers = braille && a.settings.view_prefs.line_numbers && !doc.view.codes;
         let enc = a.encoding();
         let styles = translation::style_table(&doc.styles);
         let pages_rc: Vec<Option<std::rc::Rc<bc_core::format::Page>>> = chosen.iter().map(|p| p.map(|p| std::rc::Rc::new(pages[p].clone()))).collect();
@@ -2894,31 +2894,56 @@ fn global_fonts() {
     d.destroy();
 }
 
+/// Global, View Preferences (dialog 1034, spec 24 2d.1 and 2d.2): filled from the settings, not from dialog memory.
+/// OK takes the six-key set first; a set that is not six keys gives the message and the dialog stays open, as the
+/// reference does. Then the other values are kept, and every open document is redrawn when verbose labels, line
+/// numbers or the translated line codes changed.
 fn view_preferences() {
-    let (set, verbose) = app::with(|a| (a.settings.six_key_set.clone(), a.settings.verbose_labels));
-    let Some(d) = settings_dialog(1034, "", None, |d| {
-        d.set_text(7, "0");
-        d.set_checked(9, verbose);
-        d.set_items(17, &["Hide All", "Hide Idle", "Show All"], Some(0));
-        d.set_text(19, &set);
-    }) else {
-        return;
+    let (set, verbose, p) = app::with(|a| (a.settings.six_key_set.clone(), a.settings.verbose_labels, a.settings.view_prefs));
+    let d = open_dialog(1034, None);
+    d.set_text(7, &p.bell_position.to_string());
+    d.set_checked(9, verbose);
+    d.set_checked(10, p.line_numbers);
+    d.set_checked(12, p.locator_on_open);
+    d.set_checked(13, p.locator_on_open);
+    d.set_checked(14, p.locator_on_view_switch);
+    d.set_checked(15, p.locator_on_shift);
+    d.set_items(17, &["Hide All", "Hide Idle", "Show All"], Some(p.line_codes.index() as u32));
+    d.set_text(19, &set);
+    let keys = loop {
+        if d.show() != 1 {
+            d.destroy();
+            return;
+        }
+        let keys = d.text(19);
+        if keys.chars().count() == 6 {
+            break keys.to_lowercase();
+        }
+        message("You must type exactly six keys in as the \"Six-Key Key Set.\"  The keys you type represent, in order, what you will type for Dots 1, 2, 3, 4, 5, and 6 when entering braille by six-key chording.");
     };
-    let keys = d.text(19);
-    let verbose = d.checked(9);
+    // The margin bell position is read as a whole number, with no range check (an entry that is not one keeps 0).
+    let new = app::ViewPrefs {
+        bell_position: d.text(7).trim().parse().unwrap_or(0),
+        line_numbers: d.checked(10),
+        locator_on_open: d.checked(12),
+        locator_on_view_switch: d.checked(14),
+        locator_on_shift: d.checked(15),
+        line_codes: d.selection(17).and_then(|i| app::LineCodes::ALL.get(i as usize).copied()).unwrap_or(app::LineCodes::HideIdle),
+    };
+    let verbose_new = d.checked(9);
     d.destroy();
-    // Check box 9 (verbose labels) sets how the status line shows the character at the caret.
+    settings_store::save_six_key_set(&keys);
+    settings_store::save_view_prefs(verbose_new, &new);
+    let redraw = verbose_new != verbose || new.line_numbers != p.line_numbers || new.line_codes != p.line_codes;
     app::with(|a| {
-        a.settings.verbose_labels = verbose;
+        a.settings.six_key_set = keys;
+        a.settings.verbose_labels = verbose_new;
+        a.settings.view_prefs = new;
+        if redraw {
+            a.apply_view();
+        }
         a.update_status();
     });
-    if keys.chars().count() != 6 {
-        message("You must type exactly six keys in as the \"Six-Key Key Set.\"  The keys you type represent, in order, what you will type for Dots 1, 2, 3, 4, 5, and 6 when entering braille by six-key chording.");
-        return;
-    }
-    let keys = keys.to_lowercase();
-    settings_store::save_six_key_set(&keys);
-    app::with(|a| a.settings.six_key_set = keys);
 }
 
 fn shortcut_preferences() {

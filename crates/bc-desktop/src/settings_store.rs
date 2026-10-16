@@ -11,7 +11,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::app::{DefaultViews, Fonts, Settings, Shortcuts, ViewFont};
+use crate::app::{DefaultViews, Fonts, LineCodes, Settings, Shortcuts, ViewFont, ViewPrefs};
 
 /// The section of the settings that have none.
 pub const ROOT: &str = "";
@@ -290,6 +290,30 @@ pub fn load(s: &mut Settings) {
             *field = b;
         }
     }
+    // Global, View Preferences (spec 24 2d.2).
+    if let Some(b) = get_bool("Display", "SpellCodedView") {
+        s.verbose_labels = b;
+    }
+    let p = &mut s.view_prefs;
+    if let Some(n) = get_number("Display", "BellPosition") {
+        p.bell_position = n;
+    }
+    let prefs: [(&str, &mut bool); 4] = [
+        ("ShowLineNumbers", &mut p.line_numbers),
+        ("CaretLocOnCreate", &mut p.locator_on_open),
+        ("CaretLocOnViewSwitch", &mut p.locator_on_view_switch),
+        ("CaretLocOnShift", &mut p.locator_on_shift),
+    ];
+    for (key, field) in prefs {
+        if let Some(b) = get_bool("Display", key) {
+            *field = b;
+        }
+    }
+    if let Some(i) = get("Display", "TranslatedLineCodes")
+        .and_then(|v| LineCodes::WORDS.iter().position(|w| w.eq_ignore_ascii_case(v.trim())))
+    {
+        p.line_codes = LineCodes::ALL[i];
+    }
     let f = &mut s.fonts;
     if let Some(v) = get_text("Fonts", "PrintFont") {
         f.print_face = v;
@@ -386,6 +410,17 @@ pub fn save_default_views(d: &DefaultViews) {
     set("Display", "BrailleDisplayCodes", yes_no(d.braille_codes));
     set("Display", "BrailleShowTranslationLine", yes_no(d.braille_translated));
     set("Display", "SixKeyBraille", yes_no(d.six_key));
+}
+
+/// Global, View Preferences, under the reference program's names and words (spec 24 2d.2).
+pub fn save_view_prefs(verbose: bool, p: &ViewPrefs) {
+    set("Display", "BellPosition", &p.bell_position.to_string());
+    set("Display", "SpellCodedView", yes_no(verbose));
+    set("Display", "ShowLineNumbers", yes_no(p.line_numbers));
+    set("Display", "CaretLocOnCreate", yes_no(p.locator_on_open));
+    set("Display", "CaretLocOnViewSwitch", yes_no(p.locator_on_view_switch));
+    set("Display", "CaretLocOnShift", yes_no(p.locator_on_shift));
+    set("Display", "TranslatedLineCodes", LineCodes::WORDS[p.line_codes.index()]);
 }
 
 pub fn save_six_key_set(keys: &str) {

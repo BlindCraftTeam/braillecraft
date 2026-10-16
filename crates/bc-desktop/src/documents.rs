@@ -181,7 +181,10 @@ fn wire(key: u64, child: &MDIChildFrame, text: &TextCtrl) {
             if let Some(i) = a.index_of(key) {
                 // The codes follow the edit; a code that lost a bracket goes as a whole, as codes do in the
                 // reference program, once this change has been handled.
+                let before = a.docs[i].last_value.chars().count();
                 let remains = a.sync_codes(i);
+                // One character more: typed (or one pasted), which is when the reference rings the margin bell.
+                let typed = remains.is_empty() && a.docs[i].last_value.chars().count() == before + 1;
                 if !remains.is_empty() {
                     wxdragon::call_after(Box::new(move || {
                         for (from, to) in remains {
@@ -192,6 +195,9 @@ fn wire(key: u64, child: &MDIChildFrame, text: &TextCtrl) {
                 a.docs[i].dirty = true;
                 if a.active == Some(i) {
                     a.update_status();
+                    if typed {
+                        a.margin_bell(i);
+                    }
                 }
             }
         });

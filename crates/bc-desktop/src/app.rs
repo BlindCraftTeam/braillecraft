@@ -216,6 +216,10 @@ pub struct Settings {
     /// Global, View Preferences: "Use verbose labels for non-ANSI characters in coded view"; the status line then
     /// shows the character at the caret with its Unicode value, "c {U+XXXX}".
     pub verbose_labels: bool,
+    /// Global, View Preferences: the margin bell position (cells before the end of the line; 0 off), line numbers in
+    /// formatted braille documents, when the Cursor Locator is shown, and which codes the formatted view's translated
+    /// line shows (spec 24 2d.2).
+    pub view_prefs: ViewPrefs,
     /// Global, Printer Setup: the printer, paper and margins documents print with when they have none of their own.
     pub printer: crate::print::PrinterSetup,
 }
@@ -261,7 +265,50 @@ impl Default for Settings {
             },
             reader: ReaderSettings::default(),
             verbose_labels: false,
+            view_prefs: ViewPrefs::default(),
             printer: crate::print::PrinterSetup::default(),
+        }
+    }
+}
+
+/// Which codes the formatted view's translated line shows (Display, TranslatedLineCodes).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LineCodes {
+    HideAll,
+    HideIdle,
+    ShowAll,
+}
+
+impl LineCodes {
+    /// The words the setting is kept as, in the order the dialog lists them.
+    pub const WORDS: [&'static str; 3] = ["hide", "noidle", "show"];
+    pub const ALL: [LineCodes; 3] = [LineCodes::HideAll, LineCodes::HideIdle, LineCodes::ShowAll];
+
+    pub fn index(self) -> usize {
+        Self::ALL.iter().position(|c| *c == self).unwrap_or(1)
+    }
+}
+
+/// Global, View Preferences, with the reference program's defaults (spec 24 2d.2).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ViewPrefs {
+    pub bell_position: i64,
+    pub line_numbers: bool,
+    pub locator_on_open: bool,
+    pub locator_on_view_switch: bool,
+    pub locator_on_shift: bool,
+    pub line_codes: LineCodes,
+}
+
+impl Default for ViewPrefs {
+    fn default() -> Self {
+        ViewPrefs {
+            bell_position: 0,
+            line_numbers: false,
+            locator_on_open: true,
+            locator_on_view_switch: true,
+            locator_on_shift: true,
+            line_codes: LineCodes::HideIdle,
         }
     }
 }
@@ -516,6 +563,22 @@ impl App {
         self.update_translated_line(&shown, pos);
     }
 
+    /// After a character was typed in document `i`: the margin bell rings when the caret has come to the bell
+    /// position, that many cells before the end of the line (spec 24 2d.2: not in coded view, a bell
+    /// position above 0, the caret's column equal to the cells per line less the bell position).
+    pub fn margin_bell(&mut self, i: usize) {
+        let bell = self.settings.view_prefs.bell_position;
+        if bell <= 0 || self.docs[i].view.codes {
+            return;
+        }
+        let shown = self.docs[i].shown();
+        let pos = self.docs[i].text.get_insertion_point().max(0) as usize;
+        let (_, _, column) = bc_core::format::locate(&self.laid_out(i, &shown), pos);
+        if column as i64 == i64::from(self.docs[i].cells) - bell {
+            crate::bell::ring();
+        }
+    }
+
     /// View, Translated Line: the line the caret is on, translated. A print document shows its braille in the font
     /// chosen in Global, Default Views; a braille document shows its print.
     fn update_translated_line(&mut self, shown: &Shown, pos: i64) {
@@ -526,7 +589,7 @@ impl App {
         let line = line_of(shown, pos);
         let d = &self.docs[i];
         let key = format!(
-            "{}|{:?}|{}|{}|{}|{}|{}|{:?}",
+            "{}|{:?}|{}|{}|{}|{}|{}|{:?}|{}|{:?}",
             d.key,
             d.kind,
             d.tables.join("+"),
@@ -534,7 +597,9 @@ impl App {
             d.template,
             self.settings.encoding,
             line.text,
-            line.codes
+            line.codes,
+            d.view.codes,
+            self.settings.view_prefs.line_codes
         );
         if key == self.docs[i].last_line_key {
             return;
@@ -562,7 +627,15 @@ impl App {
             DocKind::Print => crate::translation::forward(&d.tables[0], line, &d.initial_codes, enc, &styles),
             DocKind::Braille => crate::translation::back(&d.tables[2], line, &d.initial_codes, enc, &styles),
         };
-        r.map(|s| s.text).unwrap_or_else(|e| e)
+        // The codes the line shows (spec 24 2d.2): every code while the document shows its codes, else
+        // as Global, View Preferences says: all, all but the idle code, or none.
+        let codes = if d.view.codes { LineCodes::ShowAll } else { self.settings.view_prefs.line_codes };
+        r.map(|s| match codes {
+            LineCodes::ShowAll => s.text,
+            LineCodes::HideIdle => s.text_keeping_codes(|c| !bc_core::doctext::is_idle_code(c)),
+            LineCodes::HideAll => s.text_keeping_codes(|_| false),
+        })
+        .unwrap_or_else(|e| e)
     }
 
     /// Brings document `i`'s codes up to date with its text after an edit (bc_core::doctext::after_edit). Returns

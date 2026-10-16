@@ -20,6 +20,12 @@ pub fn breaks_line(code: &str) -> bool {
     matches!(code, "p" | "l")
 }
 
+/// The idle code, [idle] or [idle~...]: the one code the translated line's "Hide Idle" setting leaves out (spec 24
+/// 2d.2: the test is the code's first letters "idle" followed by its end or "~").
+pub fn is_idle_code(code: &str) -> bool {
+    code == "idle" || code.starts_with("idle~")
+}
+
 /// The new-line code, shown as a line break.
 const NEW_LINE: &str = "<";
 
@@ -197,6 +203,26 @@ impl Shown {
         Some(name)
     }
 
+    /// The text with each code whose name `keep` refuses taken out, brackets and all, with the editor's own line
+    /// break after it; the other codes stay as shown.
+    pub fn text_keeping_codes(&self, keep: impl Fn(&str) -> bool) -> String {
+        let chars: Vec<char> = self.text.chars().collect();
+        let mut out = String::new();
+        let mut at = 0;
+        for &(start, end) in &self.codes {
+            if start < at || end > chars.len() {
+                continue;
+            }
+            let name: String = chars[start + 1..end.saturating_sub(1).max(start + 1)].iter().collect();
+            if !keep(&name) {
+                out.extend(&chars[at..start]);
+                at = if self.is_own_break(end) { end + 1 } else { end };
+            }
+        }
+        out.extend(&chars[at..]);
+        out
+    }
+
     /// Whether the line break at character `pos` is the editor's own, after a [p] or [l] code.
     pub fn is_own_break(&self, pos: usize) -> bool {
         pos > 0
@@ -341,6 +367,19 @@ fn matching(chars: &[char], i: usize) -> Option<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn codes_kept_or_taken_out() {
+        let s = Shown::marked("a[p]b[idle~x]c[idle]d");
+        // [p] is followed by the editor's own line break, which goes with it.
+        assert_eq!(s.text_keeping_codes(|_| true), "a[p]\nb[idle~x]c[idle]d");
+        assert_eq!(s.text_keeping_codes(|_| false), "abcd");
+        assert_eq!(s.text_keeping_codes(|c| !is_idle_code(c)), "a[p]\nbcd");
+        // A bracket that is text stays.
+        let s = Shown { text: "x[y".into(), ..Shown::default() };
+        assert_eq!(s.text_keeping_codes(|_| false), "x[y");
+        assert!(!is_idle_code("idler"));
+    }
 
     fn run(s: &str) -> String {
         s.replace('[', "\u{1c}").replace(']', "\u{1f}")
