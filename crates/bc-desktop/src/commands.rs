@@ -643,6 +643,8 @@ fn open_dx_document(path: &Path) -> Option<u64> {
             d.view.translated = doc.translated_line;
             d.view.six_key = braille && doc.six_key;
             d.page_numbers = doc.page_numbering;
+            // A document read from its file is a saved one: its title loses "New".
+            app::child_set_title(&d.frame, &d.full_name());
             // The document's own tables, as the file names them, matched to the table list: a set the list holds
             // stays; when only the print-to-braille rules table (or a learning step) is listed, the other three are
             // that language's; a table the list does not hold gives the tables of a new document.
@@ -657,6 +659,7 @@ fn open_dx_document(path: &Path) -> Option<u64> {
             };
         }
         a.apply_view();
+        a.set_title();
     });
     Some(key)
 }
@@ -686,7 +689,12 @@ pub fn open_path(path: &Path) -> Option<u64> {
                 if let Some(i) = a.index_of(key) {
                     a.docs[i].dirty = false;
                     a.docs[i].path = Some(path.clone());
+                    // A file read from disk is not a new document; Save still asks for a name and type, as its
+                    // file is not a document file.
+                    a.docs[i].saved = true;
+                    app::child_set_title(&a.docs[i].frame, &a.docs[i].full_name());
                 }
+                a.set_title();
             });
             Some(key)
         }

@@ -287,7 +287,7 @@ const DEFAULT_VIEWS = {
   print_full_page: false,
   print_codes: false,
   print_translated: false,
-  braille_font: "print",
+  braille_font: "braille", // braille documents open in the braille font (owner direction, queue line T4)
   braille_full_page: false,
   braille_codes: false,
   braille_translated: true,

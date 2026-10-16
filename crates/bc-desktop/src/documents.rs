@@ -117,7 +117,12 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
     text_ctrl.set_focus();
     // A dialog that was open (File, Open) gives focus back to the control it came from when it finishes closing;
     // the new document takes it once that is done.
+    // On macOS each document is a window of its own, and the system gives activation back to the window that had it
+    // before the dialog (the untitled document of a plain start), whose activation would make it the active document;
+    // the new document's window is brought to the front, as the View menu's list does.
     wxdragon::call_after(Box::new(move || {
+        child.raise();
+        child_maximize(&child);
         text_ctrl.set_focus();
         activate_key(key);
     }));

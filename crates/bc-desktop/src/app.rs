@@ -227,12 +227,13 @@ impl Default for Settings {
             six_key_set: "fdsjkl".to_string(),
             default_views: DefaultViews {
                 // The defaults are the reference program's (spec 18): translated line in the print font, braille
-                // documents with the translated line and six-key entry on, status line Segoe UI 12.
+                // documents with the translated line and six-key entry on, status line Segoe UI 12. Braille
+                // documents open in the braille font (owner direction, queue line T4).
                 translated_font: ViewFont::Print,
                 print_full_page: false,
                 print_codes: false,
                 print_translated: false,
-                braille_font: ViewFont::Print,
+                braille_font: ViewFont::Braille,
                 braille_full_page: false,
                 braille_codes: false,
                 braille_translated: true,
