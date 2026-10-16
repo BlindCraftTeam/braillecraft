@@ -255,6 +255,14 @@ fn build_wxdragon_wrapper(
     // Disable WebP support since we'll use the image crate for image decoding
     cmake_config.define("wxUSE_LIBWEBP", "OFF");
 
+    // BrailleMaker: on Linux the TIFF and JPEG libraries are built into the program (wxWidgets' own copies), so the
+    // packages do not depend on the build machine's libtiff and libjpeg, whose package names change between
+    // distributions (libtiff5 on Ubuntu 22.04, libtiff6 on Ubuntu 24.04 and Debian 13).
+    if target_os == "linux" {
+        cmake_config.define("wxUSE_LIBTIFF", "builtin");
+        cmake_config.define("wxUSE_LIBJPEG", "builtin");
+    }
+
     // macOS cross-architecture support: when building on Apple Silicon for an
     // x86_64-apple-darwin target (or vice versa), CMake must be instructed to
     // use the correct architecture.  Otherwise it will default to the host
@@ -969,9 +977,7 @@ fn build_wxdragon_wrapper(
         println!("cargo:rustc-link-lib=SM"); // X11 Session Management (wxWidgets 3.3.3 apptraits GetSM)
         println!("cargo:rustc-link-lib=ICE"); // libSM dependency
         println!("cargo:rustc-link-lib=png");
-        println!("cargo:rustc-link-lib=jpeg");
         println!("cargo:rustc-link-lib=expat");
-        println!("cargo:rustc-link-lib=tiff");
 
         if cmake_cache.contains("wxUSE_LIBNOTIFY:BOOL=ON") {
             println!("cargo:rustc-link-lib=notify");
@@ -1009,6 +1015,11 @@ fn build_wxdragon_wrapper(
         println!("cargo:rustc-link-lib=static=wx_gtk3u_core-3.3");
         println!("cargo:rustc-link-lib=static=wx_baseu-3.3");
         println!("cargo:rustc-link-lib=static=wx_baseu_net-3.3");
+        // BrailleMaker: the built-in TIFF and JPEG libraries (see the wxUSE_LIBTIFF define), after the wx
+        // libraries that use them; TIFF uses zlib.
+        println!("cargo:rustc-link-lib=static=wxtiff-3.3");
+        println!("cargo:rustc-link-lib=static=wxjpeg-3.3");
+        println!("cargo:rustc-link-lib=z");
         println!("cargo:rustc-link-lib=stdc++");
         // wx_gtk3u_gl's GLX and EGL backends call into the system GL libraries, and nothing here
         // propagated the `-l` for them — the same shape as libnotify and SDL2 above. It went
