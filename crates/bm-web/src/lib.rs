@@ -86,6 +86,12 @@ fn derive(s: Shown) {
     })
 }
 
+/// The program's version, for the About box.
+#[wasm_bindgen]
+pub fn version() -> String {
+    env!("CARGO_PKG_VERSION").to_string()
+}
+
 /// Running text (a translation's result) as the editor shows it, its codes kept for the calls given it (a braille
 /// conversion for display), so braille brackets in it stay cells.
 #[wasm_bindgen]

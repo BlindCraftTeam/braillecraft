@@ -43,6 +43,8 @@ async function engine(name) {
 // The shipped table each rules table code is recreated as (tables/index.tsv: rules, scan, table, language), the
 // first line for a code chosen, as the desktop program's table set finds it.
 let tableIndex = null;
+// The number of tables the index lists (the About box's count, as the desktop program's table set counts them).
+let tableCount = 0;
 async function tableFor(code) {
   if (!tableIndex) {
     tableIndex = new Map();
@@ -50,7 +52,9 @@ async function tableFor(code) {
       const response = await fetch("tables/index.tsv");
       for (const line of response.ok ? (await response.text()).split("\n") : []) {
         const [rules, , table] = line.split("\t");
-        if (rules && !rules.startsWith("#") && table && !tableIndex.has(rules)) tableIndex.set(rules, table.trim());
+        if (!rules || rules.startsWith("#") || !table) continue;
+        tableCount += 1;
+        if (!tableIndex.has(rules)) tableIndex.set(rules, table.trim());
       }
     } catch {
       // No index: no table is found.
@@ -2929,7 +2933,15 @@ const COMMANDS = {
         apply();
       },
     }),
-  3211: () => showDialog(1016),
+  3211: async () => {
+    if (core) await tableFor("");
+    await showDialog(1016, {
+      setup(d) {
+        d.setText(8, `Version ${core ? core.version() : ""}`);
+        d.setText(10, `Braille translation: the BrailleMaker engine, ${tableCount ? `${tableCount} tables` : "no tables found"}`);
+      },
+    });
+  },
 };
 
 async function run(id, menuLabel, itemLabel) {
