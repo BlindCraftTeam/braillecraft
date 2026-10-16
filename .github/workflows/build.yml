@@ -109,11 +109,14 @@ jobs:
           if [ "$RUNNER_OS" = Linux ]; then
             # The runner has no session bus, so the GTK accessibility bridge printed a bus error at each start.
             export NO_AT_BRIDGE=1
+            { echo "window manager: $(pgrep -a openbox || echo none)"; echo "xdotool: $(xdotool version 2>&1 || true)"; } >> layout/starts.txt
           fi
           shown() {
             if [ "$RUNNER_OS" = Linux ]; then
               s=$(date +%s)
-              timeout 20 xdotool search --sync --onlyvisible --classname braillecraft-desktop > /dev/null 2>&1; rc=$?
+              # The step runs under bash -e, so the search's result is taken without letting a failure end it.
+              rc=0
+              timeout 20 xdotool search --sync --onlyvisible --classname braillecraft-desktop > /dev/null 2>&1 || rc=$?
               alive=no; kill -0 $pid 2> /dev/null && alive=yes
               wins=$(xwininfo -root -tree 2> /dev/null | grep -c -i braillecraft || true)
               echo "$2 search=$rc after $(( $(date +%s) - s ))s running=$alive windows=$wins" >> layout/starts.txt
