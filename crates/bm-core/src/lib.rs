@@ -4,6 +4,7 @@
 //! engine, document templates, braille page formatting, import and export, and the embosser job layer. The
 //! desktop shell and the web build both call into this crate.
 
+pub mod cmdline;
 pub mod codepages;
 pub mod doctext;
 pub mod dxfile;

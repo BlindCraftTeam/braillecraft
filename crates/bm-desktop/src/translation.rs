@@ -35,6 +35,8 @@ thread_local! {
     static REGION: Cell<u32> = const { Cell::new(1) };
     /// The folder of the rule scripts coded files are made with (tables/rule-scripts).
     static RULES: RefCell<Option<std::path::PathBuf>> = const { RefCell::new(None) };
+    /// The command line's /template, for this run.
+    static RUN_TEMPLATE: RefCell<Option<String>> = const { RefCell::new(None) };
 }
 
 /// A LaTeX file from a print document's running text (codes marked 0x1C ... 0x1F), as the reference program writes
@@ -99,9 +101,22 @@ pub fn with_templates<R>(f: impl FnOnce(Option<&Templates>) -> R) -> R {
 /// The template File, New selects: the one marked as default when it is still there, otherwise the built-in
 /// default.
 pub fn default_template() -> String {
-    crate::settings_store::load_default_template()
-        .filter(|n| with_templates(|t| t.is_some_and(|t| t.by_name(n).is_some())))
+    let found = |n: &String| with_templates(|t| t.is_some_and(|t| t.by_name(n).is_some()));
+    RUN_TEMPLATE
+        .with(|r| r.borrow().clone())
+        .filter(found)
+        .or_else(|| crate::settings_store::load_default_template().filter(found))
         .unwrap_or_else(|| templates::BUILT_IN_DEFAULT.to_string())
+}
+
+/// The command line's /template:<name>: the default template for this run, when the template is found (the
+/// setting kept for later runs is left as it is). Answers whether it was found.
+pub fn set_run_template(name: &str) -> bool {
+    let known = with_templates(|t| t.is_some_and(|t| t.by_name(name).is_some()));
+    if known {
+        RUN_TEMPLATE.with(|r| *r.borrow_mut() = Some(name.to_string()));
+    }
+    known
 }
 
 /// A template's four tables, by its name.

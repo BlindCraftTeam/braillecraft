@@ -4,6 +4,7 @@
 
 mod app;
 mod codes;
+mod command_line;
 mod commands;
 mod dialog_table;
 mod dlg;
@@ -186,12 +187,29 @@ fn main() {
             }
         });
 
-        let key = documents::new_document(app::DocKind::Print, None, &bm_core::doctext::Shown::default());
-        app::with(|a| {
-            if let Some(i) = a.index_of(key) {
-                a.docs[i].dirty = false;
-            }
-        });
+        // The command line (spec 26 section 26.5): files given are opened, and printed, embossed or saved when an
+        // option says so. When every file came with an option, the work is done without the editor and the program
+        // ends.
+        let cl = command_line::read();
+        let opened = command_line::run(&cl);
+        if cl.is_batch() {
+            app::with(|a| {
+                for d in a.docs.drain(..) {
+                    d.frame.destroy();
+                }
+                a.frame.destroy();
+            });
+            return;
+        }
+        // INFERENCE: a new empty print document when no file was opened in the editor, as at a plain start.
+        if !opened {
+            let key = documents::new_document(app::DocKind::Print, None, &bm_core::doctext::Shown::default());
+            app::with(|a| {
+                if let Some(i) = a.index_of(key) {
+                    a.docs[i].dirty = false;
+                }
+            });
+        }
         frame.show(true);
         if fonts == 0 {
             commands::message("The braille fonts could not be loaded; Braille Font and SimBraille Font show print characters.");

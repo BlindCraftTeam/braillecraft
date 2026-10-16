@@ -341,7 +341,9 @@ pub fn line_of(doc: &Shown, pos: i64) -> Shown {
 }
 
 /// The status line's parts are shared with the web build (bm_core::status).
-pub use bm_core::status::{char_field, open_styles, StatusLine};
+pub use bm_core::status::{char_field, StatusLine};
+#[cfg(test)]
+pub use bm_core::status::open_styles;
 
 // ------------------------------------------------------------------ fonts
 

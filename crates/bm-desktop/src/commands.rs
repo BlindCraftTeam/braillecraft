@@ -565,15 +565,21 @@ fn pick_file(message_text: &str) -> Option<std::path::PathBuf> {
     }
 }
 
-/// A .dxp (print) or .dxb (braille) document.
-fn open_dx_document(path: &Path) {
+/// A .dxp (print) or .dxb (braille) document; its key.
+fn open_dx_document(path: &Path) -> Option<u64> {
     let bytes = match std::fs::read(path) {
         Ok(b) => b,
-        Err(e) => return message(&format!("{}: {e}", path.display())),
+        Err(e) => {
+            message(&format!("{}: {e}", path.display()));
+            return None;
+        }
     };
     let doc = match bm_core::dxfile::read(&bytes) {
         Ok(d) => d,
-        Err(e) => return message(&e.to_string()),
+        Err(e) => {
+            message(&e.to_string());
+            return None;
+        }
     };
     let braille = doc.kind == bm_core::DocumentKind::Braille;
     // The file's codes are codes and its brackets text. Braille is stored in North American ASCII braille; it is
@@ -642,14 +648,21 @@ fn open_dx_document(path: &Path) {
         }
         a.apply_view();
     });
+    Some(key)
 }
 
 fn open_file() {
     let Some(path) = pick_file("Open") else { return };
+    open_path(&path);
+}
+
+/// Opens a document file (.dxp, .dxb) or a text or braille file in a new document window; its key, or None when it
+/// could not be read (a message says why).
+pub fn open_path(path: &Path) -> Option<u64> {
+    let path = path.to_path_buf();
     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase();
     if ext == "dxp" || ext == "dxb" {
-        open_dx_document(&path);
-        return;
+        return open_dx_document(&path);
     }
     match read_text_file(&path) {
         Ok(text) => {
@@ -665,8 +678,12 @@ fn open_file() {
                     a.docs[i].path = Some(path.clone());
                 }
             });
+            Some(key)
         }
-        Err(e) => message(&e),
+        Err(e) => {
+            message(&e);
+            None
+        }
     }
 }
 
@@ -781,7 +798,7 @@ fn save(key: Option<u64>, as_new: bool) -> bool {
     };
     let chosen = if chosen.extension().is_some_and(|e| e.eq_ignore_ascii_case(kind.1)) { chosen } else { chosen.with_extension(kind.1) };
     match kind.2 {
-        SaveType::Formatted => write_formatted(key, &chosen, braille),
+        SaveType::Formatted => write_formatted(key, &chosen, braille, None),
         SaveType::Refreshable => write_refreshable(key, &chosen),
         SaveType::Coded => write_coded(key, &chosen),
         SaveType::Latex => write_latex(key, &chosen),
@@ -1010,11 +1027,24 @@ fn write_refreshable(key: u64, path: &Path) -> bool {
     true
 }
 
+/// The command line's /brf and /prf: formatted braille or text with the first encoding or code page, which Save As
+/// also chooses first every time.
+pub fn write_formatted_for(key: u64, path: &Path, braille: bool) -> bool {
+    write_formatted(key, path, braille, Some(0))
+}
+
+/// The command line's /lbf: refreshable braille.
+pub fn write_refreshable_for(key: u64, path: &Path) -> bool {
+    write_refreshable(key, path)
+}
+
 /// Save As formatted braille (.brf) for a braille document or formatted text (.prf) for a print document: the
 /// document laid out into pages and written as the reference program's page writer writes them (spec 04d-B). The
 /// document itself keeps its own file and name.
-fn write_formatted(key: u64, path: &Path, braille: bool) -> bool {
-    let choice = if braille {
+fn write_formatted(key: u64, path: &Path, braille: bool, given: Option<usize>) -> bool {
+    let choice = if let Some(c) = given {
+        c
+    } else if braille {
         let list = brf_encodings();
         let refs: Vec<&str> = list.iter().map(String::as_str).collect();
         let f = app::frame();
@@ -1168,6 +1198,12 @@ fn chosen_pages(d: &Dlg, radios: [i32; 5], fields: (i32, i32), pages: &[bm_core:
 }
 
 fn print() {
+    print_with(None);
+}
+
+/// File, Print; with `skip` (a number of copies), the dialog is skipped and every page printed, as the command
+/// line's /print and /simulated do (spec 26 section 26.5.3).
+pub fn print_with(skip: Option<u32>) {
     use crate::dlg::Value;
     let Some((i, key, braille, caret, (from, to))) = app::with(|a| {
         a.active.map(|i| {
@@ -1188,32 +1224,38 @@ fn print() {
         }))
     })
     .unwrap_or(false);
-    let d = open_dialog(1040, None);
-    d.set_text(7, "1");
-    wire_page_range(&d, PRINT_RANGE, (15, 16));
-    // On a braille document the page-number choice reads "Braille page number(s)": the reference copies control 13's
-    // text into control 12 (spec 24, 2a); control 13 itself is not used.
-    if braille {
-        if let Some(label) = d.win(13).and_then(|w| w.get_label()) {
-            d.set_text(12, &label);
-        }
-    }
-    d.hide(13);
-    d.set_checked(17, braille && interline_before);
-    d.enable(17, braille);
-    let (copies, chosen, interline) = loop {
-        if d.show() != 1 {
+    let (copies, chosen, interline) = match skip {
+        Some(copies) => (copies, (0..pages.len()).map(Some).collect(), braille && interline_before),
+        None => {
+            let d = open_dialog(1040, None);
+            d.set_text(7, "1");
+            wire_page_range(&d, PRINT_RANGE, (15, 16));
+            // On a braille document the page-number choice reads "Braille page number(s)": the reference copies control 13's
+            // text into control 12 (spec 24, 2a); control 13 itself is not used.
+            if braille {
+                if let Some(label) = d.win(13).and_then(|w| w.get_label()) {
+                    d.set_text(12, &label);
+                }
+            }
+            d.hide(13);
+            d.set_checked(17, braille && interline_before);
+            d.enable(17, braille);
+            let (copies, chosen, interline) = loop {
+                if d.show() != 1 {
+                    d.destroy();
+                    return;
+                }
+                let Some(copies) = copies_field(&d, 7) else { continue };
+                let Some(chosen) = chosen_pages(&d, PRINT_RANGE, (15, 16), &pages, caret, (from, to)) else { continue };
+                break (copies, chosen, braille && d.checked(17));
+            };
             d.destroy();
-            return;
+            if braille {
+                app::with(|a| a.memory.put(1040, "print", vec![(17, Value::Flag(interline))]));
+            }
+            (copies, chosen, interline)
         }
-        let Some(copies) = copies_field(&d, 7) else { continue };
-        let Some(chosen) = chosen_pages(&d, PRINT_RANGE, (15, 16), &pages, caret, (from, to)) else { continue };
-        break (copies, chosen, braille && d.checked(17));
     };
-    d.destroy();
-    if braille {
-        app::with(|a| a.memory.put(1040, "print", vec![(17, Value::Flag(interline))]));
-    }
     let job = app::with(|a| {
         let doc = &a.docs[i];
         let (face, _) = a.face(doc.view.font);
@@ -1275,6 +1317,12 @@ fn print() {
 /// File, Emboss (dialog 1039, spec 25 2a): the document's laid-out pages in the chosen range, `copies` times,
 /// through its embosser setup's byte pipeline to the setup's output.
 fn emboss() {
+    emboss_with(None);
+}
+
+/// File, Emboss; with `skip` (a number of copies), the dialog is skipped and every page embossed, as the command
+/// line's /braille does (spec 26 section 26.5.3). The checks before a job are made either way.
+pub fn emboss_with(skip: Option<u32>) {
     use crate::embosser as emb;
     let Some((i, name, setup_name, layout, cells, lines, caret, selection)) = app::with(|a| {
         a.active.map(|i| {
@@ -1316,21 +1364,27 @@ fn emboss() {
         let shown = a.docs[i].shown();
         a.laid_out(i, &shown)
     });
-    let d = open_dialog(1039, None);
-    d.set_text(7, "1");
-    wire_page_range(&d, EMBOSS_RANGE, (14, 15));
-    d.set_text(23, &setup.shown_name());
-    d.set_text(25, &emb::form_name(&layout.form));
-    let (copies, chosen) = loop {
-        if d.show() != 1 {
+    let (copies, chosen): (u32, Vec<Option<usize>>) = match skip {
+        Some(copies) => (copies, (0..pages.len()).map(Some).collect()),
+        None => {
+            let d = open_dialog(1039, None);
+            d.set_text(7, "1");
+            wire_page_range(&d, EMBOSS_RANGE, (14, 15));
+            d.set_text(23, &setup.shown_name());
+            d.set_text(25, &emb::form_name(&layout.form));
+            let picked = loop {
+                if d.show() != 1 {
+                    d.destroy();
+                    return;
+                }
+                let Some(copies) = copies_field(&d, 7) else { continue };
+                let Some(chosen) = chosen_pages(&d, EMBOSS_RANGE, (14, 15), &pages, caret, selection) else { continue };
+                break (copies, chosen);
+            };
             d.destroy();
-            return;
+            picked
         }
-        let Some(copies) = copies_field(&d, 7) else { continue };
-        let Some(chosen) = chosen_pages(&d, EMBOSS_RANGE, (14, 15), &pages, caret, selection) else { continue };
-        break (copies, chosen);
     };
-    d.destroy();
     // The pages as North American ASCII braille, which the byte pipeline takes: the document's text is in the
     // display encoding (Global, Internationalization), so each character goes to its cell and that cell's character.
     let sides: Vec<Option<Vec<String>>> = app::with(|a| {
@@ -1386,6 +1440,16 @@ fn emboss() {
 /// document goes through the engine in one run, as in the reference program; the result keeps the codes, and its
 /// lines and pages are laid out from them.
 fn translate_document() {
+    if let Err(e) = translate_active() {
+        if !e.is_empty() {
+            message(&e);
+        }
+    }
+}
+
+/// File, Translate on the active document: the new document's key, or the message saying why none was made (empty
+/// when there is no document).
+pub fn translate_active() -> Result<u64, String> {
     let Some((text, kind, tables, initial, template, styles, numbers, name, untitled)) = app::with(|a| {
         a.doc().map(|d| {
             let (codes, template, styles) = (d.initial_codes.clone(), d.template.clone(), d.styles.clone());
@@ -1393,12 +1457,11 @@ fn translate_document() {
             (d.shown(), d.kind, d.tables.clone(), codes, template, styles, numbers, name, d.untitled)
         })
     }) else {
-        return;
+        return Err(String::new());
     };
     let style_table = translation::style_table(&styles);
     if text.text.trim().is_empty() {
-        message("The file that you are trying to translate is empty.");
-        return;
+        return Err("The file that you are trying to translate is empty.".into());
     }
     let enc = app::with(|a| a.encoding());
     let to_braille = kind == DocKind::Print;
@@ -1408,13 +1471,7 @@ fn translate_document() {
     } else {
         translation::back(&tables[2], &text, &initial, enc, &style_table)
     };
-    let out = match r {
-        Ok(s) => s,
-        Err(e) => {
-            message(&format!("Translation failed: {e}"));
-            return;
-        }
-    };
+    let out = r.map_err(|e| format!("Translation failed: {e}"))?;
     let new_name = (!untitled).then(|| {
         let stem = ["dxp", "dxb", "txt", "brf", "brl", "bru", "prf"]
             .iter()
@@ -1437,6 +1494,7 @@ fn translate_document() {
             }
         }
     });
+    Ok(key)
 }
 
 // ------------------------------------------------------------------ Edit
