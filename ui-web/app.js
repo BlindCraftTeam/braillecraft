@@ -1,6 +1,6 @@
 // BrailleMaker web build: the desktop program's menus and dialogs (ui-web/tables.js, generated from the desktop's own
 // tables), a document editor with the translated line and status line, and the core (bm-web, WebAssembly) for
-// documents, translation and embossing.
+// documents, translation, embosser setups and embossing.
 
 import { MENUS, DIALOGS } from "./tables.js";
 
@@ -40,9 +40,140 @@ async function engine(name) {
   return engines[name];
 }
 
+// The embosser models (embossers/embossers.txt beside the page).
+let catalog = null;
+async function embossers() {
+  if (!core) {
+    return null;
+  }
+  if (!catalog) {
+    try {
+      const response = await fetch("embossers/embossers.txt");
+      if (!response.ok) {
+        return null;
+      }
+      catalog = new core.Embossers(await response.text(), null);
+    } catch {
+      return null;
+    }
+  }
+  return catalog;
+}
+
+// The output encodings (fonts/encodings.json): the byte sent for each of the 64 cells in an encoding, empty for
+// North American English, which the byte pipeline sends itself; a character above one byte is sent as a space.
+let encodingTable = null;
+async function encodingCodes(name) {
+  if (/^north american english$/i.test(name ?? "")) {
+    return new Uint8Array(0);
+  }
+  if (!encodingTable) {
+    try {
+      encodingTable = await (await fetch("fonts/encodings.json")).json();
+    } catch {
+      encodingTable = [];
+    }
+  }
+  const enc = encodingTable.find((e) => e.name.toLowerCase() === (name ?? "").toLowerCase());
+  if (!enc) {
+    return new Uint8Array(0);
+  }
+  const codes = new Uint8Array(64);
+  for (let p = 0; p < 64; p++) {
+    const first = [...(enc.cells[p] ?? "")][0];
+    const c = first ? first.codePointAt(0) : 0x2800 + p;
+    codes[p] = c <= 0xff ? c : 0x20;
+  }
+  return codes;
+}
+
+// ------------------------------------------------------------------ kept settings
+
+// The browser keeps this viewer's settings (the desktop program keeps them in its settings file). A browser that
+// keeps nothing (a private window) still works; the settings then last until the page is closed.
+const memory = new Map();
+const store = {
+  get(key) {
+    try {
+      return localStorage.getItem(`braillemaker.${key}`) ?? memory.get(key) ?? null;
+    } catch {
+      return memory.get(key) ?? null;
+    }
+  },
+  set(key, value) {
+    memory.set(key, value);
+    try {
+      if (value === null) {
+        localStorage.removeItem(`braillemaker.${key}`);
+      } else {
+        localStorage.setItem(`braillemaker.${key}`, value);
+      }
+    } catch {
+      // Kept in memory only.
+    }
+  },
+  json(key, fallback) {
+    try {
+      const v = this.get(key);
+      return v ? JSON.parse(v) : fallback;
+    } catch {
+      return fallback;
+    }
+  },
+};
+
+// Embosser setups, as the desktop program keeps them: the list of names, one value per setup, the default setup,
+// and the layout new documents take with its cells and lines.
+const NEW_LAYOUT = { form: "", top_margin: 0, binding: 0, interpoint: false, banner: false, interline: 0 };
+const setupNames = () => store.json("embosser.setups", []);
+const loadSetup = (name) => store.json(`embosser.setup.${name}`, null);
+const defaultSetup = () => store.get("embosser.default") || "";
+const setDefaultSetup = (name) => store.set("embosser.default", name);
+const defaultLayout = () => store.json("embosser.layout", [NEW_LAYOUT, 40, 25]);
+const saveDefaultLayout = (layout, cells, lines) => store.set("embosser.layout", JSON.stringify([layout, cells, lines]));
+const shownName = (s) => (s.name.trim() ? s.name : s.model);
+
+function saveSetup(setup, old) {
+  const name = shownName(setup);
+  let names = setupNames();
+  if (old && old !== name) {
+    names = names.filter((n) => n !== old);
+    store.set(`embosser.setup.${old}`, null);
+    if (defaultSetup() === old) {
+      setDefaultSetup(name);
+    }
+  }
+  if (!names.includes(name)) {
+    names.push(name);
+  }
+  store.set("embosser.setups", JSON.stringify(names));
+  store.set(`embosser.setup.${name}`, JSON.stringify(setup));
+}
+
+function removeSetup(name) {
+  store.set("embosser.setups", JSON.stringify(setupNames().filter((n) => n !== name)));
+  store.set(`embosser.setup.${name}`, null);
+  if (defaultSetup() === name) {
+    setDefaultSetup("");
+  }
+}
+
+// New setups take the European order of default forms for a language other than US English (spec 06).
+const european = () => !/^en-US$/i.test(navigator.language || "en-US");
+
 // ------------------------------------------------------------------ the document
 
 const doc = { kind: "print", name: "Untitled Print Document 1", file: null, translatedLine: true };
+
+// A new document takes the default embosser setup and layout, as in the desktop program.
+function embosserDefaults() {
+  const [layout, cells, lines] = defaultLayout();
+  doc.embosser = defaultSetup();
+  doc.layout = { ...layout };
+  doc.cells = cells;
+  doc.lines = lines;
+}
+embosserDefaults();
 
 function kindName() {
   return doc.kind === "braille" ? "Braille Document" : "Print Document";
@@ -125,20 +256,12 @@ function mnemonic(label) {
   return m ? m[1].toUpperCase() : null;
 }
 
-// Builds dialog `rid` as a modal dialog: its controls in the reference program's order (OK and Cancel last), each
-// group box a fieldset around the controls inside it, each label tied to the control after it, radio buttons in
-// their groups. Returns the dialog and a promise of how it was closed.
-function buildDialog(rid, title) {
+// The controls of dialog or sheet page `rid` built into `form`, in the reference program's order: each group box a
+// fieldset around the controls inside it, each label tied to the control after it, radio buttons in their groups.
+// OK and Cancel (ids 1 and 2) are left to the caller. Returns the controls by id (labels and texts included) and
+// the Alt+letter keys.
+function buildControls(rid, form) {
   const spec = DIALOGS[rid];
-  const dialog = document.createElement("dialog");
-  const heading = document.createElement("h2");
-  heading.id = `dlg${rid}-title`;
-  heading.textContent = title ?? spec.title;
-  dialog.setAttribute("aria-labelledby", heading.id);
-  dialog.append(heading);
-  const form = document.createElement("form");
-  form.method = "dialog";
-  dialog.append(form);
   const boxes = spec.controls.filter((c) => c.kind === "box");
   const inside = (c, b) => c.x >= b.x && c.y >= b.y && c.x < b.x + b.w && c.y < b.y + b.h;
   const fieldsets = new Map();
@@ -183,6 +306,7 @@ function buildDialog(rid, title) {
       el = document.createElement("p");
       el.className = "text";
       el.textContent = plain(c.label);
+      controls.set(c.id, el);
     } else if (c.kind === "text" || c.kind === "list" || c.kind === "combo") {
       const row = document.createElement("div");
       row.className = "row";
@@ -200,6 +324,7 @@ function buildDialog(rid, title) {
         label.htmlFor = id;
         label.textContent = plain(pendingLabel.label);
         row.append(label);
+        controls.set(pendingLabel.id, label);
         const k = mnemonic(pendingLabel.label);
         if (k) {
           keys.push([k, field]);
@@ -251,14 +376,94 @@ function buildDialog(rid, title) {
     }
     where.append(el);
   }
+  // Alt with a group's letter moves to the first control in the group.
+  for (const fs of fieldsets.values()) {
+    const first = fs.querySelector("input, select, button");
+    if (fs.dataset.mnemonic && first) {
+      keys.push([fs.dataset.mnemonic, first]);
+    }
+  }
+  return { controls, keys };
+}
+
+// Helpers on a built dialog's controls (the desktop program's Dlg calls).
+function dialogHelpers(controls) {
+  const get = (id) => controls.get(id);
+  return {
+    get,
+    text: (id) => get(id)?.value ?? "",
+    setText(id, v) {
+      const el = get(id);
+      if (!el) return;
+      if ("value" in el && el.tagName !== "BUTTON") el.value = v;
+      else el.textContent = v;
+    },
+    number(id) {
+      const v = (get(id)?.value ?? "").trim();
+      return /^-?\d+$/.test(v) ? Number(v) : null;
+    },
+    checked: (id) => !!get(id)?.checked,
+    setChecked(id, on) {
+      if (get(id)) get(id).checked = !!on;
+    },
+    setItems(id, items, index) {
+      const select = get(id);
+      if (!select) return;
+      select.replaceChildren(...items.map((t) => new Option(t, t)));
+      select.selectedIndex = index ?? -1;
+    },
+    selected(id) {
+      const s = get(id);
+      return s && s.selectedIndex >= 0 ? s.options[s.selectedIndex].text : null;
+    },
+    chosenIn(id, items) {
+      const t = this.selected(id);
+      const i = items.indexOf(t);
+      return i >= 0 ? i : null;
+    },
+    radio(ids) {
+      const i = ids.findIndex((id) => get(id)?.checked);
+      return i >= 0 ? i : null;
+    },
+    setRadio(ids, i) {
+      ids.forEach((id, k) => this.setChecked(id, k === i));
+    },
+    enable(id, on) {
+      const el = get(id);
+      if (!el) return;
+      if (["INPUT", "SELECT", "BUTTON", "TEXTAREA"].includes(el.tagName)) el.disabled = !on;
+      else el.classList.toggle("disabled", !on);
+    },
+    hide(id) {
+      const el = get(id);
+      if (el) (el.closest(".row") ?? el).hidden = true;
+    },
+  };
+}
+
+// Alt with a letter moves to its control, in a dialog or on its shown page.
+function wireKeys(dialog, keysNow) {
+  dialog.addEventListener("keydown", (e) => {
+    if (e.altKey && !e.ctrlKey && e.key.length === 1) {
+      const hit = keysNow().find(([k, el]) => k === e.key.toUpperCase() && !el.closest("[hidden]"));
+      if (hit) {
+        e.preventDefault();
+        hit[1].focus();
+      }
+    }
+  });
+}
+
+// OK and Cancel of dialog `rid` into `form`. OK (also Return in a field) runs `onOk`, which may keep the dialog open
+// by answering false, as the desktop program's dialogs do after a message.
+function addButtons(rid, dialog, form, controls, onOk) {
   const buttons = document.createElement("div");
   buttons.className = "buttons";
-  for (const c of spec.controls.filter((c) => c.id === 1 || c.id === 2)) {
+  for (const c of DIALOGS[rid].controls.filter((c) => c.id === 1 || c.id === 2)) {
     const button = document.createElement("button");
     button.textContent = plain(c.label);
     if (c.id === 1) {
       button.type = "submit";
-      button.value = "ok";
       button.className = "default";
     } else {
       button.type = "button";
@@ -268,40 +473,94 @@ function buildDialog(rid, title) {
     controls.set(c.id, button);
   }
   form.append(buttons);
-  // Alt with a label's letter moves to the control after the label, as in the desktop program.
-  for (const fs of fieldsets.values()) {
-    const first = fs.querySelector("input, select, button");
-    if (fs.dataset.mnemonic && first) {
-      keys.push([fs.dataset.mnemonic, first]);
-    }
-  }
-  dialog.addEventListener("keydown", (e) => {
-    if (e.altKey && !e.ctrlKey && e.key.length === 1) {
-      const hit = keys.find(([k]) => k === e.key.toUpperCase());
-      if (hit) {
-        e.preventDefault();
-        hit[1].focus();
+  let busy = false;
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (busy) return;
+    busy = true;
+    try {
+      if (!onOk || (await onOk())) {
+        dialog.close("ok");
       }
+    } finally {
+      busy = false;
     }
   });
-  $("dialogs").append(dialog);
-  const closed = new Promise((resolve) => {
+}
+
+function newDialog(titleText, idBase) {
+  const dialog = document.createElement("dialog");
+  const heading = document.createElement("h2");
+  heading.id = `${idBase}-title`;
+  heading.textContent = titleText;
+  dialog.setAttribute("aria-labelledby", heading.id);
+  dialog.append(heading);
+  const form = document.createElement("form");
+  form.method = "dialog";
+  dialog.append(form);
+  return { dialog, form };
+}
+
+function closedPromise(dialog) {
+  return new Promise((resolve) => {
     dialog.addEventListener("close", () => {
       resolve(dialog.returnValue === "ok" ? "ok" : "cancel");
       dialog.remove();
     });
   });
-  return { dialog, controls, closed };
 }
 
-async function showDialog(rid, title, setup) {
-  const d = buildDialog(rid, title);
-  setup?.(d);
-  d.dialog.showModal();
-  const first = d.dialog.querySelector("input:not([type=hidden]):not(:disabled), select:not(:disabled), textarea");
+function focusFirst(container) {
+  const first = [...container.querySelectorAll("input:not([type=hidden]), select, textarea, button")].find(
+    (el) => !el.disabled && !el.closest("[hidden]"),
+  );
   first?.focus();
-  return { result: await d.closed, d };
 }
+
+// Dialog `rid` shown modally: `setup` fills it, `onOk` checks it. Answers how it was closed and its helpers.
+async function showDialog(rid, { title, setup, onOk } = {}) {
+  const { dialog, form } = newDialog(title ?? DIALOGS[rid].title, `dlg${rid}`);
+  const { controls, keys } = buildControls(rid, form);
+  const d = dialogHelpers(controls);
+  addButtons(rid, dialog, form, controls, onOk && (() => onOk(d)));
+  wireKeys(dialog, () => keys);
+  $("dialogs").append(dialog);
+  const closed = closedPromise(dialog);
+  setup?.(d);
+  dialog.showModal();
+  focusFirst(form);
+  return { result: await closed, d };
+}
+
+// A message box (the desktop program's message and yes_no): OK, or Yes and No; Escape answers No.
+async function messageBox(text, yesNo = false) {
+  const { dialog, form } = newDialog("BrailleMaker", "message");
+  dialog.setAttribute("role", "alertdialog");
+  const p = document.createElement("p");
+  p.className = "message";
+  p.id = "message-text";
+  p.textContent = text;
+  dialog.setAttribute("aria-describedby", p.id);
+  form.append(p);
+  const buttons = document.createElement("div");
+  buttons.className = "buttons";
+  for (const [label, value] of yesNo ? [["Yes", "ok"], ["No", "cancel"]] : [["OK", "ok"]]) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = label;
+    if (value === "ok") b.className = "default";
+    b.addEventListener("click", () => dialog.close(value));
+    buttons.append(b);
+  }
+  form.append(buttons);
+  $("dialogs").append(dialog);
+  const closed = closedPromise(dialog);
+  dialog.showModal();
+  buttons.firstChild.focus();
+  return (await closed) === "ok";
+}
+const message = (text) => messageBox(text, false);
+const yesNo = (text) => messageBox(text, true);
 
 // The dialog a menu command opens: the one titled "Menu: Item" (as the reference program titles them).
 function dialogFor(menuLabel, itemLabel) {
@@ -312,6 +571,609 @@ function dialogFor(menuLabel, itemLabel) {
     }
   }
   return null;
+}
+
+// ------------------------------------------------------------------ the embosser setup sheet
+
+// The setup sheet (dialogs 10000 to 10004, spec 25 2d): `setup` shown, a changed copy answered on OK (null when
+// cancelled). Choosing a model fills the pages with that model's own values. The TranSend SE page shows only for
+// models with TranSend (INFERENCE, as in the desktop program).
+async function editSetup(setup, cat) {
+  const lists = JSON.parse(core.setup_lists());
+  const pages = [
+    [10001, "General"],
+    [10002, "Device Settings"],
+  ];
+  if (cat.flag(setup.model, "TranSend")) {
+    pages.push([10003, "TranSend SE"]);
+  }
+  pages.push([10004, "Advanced"]);
+  const title = `Embosser Setup - ${shownName(setup) || "Untitled Configuration"}`;
+  const { dialog, form } = newDialog(title, "dlg10000");
+  const tablist = document.createElement("div");
+  tablist.setAttribute("role", "tablist");
+  tablist.setAttribute("aria-label", title);
+  form.append(tablist);
+  const built = [];
+  const tabs = [];
+  pages.forEach(([rid, name], i) => {
+    const tab = document.createElement("button");
+    tab.type = "button";
+    tab.setAttribute("role", "tab");
+    tab.id = `sheet-tab-${rid}`;
+    tab.textContent = name;
+    tablist.append(tab);
+    tabs.push(tab);
+    const panel = document.createElement("div");
+    panel.setAttribute("role", "tabpanel");
+    panel.id = `sheet-page-${rid}`;
+    panel.className = "page";
+    panel.setAttribute("aria-labelledby", tab.id);
+    tab.setAttribute("aria-controls", panel.id);
+    form.append(panel);
+    const { controls, keys } = buildControls(rid, panel);
+    built.push({ panel, d: dialogHelpers(controls), keys });
+    tab.addEventListener("click", () => showPage(i));
+  });
+  let current = 0;
+  function showPage(i, focus = true) {
+    current = i;
+    tabs.forEach((t, k) => {
+      t.setAttribute("aria-selected", String(k === i));
+      t.tabIndex = k === i ? 0 : -1;
+      built[k].panel.hidden = k !== i;
+    });
+    if (focus) tabs[i].focus();
+  }
+  // The tabs pattern: arrows, Home and End move between pages; Ctrl+PageDown and Ctrl+PageUp anywhere in the sheet.
+  tablist.addEventListener("keydown", (e) => {
+    const n = tabs.length;
+    const to = { ArrowRight: current + 1, ArrowLeft: current - 1, Home: 0, End: n - 1 }[e.key];
+    if (to !== undefined) {
+      e.preventDefault();
+      showPage((to + n) % n);
+    }
+  });
+  dialog.addEventListener("keydown", (e) => {
+    if (e.ctrlKey && (e.key === "PageDown" || e.key === "PageUp")) {
+      e.preventDefault();
+      showPage((current + (e.key === "PageDown" ? 1 : tabs.length - 1)) % tabs.length);
+    }
+  });
+  const sheetControls = new Map();
+  const general = built[0].d;
+  const device = built[1].d;
+  const advanced = built.at(-1).d;
+  const fill = (s, models) => fillSheet(general, device, advanced, s, cat, lists, models);
+  // The reference places Configuration location (8, 9) and Default Form (10, 11) at the same spot and shows one:
+  // Default Form (INFERENCE, as in the desktop program).
+  general.hide(8);
+  general.hide(9);
+  fill(setup, true);
+  general.get(5).addEventListener("change", () => {
+    const model = general.selected(5) ?? "";
+    if (!model.startsWith("(")) {
+      fill(JSON.parse(cat.new_setup(model, european())), false);
+    }
+  });
+  let answer = null;
+  addButtons(10000, dialog, form, sheetControls, async () => {
+    const model = general.selected(5) ?? "";
+    if (model.startsWith("(")) {
+      await message("Please select an embosser model.");
+      return false;
+    }
+    const s = model === setup.model ? structuredClone(setup) : JSON.parse(cat.new_setup(model, european()));
+    s.name = general.text(7).trim();
+    if (setupNames().some((n) => n === shownName(s) && n !== shownName(setup))) {
+      await message(`You already have a configuration named "${shownName(s)}".  Please give a different name.`);
+      return false;
+    }
+    s.all_users = false;
+    const forms = JSON.parse(cat.forms(model));
+    const form = forms.find((f) => f.name === general.selected(11));
+    if (form) s.form = form.id;
+    const out = general.radio([13, 14, 15]);
+    s.output =
+      out === 0
+        ? { Printer: (general.selected(16) ?? "").startsWith("(") ? "" : general.selected(16) ?? "" }
+        : out === 2
+          ? { File: general.text(18).trim() }
+          : { Port: general.selected(17) ?? "lpt1" };
+    s.serial_init = general.checked(21);
+    s.baud = Number(general.selected(23)) || s.baud;
+    s.parity = general.chosenIn(25, lists.parities) ?? s.parity;
+    s.data_bits = Number(general.selected(27)) || s.data_bits;
+    s.stop_bits = Number(general.selected(29)) || s.stop_bits;
+    s.handshaking = general.chosenIn(31, lists.handshaking) ?? s.handshaking;
+    s.version = device.chosenIn(5, lists.versions) ?? 0;
+    s.escape_codes = device.checked(6);
+    s.seek_top_of_form = device.checked(9);
+    s.interpoint_enabled = device.checked(34);
+    s.encoding = device.selected(37) ?? s.encoding;
+    s.high_punctuation = device.chosenIn(39, lists.cases) === 1;
+    s.upper_case = device.chosenIn(41, lists.cases) === 1;
+    s.reverse_order = device.checked(44);
+    s.z_fold = device.checked(52);
+    s.device_other = [16, 21, 23, 27, 30, 33, 43].map((c) => [c, device.text(c)]);
+    s.custom_codes = advanced.checked(5);
+    s.start_codes = advanced.text(7);
+    s.end_codes = advanced.text(9);
+    s.end_of_line = advanced.chosenIn(12, lists.lineEnds) ?? 0;
+    s.end_of_page = advanced.chosenIn(14, lists.pageEnds) ?? 0;
+    s.eol_on_full_line = advanced.checked(15);
+    s.eop_on_full_page = advanced.checked(16);
+    s.pad_lines = advanced.checked(17);
+    s.prompt_new_sheet = advanced.checked(18);
+    s.one_at_a_time = advanced.checked(20);
+    s.text_delay = Math.max(0, advanced.number(22) ?? 0);
+    s.control_delay = Math.max(0, advanced.number(24) ?? 0);
+    answer = s;
+    return true;
+  });
+  wireKeys(dialog, () => built[current].keys);
+  $("dialogs").append(dialog);
+  const closed = closedPromise(dialog);
+  showPage(0, false);
+  dialog.showModal();
+  focusFirst(built[0].panel);
+  return (await closed) === "ok" ? answer : null;
+}
+
+// Shows setup `s` on the sheet's pages; the model list is filled only when `models` is set.
+function fillSheet(general, device, advanced, s, cat, lists, models) {
+  if (models) {
+    const names = ["(Please select a model)", ...cat.names()];
+    general.setItems(5, names, Math.max(0, names.indexOf(s.model)));
+    general.setText(7, s.name);
+  }
+  const forms = JSON.parse(cat.forms(s.model));
+  general.setItems(11, forms.map((f) => f.name), forms.findIndex((f) => f.id === s.form));
+  general.enable(11, forms.length > 0);
+  general.setItems(16, ["(default printer)"], 0);
+  general.setItems(17, lists.ports, 0);
+  const [kind, value] = Object.entries(s.output)[0];
+  if (kind === "Printer") {
+    general.setRadio([13, 14, 15], 0);
+    if (value) general.setItems(16, [value], 0);
+  } else if (kind === "Port") {
+    general.setRadio([13, 14, 15], 1);
+    const i = lists.ports.indexOf(value);
+    if (i >= 0) general.setItems(17, lists.ports, i);
+  } else {
+    general.setRadio([13, 14, 15], 2);
+    general.setText(18, value);
+  }
+  general.setChecked(21, s.serial_init);
+  general.setItems(23, lists.bauds, lists.bauds.indexOf(String(s.baud)));
+  general.setItems(25, lists.parities, Math.min(s.parity, 3));
+  general.setItems(27, ["7", "8"], s.data_bits === 8 ? 1 : 0);
+  general.setItems(29, ["1", "2"], s.stop_bits === 2 ? 1 : 0);
+  general.setItems(31, lists.handshaking, Math.min(s.handshaking, 2));
+  const has = (k) => cat.flag(s.model, k);
+  const index = cat.driver(s.model).includes("Index");
+  device.setItems(5, lists.versions, Math.min(s.version, lists.versions.length - 1));
+  device.setChecked(6, s.escape_codes);
+  device.setChecked(9, s.seek_top_of_form);
+  device.setChecked(34, s.interpoint_enabled);
+  let encodings = cat.encodings(s.model);
+  if (!encodings.length) encodings = ["North American English"];
+  device.setItems(37, encodings, Math.max(0, encodings.indexOf(s.encoding)));
+  device.setItems(39, lists.cases, s.high_punctuation ? 1 : 0);
+  device.setItems(41, lists.cases, s.upper_case ? 1 : 0);
+  device.setChecked(44, s.reverse_order);
+  device.setChecked(52, s.z_fold);
+  for (const [cid, v] of s.device_other) device.setText(cid, v);
+  // INFERENCE (as in the desktop program): the device fields shown for a model follow its properties.
+  for (const [cid, on] of [
+    [4, index],
+    [5, index],
+    [6, has("ETCAllowEscapeCodes") || has("UsingEscapeCodes")],
+    [7, has("ETSpeaks")],
+    [8, has("ETSpeaks")],
+    [9, has("AllowSeekTOF")],
+    [34, has("CanDoInterpoint")],
+    [52, has("IndexZfold")],
+  ]) {
+    device.enable(cid, on);
+  }
+  advanced.setChecked(5, s.custom_codes);
+  advanced.setText(7, s.start_codes);
+  advanced.setText(9, s.end_codes);
+  advanced.setItems(12, lists.lineEnds, Math.min(s.end_of_line, 2));
+  advanced.setItems(14, lists.pageEnds, Math.min(s.end_of_page, 5));
+  advanced.setChecked(15, s.eol_on_full_line);
+  advanced.setChecked(16, s.eop_on_full_page);
+  advanced.setChecked(17, s.pad_lines);
+  advanced.setChecked(18, s.prompt_new_sheet);
+  advanced.setChecked(20, s.one_at_a_time);
+  advanced.setText(22, String(s.text_delay));
+  advanced.setText(24, String(s.control_delay));
+}
+
+// ------------------------------------------------------------------ Embosser Setup (dialog 1032)
+
+const NO_EMBOSSER = "(No Target Embosser)";
+
+function setupForms(cat, name) {
+  const setup = name && loadSetup(name);
+  return setup ? JSON.parse(cat.forms(setup.model)) : [];
+}
+
+function fillSetupList(d, selected) {
+  const names = [NO_EMBOSSER, ...setupNames()];
+  d.setItems(7, names, Math.max(0, names.indexOf(selected)));
+}
+
+// The form box sorts its items, so they go in sorted and the choice is found by text.
+function fillSetupForms(d, cat, form) {
+  const name = d.selected(7);
+  const forms = setupForms(cat, name === NO_EMBOSSER ? "" : name);
+  const names = forms.map((f) => f.name).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+  const chosen = forms.find((f) => f.id === form)?.name;
+  d.setItems(13, names, names.length ? Math.max(0, names.indexOf(chosen)) : -1);
+  d.enable(13, names.length > 0);
+}
+
+// Document / Global: Embosser Setup (dialog 1032, spec 25 section 2b). Document: the document's setup and its
+// embosser page layout. Global: the default setup and the layout new documents take; New, Modify Embosser and
+// Remove (Global only) open the setup sheet and change the kept setups.
+async function embosserSetup(global) {
+  const cat = await embossers();
+  if (!cat) {
+    await message("The embosser models were not found.");
+    return;
+  }
+  const [defLayout, defCells, defLines] = defaultLayout();
+  const [setupName, layout, cells, lines] = global
+    ? [defaultSetup(), defLayout, defCells, defLines]
+    : // A braille document shows its own cells and lines; a print document the default layout's.
+      [doc.embosser, doc.layout, doc.kind === "braille" ? doc.cells : defCells, doc.kind === "braille" ? doc.lines : defLines];
+  let chosen = null;
+  const { result } = await showDialog(1032, {
+    title: global ? "Global: Embosser Setup" : undefined,
+    setup(d) {
+      fillSetupList(d, setupName);
+      fillSetupForms(d, cat, layout.form);
+      d.setText(15, String(cells));
+      d.setText(17, String(lines));
+      d.setText(19, String(layout.top_margin));
+      d.setText(21, String(layout.binding));
+      d.setChecked(22, layout.interpoint);
+      d.setChecked(23, layout.banner);
+      d.setChecked(24, layout.interline !== 0);
+      d.get(7).addEventListener("change", () => fillSetupForms(d, cat, loadSetup(d.selected(7))?.form ?? ""));
+      if (!global) {
+        [8, 9, 10].forEach((b) => d.hide(b));
+        return;
+      }
+      const sheet = async (modify) => {
+        const old = d.selected(7) === NO_EMBOSSER ? null : d.selected(7);
+        if (modify && !old) return;
+        const s = (modify && old && loadSetup(old)) || JSON.parse(cat.new_setup("", european()));
+        const changed = await editSetup(s, cat);
+        if (changed) {
+          saveSetup(changed, modify ? old : null);
+          fillSetupList(d, shownName(changed));
+          fillSetupForms(d, cat, changed.form);
+        }
+        d.get(modify ? 9 : 8).focus();
+      };
+      d.get(8).addEventListener("click", () => sheet(false));
+      d.get(9).addEventListener("click", () => sheet(true));
+      d.get(10).addEventListener("click", async () => {
+        const name = d.selected(7);
+        if (!name || name === NO_EMBOSSER) return;
+        const text =
+          setupNames().length === 1
+            ? `Are you sure you want to remove embosser configuration "${name}"?  This is currently your only configuration; you will need to create another one before you can emboss.`
+            : `Are you sure that you want to remove embosser configuration "${name}"?`;
+        if (await yesNo(text)) {
+          removeSetup(name);
+          fillSetupList(d, NO_EMBOSSER);
+          fillSetupForms(d, cat, "");
+        }
+        d.get(10).focus();
+      });
+    },
+    async onOk(d) {
+      const name = d.selected(7) === NO_EMBOSSER ? "" : d.selected(7) ?? "";
+      const form = setupForms(cat, name).find((f) => f.name === d.selected(13));
+      const field = (cid, current) => {
+        const n = d.number(cid);
+        return n !== null && n >= 0 ? n : current;
+      };
+      const [c, l, top, binding] = [field(15, cells), field(17, lines), field(19, layout.top_margin), field(21, layout.binding)];
+      const interline = d.checked(24);
+      // The page the form allows; with no embosser, 10 to 160 cells and 4 to 40 lines. Cells and binding margin
+      // share the line, lines and top margin the page (spec 25 2c). INFERENCE: the least page with a form is one
+      // cell and one line. The form's interline page is not given to the web build; its most is used.
+      const [maxC, maxL, minC, minL] = form ? [form.cells, form.lines, 1, 1] : [160, 40, 10, 4];
+      const binding2 = Math.min(binding, Math.max(0, maxC - minC));
+      const c2 = Math.min(Math.max(c, minC), Math.max(maxC - binding2, minC));
+      const top2 = Math.min(top, Math.max(0, maxL - minL));
+      const l2 = Math.min(Math.max(l, minL), Math.max(maxL - top2, minL));
+      if (c2 !== c || l2 !== l || top2 !== top || binding2 !== binding) {
+        d.setText(15, String(c2));
+        d.setText(17, String(l2));
+        d.setText(19, String(top2));
+        d.setText(21, String(binding2));
+        await message(
+          `BrailleMaker has updated desired document settings to fit the selected page size.\n\nCharacters per line: ${c2}\nLines per page: ${l2}\nTop margin in lines: ${top2}\nBinding margin in characters: ${binding2}`,
+        );
+        return false;
+      }
+      chosen = {
+        name,
+        layout: { form: form?.id ?? "", top_margin: top2, binding: binding2, interpoint: d.checked(22), banner: d.checked(23), interline: interline ? 1 : 0 },
+        cells: c2,
+        lines: l2,
+      };
+      return true;
+    },
+  });
+  if (result !== "ok" || !chosen) {
+    return;
+  }
+  if (global) {
+    setDefaultSetup(chosen.name);
+    saveDefaultLayout(chosen.layout, chosen.cells, chosen.lines);
+    return;
+  }
+  doc.embosser = chosen.name;
+  doc.layout = chosen.layout;
+  if (doc.kind === "braille") {
+    doc.cells = chosen.cells;
+    doc.lines = chosen.lines;
+  }
+}
+
+// At start-up, Global, Embosser Setup when no embosser is set up (spec 25 section 11).
+async function embosserSetupAtStart() {
+  if (setupNames().length === 0) {
+    await embosserSetup(true);
+    editor.focus();
+  }
+}
+
+// ------------------------------------------------------------------ page ranges (File Print and File Emboss)
+
+const PRINT_RANGE = [9, 10, 11, 12, 14];
+const EMBOSS_RANGE = [9, 10, 11, 12, 13];
+
+// All chosen, and the two range fields enabled only with the page numbers and page sequence numbers radios.
+function wirePageRange(d, radios, fields) {
+  d.setRadio(radios, 0);
+  d.enable(fields[0], false);
+  d.enable(fields[1], false);
+  radios.forEach((r, i) =>
+    d.get(r).addEventListener("change", () => {
+      d.enable(fields[0], i === 3);
+      d.enable(fields[1], i === 4);
+    }),
+  );
+}
+
+async function copiesField(d, cid) {
+  const n = d.number(cid);
+  if (n !== null && n >= 1) {
+    return n;
+  }
+  await message("You must print or emboss at least 1 copy, or press Cancel to avoid printing any.");
+  return null;
+}
+
+// The pages the page range group asks for (indexes, -1 for a blank page), or null when a message was shown and the
+// dialog stays open; the caret and the selection are the editor's as the dialog opened.
+async function chosenPages(d, radios, fields, braille, caret, from, to) {
+  const count = core.page_count(editor.value, doc.cells, doc.lines, braille);
+  const pageOf = (pos) => core.page_of(editor.value, doc.cells, doc.lines, braille, Math.max(0, pos));
+  let range;
+  switch (d.radio(radios) ?? 0) {
+    case 0:
+      range = { kind: "pages", pages: [...Array(count).keys()] };
+      break;
+    case 1:
+      range = { kind: "pages", pages: [pageOf(caret) - 1] };
+      break;
+    case 2:
+      // INFERENCE (as in the desktop program): an empty selection gives the no-pages message.
+      if (from >= to) {
+        range = { kind: "none" };
+      } else {
+        const first = pageOf(from);
+        const last = pageOf(to - 1);
+        range = { kind: "pages", pages: [...Array(last - first + 1).keys()].map((k) => first - 1 + k) };
+      }
+      break;
+    case 3:
+      range = JSON.parse(core.parse_range(d.text(fields[0]), count));
+      break;
+    default:
+      range = JSON.parse(core.parse_range(d.text(fields[1]), count));
+  }
+  if (range.kind === "malformed") {
+    await message(
+      "The page range specified is not written properly.  Type your page range as in the following example, which requests pages 1 through 7, a blank page, and then page 9 only: 1-7,b,9",
+    );
+    return null;
+  }
+  if (range.kind === "empty") {
+    await message("You must enter at least one page number.");
+    return null;
+  }
+  if (range.kind === "none") {
+    await message("That page range does not match any pages found in your document.");
+    return null;
+  }
+  if (
+    range.missing &&
+    !(await yesNo("The page range you entered must be adjusted because not all pages you specified were found in this document. Do you wish to proceed anyway?"))
+  ) {
+    return null;
+  }
+  if (range.repeated && !(await yesNo("The page range you have specified implies that one or more pages will be printed more than once.  Do you wish to proceed?"))) {
+    return null;
+  }
+  return range.pages;
+}
+
+// ------------------------------------------------------------------ File Print (dialog 1040)
+
+// The document's chosen pages printed through the browser's print dialog, `copies` times, a page per sheet; a
+// braille document in the braille font, with each line's print under it when interline print is chosen.
+async function print() {
+  if (!core) {
+    window.print();
+    return;
+  }
+  const braille = doc.kind === "braille";
+  const [caret, from, to] = [editor.selectionStart, editor.selectionStart, editor.selectionEnd];
+  let job = null;
+  const { result } = await showDialog(1040, {
+    setup(d) {
+      d.setText(7, "1");
+      wirePageRange(d, PRINT_RANGE, [15, 16]);
+      // On a braille document the page-number choice reads "Braille page number(s)": the reference copies control
+      // 13's text into control 12 (spec 24, 2a); control 13 itself is not used.
+      if (braille) d.get(12).closest("label").lastChild.textContent = d.get(13).closest("label").textContent;
+      d.hide(13);
+      d.setChecked(17, braille && store.get("print.interline") === "1");
+      d.enable(17, braille);
+    },
+    async onOk(d) {
+      const copies = await copiesField(d, 7);
+      if (copies === null) return false;
+      const pages = await chosenPages(d, PRINT_RANGE, [15, 16], braille, caret, from, to);
+      if (pages === null) return false;
+      job = { copies, pages, interline: braille && d.checked(17) };
+      return true;
+    },
+  });
+  if (result !== "ok") return;
+  if (braille) store.set("print.interline", job.interline ? "1" : "0");
+  const pages = JSON.parse(core.page_lines(editor.value, doc.cells, doc.lines, braille, Int32Array.from(job.pages)));
+  const back = job.interline ? await engine("en-ueb-g2-back") : null;
+  const area = $("print-area");
+  area.replaceChildren();
+  area.classList.toggle("braille", braille);
+  for (let copy = 0; copy < job.copies; copy++) {
+    for (const lines of pages) {
+      const page = document.createElement("section");
+      page.className = "printed-page";
+      for (const line of lines ?? []) {
+        const row = document.createElement("div");
+        row.className = "printed-line";
+        row.textContent = line || " ";
+        page.append(row);
+        if (back && line.trim()) {
+          const ink = document.createElement("div");
+          ink.className = "printed-ink";
+          try {
+            ink.textContent = back.translate(line.trimEnd());
+          } catch {
+            ink.textContent = "";
+          }
+          page.append(ink);
+        }
+      }
+      area.append(page);
+    }
+  }
+  window.print();
+  area.replaceChildren();
+}
+
+// ------------------------------------------------------------------ File Emboss (dialog 1039)
+
+// Sends a job through Web Serial, the browser's serial port access, with the setup's serial settings.
+// INFERENCE (web build): XON/XOFF handshaking has no Web Serial setting, so the port runs without handshaking then.
+async function sendSerial(setup, bytes) {
+  const port = await navigator.serial.requestPort();
+  const options = { baudRate: setup.baud, dataBits: setup.data_bits, stopBits: setup.stop_bits };
+  if (setup.serial_init) {
+    options.parity = ["none", "even", "odd", "none"][setup.parity] ?? "none";
+    options.flowControl = setup.handshaking === 0 ? "hardware" : "none";
+  }
+  await port.open(options);
+  try {
+    const writer = port.writable.getWriter();
+    try {
+      await writer.write(bytes);
+    } finally {
+      writer.releaseLock();
+    }
+  } finally {
+    await port.close();
+  }
+}
+
+// File, Emboss (dialog 1039, spec 25 2a): the checks before a job in the reference's order (spec 25 9.1), then the
+// document's laid-out pages in the chosen range, `copies` times, through its setup's byte pipeline. A serial port
+// goes through Web Serial where the browser has it; the browser reaches no printer queue, parallel port or USB
+// port, so those jobs, and Write to File, are saved as a file.
+async function emboss() {
+  if (!core) {
+    await message("Embossing is not available in this copy of the web build.");
+    return;
+  }
+  // INFERENCE: a setup name that is no longer kept here is treated as no setup chosen.
+  const setup = doc.embosser ? loadSetup(doc.embosser) : null;
+  if (!setup) {
+    await message(core.no_setup_message());
+    return;
+  }
+  const cat = await embossers();
+  if (!cat) {
+    await message("The embosser models were not found.");
+    return;
+  }
+  const [setupJson, layoutJson] = [JSON.stringify(setup), JSON.stringify(doc.layout)];
+  const verdict = cat.check(setupJson, layoutJson, doc.cells, doc.lines);
+  if (verdict.startsWith("stop:")) {
+    await message(verdict.slice(5));
+    return;
+  }
+  if (verdict.startsWith("ask:") && !(await yesNo(verdict.slice(4)))) {
+    return;
+  }
+  const braille = doc.kind === "braille";
+  const [caret, from, to] = [editor.selectionStart, editor.selectionStart, editor.selectionEnd];
+  let job = null;
+  const { result } = await showDialog(1039, {
+    setup(d) {
+      d.setText(7, "1");
+      wirePageRange(d, EMBOSS_RANGE, [14, 15]);
+      d.setText(23, shownName(setup));
+      d.setText(25, core.formName(doc.layout.form));
+    },
+    async onOk(d) {
+      const copies = await copiesField(d, 7);
+      if (copies === null) return false;
+      const pages = await chosenPages(d, EMBOSS_RANGE, [14, 15], braille, caret, from, to);
+      if (pages === null) return false;
+      job = { copies, pages };
+      return true;
+    },
+  });
+  if (result !== "ok") return;
+  const bytes = cat.job(setupJson, layoutJson, editor.value, braille, doc.cells, doc.lines, job.copies, Int32Array.from(job.pages), await encodingCodes(setup.encoding));
+  const [kind, target] = Object.entries(setup.output)[0];
+  if (kind === "Port" && /^com/i.test(target) && "serial" in navigator) {
+    try {
+      await sendSerial(setup, bytes);
+      return;
+    } catch (err) {
+      if (err?.name === "NotFoundError") return; // no port was chosen
+      await message(String(err.message ?? err));
+      return;
+    }
+  }
+  const named = kind === "File" && target.trim() ? target.trim().split(/[\\/]/).pop() : `${stem()}.brl`;
+  download(named, bytes);
+  if (kind !== "File") {
+    statusLine.textContent = `This browser cannot send to ${kind === "Printer" ? "a printer" : target}; the job was saved as ${named}.`;
+  }
 }
 
 // ------------------------------------------------------------------ commands
@@ -325,12 +1187,24 @@ fileInput.addEventListener("change", async () => {
   }
   const bytes = new Uint8Array(await file.arrayBuffer());
   const ext = file.name.split(".").pop().toLowerCase();
+  embosserDefaults();
   if ((ext === "dxp" || ext === "dxb") && core) {
     try {
       const d = core.read_document(bytes);
       doc.kind = d.braille ? "braille" : "print";
       editor.value = d.text;
       doc.file = d;
+      // The document's own embosser setup and page layout, as the file keeps them (spec 25 section 10); cells and
+      // lines are taken by a braille document.
+      if (d.embosser) doc.embosser = d.embosser;
+      if (d.embosser_layout) {
+        const l = JSON.parse(d.embosser_layout);
+        doc.layout = l.layout;
+        if (d.braille) {
+          doc.cells = l.cells;
+          doc.lines = l.lines;
+        }
+      }
     } catch (err) {
       statusLine.textContent = String(err.message ?? err);
       return;
@@ -365,32 +1239,17 @@ async function translateDocument() {
 
 function save(asBrf) {
   if (asBrf && core) {
-    download(`${stem()}.brf`, core.layout_braille(editor.value, 40, 25));
+    download(`${stem()}.brf`, core.layout_braille(editor.value, doc.cells, doc.lines));
   } else if (doc.file) {
-    download(doc.name, doc.file.save(editor.value));
+    // The setup name and layout go back into the file, as the desktop program saves them.
+    try {
+      download(doc.name, doc.file.save_with(editor.value, doc.embosser, doc.layout.form ? JSON.stringify(doc.layout) : "", doc.cells, doc.lines));
+    } catch {
+      download(doc.name, doc.file.save(editor.value));
+    }
   } else {
     download(`${stem()}.txt`, editor.value, "text/plain");
   }
-}
-
-async function emboss() {
-  const { result, d } = await showDialog(1039, null, (d) => {
-    d.controls.get(7).value = "1";
-    d.controls.get(9).checked = true;
-  });
-  if (result !== "ok") {
-    return;
-  }
-  const copies = Number(d.controls.get(7).value);
-  if (!Number.isInteger(copies) || copies < 1) {
-    statusLine.textContent = "You must print or emboss at least 1 copy, or press Cancel to avoid printing any.";
-    return;
-  }
-  if (!core) {
-    statusLine.textContent = "Embossing is not available in this copy of the web build.";
-    return;
-  }
-  download(`${stem()}.brl`, core.emboss_job(editor.value, 40, 25, copies));
 }
 
 const COMMANDS = {
@@ -398,6 +1257,7 @@ const COMMANDS = {
     doc.kind = "print";
     doc.name = "Untitled Print Document 1";
     doc.file = null;
+    embosserDefaults();
     editor.value = "";
     showTitle();
     editor.focus();
@@ -406,7 +1266,7 @@ const COMMANDS = {
   1105: () => save(false),
   1106: () => save(doc.kind === "braille"),
   1109: translateDocument,
-  1111: () => window.print(),
+  1111: print,
   1112: emboss,
   1310: () => {
     doc.translatedLine = !doc.translatedLine;
@@ -414,6 +1274,8 @@ const COMMANDS = {
     lastLine = null;
     showTranslatedLine();
   },
+  2601: () => embosserSetup(false),
+  3101: () => embosserSetup(true),
   3211: () => showDialog(1016),
 };
 
@@ -673,7 +1535,10 @@ document.addEventListener("keydown", (e) => {
 
 showTitle();
 showStatus();
-loadCore().then(() => {
+loadCore().then(async () => {
   lastLine = null;
   showTranslatedLine();
+  if (core) {
+    await embosserSetupAtStart();
+  }
 });

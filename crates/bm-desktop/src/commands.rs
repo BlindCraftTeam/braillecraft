@@ -1287,9 +1287,9 @@ fn emboss() {
     // The checks before a job, in the reference's order (spec 25 9.1): a setup chosen (2892), the document's paper
     // size defined on that embosser (2364, the job stops), its layout fitting that paper (2362, a question).
     // INFERENCE: a setup name that is no longer kept here is treated as no setup chosen.
-    const NO_SETUP: &str = "Before embossing this document, you must use Embosser Setup in the Document menu to choose an embosser.";
+    use bm_core::emboss_setup::{check, does_not_fit_message, form_not_defined_message, Check, NO_SETUP_MESSAGE};
     let Some(setup) = Some(&setup_name).filter(|n| !n.is_empty()).and_then(|n| emb::load_setup(n)) else {
-        message(NO_SETUP);
+        message(NO_SETUP_MESSAGE);
         return;
     };
     let ready = emb::with_catalog(|cat| match cat {
@@ -1304,23 +1304,13 @@ fn emboss() {
         }
     };
     let (shown_setup, shown_form) = (setup.shown_name(), emb::form_name(&layout.form));
-    let Some(form) = model.forms.iter().find(|f| f.id == layout.form) else {
-        message(&format!(
-            "This document is set to use a paper size (\"{shown_form}\") that is not defined on its assigned embosser (\"{shown_setup}\").  You must fix this in the \"Document: Embosser Settings\" dialogue before embossing the document; you should choose an embosser and paper size capable of fitting {lines} lines of {cells} cells to avoid reformatting the document."
-        ));
-        return;
-    };
-    // INFERENCE: the reference's fit test (dxemb_form_validate_settings) was not decoded; this is the rule the
-    // Embosser Setup dialog keeps: cells and binding margin share the form's line, lines and top margin its page,
-    // on the interline page when interline print is on and the form gives one.
-    let (max_cells, max_lines) = if layout.interline != 0 { form.interline.map(|i| i.0).unwrap_or(form.maximum) } else { form.maximum };
-    let fits = cells + layout.binding <= max_cells && lines + layout.top_margin <= max_lines;
-    if !fits
-        && !yes_no(&format!(
-            "This document is set for a braille layout that won't fit properly on its assigned embosser (\"{shown_setup}\") and paper size (\"{shown_form}\").  You should fix this in the \"Document: Embosser Settings\" dialogue before embossing; you should choose an embosser and paper size capable of fitting {lines} lines of {cells} cells to avoid reformatting the document.  Do you want to emboss this anyway?"
-        ))
-    {
-        return;
+    match check(&model, &layout, cells, lines) {
+        Check::FormNotDefined => {
+            message(&form_not_defined_message(&shown_setup, &shown_form, cells, lines));
+            return;
+        }
+        Check::DoesNotFit if !yes_no(&does_not_fit_message(&shown_setup, &shown_form, cells, lines)) => return,
+        _ => {}
     }
     let pages = app::with(|a| {
         let shown = a.docs[i].shown();
@@ -1956,7 +1946,7 @@ fn embosser_setup(global: bool) {
                 Ok(cat) => {
                     let mut s = match old.as_deref().filter(|_| modify).and_then(emb::load_setup) {
                         Some(s) => s,
-                        None => emb::Setup::for_model(cat, ""),
+                        None => emb::new_setup(cat, ""),
                     };
                     if emb::edit(&mut s, cat) {
                         emb::save_setup(&s, if modify { old.as_deref() } else { None });

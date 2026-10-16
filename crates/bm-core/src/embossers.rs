@@ -286,10 +286,23 @@ pub struct Catalog {
 impl Catalog {
     pub fn read(shipped: &Path, user: Option<&Path>) -> Result<Catalog, String> {
         let text = std::fs::read_to_string(shipped).map_err(|e| format!("{}: {e}", shipped.display()))?;
-        let mut models = parse(&text).map_err(|e| format!("Syntax error in {} at or near line {}: {}", shipped.display(), e.line, e.message))?;
-        if let Some(user) = user.filter(|p| p.exists()) {
-            let text = std::fs::read_to_string(user).map_err(|e| format!("{}: {e}", user.display()))?;
-            let own = parse(&text).map_err(|e| format!("Syntax error in {} at or near line {}: {}", user.display(), e.line, e.message))?;
+        let own = match user.filter(|p| p.exists()) {
+            Some(user) => Some((std::fs::read_to_string(user).map_err(|e| format!("{}: {e}", user.display()))?, user.display().to_string())),
+            None => None,
+        };
+        Self::from_named_texts((&text, &shipped.display().to_string()), own.as_ref().map(|(t, n)| (t.as_str(), n.as_str())))
+    }
+
+    /// The catalog from the texts of the shipped file and the user's file (the web build has no folder to read).
+    pub fn from_texts(shipped: &str, user: Option<&str>) -> Result<Catalog, String> {
+        Self::from_named_texts((shipped, "embossers.txt"), user.map(|t| (t, "myembossers.txt")))
+    }
+
+    fn from_named_texts(shipped: (&str, &str), user: Option<(&str, &str)>) -> Result<Catalog, String> {
+        let syntax = |name: &str, e: Error| format!("Syntax error in {name} at or near line {}: {}", e.line, e.message);
+        let mut models = parse(shipped.0).map_err(|e| syntax(shipped.1, e))?;
+        if let Some((text, name)) = user {
+            let own = parse(text).map_err(|e| syntax(name, e))?;
             models.retain(|m| !own.iter().any(|o| o.names.iter().any(|n| m.has_name(&n.name))));
             models.extend(own);
         }

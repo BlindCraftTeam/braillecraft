@@ -182,6 +182,8 @@ name = "bm-core"
 version = "0.1.0"
 dependencies = [
  "encoding_rs",
+ "serde",
+ "serde_json",
  "windows-sys 0.61.2",
 ]
 
@@ -218,6 +220,7 @@ name = "bm-web"
 version = "0.1.0"
 dependencies = [
  "bm-core",
+ "serde_json",
  "wasm-bindgen",
 ]
 

@@ -187,4 +187,24 @@ button {
   font: inherit;
 }
 button.default { border: 2px solid var(--accent); }
-button:disabled, input:disabled, select:disabled { opacity: 0.6; }
+button:disabled, input:disabled, select:disabled, .disabled { opacity: 0.6; }
+
+/* Message boxes keep the reference messages' line breaks. */
+dialog p.message { margin: 0; max-width: 36rem; white-space: pre-wrap; }
+
+/* The embosser setup sheet: its pages as tabs. */
+[role="tablist"] { display: flex; flex-wrap: wrap; gap: 0.25rem; align-self: stretch; border-bottom: 1px solid var(--line); }
+[role="tab"] { min-width: 0; border-bottom: 0; }
+[role="tab"][aria-selected="true"] { background: var(--bg); font-weight: bold; border-width: 2px 2px 0; border-color: var(--accent); }
+.page { display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; align-self: stretch; }
+.page[hidden] { display: none; }
+
+/* File Print: only the chosen pages print, a page per sheet. */
+#print-area { display: none; }
+@media print {
+  body > :not(#print-area) { display: none !important; }
+  #print-area { display: block; color: #000; background: #fff; }
+  .printed-page { break-after: page; font: 12pt/1.35 monospace; }
+  .printed-line, .printed-ink { white-space: pre; }
+  #print-area.braille .printed-line { font-family: "BrailleMaker Braille", monospace; }
+}
