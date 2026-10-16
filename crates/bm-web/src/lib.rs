@@ -13,6 +13,279 @@ fn error(e: impl std::fmt::Display) -> JsError {
     JsError::new(&e.to_string())
 }
 
+// ------------------------------------------------------------------ the editor's codes
+
+/// The editor's text with its codes kept apart from it, as the desktop program keeps them (bm_core::doctext): a code
+/// is a code because the program put it in (a menu code, a style, a document file's codes), never because the text
+/// has brackets in it. `known` holds text taken out or copied with codes, `taken` codes that went, as the desktop's
+/// own. The browser counts positions in UTF-16 units; they are converted here.
+#[derive(Default)]
+struct Tracker {
+    shown: Shown,
+    known: Vec<Shown>,
+    taken: Vec<(usize, Shown)>,
+    /// The editor's text converted cell for cell (`editor_alias`).
+    alias: Option<String>,
+    /// Texts made from the editor's since its last change, with its codes: a line of it (`editor_slice`) and braille
+    /// conversions of a known text (`convert_braille`), newest last.
+    derived: Vec<Shown>,
+}
+
+thread_local! {
+    static EDITOR: std::cell::RefCell<Tracker> = std::cell::RefCell::new(Tracker::default());
+}
+
+/// A UTF-16 position in `text` as a character position.
+fn char_pos(text: &str, utf16: u32) -> usize {
+    let mut units = 0u32;
+    for (i, c) in text.chars().enumerate() {
+        if units >= utf16 {
+            return i;
+        }
+        units += c.len_utf16() as u32;
+    }
+    text.chars().count()
+}
+
+/// A character position in `text` as a UTF-16 position.
+fn utf16_pos(text: &str, chars: usize) -> u32 {
+    text.chars().take(chars).map(|c| c.len_utf16() as u32).sum()
+}
+
+/// `text` (editor form) with the editor's codes when it is the editor's text or the conversion of it declared with
+/// `editor_alias`; else every bracketed run in it is a code (text the program wrote itself).
+fn shown_of(text: &str) -> Shown {
+    tracked(text).unwrap_or_else(|| Shown::marked(text))
+}
+
+/// `text` with the editor's codes, when it is the editor's text, its declared conversion, or a text made from it
+/// (`derived`).
+fn tracked(text: &str) -> Option<Shown> {
+    EDITOR.with(|e| {
+        let e = e.borrow();
+        let ours = &e.shown;
+        if ours.text == text {
+            Some(ours.clone())
+        } else if e.alias.as_deref() == Some(text) {
+            Some(Shown { text: text.to_string(), codes: ours.codes.clone(), inner: ours.inner.clone() })
+        } else {
+            e.derived.iter().rev().find(|d| d.text == text).cloned()
+        }
+    })
+}
+
+/// Keeps a text made from the editor's, with its codes (the last few).
+fn derive(s: Shown) {
+    EDITOR.with(|e| {
+        let mut e = e.borrow_mut();
+        e.derived.retain(|d| d.text != s.text);
+        e.derived.push(s);
+        if e.derived.len() > 8 {
+            e.derived.remove(0);
+        }
+    })
+}
+
+/// Running text (a translation's result) as the editor shows it, its codes kept for the calls given it (a braille
+/// conversion for display), so braille brackets in it stay cells.
+#[wasm_bindgen]
+pub fn running_text(running: &str) -> String {
+    let s = Shown::from_running(running);
+    let text = s.text.clone();
+    derive(s);
+    text
+}
+
+/// Text with no codes (a laid-out line), kept as such for the calls given it.
+#[wasm_bindgen]
+pub fn plain_text(text: &str) -> String {
+    derive(Shown::plain(text));
+    text.to_string()
+}
+
+/// The editor's text from UTF-16 `from` to `to` (a line, for the translated line), with its codes kept for the
+/// calls given it.
+#[wasm_bindgen]
+pub fn editor_slice(from: u32, to: u32) -> String {
+    let part = EDITOR.with(|e| {
+        let e = e.borrow();
+        let t = &e.shown.text;
+        e.shown.slice(char_pos(t, from), char_pos(t, to))
+    });
+    let text = part.text.clone();
+    derive(part);
+    text
+}
+
+/// Whether `text` is the editor's text with only cells outside its codes changed (braille converted between
+/// encodings, cell for cell).
+fn converts(ours: &Shown, text: &str) -> bool {
+    let (a, b): (Vec<char>, Vec<char>) = (ours.text.chars().collect(), text.chars().collect());
+    a.len() == b.len() && ours.codes.iter().all(|&(s, t)| a[s..t] == b[s..t])
+}
+
+/// `text` is the editor's text converted cell for cell (braille in North American braille for the core, while the
+/// editor shows another encoding): calls given it read the editor's codes. Answers whether it is such a conversion.
+#[wasm_bindgen]
+pub fn editor_alias(text: &str) -> bool {
+    EDITOR.with(|e| {
+        let mut e = e.borrow_mut();
+        let ok = converts(&e.shown, text);
+        e.alias = ok.then(|| text.to_string());
+        ok
+    })
+}
+
+/// The editor shows `text`, its text converted cell for cell (another braille encoding): the codes stay where they
+/// are. Answers whether it was such a conversion; otherwise nothing changes.
+#[wasm_bindgen]
+pub fn editor_convert(text: &str) -> bool {
+    EDITOR.with(|e| {
+        let mut e = e.borrow_mut();
+        if !converts(&e.shown, text) {
+            return false;
+        }
+        e.shown.text = text.to_string();
+        e.alias = None;
+        e.derived.clear();
+        true
+    })
+}
+
+fn remember(t: &mut Tracker, s: Shown) {
+    if s.codes.is_empty() {
+        return;
+    }
+    t.known.retain(|k| k.text != s.text);
+    t.known.push(s);
+    if t.known.len() > 32 {
+        t.known.remove(0);
+    }
+}
+
+/// The editor takes a document's running text (codes marked 0x1C ... 0x1F, as a document file keeps them); answers
+/// the text as the editor shows it.
+#[wasm_bindgen]
+pub fn editor_load(running: &str) -> String {
+    EDITOR.with(|e| {
+        let mut e = e.borrow_mut();
+        e.shown = Shown::from_running(running);
+        e.taken.clear();
+        e.alias = None;
+        e.derived.clear();
+        e.shown.text.clone()
+    })
+}
+
+/// The editor takes text with no codes (a text or braille file, a new document).
+#[wasm_bindgen]
+pub fn editor_load_plain(text: &str) {
+    EDITOR.with(|e| {
+        let mut e = e.borrow_mut();
+        e.shown = Shown::plain(text);
+        e.taken.clear();
+        e.alias = None;
+        e.derived.clear();
+    })
+}
+
+/// The editor's text became `text` (an edit): its codes follow it (bm_core::doctext::after_edit). Answers what is
+/// left of codes the edit broke, as UTF-16 [from, to] pairs, last first: they are taken out, since a code goes as a
+/// whole.
+#[wasm_bindgen]
+pub fn editor_edit(text: &str) -> Vec<u32> {
+    EDITOR.with(|e| {
+        let mut e = e.borrow_mut();
+        if e.shown.text == text {
+            return Vec::new();
+        }
+        let taken = std::mem::take(&mut e.taken);
+        let edited = bm_core::doctext::after_edit(&e.shown, text, &e.known, &taken);
+        e.shown = edited.shown;
+        e.taken = edited.taken;
+        e.alias = None;
+        e.derived.clear();
+        if let Some(r) = edited.removed {
+            remember(&mut e, r);
+        }
+        edited.remains.iter().flat_map(|&(s, t)| [utf16_pos(text, s), utf16_pos(text, t)]).collect()
+    })
+}
+
+/// The text the program put in at UTF-16 position `at` (editor form, `marked`: its bracketed runs are codes) is
+/// known as codes; the editor's text already holds it.
+#[wasm_bindgen]
+pub fn editor_mark(at: u32, marked: &str) {
+    EDITOR.with(|e| {
+        let mut e = e.borrow_mut();
+        let from = char_pos(&e.shown.text, at);
+        let put = Shown::marked(marked);
+        let len = put.text.chars().count();
+        if e.shown.text.chars().skip(from).take(len).ne(put.text.chars()) {
+            return;
+        }
+        let codes: Vec<(usize, usize)> = put.codes.iter().map(|c| (c.0 + from, c.1 + from)).collect();
+        let inner: Vec<(usize, usize)> = put.inner.iter().map(|c| (c.0 + from, c.1 + from)).collect();
+        e.shown.codes.extend(codes);
+        e.shown.inner.extend(inner);
+        e.shown.codes.sort_unstable();
+        e.shown.codes.dedup();
+        e.shown.inner.sort_unstable();
+        e.shown.inner.dedup();
+        e.alias = None;
+        e.derived.clear();
+    })
+}
+
+/// Code text the program puts in ("[p]", "[hds2]") as the editor shows it: a [p] or [l] code takes the editor's own
+/// line break after it, as the desktop program's editor puts it in.
+#[wasm_bindgen]
+pub fn marked_text(codes: &str) -> String {
+    Shown::marked(codes).text
+}
+
+/// Copy or cut of UTF-16 `from` to `to`: the part is kept with its codes, so pasting it brings them back.
+#[wasm_bindgen]
+pub fn editor_remember(from: u32, to: u32) {
+    EDITOR.with(|e| {
+        let mut e = e.borrow_mut();
+        let (f, t) = (char_pos(&e.shown.text, from), char_pos(&e.shown.text, to));
+        let part = e.shown.slice(f, t);
+        remember(&mut e, part);
+    })
+}
+
+/// The editor's codes, as UTF-16 [from, to] pairs (Change Case leaves them as they are).
+#[wasm_bindgen]
+pub fn editor_codes() -> Vec<u32> {
+    EDITOR.with(|e| {
+        let e = e.borrow();
+        e.shown.codes.iter().flat_map(|&(s, t)| [utf16_pos(&e.shown.text, s), utf16_pos(&e.shown.text, t)]).collect()
+    })
+}
+
+/// The editor's text in running form (codes marked 0x1C ... 0x1F), as a document file keeps it.
+#[wasm_bindgen]
+pub fn editor_running() -> String {
+    EDITOR.with(|e| e.borrow().shown.to_running())
+}
+
+/// Document, Modify Style, Rename with "everywhere": the style's codes are renamed in the editor's text, where
+/// codes are marked; text that only reads like the code is left as it is. Answers the new editor text.
+#[wasm_bindgen]
+pub fn editor_rename_style(old: &str, new: &str) -> String {
+    EDITOR.with(|e| {
+        let mut e = e.borrow_mut();
+        let (o, c) = (bm_core::doctext::OPEN, bm_core::doctext::CLOSE);
+        let running = e.shown.to_running().replace(&format!("{o}es~{old}{c}"), &format!("{o}es~{new}{c}")).replace(&format!("{o}ee~{old}{c}"), &format!("{o}ee~{new}{c}"));
+        e.shown = Shown::from_running(&running);
+        e.taken.clear();
+        e.alias = None;
+        e.derived.clear();
+        e.shown.text.clone()
+    })
+}
+
 /// A translator made from one table source (a shipped .bmt file's text).
 #[wasm_bindgen]
 pub struct Engine(Translator);
@@ -27,30 +300,39 @@ impl Engine {
     /// Translates a text (codes written in square brackets, as the editor shows them), giving the result in the
     /// same form: codes in brackets, a line break after each new-line and paragraph code.
     pub fn translate(&self, text: &str) -> Result<String, JsError> {
-        self.0.translate(&Shown::marked(text).to_running()).map(|out| Shown::from_running(&out).text).map_err(error)
+        self.0.translate(&shown_of(text).to_running()).map(|out| Shown::from_running(&out).text).map_err(error)
     }
 
     /// Translates a document's text (editor form) as the desktop program does: the document's initial codes in force
     /// from the start and its styles looked up by the engine; the echo of the initial codes is left off the result.
     pub fn translate_document(&self, text: &str, doc: &Document, initial: &str) -> Result<String, JsError> {
+        translate_document(&self.0, text, &doc.0, initial, None).map(|r| Shown::from_running(&r).text).map_err(error)
+    }
+
+    /// As `translate_document`, the result in running form (codes marked 0x1C ... 0x1F).
+    pub fn translate_document_running(&self, text: &str, doc: &Document, initial: &str) -> Result<String, JsError> {
         translate_document(&self.0, text, &doc.0, initial, None).map_err(error)
     }
 
     /// As `translate_document`, with the language switches of the table list, from the tables the list has loaded
     /// (`LanguageList::add_table`); a table asked for and not loaded is given by `LanguageList::missing`, to be
     /// loaded before translating again.
-    pub fn translate_document_with(&self, text: &str, doc: &Document, initial: &str, list: &LanguageList, braille_document: bool) -> Result<String, JsError> {
+    /// With `running`, the result is in running form (codes marked 0x1C ... 0x1F), for the editor to take with its
+    /// codes (`editor_load`).
+    #[allow(clippy::too_many_arguments)]
+    pub fn translate_document_with(&self, text: &str, doc: &Document, initial: &str, list: &LanguageList, braille_document: bool, running: bool) -> Result<String, JsError> {
         let mut languages = Languages::from_list(&list.0, LanguageSource::Loaded(list.1.clone()));
         languages.print_document = !braille_document;
-        translate_document(&self.0, text, &doc.0, initial, Some(&languages)).map_err(error)
+        let r = translate_document(&self.0, text, &doc.0, initial, Some(&languages)).map_err(error)?;
+        Ok(if running { r } else { Shown::from_running(&r).text })
     }
 }
 
 fn translate_document(tr: &Translator, text: &str, doc: &DxDocument, initial: &str, languages: Option<&Languages>) -> Result<String, bm_core::engine::EngineError> {
     let lead = Shown::marked(initial).to_running();
-    let running = format!("{lead}{}", Shown::marked(text).to_running());
+    let running = format!("{lead}{}", shown_of(text).to_running());
     let out = tr.translate_marked(&running, Some(&style_table(doc)), languages)?;
-    Ok(Shown::from_running(out.strip_prefix(lead.as_str()).unwrap_or(&out)).text)
+    Ok(out.strip_prefix(lead.as_str()).unwrap_or(&out).to_string())
 }
 
 /// A document's styles as the engine looks them up (the desktop program's own).
@@ -175,6 +457,12 @@ impl Document {
         Shown::from_running(&self.0.text).text
     }
 
+    /// The text in running form (codes marked 0x1C ... 0x1F), for the editor to take with its codes.
+    #[wasm_bindgen(getter)]
+    pub fn running(&self) -> String {
+        self.0.text.clone()
+    }
+
     /// The four table names: print to braille, its scan table, braille to print, its scan table.
     #[wasm_bindgen(getter)]
     pub fn tables(&self) -> Vec<String> {
@@ -201,7 +489,7 @@ impl Document {
 
     /// The file's bytes with `text` (editor form) in place of the document's text; everything else as read.
     pub fn save(&self, text: &str) -> Vec<u8> {
-        let doc = DxDocument { text: Shown::marked(text).to_running(), ..self.0.clone() };
+        let doc = DxDocument { text: shown_of(text).to_running(), ..self.0.clone() };
         dxfile::write(&doc)
     }
 
@@ -232,7 +520,7 @@ impl Document {
     /// tables by their older names where they have them (spec 04d-C; a web document has no initial codes in force).
     pub fn save_version(&self, text: &str, embosser: &str, layout: &str, cells: u32, lines: u32, version: u16) -> Result<Vec<u8>, JsError> {
         let tables = if version == 0 { dxfile::older_table_names(&self.0.tables, |_| false) } else { self.0.tables.clone() };
-        let mut doc = DxDocument { text: Shown::marked(text).to_running(), embosser: embosser.to_string(), version, tables, ..self.0.clone() };
+        let mut doc = DxDocument { text: shown_of(text).to_running(), embosser: embosser.to_string(), version, tables, ..self.0.clone() };
         if !layout.is_empty() {
             let l: Layout = serde_json::from_str(layout).map_err(error)?;
             if !l.form.is_empty() {
@@ -255,7 +543,7 @@ impl Document {
 
     /// Save As refreshable braille (.lbf): `text` (editor form) with the document's styles (bm_core::lbf).
     pub fn refreshable(&self, text: &str) -> Vec<u8> {
-        bm_core::lbf::write(&Shown::marked(text).to_running(), &self.0.styles)
+        bm_core::lbf::write(&shown_of(text).to_running(), &self.0.styles)
     }
 
     /// A style's start and end codes as the style dialogs show them (each code in brackets), as JSON [begin, end];
@@ -321,7 +609,7 @@ impl Document {
     pub fn as_kind(&self, braille: bool, text: &str) -> Document {
         Document(DxDocument {
             kind: if braille { DocumentKind::Braille } else { DocumentKind::Print },
-            text: Shown::marked(text).to_running(),
+            text: shown_of(text).to_running(),
             embosser: String::new(),
             layout: None,
             ..self.0.clone()
@@ -386,7 +674,7 @@ pub fn new_document(braille: bool, text: &str, template: &str) -> Document {
         translated_line: true,
         six_key: false,
         tables: templates::tables(template).unwrap_or_else(|| ["enuncp", "enudxp", "enuncb", "gendxb"].map(String::from)),
-        text: Shown::marked(text).to_running(),
+        text: shown_of(text).to_running(),
         styles,
         style_index: Vec::new(),
         settings: Vec::new(),
@@ -447,7 +735,7 @@ pub fn formatted_braille(text: &str, cells: u32, lines: u32, shown_cells: &str, 
 #[wasm_bindgen]
 pub fn coded(text: &str, script: &[u8], wrap: &[u8]) -> Result<Vec<u8>, JsError> {
     use bm_core::rule_script::{run_all, RuleScript};
-    let body = dxfile::body_bytes(&Shown::marked(text).to_running());
+    let body = dxfile::body_bytes(&shown_of(text).to_running());
     let mut scripts = [RuleScript::from_bytes(script, None).map_err(error)?, RuleScript::from_bytes(wrap, None).map_err(error)?];
     run_all(&mut scripts, &body).map_err(error)
 }
@@ -457,7 +745,7 @@ pub fn coded(text: &str, script: &[u8], wrap: &[u8]) -> Result<Vec<u8>, JsError>
 /// on unchanged), then the LaTeX rule script (`script`, latex.rules).
 #[wasm_bindgen]
 pub fn latex(text: &str, table: &str, script: &[u8]) -> Result<Vec<u8>, JsError> {
-    let running = Shown::marked(text).to_running();
+    let running = shown_of(text).to_running();
     let translated = Translator::from_source(table).ok().and_then(|t| t.translate_marked(&running, None, None).ok());
     // The engine writes bytes; its text holds one character per byte.
     let middle: Vec<u8> = match translated {
@@ -485,7 +773,8 @@ pub fn convert_braille(text: &str, from: &str, to: &str) -> Result<String, JsErr
             None => c,
         }
     };
-    let shown = Shown::marked(text);
+    let known = tracked(text);
+    let shown = known.clone().unwrap_or_else(|| Shown::marked(text));
     let chars: Vec<char> = shown.text.chars().collect();
     let mut out = String::with_capacity(shown.text.len());
     let mut at = 0;
@@ -495,6 +784,10 @@ pub fn convert_braille(text: &str, from: &str, to: &str) -> Result<String, JsErr
         at = end;
     }
     out.extend(chars[at.min(chars.len())..].iter().map(|&c| convert(c)));
+    // A conversion of the editor's text (or of a text made from it) keeps its codes for the calls given it.
+    if let Some(k) = known {
+        derive(Shown { text: out.clone(), codes: k.codes, inner: k.inner });
+    }
     Ok(out)
 }
 
@@ -505,7 +798,7 @@ pub fn convert_braille(text: &str, from: &str, to: &str) -> Result<String, JsErr
 #[wasm_bindgen]
 pub fn status_line(text: &str, cells: u32, lines: u32, braille: bool, position: usize, codes: bool, verbose: bool, six_key: bool, highlight: bool) -> String {
     use bm_core::status::{char_field, style_text, StatusLine};
-    let shown = Shown::marked(text);
+    let shown = shown_of(text);
     let pos = position as i64;
     StatusLine {
         style: style_text(&shown, pos),
@@ -587,7 +880,7 @@ pub fn read_document(bytes: &[u8]) -> Result<Document, JsError> {
 /// the lines of each page with CR LF, a form feed after every page (the formatted text of a braille file).
 #[wasm_bindgen]
 pub fn layout_braille(text: &str, cells: usize, lines: usize) -> String {
-    let pages = bm_core::format::format(&Shown::marked(text), &bm_core::format::Layout::braille(cells, lines), None);
+    let pages = bm_core::format::format(&shown_of(text), &bm_core::format::Layout::braille(cells, lines), None);
     bm_core::format::formatted_text(&pages)
 }
 
@@ -595,7 +888,7 @@ pub fn layout_braille(text: &str, cells: usize, lines: usize) -> String {
 /// `lines`, `copies` times, as Write to File gives them.
 #[wasm_bindgen]
 pub fn emboss_job(text: &str, cells: u32, lines: u32, copies: u32) -> Vec<u8> {
-    let pages = bm_core::format::format(&Shown::marked(text), &bm_core::format::Layout::braille(cells as usize, lines as usize), None);
+    let pages = bm_core::format::format(&shown_of(text), &bm_core::format::Layout::braille(cells as usize, lines as usize), None);
     let sides: Vec<Option<Vec<String>>> = pages.iter().map(|p| Some(p.lines.iter().map(|l| l.text.clone()).collect())).collect();
     let options = bm_core::emboss::Options { cells, lines, ..bm_core::emboss::Options::default() };
     bm_core::emboss::job(&options, &sides, copies)
@@ -606,7 +899,7 @@ pub fn emboss_job(text: &str, cells: u32, lines: u32, copies: u32) -> Vec<u8> {
 fn laid_out(text: &str, cells: u32, lines: u32, braille: bool) -> Vec<bm_core::format::Page> {
     let (c, l) = (cells.max(1) as usize, lines.max(1) as usize);
     let layout = if braille { bm_core::format::Layout::braille(c, l) } else { bm_core::format::Layout::print(c, l) };
-    bm_core::format::format(&Shown::marked(text), &layout, None)
+    bm_core::format::format(&shown_of(text), &layout, None)
 }
 
 /// How many pages a document takes laid out `cells` by `lines`.
@@ -970,6 +1263,49 @@ mod tests {
         let graded: serde_json::Value = serde_json::from_str(&list.menus(1, doc.tables(), &regrade("", "[g1l]"))).unwrap();
         assert_eq!(graded["checked"], 2801);
         assert_eq!(list.tables(active).len(), 4);
+    }
+
+    #[test]
+    fn the_editor_keeps_codes_apart_from_brackets_in_the_text() {
+        use bm_core::doctext::{CLOSE, OPEN};
+        // Typed text with brackets is text; a code the program puts in is a code.
+        editor_load_plain("");
+        assert!(editor_edit("a [b] c").is_empty());
+        // A [p] code is put in with the editor's own line break after it.
+        assert_eq!(marked_text("[p]"), "[p]\n");
+        let typed = "a [b] c[p]\n";
+        assert!(editor_edit(typed).is_empty());
+        editor_mark(7, "[p]");
+        assert_eq!(editor_running(), format!("a [b] c{OPEN}p{CLOSE}"));
+        assert_eq!(editor_codes(), vec![7, 10]);
+        // Saved, the bracket stays text and the code a code.
+        let doc = new_document(false, "", "");
+        let back = read_document(&doc.save(typed)).ok().unwrap();
+        assert_eq!(back.running(), format!("a [b] c{OPEN}p{CLOSE}"));
+        // Taking one bracket of the code: what is left of it goes as a whole, with its line break.
+        assert_eq!(editor_edit("a [b] cp]\n"), vec![9, 10, 7, 9]);
+        assert_eq!(editor_edit("a [b] c"), Vec::<u32>::new());
+        assert!(editor_codes().is_empty());
+        // Cut and paste bring the codes back.
+        editor_load(&format!("x{OPEN}hds2{CLOSE}y"));
+        editor_remember(0, 8);
+        assert!(editor_edit("").is_empty());
+        assert!(editor_edit("x[hds2]y").is_empty());
+        assert_eq!(editor_codes(), vec![1, 7]);
+        // A conversion declared cell for cell reads the same codes.
+        assert!(editor_alias("X[hds2]Y"));
+        assert_eq!(shown_of("X[hds2]Y").codes, vec![(1, 7)]);
+        assert!(!editor_alias("X[hds3]Y"));
+        assert_eq!(editor_rename_style("q", "r"), "x[hds2]y");
+        // A line of the editor, and a braille conversion of it, keep its codes; the code's text is not converted.
+        let line = editor_slice(0, 8);
+        assert_eq!(line, "x[hds2]y");
+        let converted = convert_braille(&line, r#"["x","h"]"#, r#"["z","q"]"#).ok().unwrap();
+        assert_eq!(converted, "z[hds2]y");
+        assert_eq!(shown_of(&converted).codes, vec![(1, 7)]);
+        // Brackets typed as text are converted as cells.
+        editor_load_plain("[h]");
+        assert_eq!(convert_braille("[h]", r#"["x","h"]"#, r#"["z","q"]"#).ok().unwrap(), "[q]");
     }
 
     #[test]

@@ -73,12 +73,12 @@ async function documentEngine(braille = doc.kind === "braille") {
 // and its initial codes, with the language switches of the table list, as the desktop program does. A switch asks
 // for a table the page has not fetched yet: it is fetched and the text translated again, until nothing new is
 // asked for; a table not in this copy stays on the current table, as an unknown code does.
-async function translateText(e, text, file, braille) {
+async function translateText(e, text, file, braille, running = false) {
   const initial = doc.initialCodes ?? "";
   const list = await languages();
-  if (!list) return e.translate_document(text, file, initial);
+  if (!list) return running ? e.translate_document_running(text, file, initial) : e.translate_document(text, file, initial);
   for (let pass = 0; ; pass++) {
-    const out = e.translate_document_with(text, file, initial, list, braille);
+    const out = e.translate_document_with(text, file, initial, list, braille, running);
     const missing = list.missing();
     if (!missing.length || pass >= 8) return out;
     for (const code of missing) {
@@ -444,7 +444,9 @@ function caretLine() {
   const before = editor.value.slice(0, editor.selectionStart);
   const line = before.split("\n").length;
   const column = before.length - before.lastIndexOf("\n");
-  return { line, column, text: editor.value.split("\n")[line - 1] ?? "" };
+  const start = before.lastIndexOf("\n") + 1;
+  const end = editor.value.indexOf("\n", start);
+  return { line, column, text: editor.value.split("\n")[line - 1] ?? "", start, end: end < 0 ? editor.value.length : end };
 }
 
 // The status line, as the desktop program shows it (bm_core::status): the current style, Page, Line and Column on the
@@ -487,7 +489,11 @@ async function showTranslatedLine() {
     return;
   }
   try {
-    translated.textContent = doc.kind === "print" ? fromNA(await translateText(e, text, file, false)) : await translateText(e, toNA(text), file, true);
+    // The caret's line with the editor's codes; the result keeps its own codes apart from braille brackets.
+    const { start, end } = caretLine();
+    const part = core.editor_slice(start, end);
+    translated.textContent =
+      doc.kind === "print" ? fromNA(core.running_text(await translateText(e, part, file, false, true))) : core.running_text(await translateText(e, toNA(part), file, true, true));
   } catch (err) {
     translated.textContent = String(err.message ?? err);
   }
@@ -521,10 +527,24 @@ editor.addEventListener("keyup", (e) => {
 });
 
 editor.addEventListener("input", () => {
+  // The codes follow the edit (bm_core::doctext, as in the desktop program); a code that lost a bracket goes as a
+  // whole, last first, and that change comes back here.
+  if (core) {
+    const remains = core.editor_edit(editor.value);
+    if (remains.length) {
+      for (let k = 0; k < remains.length; k += 2) editor.setRangeText("", remains[k], remains[k + 1], "end");
+      editor.dispatchEvent(new Event("input"));
+      return;
+    }
+  }
   doc.dirty = true;
   showStatus();
   showTranslatedLine();
 });
+// Copy and cut keep the selection with its codes, so pasting the same text brings them back.
+for (const kind of ["copy", "cut"]) {
+  editor.addEventListener(kind, () => core?.editor_remember(editor.selectionStart, editor.selectionEnd));
+}
 // Leaving the page with changes not saved: the browser asks, as the desktop program does at Exit.
 window.addEventListener("beforeunload", (e) => {
   if (doc.dirty) e.preventDefault();
@@ -1444,7 +1464,8 @@ async function print() {
           ink.className = "printed-ink";
           ink.style.fontFamily = faceOf("print")[0];
           try {
-            ink.textContent = await translateText(back.e, toNA(line.trimEnd()), back.file, true);
+            // A laid-out line holds no codes: its brackets are braille cells.
+            ink.textContent = core.running_text(await translateText(back.e, toNA(core.plain_text(line.trimEnd())), back.file, true, true));
           } catch {
             ink.textContent = "";
           }
@@ -1629,7 +1650,10 @@ fileInput.addEventListener("change", async () => {
     try {
       const d = core.read_document(bytes);
       doc.kind = d.braille ? "braille" : "print";
-      editor.value = d.braille ? fromNA(d.text) : d.text;
+      // The editor takes the file's codes as codes; brackets in its text stay text.
+      const text = core.editor_load(d.running);
+      editor.value = d.braille ? fromNA(text) : text;
+      if (d.braille) core.editor_convert(editor.value);
       doc.file = d;
       doc.saved = true;
       // The document's own embosser setup and page layout, as the file keeps them (spec 25 section 10); cells and
@@ -1650,7 +1674,9 @@ fileInput.addEventListener("change", async () => {
   } else {
     doc.kind = ext === "brf" || ext === "brl" || ext === "bru" ? "braille" : "print";
     const read = new TextDecoder("latin1").decode(bytes);
+    // A text or braille file holds no codes: all of it is text.
     editor.value = doc.kind === "braille" ? fromNA(read.replaceAll("\f", "\n")) : read;
+    core?.editor_load_plain(editor.value);
     doc.file = null;
     doc.saved = false;
   }
@@ -1683,16 +1709,19 @@ async function translateDocument() {
   }
   let out;
   try {
-    out = toBraille ? await translateText(e, editor.value, file, false) : await translateText(e, toNA(editor.value), file, true);
+    // In running form, so the translation's codes are codes in the new document.
+    out = await translateText(e, storedText(), file, !toBraille, true);
   } catch (err) {
     await message(`Translation failed: ${err.message ?? err}`);
     return;
   }
   const untitled = !doc.saved && /^Untitled /.test(doc.name);
-  editor.value = toBraille ? fromNA(out) : out;
+  const text = core.editor_load(out);
+  doc.file = file.as_kind(toBraille, text);
+  editor.value = toBraille ? fromNA(text) : text;
+  if (toBraille) core.editor_convert(editor.value);
   doc.kind = toBraille ? "braille" : "print";
   doc.name = untitled ? `Untitled ${toBraille ? "Braille" : "Print"} Document 1` : `${stem()}${toBraille ? ".brf" : ".txt"}`;
-  doc.file = file.as_kind(toBraille, out);
   if (toBraille) doc.cells = 40;
   doc.saved = false;
   doc.dirty = true;
@@ -1973,6 +2002,8 @@ async function internationalization() {
   if (!chosen || chosen.id === current) return;
   if (doc.kind === "braille" && core) {
     editor.value = core.convert_braille(editor.value, JSON.stringify(encodingNow().cells), JSON.stringify(chosen.cells));
+    // Converted cell for cell: the codes stay where they are.
+    core.editor_convert(editor.value);
   }
   settings.encoding = chosen.id;
   store.set("encoding", chosen.id);
@@ -2083,21 +2114,42 @@ const PLANNED_PICTURES = "Pictures are built after the core features of version 
 const PLANNED_FORMATTER = "This needs the page formatter, built in step 8 of the plan.";
 const PLANNED_EBRAILLE = "eBraille output is built after the formatted braille, document and PEF outputs.";
 
-// Puts `text` (codes in brackets) in place of the selection; the caret goes after it.
+// Puts `text` in place of the selection as text (pasted, a file's, a sign): brackets in it are text, as typed ones
+// are; the caret goes after it.
 function insertText(text) {
   editor.focus();
   editor.setRangeText(text, editor.selectionStart, editor.selectionEnd, "end");
   editor.dispatchEvent(new Event("input"));
 }
 
-// Puts `before` at the start of the selection and `after` at its end; the caret goes after the start part.
+// Puts code text the program writes ("[p]", "[hds2]") in place of the selection, as the editor shows it (a [p] or
+// [l] code with the editor's line break after it): its codes are codes. The caret goes after it.
+function insertCodes(codes) {
+  if (!core) return insertText(codes);
+  const at = editor.selectionStart;
+  insertText(core.marked_text(codes));
+  core.editor_mark(at, codes);
+  lastLine = null;
+  showStatus();
+  showTranslatedLine();
+}
+
+// Puts codes `before` at the start of the selection and `after` at its end, each as its own edit so the selected
+// text and its codes are left as they are; the caret goes after the start part.
 function wrapSelection(before, after) {
   editor.focus();
   const [from, to] = [editor.selectionStart, editor.selectionEnd];
-  editor.setRangeText(after, to, to, "preserve");
-  editor.setRangeText(before, from, from, "preserve");
-  editor.setSelectionRange(to + before.length, to + before.length);
+  const [b, a] = core ? [core.marked_text(before), core.marked_text(after)] : [before, after];
+  editor.setRangeText(a, to, to, "preserve");
   editor.dispatchEvent(new Event("input"));
+  core?.editor_mark(to, after);
+  editor.setRangeText(b, from, from, "preserve");
+  editor.dispatchEvent(new Event("input"));
+  core?.editor_mark(from, before);
+  editor.setSelectionRange(to + b.length, to + b.length);
+  lastLine = null;
+  showStatus();
+  showTranslatedLine();
 }
 
 // Edit, Undo to Select All, as the text control carries them out.
@@ -2113,7 +2165,8 @@ async function editStandard(id) {
       break;
     case 1203:
     case 1204:
-      // The selection, codes and all, goes to the clipboard.
+      // The selection, codes and all, goes to the clipboard; its codes are kept, so pasting it brings them back.
+      core?.editor_remember(from, to);
       try {
         await navigator.clipboard.writeText(editor.value.slice(from, to));
       } catch {
@@ -2149,17 +2202,28 @@ function toggleHighlight() {
 function changeCase() {
   const [from, to] = [editor.selectionStart, editor.selectionEnd];
   if (from === to) return;
-  const part = editor.value.slice(from, to);
-  const upper = part !== part.toUpperCase();
-  // Odd pieces of the split are codes ([...] with no space in them); the rest is text.
-  const changed = part
-    .split(/(\[[^\s[\]]+\])/)
-    .map((piece, i) => (i % 2 ? piece : upper ? piece.toUpperCase() : piece.toLowerCase()))
-    .join("");
-  if (changed.length === part.length) {
-    editor.setRangeText(changed, from, to, "select");
-    editor.dispatchEvent(new Event("input"));
+  // The text runs between the editor's codes, each changed as its own edit so the codes are left as they are.
+  const codes = core ? [...core.editor_codes()] : [];
+  const runs = [];
+  let at = from;
+  for (let k = 0; k < codes.length; k += 2) {
+    const [s, e] = [codes[k], codes[k + 1]];
+    if (e <= from || s >= to) continue;
+    if (s > at) runs.push([at, s]);
+    at = Math.max(at, e);
   }
+  if (at < to) runs.push([at, to]);
+  const text = runs.map(([s, e]) => editor.value.slice(s, e)).join("");
+  const upper = text !== text.toUpperCase();
+  for (const [s, e] of runs) {
+    const piece = editor.value.slice(s, e);
+    const changed = upper ? piece.toUpperCase() : piece.toLowerCase();
+    if (changed !== piece && changed.length === piece.length) {
+      editor.setRangeText(changed, s, e, "preserve");
+      editor.dispatchEvent(new Event("input"));
+    }
+  }
+  editor.setSelectionRange(from, to);
 }
 
 // Edit, Insert File: a file's text put in at the caret.
@@ -2302,6 +2366,8 @@ async function replace() {
     if (answer === "5" || answer === "7") {
       if (answer === "7") all = true;
       editor.setRangeText(spec.replace_with, i, i + findLen, "end");
+      // Each replacement is its own edit, so the codes between them are left as they are.
+      editor.dispatchEvent(new Event("input"));
       count += 1;
       pos = spec.backward ? i : i + replLen;
     } else if (answer === "6") {
@@ -2401,7 +2467,8 @@ async function modifyStyle() {
         if (r.d.checked(8)) {
           // The style's codes are renamed in the text.
           const [from, to] = [editor.selectionStart, editor.selectionEnd];
-          editor.value = editor.value.replaceAll(`[es~${old}]`, `[es~${name}]`).replaceAll(`[ee~${old}]`, `[ee~${name}]`);
+          // The style's codes are renamed where codes are; text that only reads like the code is left as it is.
+          editor.value = core.editor_rename_style(old, name);
           editor.setSelectionRange(Math.min(from, editor.value.length), Math.min(to, editor.value.length));
         }
         doc.dirty = true;
@@ -2539,7 +2606,7 @@ async function setPageNumber() {
       d.setRadio([9, 10], 0);
     },
   });
-  if (result === "ok") insertText(`[${d.radio([9, 10]) === 1 ? "pntr" : "pnta"}][pv${d.text(7).trim()}]`);
+  if (result === "ok") insertCodes(`[${d.radio([9, 10]) === 1 ? "pntr" : "pnta"}][pv${d.text(7).trim()}]`);
 }
 
 // Layout, Header and Footer (dialogs 1029, 1030): the text between the start and end codes, or the code that
@@ -2547,7 +2614,14 @@ async function setPageNumber() {
 async function headerFooter(rid, start, end, none) {
   const { result, d } = await showDialog(rid, { setup: (d) => d.setRadio([9, 10, 11, 12], 0) });
   if (result !== "ok") return;
-  insertText(d.radio([9, 10, 11, 12]) === 3 ? none : `${start}${d.text(7)}${end}`);
+  // The codes are codes; the header or footer text typed is text.
+  if (d.radio([9, 10, 11, 12]) === 3) {
+    insertCodes(none);
+  } else {
+    insertCodes(start);
+    insertText(d.text(7));
+    insertCodes(end);
+  }
 }
 
 // Layout, Code List (dialog 1041): a code from the list with its parameters.
@@ -2574,7 +2648,7 @@ async function codeList() {
     return;
   }
   const chosen = list[d.get(18).selectedIndex];
-  if (chosen) insertText(`[${chosen[0]}${params}]`);
+  if (chosen) insertCodes(`[${chosen[0]}${params}]`);
 }
 
 // Document, Hyphenation: the document's hyphenation, marked in the menu (the formatter that uses it is step 8).
@@ -2696,20 +2770,16 @@ function insertCode(id) {
   const code = core ? core.menu_code(id) : "";
   if (!code) return;
   const c = JSON.parse(code);
-  if (c.text !== undefined) insertText(c.text);
+  if (c.text !== undefined) insertCodes(c.text);
   else if (c.pair) wrapSelection(c.pair[0], c.pair[1]);
-  else {
+  else if (c.setting === "termination_sign") {
+    // The signs and the hard space are text; the rest are codes.
+    insertText(doc.kind === "braille" ? ",'" : "&@");
+  } else if (c.setting === "hard_space") {
+    insertText("\u00a0");
+  } else {
     const s = settings.shortcuts;
-    const value = {
-      grade0: s.grade0,
-      cbc: s.cbc,
-      flush_right_leader: s.flush_right_leader,
-      new_page: s.new_page,
-      new_ref_page: s.new_ref_page,
-      termination_sign: doc.kind === "braille" ? ",'" : "&@",
-      hard_space: " ",
-    }[c.setting];
-    insertText(value ?? "");
+    insertCodes({ grade0: s.grade0, cbc: s.cbc, flush_right_leader: s.flush_right_leader, new_page: s.new_page, new_ref_page: s.new_ref_page }[c.setting] ?? "");
   }
 }
 
@@ -2726,6 +2796,7 @@ const COMMANDS = {
     embosserDefaults();
     doc.view = newView(false);
     editor.value = "";
+    core?.editor_load_plain("");
     showTitle();
     editor.focus();
     applyView();
