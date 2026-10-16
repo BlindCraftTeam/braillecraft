@@ -89,6 +89,11 @@ jobs:
             # A window manager, so the main window becomes active as on a desktop (BC_LAYOUT_RUN waits for that).
             openbox > /dev/null 2>&1 &
             sleep 1
+            # The runner's session bus has nothing behind the desktop settings portal, so at each start wxWidgets'
+            # settings module waited up to 25 seconds for it (g_dbus_proxy_new_for_bus_sync in
+            # wxSystemSettingsModule::OnInit, backtraces of run 38935774513) and most windows never showed within the
+            # 20 second wait. With no session bus the call fails at once, as on the Debian 13 machine.
+            export DBUS_SESSION_BUS_ADDRESS=unix:path=/nonexistent/bus
           fi
           # The check writes its report as it goes and ends by itself; one still running after 300 seconds is stopped
           # and the end of its report shows where it stood.
@@ -107,7 +112,7 @@ jobs:
           # (run 38899662545) while the same steps show every window at once on a Debian 13 machine.
           mkdir -p layout/logs
           if [ "$RUNNER_OS" = Linux ]; then
-            # The runner has no session bus, so the GTK accessibility bridge printed a bus error at each start.
+            # With no session bus the GTK accessibility bridge would print a bus error at each start.
             export NO_AT_BRIDGE=1
             { echo "window manager: $(pgrep -a openbox || echo none)"; echo "xdotool: $(xdotool version 2>&1 || true)"; } >> layout/starts.txt
             # Only every sixth start showed its window in run 38929914931; the others kept running with one program
@@ -146,13 +151,20 @@ jobs:
               sleep "$1"
             fi
           }
+          # On Linux the picture is of the active window: a picture of the whole screen showed a dialog opened over the
+          # main window as a black box although it was drawn (run 38929914931 cmd-1218; the same on a Debian 13
+          # machine, where a picture of the dialog window itself showed it whole).
+          picture() {
+            w=$(xdotool getactivewindow 2> /dev/null || true)
+            { if [ -n "$w" ]; then xwd -id "$w" -silent; else xwd -root -silent; fi; } | convert xwd:- "$1" || true
+          }
           ids="$(grep -o 'name="dlg[0-9]*"' ui-native/dialogs.xrc | tr -dc '0-9\n' | grep -v -x -E '1000[0-4]') 10001 10002 10003 10004"
           for p in $ids; do
             BC_LAYOUT_SHOW=$p $exe 2> layout/logs/$p.txt & pid=$!
             shown 4 $p
             case "$RUNNER_OS" in
               macOS) screencapture -x layout/pictures/$p.png || true ;;
-              Linux) xwd -root -silent | convert xwd:- layout/pictures/$p.png || true ;;
+              Linux) picture layout/pictures/$p.png ;;
               Windows) powershell -NoProfile -File tools/ci/screenshot.ps1 layout/pictures/$p.png || true ;;
             esac
             if [ "$RUNNER_OS" = Windows ]; then taskkill //F //IM braillecraft-desktop.exe > /dev/null 2>&1 || true; else kill $pid 2> /dev/null || true; fi
@@ -165,7 +177,7 @@ jobs:
             shown 5 cmd-$c
             case "$RUNNER_OS" in
               macOS) screencapture -x layout/pictures/cmd-$c.png || true ;;
-              Linux) xwd -root -silent | convert xwd:- layout/pictures/cmd-$c.png || true ;;
+              Linux) picture layout/pictures/cmd-$c.png ;;
               Windows) powershell -NoProfile -File tools/ci/screenshot.ps1 layout/pictures/cmd-$c.png || true ;;
             esac
             if [ "$RUNNER_OS" = Windows ]; then taskkill //F //IM braillecraft-desktop.exe > /dev/null 2>&1 || true; else kill $pid 2> /dev/null || true; fi
