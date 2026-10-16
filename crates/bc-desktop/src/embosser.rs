@@ -256,8 +256,9 @@ fn fill_sheet(general: &Dlg, device: &Dlg, advanced: &Dlg, s: &Setup, cat: &Cata
 /// The setup sheet (dialogs 10000 to 10004): `setup` shown, changed on OK. Returns false when cancelled. Choosing a
 /// model fills the pages with that model's own values. The TranSend SE page shows only for models with TranSend
 /// (INFERENCE: which pages the reference shows per model was not traced).
-pub fn edit(setup: &mut Setup, cat: &Catalog) -> bool {
-    let transend = find_model(cat, &setup.model).is_some_and(|m| m.flag("TranSend"));
+/// The setup sheet for `setup`, filled: its pages are General, Device Settings, TranSend SE (when `transend`) and
+/// Advanced.
+fn build_sheet(setup: &Setup, cat: &Catalog, transend: bool) -> (Dlg, Vec<Dlg>) {
     let mut pages = vec![(10001, "General"), (10002, "Device Settings")];
     if transend {
         pages.push((10003, "TranSend SE"));
@@ -265,15 +266,30 @@ pub fn edit(setup: &mut Setup, cat: &Catalog) -> bool {
     pages.push((10004, "Advanced"));
     let title = format!("Embosser Setup - {}", if setup.shown_name().is_empty() { "Untitled Configuration".to_string() } else { setup.shown_name() });
     let (sheet, p) = Dlg::sheet(&crate::app::frame(), 10000, &title, &pages);
-    let general = &p[0];
-    let device = &p[1];
-    let advanced = p.last().expect("advanced page");
     // The reference places Configuration location (8, 9) and Default Form (10, 11) at the same spot and shows one.
     // INFERENCE (which one it shows when was not traced): Default Form; setups are kept in the user's own settings,
     // so a location for all users has no meaning here.
-    general.hide(8);
-    general.hide(9);
-    fill_sheet(general, device, advanced, setup, cat, true);
+    p[0].hide(8);
+    p[0].hide(9);
+    fill_sheet(&p[0], &p[1], p.last().expect("advanced page"), setup, cat, true);
+    (sheet, p)
+}
+
+/// The setup sheet with every page, for an Index model, as the layout check opens it (dlg::layout_check).
+pub fn layout_sheet() -> Option<(Dlg, Vec<Dlg>)> {
+    with_catalog(|cat| {
+        let cat = cat.ok()?;
+        let model = cat.names().into_iter().find(|n| n.contains("Index"))?;
+        Some(build_sheet(&new_setup(cat, &model), cat, true))
+    })
+}
+
+pub fn edit(setup: &mut Setup, cat: &Catalog) -> bool {
+    let transend = find_model(cat, &setup.model).is_some_and(|m| m.flag("TranSend"));
+    let (sheet, p) = build_sheet(setup, cat, transend);
+    let general = &p[0];
+    let device = &p[1];
+    let advanced = p.last().expect("advanced page");
     let (g, dv, adv) = (handle(general), handle(device), handle(advanced));
     if let Some(models) = general.win(5).and_then(|w| w.as_widget::<ComboBox>()) {
         models.on_selection_changed(move |_| {

@@ -625,6 +625,82 @@ impl Dlg {
     }
 }
 
+/// Layout check (BC_LAYOUT_CHECK=<file>): every dialog and the embosser setup sheet are laid out as on this system
+/// and each pair of shown controls that overlap, and each control that reaches past its dialog, is written to the
+/// file, with a count per dialog. Group boxes are left out of the pairs: they hold other controls by design.
+pub fn layout_check(path: &str) {
+    let mut out = String::new();
+    let frame = crate::app::frame();
+    for (id, _, _, _) in DIALOGS.iter() {
+        if (10000..=10004).contains(id) {
+            continue;
+        }
+        let d = Dlg::open(&frame, *id, None);
+        report_layout(&d, &format!("dialog {id}"), &mut out);
+        d.destroy();
+    }
+    match crate::embosser::layout_sheet() {
+        Some((sheet, pages)) => {
+            for p in &pages {
+                report_layout(p, &format!("sheet page {}", p.id), &mut out);
+            }
+            sheet.destroy();
+        }
+        None => out.push_str("embosser setup sheet: no embosser models\n"),
+    }
+    if let Err(e) = std::fs::write(path, out) {
+        eprintln!("BrailleCraft: layout check not written to {path}: {e}");
+    }
+}
+
+/// Layout check, the picture (BC_LAYOUT_SHOW=<page id>): the setup sheet with that one page, shown and left open.
+pub fn layout_show(page: i32) {
+    let name = match page {
+        10001 => "General",
+        10002 => "Device Settings",
+        10003 => "TranSend SE",
+        _ => "Advanced",
+    };
+    let (sheet, _) = Dlg::sheet(&crate::app::frame(), 10000, "Embosser Setup - layout check", &[(page, name)]);
+    sheet.dialog.show(true);
+    sheet.dialog.raise();
+}
+
+fn report_layout(d: &Dlg, name: &str, out: &mut String) {
+    use std::fmt::Write;
+    let client = d.client();
+    let mut rects = Vec::new();
+    for (cid, kind) in d.controls() {
+        let Some(w) = d.win(*cid) else { continue };
+        let (p, s) = (w.get_position(), w.get_size());
+        if !w.is_shown() || s.width <= 0 || s.height <= 0 {
+            continue;
+        }
+        rects.push((*cid, *kind, p.x, p.y, s.width, s.height));
+    }
+    let mut found = 0;
+    for (i, a) in rects.iter().enumerate() {
+        let (acid, akind, ax, ay, aw, ah) = *a;
+        if ax + aw > client.width + 1 || ay + ah > client.height + 1 {
+            found += 1;
+            let _ = writeln!(out, "{name}: {acid} {akind:?} {ax},{ay} {aw}x{ah} reaches past the {}x{} dialog", client.width, client.height);
+        }
+        if akind == Ctl::Box {
+            continue;
+        }
+        for &(bcid, bkind, bx, by, bw, bh) in &rects[i + 1..] {
+            if bkind == Ctl::Box {
+                continue;
+            }
+            if ax + 1 < bx + bw && bx + 1 < ax + aw && ay + 1 < by + bh && by + 1 < ay + ah {
+                found += 1;
+                let _ = writeln!(out, "{name}: {acid} {akind:?} {ax},{ay} {aw}x{ah} overlaps {bcid} {bkind:?} {bx},{by} {bw}x{bh}");
+            }
+        }
+    }
+    let _ = writeln!(out, "{name}: {found} found");
+}
+
 /// Remembered values of settings dialogs, by dialog id (and a key, for dialogs opened in two roles).
 #[derive(Default)]
 pub struct Memory(HashMap<(i32, &'static str), Vec<(i32, Value)>>);

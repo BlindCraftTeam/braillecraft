@@ -220,6 +220,18 @@ fn main() {
             }
         });
 
+        // Layout check (dlg::layout_check), for the build checks: the dialogs measured as this system lays them out,
+        // and the program ends; or one page of the embosser setup sheet left open for a picture.
+        if let Ok(path) = std::env::var("BC_LAYOUT_CHECK") {
+            dlg::layout_check(&path);
+            app::with(|a| a.frame.destroy());
+            return;
+        }
+        if let Some(page) = std::env::var("BC_LAYOUT_SHOW").ok().and_then(|p| p.parse().ok()) {
+            dlg::layout_show(page);
+            return;
+        }
+
         // macOS: documents opened from the Finder (double-click, Open With, a drop on the program icon) come as an
         // Apple event, not on the command line; each is opened in the editor.
         #[cfg(target_os = "macos")]

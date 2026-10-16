@@ -72,6 +72,34 @@ jobs:
           if-no-files-found: error
           path: dist/BrailleCraft
 
+      # The dialogs as this system draws them (dlg::layout_check): each pair of overlapping controls and each control
+      # past its dialog's edge, per dialog; on macOS also a picture of each page of the embosser setup sheet. Kept as
+      # the braillecraft-layout-<system> artifact.
+      - name: Dialog layout check
+        shell: bash
+        timeout-minutes: 5
+        run: |
+          mkdir -p layout
+          exe=dist/BrailleCraft/braillecraft-desktop${{ runner.os == 'Windows' && '.exe' || '' }}
+          run=""
+          if [ "$RUNNER_OS" = Linux ]; then sudo apt-get install -y xvfb > /dev/null; run="xvfb-run -a"; fi
+          BC_LAYOUT_CHECK=layout/layout.txt $run $exe || true
+          grep " found$" layout/layout.txt | grep -v ": 0 found" || true
+          if [ "$RUNNER_OS" = macOS ]; then
+            for p in 10001 10002 10003 10004; do
+              BC_LAYOUT_SHOW=$p $exe & pid=$!
+              sleep 6
+              screencapture -x layout/sheet-$p.png || true
+              kill $pid || true
+              sleep 1
+            done
+          fi
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: braillecraft-layout-${{ matrix.name }}
+          path: layout
+
       # The Windows installer of the native program (packaging/windows, WiX Toolset 5), laid out as the reference
       # program's installer (re/spec/26-installer.md).
       - name: Windows installer
