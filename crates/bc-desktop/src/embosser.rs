@@ -207,8 +207,6 @@ fn fill_sheet(general: &Dlg, device: &Dlg, advanced: &Dlg, s: &Setup, cat: &Cata
     general.set_items(29, &["1", "2"], Some(u32::from(s.stop_bits == 2)));
     general.set_items(31, HANDSHAKING, Some(s.handshaking.min(2) as u32));
     // Device settings.
-    let has = |k: &str| model.is_some_and(|m| m.flag(k));
-    let index = model.is_some_and(|m| m.driver().contains("Index"));
     device.set_items(5, VERSIONS, Some(s.version.min(VERSIONS.len() - 1) as u32));
     device.set_checked(6, s.escape_codes);
     device.set_checked(9, s.seek_top_of_form);
@@ -223,21 +221,7 @@ fn fill_sheet(general: &Dlg, device: &Dlg, advanced: &Dlg, s: &Setup, cat: &Cata
     for (cid, v) in &s.device_other {
         device.set_text(*cid, v);
     }
-    // INFERENCE: the device fields shown for a model follow its properties (which the reference shows per model
-    // was not traced): the version for Index models, escape codes for models that use them, interpoint for
-    // models that can do it, Z-fold for Index Z-fold models, seek top of form where allowed.
-    for (cid, on) in [
-        (4, index),
-        (5, index),
-        (6, has("ETCAllowEscapeCodes") || has("UsingEscapeCodes")),
-        (7, has("ETSpeaks")),
-        (8, has("ETSpeaks")),
-        (9, has("AllowSeekTOF")),
-        (34, has("CanDoInterpoint")),
-        (52, has("IndexZfold")),
-    ] {
-        device.enable(cid, on);
-    }
+    show_device(device, model, s.version, s.escape_codes);
     // Advanced.
     advanced.set_checked(5, s.custom_codes);
     advanced.set_text(7, &s.start_codes);
@@ -256,6 +240,83 @@ fn fill_sheet(general: &Dlg, device: &Dlg, advanced: &Dlg, s: &Setup, cat: &Cata
 /// The setup sheet (dialogs 10000 to 10004): `setup` shown, changed on OK. Returns false when cancelled. Choosing a
 /// model fills the pages with that model's own values. The TranSend SE page shows only for models with TranSend
 /// (INFERENCE: which pages the reference shows per model was not traced).
+/// The Device Settings page as the reference sets it (re/spec/25-emboss.md, Device Settings page (resource
+/// 10002)): the page holds one group of controls per embosser driver at the same places, and only the group of the
+/// model's driver is shown; the margin rows, the interpoint check box and the encoding rows show by the driver and
+/// by whether escape codes are in use. `version` is the place chosen in VERSIONS, `escapes` the Allow escape codes
+/// check box.
+fn show_device(device: &Dlg, model: Option<&Model>, version: usize, escapes: bool) {
+    let driver = model.map_or("", |m| m.driver());
+    let (index, enabling, braillo, tiger, elekul) = (
+        driver == "Emb_IndexEmbosserDriver",
+        driver == "Emb_EnablingEmbosserDriver",
+        driver == "Emb_BrailloEmbosserDriver",
+        driver == "Emb_TigerEmbosserDriver",
+        driver == "Emb_ElekulEmbosserDriver",
+    );
+    let flag = |k: &str| model.is_some_and(|m| m.flag(k));
+    // Escape codes in use: the model uses them, or the setup allows them.
+    let in_use = flag("UsingEscapeCodes") || escapes;
+    let (margins, interpoint, encoding) = if tiger || elekul {
+        (false, false, false)
+    } else if index {
+        // Below Embosser Version 4: "(unspecified)" to the two Version 3 entries.
+        (version < 5, true, true)
+    } else if enabling {
+        (!escapes, !escapes, true)
+    } else if braillo {
+        (false, false, true)
+    } else {
+        (!in_use, !in_use, true)
+    };
+    let rows = margins && model.is_some();
+    let groups: [(i32, i32, bool); 14] = [
+        (4, 5, index),
+        (6, 6, enabling),
+        (7, 11, enabling && in_use),
+        (12, 14, braillo),
+        // INFERENCE: the reference shows 15-18 and 19-23 for Braillo models by submodel bits whose meaning was not
+        // traced (spec 25, unknowns); both rows lie at the same place, so neither is shown.
+        (15, 23, false),
+        (24, 24, tiger),
+        (25, 25, margins),
+        (26, 28, rows && !flag("NoLeftMargin")),
+        (29, 31, rows && !flag("NoRightMargin")),
+        (32, 33, rows && !flag("NoTopMargin")),
+        (34, 34, interpoint),
+        (35, 41, encoding),
+        (42, 51, elekul),
+        (52, 52, index),
+    ];
+    for (first, last, on) in groups {
+        for cid in first..=last {
+            device.set_shown(cid, on);
+        }
+    }
+    // Enabled: with no model chosen, 6 to 31 are not; Manage ET Speaks and Seek Top of Form need escape codes in use
+    // and the model's support; interpoint and Z-fold need the model's support.
+    for cid in 6..=31 {
+        device.enable(cid, model.is_some());
+    }
+    device.enable(7, in_use && flag("ETSpeaks"));
+    device.enable(8, in_use && flag("ETSpeaks"));
+    device.enable(9, in_use && flag("AllowSeekTOF"));
+    device.enable(34, flag("CanDoInterpoint"));
+    device.enable(52, flag("IndexZfold"));
+}
+
+/// The Device Settings groups shown again for the model, version and escape codes now chosen on the sheet.
+fn refresh_device(general: &Dlg, device: &Dlg) {
+    let model = general.selected_text(5).unwrap_or_default();
+    let version = device.chosen_in(5, VERSIONS).unwrap_or(0);
+    let escapes = device.checked(6);
+    with_catalog(|cat| {
+        if let Ok(cat) = cat {
+            show_device(device, find_model(cat, &model), version, escapes);
+        }
+    });
+}
+
 /// The setup sheet for `setup`, filled: its pages are General, Device Settings, TranSend SE (when `transend`) and
 /// Advanced.
 fn build_sheet(setup: &Setup, cat: &Catalog, transend: bool) -> (Dlg, Vec<Dlg>) {
@@ -275,12 +336,42 @@ fn build_sheet(setup: &Setup, cat: &Catalog, transend: bool) -> (Dlg, Vec<Dlg>) 
     (sheet, p)
 }
 
-/// The setup sheet with every page, for an Index model, as the layout check opens it (dlg::layout_check).
-pub fn layout_sheet() -> Option<(Dlg, Vec<Dlg>)> {
+/// One model name for each embosser driver, for the layout check (dlg::layout_check).
+pub fn layout_models() -> Vec<String> {
+    with_catalog(|cat| {
+        let Ok(cat) = cat else { return Vec::new() };
+        let mut drivers = Vec::new();
+        let mut names = Vec::new();
+        for name in cat.names() {
+            if let Some(m) = find_model(cat, &name) {
+                if !drivers.contains(&m.driver().to_string()) {
+                    drivers.push(m.driver().to_string());
+                    names.push(name);
+                }
+            }
+        }
+        names
+    })
+}
+
+/// The Device Settings page shown for the first Index model, for the layout check's picture.
+pub fn layout_device_page(device: &Dlg) {
+    with_catalog(|cat| {
+        if let Ok(cat) = cat {
+            let name = cat.names().into_iter().find(|n| find_model(cat, n).is_some_and(|m| m.driver() == "Emb_IndexEmbosserDriver"));
+            if let Some(name) = name {
+                let s = new_setup(cat, &name);
+                show_device(device, find_model(cat, &name), s.version, s.escape_codes);
+            }
+        }
+    });
+}
+
+/// The setup sheet with every page for model `name`, as the layout check opens it.
+pub fn layout_sheet(name: &str) -> Option<(Dlg, Vec<Dlg>)> {
     with_catalog(|cat| {
         let cat = cat.ok()?;
-        let model = cat.names().into_iter().find(|n| n.contains("Index"))?;
-        Some(build_sheet(&new_setup(cat, &model), cat, true))
+        Some(build_sheet(&new_setup(cat, name), cat, true))
     })
 }
 
@@ -303,6 +394,15 @@ pub fn edit(setup: &mut Setup, cat: &Catalog) -> bool {
                 }
             });
         });
+    }
+    // As in the reference, a change of Embosser Version or of Allow escape codes shows the page's groups again.
+    if let Some(versions) = device.win(5).and_then(|w| w.as_widget::<ComboBox>()) {
+        let (g, dv) = (handle(general), handle(device));
+        versions.on_selection_changed(move |_| refresh_device(&g, &dv));
+    }
+    if let Some(escapes) = device.win(6).and_then(|w| w.as_widget::<CheckBox>()) {
+        let (g, dv) = (handle(general), handle(device));
+        escapes.on_toggled(move |_| refresh_device(&g, &dv));
     }
     let result = loop {
         if sheet.show() != 1 {

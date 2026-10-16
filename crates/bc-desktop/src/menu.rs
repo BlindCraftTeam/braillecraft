@@ -66,6 +66,12 @@ pub struct Menus {
     pub learning_item: Option<MenuItem>,
     pub languages: Vec<i32>,
     pub courses: Vec<i32>,
+    /// What the three run-time lists show now. A list is rebuilt only when what it shows changes; otherwise only its
+    /// check marks are set. Rebuilding deletes menu items, and macOS can still hold an item it showed (its menu bar
+    /// runs apart from the program), so a deleted item chosen afterwards crashed the program in wxWidgets.
+    shown_documents: Vec<String>,
+    shown_languages: Vec<(usize, String)>,
+    shown_courses: Vec<String>,
 }
 
 impl Menus {
@@ -82,6 +88,15 @@ impl Menus {
 
     /// The open documents at the end of the View menu, numbered, the active one checked.
     pub fn set_documents(&mut self, names: &[String], active: Option<usize>) {
+        if self.shown_documents == names {
+            for (i, id) in self.documents.iter().enumerate() {
+                if let Some(item) = self.view.find_item(*id) {
+                    item.check(Some(i) == active);
+                }
+            }
+            return;
+        }
+        self.shown_documents = names.to_vec();
         for id in self.documents.drain(..) {
             self.view.remove(id);
         }
@@ -106,6 +121,15 @@ impl Menus {
     /// order, after a separator; the active document's entry checked.
     pub fn set_languages(&mut self, list: &[(usize, String)], active: Option<usize>) {
         let Some(menu) = &self.tables else { return };
+        if self.shown_languages == list {
+            for (entry, _) in list {
+                if let Some(item) = menu.find_item(LANGUAGE_BASE + *entry as i32) {
+                    item.check(Some(*entry) == active);
+                }
+            }
+            return;
+        }
+        self.shown_languages = list.to_vec();
         for id in self.languages.drain(..) {
             remove(menu, id);
         }
@@ -131,6 +155,17 @@ impl Menus {
             item.enable(has_steps);
         }
         let Some(menu) = &self.learning else { return };
+        if self.shown_courses == names {
+            for id in &self.courses {
+                if let Some(item) = menu.find_item(*id) {
+                    item.check(*id == checked);
+                }
+            }
+            self.check(2801, checked == 2801);
+            self.check(2802, checked == 2802);
+            return;
+        }
+        self.shown_courses = names.to_vec();
         for id in self.courses.drain(..) {
             remove(menu, id);
         }
@@ -227,5 +262,8 @@ pub fn install(frame: &MDIParentFrame) -> Menus {
         learning_item: found.learning_item,
         languages: Vec::new(),
         courses: Vec::new(),
+        shown_documents: Vec::new(),
+        shown_languages: Vec::new(),
+        shown_courses: Vec::new(),
     }
 }

@@ -214,10 +214,45 @@ impl Dlg {
             let c = self.client();
             self.set_client(Size::new((c.width as f64 * factor).ceil() as i32, c.height));
         }
+        // Wrapped to the room it has in the dialog: on macOS a label takes the width of its whole text when it is
+        // made, so its own width would leave it on one line, far past the dialog's edge.
+        let room = self.client().width - self.margin().width;
         for cid in several_lines {
             if let Some(s) = self.win(cid).and_then(|w| w.as_widget::<StaticText>()) {
-                s.wrap(s.get_size().width);
+                let (p, size) = (s.get_position(), s.get_size());
+                let width = size.width.min(room - p.x).max(1);
+                s.set_size(Size::new(width, size.height));
+                s.wrap(width);
+                s.set_size(Size::new(width, size.height.max(s.get_best_size().height)));
             }
+        }
+        self.cover_controls();
+    }
+
+    /// The dialog's own margin: 4 dialog units.
+    fn margin(&self) -> Size {
+        match &self.page {
+            Some(p) => dialog_units(p, 4, 4),
+            None => dialog_units(&self.dialog, 4, 4),
+        }
+    }
+
+    /// After the controls have grown, the dialog (or page) grows until every control lies inside it, with the
+    /// dialog's own margin beyond the furthest one.
+    fn cover_controls(&self) {
+        let margin = self.margin();
+        let (mut right, mut bottom) = (0, 0);
+        for (cid, _) in self.controls() {
+            if let Some(w) = self.win(*cid) {
+                let (p, s) = (w.get_position(), w.get_size());
+                right = right.max(p.x + s.width);
+                bottom = bottom.max(p.y + s.height);
+            }
+        }
+        let c = self.client();
+        let wanted = Size::new(c.width.max(right + margin.width), c.height.max(bottom + margin.height));
+        if wanted.width > c.width || wanted.height > c.height {
+            self.set_client(wanted);
         }
     }
 
@@ -529,8 +564,13 @@ impl Dlg {
 
     /// Hides a control.
     pub fn hide(&self, cid: i32) {
+        self.set_shown(cid, false);
+    }
+
+    /// Shows or hides a control.
+    pub fn set_shown(&self, cid: i32, on: bool) {
         if let Some(w) = self.win(cid) {
-            w.show(false);
+            w.show(on);
         }
     }
 
@@ -639,14 +679,17 @@ pub fn layout_check(path: &str) {
         report_layout(&d, &format!("dialog {id}"), &mut out);
         d.destroy();
     }
-    match crate::embosser::layout_sheet() {
-        Some((sheet, pages)) => {
+    let models = crate::embosser::layout_models();
+    if models.is_empty() {
+        out.push_str("embosser setup sheet: no embosser models\n");
+    }
+    for model in models {
+        if let Some((sheet, pages)) = crate::embosser::layout_sheet(&model) {
             for p in &pages {
-                report_layout(p, &format!("sheet page {}", p.id), &mut out);
+                report_layout(p, &format!("sheet page {} ({model})", p.id), &mut out);
             }
             sheet.destroy();
         }
-        None => out.push_str("embosser setup sheet: no embosser models\n"),
     }
     if let Err(e) = std::fs::write(path, out) {
         eprintln!("BrailleCraft: layout check not written to {path}: {e}");
@@ -661,7 +704,10 @@ pub fn layout_show(page: i32) {
         10003 => "TranSend SE",
         _ => "Advanced",
     };
-    let (sheet, _) = Dlg::sheet(&crate::app::frame(), 10000, "Embosser Setup - layout check", &[(page, name)]);
+    let (sheet, pages) = Dlg::sheet(&crate::app::frame(), 10000, "Embosser Setup - layout check", &[(page, name)]);
+    if page == 10002 {
+        crate::embosser::layout_device_page(&pages[0]);
+    }
     sheet.dialog.show(true);
     sheet.dialog.raise();
 }
