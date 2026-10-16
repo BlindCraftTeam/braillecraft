@@ -44,6 +44,39 @@ const FIELD_PADDING: i32 = 20;
 /// licensing, so it is the licensed state).
 const HIDDEN_AT_START: &[(i32, i32)] = &[(1034, 13), (10003, 19), (10003, 22)];
 
+/// The room a macOS text field keeps inside its width beside the text it wraps (the text cell's padding, both
+/// sides; this program's allowance, a little more than Cocoa's own so a line never wraps where the count did not).
+const MAC_TEXT_INSET: i32 = 6;
+
+/// The number of lines `text` takes when its words are wrapped to `width` in `w`'s font (its own line breaks kept).
+fn wrapped_lines(w: &dyn WxWidget, text: &str, width: i32) -> i32 {
+    let mut lines = 0;
+    for paragraph in text.split('\n') {
+        lines += 1;
+        let mut line = String::new();
+        for word in paragraph.split(' ') {
+            let candidate = if line.is_empty() { word.to_string() } else { format!("{line} {word}") };
+            if !line.is_empty() && w.get_text_extent(&candidate).width > width {
+                lines += 1;
+                line = word.to_string();
+            } else {
+                line = candidate;
+            }
+        }
+    }
+    lines
+}
+
+/// The lines a label of `width` shows its `text` in: its own line breaks, and on macOS the lines the label wraps
+/// the text into by itself (see fit_labels).
+fn label_lines(w: &dyn WxWidget, text: &str, width: i32) -> i32 {
+    if cfg!(target_os = "macos") {
+        wrapped_lines(w, text, width - MAC_TEXT_INSET)
+    } else {
+        text.split('\n').count() as i32
+    }
+}
+
 /// Loads the dialog resources; call once at start.
 pub fn load_resources() -> Result<(), String> {
     let res = XmlResource::get();
@@ -251,8 +284,16 @@ impl Dlg {
                 let (p, size) = (s.get_position(), s.get_size());
                 let width = size.width.min(room - p.x).max(1);
                 s.set_size(Size::new(width, size.height));
-                s.wrap(width);
-                let height = size.height.max(s.get_best_size().height);
+                let height = if cfg!(target_os = "macos") {
+                    // A macOS label wraps by itself (a wrapping text field) inside a little less than its width; line
+                    // breaks added here would be wrapped again. It is given the height of the lines it needs.
+                    let line = s.get_text_extent("Ag").height.max(1);
+                    let label = s.get_label().replace('&', "");
+                    size.height.max(wrapped_lines(&s, &label, width - MAC_TEXT_INSET) * line + 2)
+                } else {
+                    s.wrap(width);
+                    size.height.max(s.get_best_size().height)
+                };
                 s.set_size(Size::new(width, height));
                 let extra = height - size.height;
                 if extra > 0 {
@@ -822,7 +863,7 @@ fn drawn(w: &Window, kind: Ctl) -> Option<(i32, i32, i32, i32)> {
             if width == 0 {
                 return None;
             }
-            Some((p.x, p.y, width.min(s.width), (line * lines.len() as i32).min(s.height)))
+            Some((p.x, p.y, width.min(s.width), (line * label_lines(w, &label, s.width)).min(s.height)))
         }
         Ctl::Box if !label.trim().is_empty() => {
             let t = w.get_text_extent(&label);
@@ -844,6 +885,16 @@ fn report_layout(d: &Dlg, name: &str, out: &mut String) {
         if w.is_shown() && s.width > 0 && s.height > 0 && (p.x + s.width > client.width + 1 || p.y + s.height > client.height + 1) {
             found += 1;
             let _ = writeln!(out, "{name}: {cid} {kind:?} {},{} {}x{} reaches past the {}x{} dialog", p.x, p.y, s.width, s.height, client.width, client.height);
+        }
+        // A label whose text needs more lines than its height holds shows only part of it.
+        if *kind == Ctl::Static && w.is_shown() && s.width > 0 {
+            let label = w.get_label().unwrap_or_default().replace('&', "");
+            let line = w.get_text_extent("Ag").height.max(1);
+            let needed = label_lines(&w, &label, s.width) * line;
+            if !label.trim().is_empty() && needed > s.height + 1 {
+                found += 1;
+                let _ = writeln!(out, "{name}: {cid} {kind:?} {},{} {}x{} text needs {needed} high, cut", p.x, p.y, s.width, s.height);
+            }
         }
         if let Some((x, y, w, h)) = drawn(&w, *kind) {
             rects.push((*cid, *kind, x, y, w, h));
