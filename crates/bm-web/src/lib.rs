@@ -54,6 +54,12 @@ impl Document {
         self.0.tables.to_vec()
     }
 
+    /// The names of the document's styles, in its order.
+    #[wasm_bindgen(getter)]
+    pub fn style_names(&self) -> Vec<String> {
+        self.0.styles.iter().map(|s| s.0.clone()).collect()
+    }
+
     /// Whether the document's translated line shows, as the file keeps it.
     #[wasm_bindgen(getter)]
     pub fn translated_line(&self) -> bool {
@@ -257,10 +263,10 @@ pub fn convert_braille(text: &str, from: &str, to: &str) -> Result<String, JsErr
 
 /// The status line for the caret at `position` of a document (editor form) laid out `cells` by `lines`, as the
 /// desktop program shows it: the current style, Page, Line and Column on the laid-out pages (left out in coded view,
-/// `codes`), the character at the caret (with its Unicode value when `verbose`), and Keys.
+/// `codes`), the character at the caret (with its Unicode value when `verbose`), and Keys (with H when highlighting).
 #[allow(clippy::too_many_arguments)]
 #[wasm_bindgen]
-pub fn status_line(text: &str, cells: u32, lines: u32, braille: bool, position: usize, codes: bool, verbose: bool, six_key: bool) -> String {
+pub fn status_line(text: &str, cells: u32, lines: u32, braille: bool, position: usize, codes: bool, verbose: bool, six_key: bool, highlight: bool) -> String {
     use bm_core::status::{char_field, style_text, StatusLine};
     let shown = Shown::marked(text);
     let pos = position as i64;
@@ -269,10 +275,49 @@ pub fn status_line(text: &str, cells: u32, lines: u32, braille: bool, position: 
         location: (!codes).then(|| bm_core::format::locate(&laid_out(text, cells, lines, braille), position)),
         character: char_field(&shown, pos, verbose),
         six_key,
-        highlight: false,
+        highlight,
         keyboard: false,
     }
     .text()
+}
+
+/// Edit, Goto: the character position of a page, line and column (from 1) on a document's laid-out pages, as the
+/// status line counts them; -1 when the document has no such place.
+#[allow(clippy::too_many_arguments)]
+#[wasm_bindgen]
+pub fn position_of(text: &str, cells: u32, lines: u32, braille: bool, page: usize, line: usize, column: usize) -> i64 {
+    bm_core::format::position_of(&laid_out(text, cells, lines, braille), page, line, column).map_or(-1, |p| p as i64)
+}
+
+/// What a Layout menu code item inserts (bm_core::menu_codes), as JSON: {"text": codes}, {"pair": [before, after]}
+/// around the selection, or {"setting": name} for one taken from Shortcut Preferences or the document (grade0, cbc,
+/// flush_right_leader, new_page, new_ref_page, termination_sign, hard_space); empty for no code item.
+#[wasm_bindgen]
+pub fn menu_code(id: i32) -> String {
+    use bm_core::menu_codes::{insert, Dynamic, Insert};
+    match insert(id) {
+        Some(Insert::Text(s)) => serde_json::json!({ "text": s }).to_string(),
+        Some(Insert::Pair(a, b)) => serde_json::json!({ "pair": [a, b] }).to_string(),
+        Some(Insert::Setting(d)) => {
+            let name = match d {
+                Dynamic::Grade0 => "grade0",
+                Dynamic::Cbc => "cbc",
+                Dynamic::FlushRightLeader => "flush_right_leader",
+                Dynamic::NewPage => "new_page",
+                Dynamic::NewReferencePage => "new_ref_page",
+                Dynamic::TerminationSign => "termination_sign",
+                Dynamic::HardSpace => "hard_space",
+            };
+            serde_json::json!({ "setting": name }).to_string()
+        }
+        None => String::new(),
+    }
+}
+
+/// The code vocabulary of Layout, Code List, as JSON [[code, description], ...].
+#[wasm_bindgen]
+pub fn code_list() -> String {
+    serde_json::to_string(bm_core::menu_codes::CODE_LIST).unwrap_or_default()
 }
 
 /// The page (from 1) on which a character position of a document laid out `cells` by `lines` falls.
@@ -549,9 +594,21 @@ mod tests {
     #[test]
     fn the_status_line_reads_as_the_desktop_one() {
         let text = "[es~h1.]ab[ee~h1.]\ncd";
-        assert_eq!(status_line(text, 40, 25, true, 8, false, false, false), "Current Style: h1.  Page:1  Line:1  Column:1  a  Keys:1");
-        assert_eq!(status_line(text, 40, 25, true, 8, true, true, true), "Current Style: h1.  a {U+0061}  Keys:6");
-        assert!(status_line(text, 40, 25, true, 21, false, false, false).ends_with("(end)  Keys:1"));
+        assert_eq!(status_line(text, 40, 25, true, 8, false, false, false, false), "Current Style: h1.  Page:1  Line:1  Column:1  a  Keys:1");
+        assert_eq!(status_line(text, 40, 25, true, 8, true, true, true, true), "Current Style: h1.  a {U+0061}  Keys:6H");
+        assert!(status_line(text, 40, 25, true, 21, false, false, false, false).ends_with("(end)  Keys:1"));
+    }
+
+    #[test]
+    fn menu_codes_and_goto() {
+        assert_eq!(menu_code(1904), r#"{"pair":["[hds]","[hde]"]}"#);
+        assert_eq!(menu_code(1910), r#"{"text":"[p]"}"#);
+        assert_eq!(menu_code(1701), r#"{"setting":"grade0"}"#);
+        assert_eq!(menu_code(1), "");
+        assert!(code_list().starts_with(r#"[["atx","ASCII is all text"]"#));
+        let text = "ab[l]\ncd[l]\nef";
+        assert_eq!(position_of(text, 40, 2, true, 2, 1, 1), 12);
+        assert_eq!(position_of(text, 40, 2, true, 9, 1, 1), -1);
     }
 
     #[test]

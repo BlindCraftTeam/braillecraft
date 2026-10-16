@@ -370,8 +370,16 @@ function showStatus() {
     return;
   }
   // As in the desktop program, the text as it is shown (in the shown encoding) is laid out.
-  const status = core.status_line(editor.value, doc.cells, doc.lines, doc.kind === "braille", editor.selectionStart, doc.view.codes, settings.verbose, doc.view.six_key);
+  const status = core.status_line(editor.value, doc.cells, doc.lines, doc.kind === "braille", editor.selectionStart, doc.view.codes, settings.verbose, doc.view.six_key, doc.highlight !== null && doc.highlight !== undefined);
   if (statusLine.textContent !== status) statusLine.textContent = status;
+}
+
+// Edit, Highlight: from where it was turned on, the selection follows the caret.
+function followHighlight() {
+  const anchor = doc.highlight;
+  if (anchor === null || anchor === undefined) return;
+  const at = editor.selectionStart === editor.selectionEnd ? editor.selectionStart : null;
+  if (at !== null && at !== anchor) editor.setSelectionRange(Math.min(at, anchor), Math.max(at, anchor), at < anchor ? "backward" : "forward");
 }
 
 let lastLine = null;
@@ -429,10 +437,14 @@ editor.addEventListener("input", () => {
   showTranslatedLine();
 });
 editor.addEventListener("keyup", () => {
+  followHighlight();
   showStatus();
   showTranslatedLine();
 });
-editor.addEventListener("click", showStatus);
+editor.addEventListener("click", () => {
+  followHighlight();
+  showStatus();
+});
 
 function download(name, bytes, type = "application/octet-stream") {
   const url = URL.createObjectURL(new Blob([bytes], { type }));
@@ -750,7 +762,8 @@ function newDialog(titleText, idBase) {
 function closedPromise(dialog) {
   return new Promise((resolve) => {
     dialog.addEventListener("close", () => {
-      resolve(dialog.returnValue === "ok" ? "ok" : "cancel");
+      // "ok", the id of a button that closes the dialog itself (as a string), or "cancel".
+      resolve(dialog.returnValue || "cancel");
       dialog.remove();
     });
   });
@@ -766,11 +779,13 @@ function focusFirst(container) {
 // Dialog `rid` shown modally: `setup` fills it, `onOk` checks it. With `memory`, the values chosen last are put back
 // after `setup` and kept on OK, as the desktop program's settings dialogs do. Answers how it was closed and its
 // helpers.
-async function showDialog(rid, { title, setup, onOk, memory, after } = {}) {
+async function showDialog(rid, { title, setup, onOk, memory, after, closes = [] } = {}) {
   const { dialog, form } = newDialog(title ?? DIALOGS[rid].title, `dlg${rid}`);
   const { controls, keys } = buildControls(rid, form);
   const d = dialogHelpers(controls);
   addButtons(rid, dialog, form, controls, onOk && (() => onOk(d)));
+  // Buttons that close the dialog with their own id (the desktop program's closes_with).
+  for (const id of closes) d.get(id)?.addEventListener("click", () => dialog.close(String(id)));
   wireKeys(dialog, () => keys);
   $("dialogs").append(dialog);
   const closed = closedPromise(dialog);
@@ -1470,9 +1485,9 @@ fileInput.addEventListener("change", async () => {
       return;
     }
   } else {
-    doc.kind = ext === "brf" || ext === "brl" ? "braille" : "print";
+    doc.kind = ext === "brf" || ext === "brl" || ext === "bru" ? "braille" : "print";
     const read = new TextDecoder("latin1").decode(bytes);
-    editor.value = doc.kind === "braille" ? fromNA(read) : read;
+    editor.value = doc.kind === "braille" ? fromNA(read.replaceAll("\f", "\n")) : read;
     doc.file = null;
     doc.saved = false;
   }
@@ -1869,6 +1884,350 @@ async function shortcutPreferences() {
   store.set("shortcuts", JSON.stringify(chosen));
 }
 
+// ------------------------------------------------------------------ Edit and Layout
+
+// Messages for parts of the program that later build steps bring, as the desktop program gives them.
+const PLANNED_SPELL = "The spell checker (Hunspell dictionaries) is built after the core features of version 1.";
+const PLANNED_HELP = "The BrailleMaker help is written with the features it describes; it is not in this build yet.";
+const PLANNED_TEMPLATES = "Templates are built with the BrailleMaker document format in step 7 of the plan.";
+const PLANNED_PICTURES = "Pictures are built after the core features of version 1.";
+const PLANNED_FORMATTER = "This needs the page formatter, built in step 8 of the plan.";
+const PLANNED_EBRAILLE = "eBraille output is built after the formatted braille, document and PEF outputs.";
+
+// Puts `text` (codes in brackets) in place of the selection; the caret goes after it.
+function insertText(text) {
+  editor.focus();
+  editor.setRangeText(text, editor.selectionStart, editor.selectionEnd, "end");
+  editor.dispatchEvent(new Event("input"));
+}
+
+// Puts `before` at the start of the selection and `after` at its end; the caret goes after the start part.
+function wrapSelection(before, after) {
+  editor.focus();
+  const [from, to] = [editor.selectionStart, editor.selectionEnd];
+  editor.setRangeText(after, to, to, "preserve");
+  editor.setRangeText(before, from, from, "preserve");
+  editor.setSelectionRange(to + before.length, to + before.length);
+  editor.dispatchEvent(new Event("input"));
+}
+
+// Edit, Undo to Select All, as the text control carries them out.
+async function editStandard(id) {
+  editor.focus();
+  const [from, to] = [editor.selectionStart, editor.selectionEnd];
+  switch (id) {
+    case 1201:
+      document.execCommand("undo");
+      break;
+    case 1202:
+      document.execCommand("redo");
+      break;
+    case 1203:
+    case 1204:
+      // The selection, codes and all, goes to the clipboard.
+      try {
+        await navigator.clipboard.writeText(editor.value.slice(from, to));
+      } catch {
+        document.execCommand("copy");
+      }
+      if (id === 1203) insertText("");
+      break;
+    case 1205:
+      try {
+        insertText(await navigator.clipboard.readText());
+      } catch {
+        await message("The browser did not allow reading the clipboard; use Ctrl+V to paste.");
+      }
+      break;
+    case 1206:
+      insertText("");
+      break;
+    case 1207:
+      editor.select();
+      break;
+  }
+  showStatus();
+}
+
+function toggleHighlight() {
+  doc.highlight = doc.highlight === null || doc.highlight === undefined ? editor.selectionStart : null;
+  // The Keys field shows highlighting ("H"), as the reference rewrites it on this command.
+  showStatus();
+}
+
+// Edit, Change Case: the text between the codes in the selection goes to capitals, or to small letters when it is
+// all capitals already; the codes are left as they are.
+function changeCase() {
+  const [from, to] = [editor.selectionStart, editor.selectionEnd];
+  if (from === to) return;
+  const part = editor.value.slice(from, to);
+  const upper = part !== part.toUpperCase();
+  // Odd pieces of the split are codes ([...] with no space in them); the rest is text.
+  const changed = part
+    .split(/(\[[^\s[\]]+\])/)
+    .map((piece, i) => (i % 2 ? piece : upper ? piece.toUpperCase() : piece.toLowerCase()))
+    .join("");
+  if (changed.length === part.length) {
+    editor.setRangeText(changed, from, to, "select");
+    editor.dispatchEvent(new Event("input"));
+  }
+}
+
+// Edit, Insert File: a file's text put in at the caret.
+function insertFile() {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.addEventListener("change", async () => {
+    const file = input.files[0];
+    if (!file) return;
+    insertText(new TextDecoder("latin1").decode(new Uint8Array(await file.arrayBuffer())));
+  });
+  input.click();
+}
+
+// Edit, Goto (dialog 1019): a page, line and column of the laid-out pages, as the status line counts them.
+async function gotoPosition() {
+  const braille = doc.kind === "braille";
+  const status = core ? core.status_line(editor.value, doc.cells, doc.lines, braille, editor.selectionStart, false, false, false, false) : "";
+  const at = (label) => Number((new RegExp(`${label}:(\\d+)`).exec(status) ?? [])[1] ?? 1);
+  const { result, d } = await showDialog(1019, {
+    setup(d) {
+      d.setText(7, String(at("Page")));
+      d.setText(10, String(at("Line")));
+      d.setText(12, String(at("Column")));
+    },
+  });
+  if (result !== "ok") return;
+  const [page, line, column] = [d.number(7), d.number(10), d.number(12)];
+  if (page === null || line === null || column === null) {
+    await message("You cannot go to that location in the document.");
+    return;
+  }
+  if (page < 1 || line < 1 || column < 1) {
+    await message("You cannot go to pages with numbers less than 1.");
+    return;
+  }
+  const offset = core.position_of(editor.value, doc.cells, doc.lines, braille, page, line, column);
+  if (offset < 0) {
+    await message("You cannot go to that location in the document.");
+    return;
+  }
+  editor.focus();
+  editor.setSelectionRange(Number(offset), Number(offset));
+  showStatus();
+}
+
+// Find: the next place `spec.find` is from `from`, forward or backward, matching case and whole words as asked.
+function findNext(spec, text, from, backward) {
+  const fold = (s) => (spec.match_case ? s : s.toLowerCase());
+  const hay = [...fold(text)];
+  const needle = [...fold(spec.find)];
+  if (!needle.length || needle.length > hay.length) return null;
+  const isWord = (i) => i >= 0 && i < hay.length && (/[\p{L}\p{N}]/u.test(hay[i]) || hay[i] === "_");
+  const fits = (i) => needle.every((c, k) => hay[i + k] === c) && !(spec.whole_words && (isWord(i - 1) || isWord(i + needle.length)));
+  const last = hay.length - needle.length;
+  if (backward) {
+    for (let i = Math.min(from - 1, last); i >= 0; i--) if (fits(i)) return i;
+  } else {
+    for (let i = Math.max(from, 0); i <= last; i++) if (fits(i)) return i;
+  }
+  return null;
+}
+
+let lastFind = null;
+
+// Edit, Find (dialog 1020) and Find Again: the next place, with the offer to go on from the other end.
+async function find(again) {
+  let spec = lastFind;
+  if (!again || !spec) {
+    const sel = editor.value.slice(editor.selectionStart, editor.selectionEnd);
+    const { result, d } = await showDialog(1020, {
+      setup(d) {
+        d.setRadio([12, 13, 14], 0);
+        if (spec) {
+          d.setText(7, spec.find);
+          d.setChecked(8, spec.match_case);
+          d.setChecked(9, spec.backward);
+          d.setChecked(10, spec.whole_words);
+        } else if (sel) {
+          d.setText(7, sel);
+        }
+      },
+    });
+    if (result !== "ok") return;
+    const s = { find: d.text(7), replace_with: "", match_case: d.checked(8), backward: d.checked(9), whole_words: d.checked(10) };
+    if (!s.find) {
+      await message("The search string is empty.");
+      return;
+    }
+    lastFind = spec = s;
+  }
+  const value = editor.value;
+  const from = spec.backward ? editor.selectionStart : editor.selectionEnd;
+  let found = findNext(spec, value, from, spec.backward);
+  const atEdge = spec.backward ? from === value.length : from === 0;
+  if (found === null && !atEdge) {
+    const q = spec.backward
+      ? "BrailleMaker has finished searching to the beginning of the document.  Would you like to continue searching at the end?"
+      : "BrailleMaker has finished searching to the end of the document.  Would you like to continue searching at the beginning?";
+    if (!(await yesNo(q))) return;
+    found = findNext(spec, value, spec.backward ? value.length : 0, spec.backward);
+  }
+  if (found === null) {
+    await message(again ? "The text does not appear again in the document." : "Text was not found in the document.");
+    return;
+  }
+  editor.focus();
+  editor.setSelectionRange(found, found + [...spec.find].length);
+  showStatus();
+}
+
+// Edit, Replace (dialog 1021): each place asked about (dialog 1024: Replace, Skip, Replace All), then the count.
+async function replace() {
+  const last = lastFind;
+  const { result, d } = await showDialog(1021, {
+    setup(d) {
+      d.setRadio([14, 15, 16], 0);
+      if (last) {
+        d.setText(7, last.find);
+        d.setChecked(10, last.match_case);
+        d.setChecked(12, last.whole_words);
+      }
+    },
+  });
+  if (result !== "ok") return;
+  const spec = { find: d.text(7), replace_with: d.text(9), match_case: d.checked(10), backward: d.checked(11), whole_words: d.checked(12) };
+  if (!spec.find) {
+    await message("The search string is empty.");
+    return;
+  }
+  lastFind = spec;
+  let count = 0;
+  let all = false;
+  let pos = spec.backward ? editor.selectionStart : editor.selectionEnd;
+  const [findLen, replLen] = [[...spec.find].length, [...spec.replace_with].length];
+  for (let i = findNext(spec, editor.value, pos, spec.backward); i !== null; i = findNext(spec, editor.value, pos, spec.backward)) {
+    editor.focus();
+    editor.setSelectionRange(i, i + findLen);
+    const answer = all ? "5" : (await showDialog(1024, { closes: [5, 6, 7] })).result;
+    if (answer === "5" || answer === "7") {
+      if (answer === "7") all = true;
+      editor.setRangeText(spec.replace_with, i, i + findLen, "end");
+      count += 1;
+      pos = spec.backward ? i : i + replLen;
+    } else if (answer === "6") {
+      pos = spec.backward ? i : i + findLen;
+    } else break;
+  }
+  editor.dispatchEvent(new Event("input"));
+  await message(`${count} replacements were made.`);
+}
+
+// The document's styles: those of its file, else those of the template it was made from.
+async function styleNames() {
+  return core ? (await documentFile()).style_names : [];
+}
+
+const STYLE_SHOW = ["Recommended and In-Use Styles", "All Styles", "Styles In-Use", "Only Recommended Styles"];
+
+// Layout, Apply Style (dialog 1046): the chosen style's start and end codes around the selection.
+async function applyStyle() {
+  const names = await styleNames();
+  if (!names.length) {
+    await message("This document has no styles yet. Use Document, Add Style to create one.");
+    return;
+  }
+  const { result, d } = await showDialog(1046, {
+    setup(d) {
+      d.setItems(7, names, 0);
+      d.setItems(9, STYLE_SHOW, 0);
+    },
+  });
+  if (result === "ok" && d.selected(7)) applyNamedStyle(d.selected(7));
+}
+
+function applyNamedStyle(name) {
+  wrapSelection(`[es~${name}]`, `[ee~${name}]`);
+  doc.lastStyle = name;
+}
+
+// Layout, Join Lines: the next line break becomes a space.
+function joinLines() {
+  const at = editor.value.indexOf("\n", editor.selectionStart);
+  if (at >= 0) {
+    editor.setRangeText(" ", at, at + 1, "preserve");
+    editor.dispatchEvent(new Event("input"));
+  }
+}
+
+// Layout, Page Number (dialog 1042): the page numbering style and number codes.
+async function setPageNumber() {
+  const { result, d } = await showDialog(1042, {
+    setup(d) {
+      d.setText(7, "1");
+      d.setRadio([9, 10], 0);
+    },
+  });
+  if (result === "ok") insertText(`[${d.radio([9, 10]) === 1 ? "pntr" : "pnta"}][pv${d.text(7).trim()}]`);
+}
+
+// Layout, Header and Footer (dialogs 1029, 1030): the text between the start and end codes, or the code that
+// discontinues it.
+async function headerFooter(rid, start, end, none) {
+  const { result, d } = await showDialog(rid, { setup: (d) => d.setRadio([9, 10, 11, 12], 0) });
+  if (result !== "ok") return;
+  insertText(d.radio([9, 10, 11, 12]) === 3 ? none : `${start}${d.text(7)}${end}`);
+}
+
+// Layout, Code List (dialog 1041): a code from the list with its parameters.
+async function codeList() {
+  const list = JSON.parse(core.code_list());
+  const { result, d } = await showDialog(1041, {
+    closes: [6],
+    setup(d) {
+      d.setChecked(8, true);
+      d.setItems(18, list.map(([c, desc]) => `${c} (${desc})`), 0);
+      d.setText(20, `[${list[0][0]}]`);
+      d.setText(22, "");
+      d.get(18).addEventListener("change", () => d.setText(20, `[${list[d.get(18).selectedIndex]?.[0] ?? ""}]`));
+    },
+  });
+  if (result === "6") {
+    await message(PLANNED_HELP);
+    return;
+  }
+  if (result !== "ok") return;
+  const params = d.text(22).trim();
+  if (/\s/.test(params)) {
+    await message("The parameters to a code must not contain spaces.");
+    return;
+  }
+  const chosen = list[d.get(18).selectedIndex];
+  if (chosen) insertText(`[${chosen[0]}${params}]`);
+}
+
+// A Layout menu code item: its codes put in, or put around the selection.
+function insertCode(id) {
+  const code = core ? core.menu_code(id) : "";
+  if (!code) return;
+  const c = JSON.parse(code);
+  if (c.text !== undefined) insertText(c.text);
+  else if (c.pair) wrapSelection(c.pair[0], c.pair[1]);
+  else {
+    const s = settings.shortcuts;
+    const value = {
+      grade0: s.grade0,
+      cbc: s.cbc,
+      flush_right_leader: s.flush_right_leader,
+      new_page: s.new_page,
+      new_ref_page: s.new_ref_page,
+      termination_sign: doc.kind === "braille" ? ",'" : "&@",
+      hard_space: " ",
+    }[c.setting];
+    insertText(value ?? "");
+  }
+}
+
 const COMMANDS = {
   1101: () => {
     doc.kind = "print";
@@ -1888,6 +2247,33 @@ const COMMANDS = {
   1109: translateDocument,
   1111: print,
   1112: emboss,
+  1201: () => editStandard(1201),
+  1202: () => editStandard(1202),
+  1203: () => editStandard(1203),
+  1204: () => editStandard(1204),
+  1205: () => editStandard(1205),
+  1206: () => editStandard(1206),
+  1207: () => editStandard(1207),
+  1209: toggleHighlight,
+  1211: changeCase,
+  1213: insertFile,
+  1215: gotoPosition,
+  1216: () => find(false),
+  1217: () => find(true),
+  1218: replace,
+  1220: () => message(PLANNED_SPELL),
+  1221: () => message(PLANNED_SPELL),
+  1401: applyStyle,
+  1402: () => (doc.lastStyle ? applyNamedStyle(doc.lastStyle) : message("No style has been applied yet in this document.")),
+  1403: () => message(PLANNED_FORMATTER),
+  1404: () => message(PLANNED_FORMATTER),
+  1406: () => message(PLANNED_FORMATTER),
+  1407: joinLines,
+  1409: setPageNumber,
+  1410: () => headerFooter(1029, "[tls]", "[tle]", "[tld]"),
+  1411: () => headerFooter(1030, "[rfs]", "[rfe]", "[rfd]"),
+  1413: () => message(PLANNED_FORMATTER),
+  1416: codeList,
   1301: () => setView((v) => (v.full_page = !v.full_page)),
   1303: () => setView((v) => (v.font = "print")),
   1304: () => setView((v) => (v.font = "braille")),
@@ -1953,7 +2339,12 @@ const COMMANDS = {
 
 async function run(id, menuLabel, itemLabel) {
   closeMenus();
-  if (COMMANDS[id]) {
+  // The Layout menu's code items and the pictures items (ranges, as in the desktop program).
+  if (id >= 1701 && id <= 2404) {
+    insertCode(id);
+  } else if (id >= 2501 && id <= 2511) {
+    await message(PLANNED_PICTURES);
+  } else if (COMMANDS[id]) {
     await COMMANDS[id]();
   } else {
     const rid = dialogFor(menuLabel, itemLabel);
@@ -2198,6 +2589,8 @@ document.addEventListener("keydown", (e) => {
   if (e.shiftKey) parts.push("shift");
   parts.push(e.key.length === 1 ? e.key.toLowerCase() : e.key.toLowerCase());
   const hit = SHORTCUTS.get(parts.join("+"));
+  // In the editor, undo, redo and the clipboard keys stay the browser's own (the text control's, as on the desktop).
+  if (hit && e.target === editor && hit[0] >= 1201 && hit[0] <= 1207) return;
   if (hit && !menubar.contains(e.target)) {
     e.preventDefault();
     run(...hit);

@@ -14,6 +14,7 @@ pub mod embossers;
 pub mod engine;
 pub mod format;
 pub mod lbf;
+pub mod menu_codes;
 pub mod range;
 pub mod rule_script;
 pub mod status;
