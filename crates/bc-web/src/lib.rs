@@ -969,6 +969,12 @@ impl Embossers {
         find_model(&self.0, label).is_some_and(|m| m.flag(key))
     }
 
+    /// A setup given as JSON after a change of its model to `label` on the setup sheet (spec 25 18.3), as JSON.
+    pub fn with_model(&self, setup: &str, label: &str, european: bool) -> Result<String, JsError> {
+        let s: Setup = serde_json::from_str(setup).map_err(|e| JsError::new(&e.to_string()))?;
+        Ok(serde_json::to_string(&s.with_model(&self.0, label, european)).unwrap_or_default())
+    }
+
     /// The ports Write to Port lists for a model (spec 25 16.1); none for an unknown model.
     pub fn ports(&self, label: &str) -> Vec<String> {
         bc_core::emboss_setup::ports(find_model(&self.0, label))

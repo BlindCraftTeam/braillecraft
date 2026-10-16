@@ -198,9 +198,9 @@ fn handle(d: &Dlg) -> Dlg {
     Dlg { id: d.id, dialog: d.dialog, page: d.page }
 }
 
-/// Shows `s` on the sheet's pages. `models` is set when the sheet opens: the model list, the setup name, the output
-/// (printer list, port list, file name) and the serial settings are filled only then, because a change of model in
-/// the reference refills the forms and the other pages but leaves those as they are (spec 25 15.3).
+/// Shows `s` on the sheet's pages. `models` is set when the sheet opens: the model list, the setup name and the output
+/// (printer list, port list, file name) are filled only then, because a change of model in the reference leaves
+/// those as they are (spec 25 15.3); the forms, the serial settings and the other pages are filled each time.
 fn fill_sheet(general: &Dlg, device: &Dlg, advanced: &Dlg, s: &Setup, cat: &Catalog, models: bool) {
     let model = find_model(cat, &s.model);
     if models {
@@ -233,13 +233,15 @@ fn fill_sheet(general: &Dlg, device: &Dlg, advanced: &Dlg, s: &Setup, cat: &Cata
             Output::Port(p) => Some(p.as_str()),
             _ => None,
         });
-        general.set_checked(21, s.serial_init);
-        general.set_items(23, BAUDS, BAUDS.iter().position(|b| *b == s.baud.to_string()).map(|i| i as u32));
-        general.set_items(25, PARITIES, Some(s.parity.min(3) as u32));
-        general.set_items(27, &["7", "8"], Some(u32::from(s.data_bits == 8)));
-        general.set_items(29, &["1", "2"], Some(u32::from(s.stop_bits == 2)));
-        general.set_items(31, HANDSHAKING, Some(s.handshaking.min(2) as u32));
     }
+    // The serial settings: a change of model gives the new model's (apart from parity and Initialize Serial Port,
+    // which `s` keeps; spec 25 18.3).
+    general.set_checked(21, s.serial_init);
+    general.set_items(23, BAUDS, BAUDS.iter().position(|b| *b == s.baud.to_string()).map(|i| i as u32));
+    general.set_items(25, PARITIES, Some(s.parity.min(3) as u32));
+    general.set_items(27, &["7", "8"], Some(u32::from(s.data_bits == 8)));
+    general.set_items(29, &["1", "2"], Some(u32::from(s.stop_bits == 2)));
+    general.set_items(31, HANDSHAKING, Some(s.handshaking.min(2) as u32));
     let forms: Vec<String> = model.map(|m| m.forms.iter().map(|f| form_name(&f.id)).collect()).unwrap_or_default();
     let form_refs: Vec<&str> = forms.iter().map(String::as_str).collect();
     let chosen = model.and_then(|m| m.forms.iter().position(|f| f.id == s.form)).map(|i| i as u32);
@@ -257,8 +259,11 @@ fn fill_sheet(general: &Dlg, device: &Dlg, advanced: &Dlg, s: &Setup, cat: &Cata
     device.set_items(41, CASES, Some(u32::from(s.upper_case)));
     device.set_checked(44, s.reverse_order);
     device.set_checked(52, s.z_fold);
-    for (cid, v) in &s.device_other {
-        device.set_text(*cid, v);
+    // The page's other fields as the setup has them; one it does not hold is empty (after a change of model those
+    // the model gives, spec 25 18.3).
+    for cid in [16, 21, 23, 27, 30, 33, 43] {
+        let value = s.device_other.iter().find(|(c, _)| *c == cid).map_or("", |(_, v)| v.as_str());
+        device.set_text(cid, value);
     }
     show_device(device, model, s.version, s.escape_codes);
     // Advanced.
@@ -557,6 +562,9 @@ pub fn edit(setup: &mut Setup, cat: &Catalog) -> bool {
     // change, and then leaves nothing in it chosen (spec 25 16.1).
     let last_ports = std::rc::Rc::new(std::cell::RefCell::new(bc_core::emboss_setup::ports(opened)));
     let pages: Vec<Dlg> = p.iter().map(handle).collect();
+    // The model the pages show (the form list holds its forms), and the setup the sheet opened with.
+    let shown_model = std::rc::Rc::new(std::cell::RefCell::new(setup.model.clone()));
+    let base = setup.clone();
     if let Some(models) = general.win(5).and_then(|w| w.as_widget::<Choice>()) {
         models.on_selection_changed(move |_| {
             let name = pages[0].selected_text(5).unwrap_or_default();
@@ -564,7 +572,13 @@ pub fn edit(setup: &mut Setup, cat: &Catalog) -> bool {
                 let Ok(cat) = cat else { return };
                 let model = if name.starts_with('(') { None } else { find_model(cat, &name) };
                 match model {
-                    Some(_) => fill_sheet(&pages[0], &pages[1], &pages[3], &new_setup(cat, &name), cat, false),
+                    // The setup as the pages show it, changed to the new model as the reference changes it (spec 25
+                    // 18.3), shown again.
+                    Some(_) => {
+                        let shown = read_sheet(&pages, &base, cat, &shown_model.borrow());
+                        fill_sheet(&pages[0], &pages[1], &pages[3], &shown.with_model(cat, &name, european()), cat, false);
+                        *shown_model.borrow_mut() = name.clone();
+                    }
                     None => show_device(&pages[1], None, 0, false),
                 }
                 let ports = bc_core::emboss_setup::ports(model);
@@ -597,63 +611,72 @@ pub fn edit(setup: &mut Setup, cat: &Catalog) -> bool {
             crate::commands::message("Please select an embosser model.");
             continue;
         }
-        let mut s = if model == setup.model { setup.clone() } else { new_setup(cat, &model) };
-        s.name = general.text(7).trim().to_string();
+        let mut s = read_sheet(&p, setup, cat, &model);
         let taken = setup_names().into_iter().any(|n| n == s.shown_name() && n != setup.shown_name());
         if taken {
             crate::commands::message(&format!("You already have a configuration named \"{}\".  Please give a different name.", s.shown_name()));
             continue;
         }
         s.all_users = false;
-        if let (Some(m), Some(shown)) = (find_model(cat, &model), general.selected_text(11)) {
-            if let Some(f) = m.forms.iter().find(|f| form_name(&f.id) == shown) {
-                s.form = f.id.clone();
-            }
-        }
-        s.output = match general.radio(&[13, 14, 15]) {
-            Some(0) => Output::Printer(general.selected_text(16).unwrap_or_default()),
-            Some(2) => Output::File(general.text(18).trim().to_string()),
-            // With no port chosen (the list made again for a new model), the port kept is the one stored before, as
-            // the reference stores the target name only when a port is chosen (spec 25 16.3).
-            _ => Output::Port(general.selected_text(17).unwrap_or_else(|| match &setup.output {
-                Output::Port(p) => p.clone(),
-                _ => bc_core::emboss_setup::ports(find_model(cat, &model)).into_iter().next().unwrap_or_default(),
-            })),
-        };
-        s.serial_init = general.checked(21);
-        s.baud = general.selected_text(23).and_then(|b| b.parse().ok()).unwrap_or(s.baud);
-        s.parity = general.chosen_in(25, PARITIES).unwrap_or(s.parity);
-        s.data_bits = general.selected_text(27).and_then(|b| b.parse().ok()).unwrap_or(s.data_bits);
-        s.stop_bits = general.selected_text(29).and_then(|b| b.parse().ok()).unwrap_or(s.stop_bits);
-        s.handshaking = general.chosen_in(31, HANDSHAKING).unwrap_or(s.handshaking);
-        s.version = device.chosen_in(5, VERSIONS).unwrap_or(0);
-        s.escape_codes = device.checked(6);
-        s.seek_top_of_form = device.checked(9);
-        s.interpoint_enabled = device.checked(34);
-        s.encoding = device.selected_text(37).unwrap_or(s.encoding);
-        s.high_punctuation = device.chosen_in(39, CASES) == Some(1);
-        s.upper_case = device.chosen_in(41, CASES) == Some(1);
-        s.reverse_order = device.checked(44);
-        s.z_fold = device.checked(52);
-        s.device_other = [16, 21, 23, 27, 30, 33, 43].iter().map(|c| (*c, device.text(*c))).collect();
-        s.custom_codes = advanced.checked(5);
-        s.start_codes = advanced.text(7);
-        s.end_codes = advanced.text(9);
-        s.end_of_line = advanced.chosen_in(12, LINE_ENDS).unwrap_or(0);
-        s.end_of_page = advanced.chosen_in(14, PAGE_ENDS).unwrap_or(0);
-        s.eol_on_full_line = advanced.checked(15);
-        s.eop_on_full_page = advanced.checked(16);
-        s.pad_lines = advanced.checked(17);
-        s.prompt_new_sheet = advanced.checked(18);
-        s.one_at_a_time = advanced.checked(20);
-        s.text_delay = advanced.number(22).unwrap_or(0).max(0) as u32;
-        s.control_delay = advanced.number(24).unwrap_or(0).max(0) as u32;
-        // The TranSend SE values stay as they were across a change of model (spec 25 15.4), so they are read from
-        // the page whether its tab shows or not.
-        read_transend(transend_page, &mut s);
         *setup = s;
         break true;
     };
     sheet.destroy();
     result
+}
+
+/// The setup the sheet's pages show for model `model` (whose forms the form list holds), over `base` for what no
+/// page shows.
+fn read_sheet(p: &[Dlg], base: &Setup, cat: &Catalog, model: &str) -> Setup {
+    let (general, device, transend_page, advanced) = (&p[0], &p[1], &p[2], &p[3]);
+    let mut s = base.clone();
+    s.model = model.to_string();
+    s.name = general.text(7).trim().to_string();
+    if let (Some(m), Some(shown)) = (find_model(cat, model), general.selected_text(11)) {
+        if let Some(f) = m.forms.iter().find(|f| form_name(&f.id) == shown) {
+            s.form = f.id.clone();
+        }
+    }
+    s.output = match general.radio(&[13, 14, 15]) {
+        Some(0) => Output::Printer(general.selected_text(16).unwrap_or_default()),
+        Some(2) => Output::File(general.text(18).trim().to_string()),
+        // With no port chosen (the list made again for a new model), the port kept is the one stored before, as the
+        // reference stores the target name only when a port is chosen (spec 25 16.3).
+        _ => Output::Port(general.selected_text(17).unwrap_or_else(|| match &base.output {
+            Output::Port(p) => p.clone(),
+            _ => bc_core::emboss_setup::ports(find_model(cat, model)).into_iter().next().unwrap_or_default(),
+        })),
+    };
+    s.serial_init = general.checked(21);
+    s.baud = general.selected_text(23).and_then(|b| b.parse().ok()).unwrap_or(s.baud);
+    s.parity = general.chosen_in(25, PARITIES).unwrap_or(s.parity);
+    s.data_bits = general.selected_text(27).and_then(|b| b.parse().ok()).unwrap_or(s.data_bits);
+    s.stop_bits = general.selected_text(29).and_then(|b| b.parse().ok()).unwrap_or(s.stop_bits);
+    s.handshaking = general.chosen_in(31, HANDSHAKING).unwrap_or(s.handshaking);
+    s.version = device.chosen_in(5, VERSIONS).unwrap_or(0);
+    s.escape_codes = device.checked(6);
+    s.seek_top_of_form = device.checked(9);
+    s.interpoint_enabled = device.checked(34);
+    s.encoding = device.selected_text(37).unwrap_or(s.encoding);
+    s.high_punctuation = device.chosen_in(39, CASES) == Some(1);
+    s.upper_case = device.chosen_in(41, CASES) == Some(1);
+    s.reverse_order = device.checked(44);
+    s.z_fold = device.checked(52);
+    s.device_other = [16, 21, 23, 27, 30, 33, 43].iter().map(|c| (*c, device.text(*c))).collect();
+    s.custom_codes = advanced.checked(5);
+    s.start_codes = advanced.text(7);
+    s.end_codes = advanced.text(9);
+    s.end_of_line = advanced.chosen_in(12, LINE_ENDS).unwrap_or(0);
+    s.end_of_page = advanced.chosen_in(14, PAGE_ENDS).unwrap_or(0);
+    s.eol_on_full_line = advanced.checked(15);
+    s.eop_on_full_page = advanced.checked(16);
+    s.pad_lines = advanced.checked(17);
+    s.prompt_new_sheet = advanced.checked(18);
+    s.one_at_a_time = advanced.checked(20);
+    s.text_delay = advanced.number(22).unwrap_or(0).max(0) as u32;
+    s.control_delay = advanced.number(24).unwrap_or(0).max(0) as u32;
+    // The TranSend SE values stay as they were across a change of model (spec 25 15.4), so they are read from the
+    // page whether its tab shows or not.
+    read_transend(transend_page, &mut s);
+    s
 }

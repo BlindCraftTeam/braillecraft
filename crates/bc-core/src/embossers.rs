@@ -309,6 +309,15 @@ impl Catalog {
         Ok(Catalog { models })
     }
 
+    /// The Index firmware versions a model label carries ("V5", "V3_early-V3"), if any: the part after the name in a
+    /// label as `names` gives it.
+    pub fn versions(&self, label: &str) -> Option<&str> {
+        self.models.iter().flat_map(|m| m.names.iter()).find_map(|n| match &n.versions {
+            Some(v) if format!("{} {}", n.name, v) == label => Some(v.as_str()),
+            _ => None,
+        })
+    }
+
     /// The model with this name.
     pub fn model(&self, name: &str) -> Option<&Model> {
         self.models.iter().find(|m| m.has_name(name))

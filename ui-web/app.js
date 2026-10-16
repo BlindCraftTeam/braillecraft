@@ -1070,36 +1070,11 @@ async function editSetup(setup, cat) {
   for (const cid of [13, 14, 15, 17, 21]) {
     general.get(cid)?.addEventListener("change", () => showOutput(general, advanced, hasModel()));
   }
-  // The port list is made again only when the model's ports differ, and then nothing in it is chosen (spec 25 16.1).
-  let lastPorts = JSON.stringify(cat.ports(setup.model));
-  general.get(5).addEventListener("change", () => {
-    const model = hasModel() ? general.selected(5) : "";
-    if (model) {
-      fill(JSON.parse(cat.new_setup(model, european())), false);
-    }
-    const ports = cat.ports(model);
-    if (JSON.stringify(ports) !== lastPorts) {
-      general.setItems(17, ports, -1);
-      lastPorts = JSON.stringify(ports);
-    }
-    showGeneral(general, !!model);
-    showOutput(general, advanced, !!model);
-    setTranSendTab(!!model && cat.flag(model, "TranSend"));
-  });
-  let answer = null;
-  addButtons(10000, dialog, form, sheetControls, async () => {
-    const model = general.selected(5) ?? "";
-    if (model.startsWith("(")) {
-      await message("Please select an embosser model.");
-      return false;
-    }
-    const s = model === setup.model ? structuredClone(setup) : JSON.parse(cat.new_setup(model, european()));
+  // The setup the pages show for model `model` (whose forms the form list holds), over `base` for what no page shows.
+  const readSheet = (base, model) => {
+    const s = structuredClone(base);
+    s.model = model;
     s.name = general.text(7).trim();
-    if (setupNames().some((n) => n === shownName(s) && n !== shownName(setup))) {
-      await message(`You already have a configuration named "${shownName(s)}".  Please give a different name.`);
-      return false;
-    }
-    s.all_users = false;
     const forms = JSON.parse(cat.forms(model));
     const form = forms.find((f) => f.name === general.selected(11));
     if (form) s.form = form.id;
@@ -1110,7 +1085,7 @@ async function editSetup(setup, cat) {
         : out === 2
           ? { File: general.text(18).trim() }
           : // With no port chosen (the list made again for a new model) the port stored before is kept (spec 25 16.3).
-            { Port: general.selected(17) ?? setup.output.Port ?? cat.ports(model)[0] ?? "" };
+            { Port: general.selected(17) ?? base.output.Port ?? cat.ports(model)[0] ?? "" };
     s.serial_init = general.checked(21);
     s.baud = Number(general.selected(23)) || s.baud;
     s.parity = general.chosenIn(25, lists.parities) ?? s.parity;
@@ -1141,6 +1116,42 @@ async function editSetup(setup, cat) {
     s.control_delay = Math.max(0, advanced.number(24) ?? 0);
     // Kept across a change of model (spec 25 15.4), so read whether the tab shows or not.
     readTranSend(transend, s, lists);
+    return s;
+  };
+  // The port list is made again only when the model's ports differ, and then nothing in it is chosen (spec 25 16.1).
+  let lastPorts = JSON.stringify(cat.ports(setup.model));
+  // The model the pages show (the form list holds its forms).
+  let shownModel = setup.model;
+  general.get(5).addEventListener("change", () => {
+    const model = hasModel() ? general.selected(5) : "";
+    if (model) {
+      // The setup as the pages show it, changed to the new model as the reference changes it (spec 25 18.3).
+      const shown = readSheet(setup, shownModel);
+      fill(JSON.parse(cat.with_model(JSON.stringify(shown), model, european())), false);
+      shownModel = model;
+    }
+    const ports = cat.ports(model);
+    if (JSON.stringify(ports) !== lastPorts) {
+      general.setItems(17, ports, -1);
+      lastPorts = JSON.stringify(ports);
+    }
+    showGeneral(general, !!model);
+    showOutput(general, advanced, !!model);
+    setTranSendTab(!!model && cat.flag(model, "TranSend"));
+  });
+  let answer = null;
+  addButtons(10000, dialog, form, sheetControls, async () => {
+    const model = general.selected(5) ?? "";
+    if (model.startsWith("(")) {
+      await message("Please select an embosser model.");
+      return false;
+    }
+    const s = readSheet(setup, model);
+    if (setupNames().some((n) => n === shownName(s) && n !== shownName(setup))) {
+      await message(`You already have a configuration named "${shownName(s)}".  Please give a different name.`);
+      return false;
+    }
+    s.all_users = false;
     answer = s;
     return true;
   });
@@ -1203,9 +1214,9 @@ function readTranSend(d, s, lists) {
   s.ink_adjust_v = d.number(17) ?? 0;
 }
 
-// Shows setup `s` on the sheet's pages. `models` is set when the sheet opens: the model list, the setup name, the
-// output and the serial settings are filled only then, because a change of model in the reference leaves them as they
-// are (spec 25 15.3).
+// Shows setup `s` on the sheet's pages. `models` is set when the sheet opens: the model list, the setup name and the
+// output are filled only then, because a change of model in the reference leaves them as they are (spec 25 15.3);
+// the forms, the serial settings and the other pages are filled each time.
 function fillSheet(general, device, advanced, s, cat, lists, models) {
   if (models) {
     const names = ["(Please select a model)", ...cat.names()];
@@ -1223,13 +1234,15 @@ function fillSheet(general, device, advanced, s, cat, lists, models) {
     const want = (kind === "Port" ? value : "LPT1").toLowerCase();
     const at = ports.findIndex((p) => p.toLowerCase() === want);
     general.setItems(17, ports, at >= 0 ? at : ports.length ? 0 : -1);
-    general.setChecked(21, s.serial_init);
-    general.setItems(23, lists.bauds, lists.bauds.indexOf(String(s.baud)));
-    general.setItems(25, lists.parities, Math.min(s.parity, 3));
-    general.setItems(27, ["7", "8"], s.data_bits === 8 ? 1 : 0);
-    general.setItems(29, ["1", "2"], s.stop_bits === 2 ? 1 : 0);
-    general.setItems(31, lists.handshaking, Math.min(s.handshaking, 2));
   }
+  // The serial settings: a change of model gives the new model's, apart from parity and Initialize Serial Port
+  // (spec 25 18.3).
+  general.setChecked(21, s.serial_init);
+  general.setItems(23, lists.bauds, lists.bauds.indexOf(String(s.baud)));
+  general.setItems(25, lists.parities, Math.min(s.parity, 3));
+  general.setItems(27, ["7", "8"], s.data_bits === 8 ? 1 : 0);
+  general.setItems(29, ["1", "2"], s.stop_bits === 2 ? 1 : 0);
+  general.setItems(31, lists.handshaking, Math.min(s.handshaking, 2));
   const forms = JSON.parse(cat.forms(s.model));
   general.setItems(11, forms.map((f) => f.name), forms.findIndex((f) => f.id === s.form));
   general.enable(11, forms.length > 0);
@@ -1246,7 +1259,8 @@ function fillSheet(general, device, advanced, s, cat, lists, models) {
   device.setItems(41, lists.cases, s.upper_case ? 1 : 0);
   device.setChecked(44, s.reverse_order);
   device.setChecked(52, s.z_fold);
-  for (const [cid, v] of s.device_other) device.setText(cid, v);
+  // The page's other fields as the setup has them; one it does not hold is empty (spec 25 18.3).
+  for (const cid of [16, 21, 23, 27, 30, 33, 43]) device.setText(cid, s.device_other.find(([c]) => c === cid)?.[1] ?? "");
   // INFERENCE (as in the desktop program): the device fields shown for a model follow its properties.
   for (const [cid, on] of [
     [4, index],

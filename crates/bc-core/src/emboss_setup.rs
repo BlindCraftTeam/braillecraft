@@ -337,6 +337,24 @@ pub fn find_model<'a>(cat: &'a Catalog, label: &str) -> Option<&'a Model> {
 
 /// The form a new setup of `model` starts with: the first the model has of 11_w, 11_n, 10_n (A4, 12_w, 12_n, 11_w,
 /// 11_n, 10_n in Europe, spec 25 12.2), else its first form.
+/// The places in VERSIONS of a model label's Index firmware versions ("V5", or a range such as "V3_early-V3"); None
+/// for a version the list does not hold.
+fn version_range(versions: &str) -> Option<(usize, usize)> {
+    let place = |v: &str| match v.trim() {
+        "V1" => Some(1),
+        "V2" => Some(2),
+        "V3_early" => Some(3),
+        "V3" => Some(4),
+        "V4" => Some(5),
+        "V5" => Some(6),
+        _ => None,
+    };
+    match versions.split_once('-') {
+        Some((a, b)) => Some((place(a)?, place(b)?)),
+        None => place(versions).map(|v| (v, v)),
+    }
+}
+
 pub fn default_form(model: &Model, european: bool) -> String {
     let order: &[&str] = if european { &["A4", "12_w", "12_n", "11_w", "11_n", "10_n"] } else { &["11_w", "11_n", "10_n"] };
     order
@@ -399,6 +417,52 @@ impl Setup {
             transend_font_size: 0,
             ink_adjust_h: 0,
             ink_adjust_v: 0,
+        }
+    }
+
+    /// This setup after its model is changed to `label` on the setup sheet, as the reference makes it (spec 25 18.3):
+    /// the new model's serial settings (apart from parity), Advanced settings, escape codes, interpoint, encoding,
+    /// letter case and punctuation, signature sheet counts, rightmost cell and PRINT55 location; the form kept when
+    /// the new model has it, else the model's default; Embosser Version the model's single version, else the old one
+    /// when the model's range holds it, else unspecified. Everything else stays as it was: the name, the output,
+    /// Initialize Serial Port, parity, the left and top margins, line space, reverse page order, Z-fold, seek top of
+    /// form, the custom codes and the TranSend SE values.
+    pub fn with_model(&self, cat: &Catalog, label: &str, european: bool) -> Setup {
+        let new = Setup::for_model(cat, label, european);
+        let model = find_model(cat, label);
+        let form = if model.is_some_and(|m| m.forms.iter().any(|f| f.id == self.form)) { self.form.clone() } else { new.form.clone() };
+        let version = match cat.versions(label).and_then(version_range) {
+            Some((first, last)) if first == last => first,
+            Some((first, last)) if (first..=last).contains(&self.version) => self.version,
+            _ => 0,
+        };
+        // Device Settings fields kept from the setup: line space (16), left margin (27), top margin (33); the
+        // signature sheet counts (21, 23), the rightmost cell (30) and the PRINT55 location (43) take the model's.
+        let device_other = self.device_other.iter().filter(|(cid, _)| [16, 27, 33].contains(cid)).cloned().collect();
+        Setup {
+            model: label.to_string(),
+            form,
+            version,
+            device_other,
+            baud: new.baud,
+            data_bits: new.data_bits,
+            stop_bits: new.stop_bits,
+            handshaking: new.handshaking,
+            escape_codes: new.escape_codes,
+            interpoint_enabled: new.interpoint_enabled,
+            encoding: new.encoding,
+            high_punctuation: new.high_punctuation,
+            upper_case: new.upper_case,
+            end_of_line: new.end_of_line,
+            end_of_page: new.end_of_page,
+            eol_on_full_line: new.eol_on_full_line,
+            eop_on_full_page: new.eop_on_full_page,
+            pad_lines: new.pad_lines,
+            prompt_new_sheet: new.prompt_new_sheet,
+            one_at_a_time: new.one_at_a_time,
+            text_delay: new.text_delay,
+            control_delay: new.control_delay,
+            ..self.clone()
         }
     }
 
@@ -620,6 +684,36 @@ mod tests {
         assert_eq!(check(model, &layout, 60, 25), Check::DoesNotFit);
         layout.form = "zz".into();
         assert_eq!(check(model, &layout, 40, 25), Check::FormNotDefined);
+    }
+
+    #[test]
+    fn a_change_of_model_takes_and_keeps_what_the_reference_does() {
+        let cat = catalog();
+        let mut s = Setup::for_model(&cat, "Enabling Juliet Pro 60", false);
+        s.name = "Mine".into();
+        s.output = Output::Port("com3".into());
+        s.parity = 2;
+        s.baud = 1200;
+        s.custom_codes = true;
+        s.ink_adjust_h = 5;
+        s.device_other = vec![(27, "3".into()), (30, "38".into())];
+        let t = s.with_model(&cat, "Enabling Marathon", false);
+        let fresh = Setup::for_model(&cat, "Enabling Marathon", false);
+        assert_eq!(t.model, "Enabling Marathon");
+        // Kept.
+        assert_eq!((t.name.as_str(), &t.output, t.parity, t.custom_codes, t.ink_adjust_h), ("Mine", &Output::Port("com3".into()), 2, true, 5));
+        assert_eq!(t.device_other, vec![(27, "3".to_string())]);
+        // The model's.
+        assert_eq!((t.baud, t.data_bits, t.stop_bits, t.handshaking), (fresh.baud, fresh.data_bits, fresh.stop_bits, fresh.handshaking));
+        assert_eq!((t.end_of_line, t.end_of_page, t.encoding.as_str()), (fresh.end_of_line, fresh.end_of_page, fresh.encoding.as_str()));
+        // Embosser Version: a single version is taken, a range keeps an old version inside it, else unspecified.
+        let mut i = Setup::for_model(&cat, "Index Everest-D V2", false);
+        i.version = 4;
+        assert_eq!(i.with_model(&cat, "Index Basic-D V3_early-V3", false).version, 4);
+        assert_eq!(i.with_model(&cat, "Index Everest-D V5", false).version, 6);
+        i.version = 2;
+        assert_eq!(i.with_model(&cat, "Index Basic-D V3_early-V3", false).version, 0);
+        assert_eq!(i.with_model(&cat, "Enabling Marathon", false).version, 0);
     }
 
     #[test]
