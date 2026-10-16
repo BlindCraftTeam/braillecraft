@@ -263,7 +263,15 @@ pub fn run(id: i32, checked: bool) {
         1304 => set_font(ViewFont::Braille),
         1305 => set_font(ViewFont::SimBraille),
         1307 => six_key(checked),
-        1309 => set_view(|v| v.codes = checked),
+        1309 => {
+            set_view(|v| v.codes = checked);
+            // The Cursor Locator after a switch of view, when Global, View Preferences asks for it.
+            if app::with(|a| a.settings.view_prefs.locator_on_view_switch) {
+                if let Some(key) = app::with(|a| a.doc().map(|d| d.key)) {
+                    wxdragon::call_after(Box::new(move || documents::show_cursor_locator(key)));
+                }
+            }
+        }
         1310 => set_view(|v| v.translated = checked),
 
         1401 => apply_style(),
@@ -666,7 +674,17 @@ fn open_dx_document(path: &Path) -> Option<u64> {
 
 fn open_file() {
     let Some(path) = pick_file("Open") else { return };
-    open_path(&path);
+    if let Some(key) = open_path(&path) {
+        locator_after_open(key);
+    }
+}
+
+/// The Cursor Locator over a document just opened or translated, when Global, View Preferences asks for it; shown
+/// once the new window is up and the dialog that opened it has gone.
+fn locator_after_open(key: u64) {
+    if app::with(|a| a.settings.view_prefs.locator_on_open) {
+        wxdragon::call_after(Box::new(move || wxdragon::call_after(Box::new(move || documents::show_cursor_locator(key)))));
+    }
 }
 
 /// Opens a document file (.dxp, .dxb) or a text or braille file in a new document window; its key, or None when it
@@ -1656,6 +1674,7 @@ pub fn translate_active() -> Result<u64, String> {
             }
         }
     });
+    locator_after_open(key);
     Ok(key)
 }
 

@@ -129,6 +129,18 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
     key
 }
 
+/// The key code of the Shift key (WXK_SHIFT).
+const SHIFT_KEY: i32 = 306;
+
+/// Shows the Cursor Locator over document `key`'s editing area (spec 24 2d.2): a rectangle closing in on the caret.
+pub fn show_cursor_locator(key: u64) {
+    let mut text = None;
+    app::try_with(|a| text = a.index_of(key).map(|i| a.docs[i].text));
+    if let Some(t) = text {
+        unsafe { wxdragon_sys::wxd_TextCtrl_ShowCursorLocator(t.handle_ptr() as *mut wxdragon_sys::wxd_Window_t) };
+    }
+}
+
 /// Makes the document with this key the active one.
 pub fn activate_key(key: u64) {
     app::try_with(|a| {
@@ -204,9 +216,14 @@ fn wire(key: u64, child: &MDIChildFrame, text: &TextCtrl) {
     });
 
     let t = *text;
+    // Shift pressed and let go with no other key between: the Cursor Locator, when Global, View Preferences asks for
+    // it (spec 24 2d.2).
+    let shift_alone = std::rc::Rc::new(std::cell::Cell::new(false));
+    let shift_down = shift_alone.clone();
     text.on_key_down(move |e| {
         let mut consumed = false;
         if let WindowEventData::Keyboard(k) = &e {
+            shift_down.set(k.get_key_code() == Some(SHIFT_KEY));
             app::try_with(|a| {
                 let Some(i) = a.index_of(key) else { return };
                 // Copy and cut keep the selection with its codes, so pasting it brings them back.
@@ -257,6 +274,13 @@ fn wire(key: u64, child: &MDIChildFrame, text: &TextCtrl) {
             }
             k.event.skip(true);
             caret_moved(key);
+            if k.get_key_code() == Some(SHIFT_KEY) && shift_alone.replace(false) {
+                let mut on = false;
+                app::try_with(|a| on = a.settings.view_prefs.locator_on_shift);
+                if on {
+                    wxdragon::call_after(Box::new(move || show_cursor_locator(key)));
+                }
+            }
         }
     });
 

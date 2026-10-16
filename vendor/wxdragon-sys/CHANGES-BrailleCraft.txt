@@ -19,5 +19,10 @@ cpp/CMakeLists.txt and included from cpp/include/wxdragon.h):
   subclass="WxdReaderStaticText".
 - wxd_ReaderStaticText_Registered: whether that class is registered; called once at start-up so the class is kept.
 
+Also added, in cpp/include/core/wxd_cursor_locator.h and cpp/src/cursor_locator.cpp (listed in cpp/CMakeLists.txt
+and included from cpp/include/wxdragon.h):
+- wxd_TextCtrl_ShowCursorLocator: the Cursor Locator over a multi-line text control, a rectangle closing in on the
+  caret, drawn with four borderless popup windows in the window text colour.
+
 The Rust bindings are generated from the header when the crate builds, so no Rust file changed.
 The workspace Cargo.toml uses this copy through [patch.crates-io].

@@ -134,6 +134,8 @@ extern "C" {
 
 // Added for BrailleCraft: the static text Tab reaches while a screen reader runs
 #include "core/wxd_reader_static_text.h"
+// Added for BrailleCraft: the Cursor Locator
+#include "core/wxd_cursor_locator.h"
 
 // Sound support
 #include "core/wxd_sound.h"
