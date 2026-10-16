@@ -236,6 +236,7 @@ impl Dlg {
             self.plain_ok_cancel();
             self.wire_label_mnemonics();
         }
+        self.fit_lists();
         if cfg!(target_os = "macos") {
             self.mac_button_order();
         }
@@ -462,8 +463,7 @@ impl Dlg {
     /// A drop-down list is given the height of its open list, as in Windows dialogs, where that height sizes the
     /// list and the closed box is one row (12 dialog units) high. Elsewhere the given height would size the closed
     /// box, so it takes its own height, which is more than that row: what lies below the row moves down by the
-    /// difference, a group around it grows, and the dialog grows. A Windows list box shortens itself to whole rows,
-    /// which keeps it clear of a control placed just below its edge; here such a list ends above that control.
+    /// difference, a group around it grows, and the dialog grows.
     fn fit_drop_downs(&self) {
         let row = match &self.page {
             Some(p) => dialog_units(p, 0, 12).height,
@@ -502,6 +502,12 @@ impl Dlg {
                 self.set_client(Size::new(c.width, c.height + extra));
             }
         }
+    }
+
+    /// A Windows list box shortens itself to whole rows, which keeps it clear of a control placed just below its
+    /// edge. wxWidgets makes its list boxes keep the height they are given (on Windows too, LBS_NOINTEGRALHEIGHT), so
+    /// such a list ends above that control, on every system.
+    fn fit_lists(&self) {
         for (cid, kind) in self.controls() {
             let Some(l) = self.win(*cid).filter(|_| *kind == Ctl::List) else { continue };
             let (lp, ls) = (l.get_position(), l.get_size());
