@@ -124,7 +124,7 @@ jobs:
           done
           # The same dialogs as their menu commands open them, filled as they are in use (BC_LAYOUT_RUN): one command
           # for each dialog a command opens.
-          for c in 1101 1103 1111 1112 1211 1215 1409 1416 1501 2601 2602 2604 2608 2609 2612 3101 3102 3104 3105 3106 3107 3108 3109 3111 3113 3114 3115 3117 3211; do
+          for c in 1101 1103 1111 1112 1215 1218 1409 1416 1501 2601 2602 2604 2608 2609 2612 3101 3102 3104 3105 3106 3107 3108 3109 3111 3113 3114 3115 3117 3211; do
             BC_LAYOUT_RUN=$c $exe & pid=$!
             shown 5
             case "$RUNNER_OS" in
