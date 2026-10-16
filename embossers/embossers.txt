@@ -1,0 +1,3147 @@
+# BrailleMaker embosser models.
+#
+# A model is one or more name lines, each a name in double quotes, optionally followed by an Index firmware version
+# or range (V2, V3_early-V3, V5), then its properties between a line { and a line }. A property line is a name
+# alone (a flag), name = number, name = "text", name = word, Encoding = "section" (an encoding the model can use;
+# the first is its default), a form line
+#     Form "id" = width x length ; SinglePage|DoublePage [cell offset] ; max cells x lines ; recommended cells x lines
+# (sizes in tenths of an inch; a model with interline print gives BrailleOnly = ... ; ... ; Interline = ... ; ...
+# instead of the two pairs), or HardwareDCB / SoftwareDCB followed by a { name = value } block of serial port
+# settings. TopMargin, LeftMargin, RightMargin and BottomMargin (tenths of a millimetre) apply to the forms after
+# them. Property names are matched without regard to case. Lines starting with # are comments.
+#
+# A file myembossers.txt beside this one may hold models of the same names; they replace these.
+
+"Generic"
+{
+  Baud = 9600
+  DataBits = 8
+  StopBits = 1
+  StartLeftMargin = 1
+  MaximumCells = 42
+  MaximumLines = 27
+  Driver = "Emb_GenericEmbosserDriver"
+  BreakLimits
+  HelpPage = "Generic.htm"
+  Form "A4"   =  83 x 117 ; SinglePage ; 35 x 29 ; 30 x 28
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 22 ; 32 x 22
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 44 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 44 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 44 x 32 ; 40 x 30
+  SortToTop
+}
+
+"Generic Interpoint"
+{
+  MaximumCells = 42
+  MaximumLines = 27
+  BreakLimits
+  CanDoInterpoint
+  HelpPage = "Generic_Interpoint.htm"
+  Form "A4"   =  83 x 117 ; SinglePage ; 35 x 29 ; 30 x 28
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 22 ; 32 x 22
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 44 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 44 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 44 x 32 ; 40 x 30
+  SortToTop
+}
+
+"APH PageBlaster" V5
+{
+  CanDoInterpoint
+  VPGraphics
+  Index20Graphics
+  IndexMulti
+  Index16Graphics
+  IndexPageInch
+  ControlZ
+  MaximumCells = 48
+  MaximumLines = 27
+  EndofPage = 1
+  YesUSB
+  NoParallel
+  IndexZfold
+  Driver = "Emb_IndexEmbosserDriver"
+  TranSend
+  WindowsDriverName = "APH PageBlaster"
+  StartLeftMargin = 0
+  InitSequence="BT0,TD0,PN0,DP,LS,TM,BI,CH,LP,MC"
+  HelpPage = "APH_PageBlaster.htm"
+  Form "A3"   =  117 x 165 ; SinglePage ; 49 x 41 ; 47 x 40
+  Form "10_n" =  85 x 100 ; SinglePage ; 35 x 23 ; 32 x 24
+  Form "11_n" =  85 x 110 ; SinglePage ; 35 x 27 ; 32 x 25
+  Form "A4"   =  83 x 117 ; SinglePage ; 35 x 29 ; 30 x 27
+  Form "A4_ex" =  98 x 117 ; SinglePage ; 41 x 29 ; 41 x 27
+  Form "11_w" = 115 x 110 ; SinglePage ; 47 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 35 x 29 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 47 x 29 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 35 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 47 x 32 ; 40 x 30
+  Form "10_n_side" = 100 x 85 ; SinglePage ; 40 x 21 ; 38 x 20
+  Form "11_n_side" = 110 x 85 ; SinglePage ; 44 x 21 ; 42 x 20
+  Form "11_w_side" = 110 x 115 ; SinglePage ; 44 x 28 ; 42 x 26
+}
+
+"APH PixBlaster"
+{
+  Driver = "Emb_TigerEmbosserDriver"
+  WindowsDriverName = "Pixblaster"
+  CanDoInterpoint
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  MaximumCells = 46
+  MaximumLines = 27
+  HelpPage = "APH_PixBlaster.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 46 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 46 x 30 ; 40 x 28
+}
+
+"ATC Braille & Print" V4
+{
+  CanDoInterpoint
+  VPGraphics
+  Index20Graphics
+  Index16Graphics
+  Interline
+  MaximumCells = 47
+  MaximumLines = 27
+  EndofPage = 1
+  IndexMulti
+  YesUSB
+  NoParallel
+  ControlZ
+  IndexPagemm
+  Driver = "Emb_IndexEmbosserDriver"
+  WindowsDriverName = "ATC Braille and Print"
+  StartLeftMargin = 0
+  InitSequence="BT0,TD0,PN0,DP,LS50,TM,BI,CH,LP,MC"
+  HelpPage = "ATC_Braille_a_Print.htm"
+  Form "A3"   =  117 x 165 ; SinglePage ; BrailleOnly = 42 x 41 ; 40 x 40 ; Interline = 42 x 41 ; 40 x 40
+  Form "A4"   =  83 x 117 ; SinglePage ; BrailleOnly = 35 x 29 ; 30 x 27 ; Interline = 35 x 29 ; 30 x 27
+  Form "A4_ex"        =  98 x 117 ; SinglePage ; BrailleOnly = 41 x 29 ; 41 x 27 ; Interline = 41 x 29 ; 41 x 27
+  Form "A3_landscape" = 165 x 117 ; SinglePage ; BrailleOnly = 68 x 29 ; 66 x 27 ; Interline = 68 x 29 ; 66 x 27
+  Form "A4_landscape" = 117 x 83 ; SinglePage ; BrailleOnly = 42 x 20 ; 40 x 18 ; Interline = 42 x 20 ; 40 x 18
+  Form "A3_folio" = 165 x 117; DoublePage ; BrailleOnly = 33 x 29 ; 31 x 27 ; Interline = 33 x 29 ; 31 x 27
+  Form "A4_folio" = 117 x 83; DoublePage ; BrailleOnly = 22 x 20 ; 20 x 20 ; Interline = 22 x 20 ; 20 x 20
+  Form "10_n" =  85 x 100 ; SinglePage ; BrailleOnly = 36 x 24 ; 32 x 23 ; Interline = 36 x 24 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; BrailleOnly = 36 x 27 ; 32 x 25 ; Interline = 36 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; BrailleOnly = 47 x 27 ; 40 x 25 ; Interline = 47 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; BrailleOnly = 36 x 30 ; 32 x 28 ; Interline = 36 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; BrailleOnly = 47 x 30 ; 40 x 28 ; Interline = 47 x 30 ; 40 x 28
+  Form "14_n" =  85 x 140 ; SinglePage ; BrailleOnly = 36 x 35 ; 32 x 34 ; Interline = 36 x 35 ; 32 x 34
+  Form "11_nd" = 170 x 110; DoublePage ; BrailleOnly = 33 x 28 ; 32 x 25 ; Interline = 33 x 28 ; 32 x 25
+  Form "RusBook"   =  96 x 117 ; SinglePage ; BrailleOnly = 40 x 29 ; 36 x 27 ; Interline = 40 x 29 ; 36 x 27
+  Form "RusNote" = 150 x 99; SinglePage ; BrailleOnly = 41 x 37 ; 38 x 37 ; Interline = 41 x 37 ; 38 x 37
+  Form "RusNote_folio" = 150 x 99; DoublePage ; BrailleOnly = 31 x 25 ; 30 x 23 ; Interline = 31 x 25 ; 30 x 23
+}
+
+"ATC Dot & Print"
+{
+  Driver = "Emb_DotnPrint_EmbosserDriver"
+  StartLeftMargin = 0
+  Interline
+  MaximumCells = 40
+  MaximumLines = 20
+  Baud = 19200
+  HelpPage = "ATC_Dot_a_Print.htm"
+  Form "11_w" = 115 x 110 ; SinglePage ;
+    BrailleOnly = 40 x 20 ; 40 x 20 ;
+    Interline = 40 x 20 ; 40 x 20
+  Form "12_w" = 115 x 120 ; SinglePage ;
+    BrailleOnly = 40 x 22 ; 40 x 22 ;
+    Interline = 40 x 22 ; 40 x 22
+}
+
+"ATC Ohtsuki"
+{
+  MaximumCells = 42
+  MaximumLines = 25
+  Interline
+  OneByOne
+  LettersUpperCase
+  PageWrap
+  Driver = "Emb_OhtsukiEmbosserDriver"
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  HelpPage = "ATC_Ohtsuki.htm"
+  Form "11_w" = 115 x 110 ;  SinglePage ;
+    BrailleOnly = 42 x 25 ; 40 x 25 ;
+    Interline = 42 x 25 ; 40 x 25
+}
+
+"Brailletec BTec 100"
+{
+  Driver = "Emb_PumaEmbosserDriver"
+  NoParallel
+  MaximumCells = 44
+  MaximumLines = 27
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  OneByOne
+  AdditionalDelay = 2
+  ControlDelay = 2
+  EndofPage = 5
+  HelpPage = "Brailletec_BTec_100.htm"
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 25 ; 40 x 25
+  Encoding = "PUMA binary (transparent) code"
+  Form "A4"   =  83 x 115 ; SinglePage ; 32 x 29 ; 32 x 28
+  Form "10_n" =  85 x 100 ; SinglePage ; 32 x 24 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 32 x 27 ; 32 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 32 x 29 ; 32 x 28
+}
+
+"Brailletec Elotype 4A"
+{
+  MaximumCells = 40
+  MaximumLines = 30
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  NoParallel
+  Encoding = "North American English"
+  Encoding = "German"
+  HelpPage = "Brailletec_Elotype_4A.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 40 x 30 ; 40 x 28
+}
+
+"Brailletec PUMA 6"
+{
+  Driver = "Emb_PumaEmbosserDriver"
+  Encoding = "PUMA binary (transparent) code"
+  NoParallel
+  OneByOne
+  EndofPage = 5
+  CrMac
+  LineWrap
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  Handshaking=Software
+  HelpPage = "Brailletec_PUMA_6.htm"
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 25 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 28 ; 32 x 28
+}
+
+"Brailletec PUMA 7"
+{
+  Driver = "Emb_PumaEmbosserDriver"
+  Encoding = "PUMA binary (transparent) code"
+  NoParallel
+  OneByOne
+  EndofPage = 5
+  CrMac
+  LineWrap
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  Handshaking=Software
+  HelpPage = "Brailletec_PUMA_7.htm"
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 25 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 28 ; 32 x 28
+}
+
+"Braillo 200"
+{
+  CanDoInterpoint
+  NoLeftMargin
+  NoRightMargin
+  MaximumCells = 42
+  UsingEscapeCodes
+  BrailloHGapGraphics
+  Driver = "Emb_BrailloEmbosserDriver"
+  Submodel = 1
+  HelpPage = "Braillo_200.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 27 ; 40 x 25
+  Form "A4"   =  83 x 115 ; SinglePage ; 34 x 29 ; 32 x 28
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 42 x 32 ; 40 x 30
+}
+
+"Braillo 200/400 with 270 style ROMs"
+{
+  CanDoInterpoint
+  NoLeftMargin
+  NoRightMargin
+  MaximumCells = 42
+  UsingEscapeCodes
+  Driver = "Emb_BrailloEmbosserDriver"
+  Submodel = 2
+  HelpPage = "Braillo_200_400_with_270_style_ROMs.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 42 x 32 ; 40 x 30
+}
+
+"Braillo 270"
+{
+  CanDoInterpoint
+  NoLeftMargin
+  NoRightMargin
+  MaximumCells = 42
+  UsingEscapeCodes
+  Driver = "Emb_BrailloEmbosserDriver"
+  Submodel = 3
+  HelpPage = "Braillo_270.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 42 x 32 ; 40 x 30
+}
+
+"Braillo 30"
+{
+  HelpPage = "Braillo_30.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 40 x 30 ; 40 x 28
+}
+
+"Braillo 300"
+{
+  CanDoInterpoint
+  NoLeftMargin
+  NoRightMargin
+  MaximumCells = 42
+  UsingEscapeCodes
+  BrailloHGapGraphics
+  Driver = "Emb_BrailloEmbosserDriver"
+  NoParallel
+  Submodel = 4
+  HelpPage = "Braillo_300.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 27 ; 40 x 25
+  Form "A4"   =  83 x 117 ; SinglePage ; 34 x 29 ; 32 x 28
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 42 x 32 ; 40 x 30
+}
+
+"Braillo 300 S2"
+{
+  CanDoInterpoint
+  NoLeftMargin
+  NoRightMargin
+  MaximumCells = 42
+  UsingEscapeCodes
+  BrailloHGapGraphics
+  Driver = "Emb_BrailloEmbosserDriver"
+  NoParallel
+  Submodel = 4
+  HelpPage = "Braillo_300_s2.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 27 ; 40 x 25
+  Form "A4"   =  83 x 117 ; SinglePage ; 34 x 29 ; 32 x 28
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 42 x 32 ; 40 x 30
+}
+
+"Braillo 40/50"
+{
+  HelpPage = "Braillo_40_50.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 40 x 30 ; 40 x 28
+}
+
+"Braillo 400S"
+{
+  CanDoInterpoint
+  NoLeftMargin
+  NoRightMargin
+  MaximumCells = 42
+  UsingEscapeCodes
+  Driver = "Emb_BrailloEmbosserDriver"
+  Submodel = 5
+  HelpPage = "Braillo_400_S.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 27 ; 40 x 25
+  Form "A4"   =  83 x 115 ; SinglePage ; 34 x 29 ; 32 x 28
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 42 x 32 ; 40 x 30
+}
+
+"Braillo 450 S2"
+{
+  CanDoInterpoint
+  NoLeftMargin
+  NoRightMargin
+  MaximumCells = 42
+  UsingEscapeCodes
+  BrailloHGapGraphics
+  Driver = "Emb_BrailloEmbosserDriver"
+  NoParallel
+  Submodel = 4
+  HelpPage = "Braillo_300.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 27 ; 40 x 25
+  Form "A4"   =  83 x 117 ; SinglePage ; 34 x 29 ; 32 x 28
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 42 x 32 ; 40 x 30
+}
+
+"Braillo 400SR"
+{
+  CanDoInterpoint
+  NoLeftMargin
+  NoRightMargin
+  MaximumCells = 42
+  UsingEscapeCodes
+  Driver = "Emb_BrailloEmbosserDriver"
+  Submodel = 6
+  HelpPage = "Braillo_400_SR.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 27 ; 40 x 25
+  Form "A4"   =  83 x 115 ; SinglePage ; 34 x 29 ; 32 x 28
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 42 x 32 ; 40 x 30
+}
+
+"Braillo 440 SW"
+{
+  Driver = "Emb_BrailloEmbosserDriver"
+  Submodel = 7
+  CanDoInterpoint
+  NoLeftMargin
+  NoRightMargin
+  MaximumCells = 44
+  UsingEscapeCodes
+  HelpPage = "Braillo_440_SW.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 22 ; 32 x 22
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 25 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 44 x 25 ; 40 x 25
+  Form "11_d" = 230 x 110 ; DoublePage ; 44 x 28 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 28 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 44 x 28 ; 40 x 28
+  Form "12_d" = 230 x 120 ; DoublePage ; 44 x 28 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "13_w" = 115 x 130 ; SinglePage ; 44 x 30 ; 40 x 28
+  Form "13_d" = 230 x 130 ; DoublePage ; 44 x 30 ; 40 x 28
+  Form "13.5_d" = 230 x 135 ; DoublePage ; 44 x 31 ; 40 x 31
+}
+
+"Braillo 440 SF"
+"Braillo 440 S&F"
+{
+  Driver = "Emb_BrailloEmbosserDriver"
+  Submodel = 8
+  CanDoInterpoint
+  NoLeftMargin
+  NoRightMargin
+  MaximumCells = 44
+  UsingEscapeCodes
+  HelpPage = "Braillo_440_SaF.htm"
+  Form "11_d"   = 230 x 110 ; DoublePage ; 44 x 28 ; 40 x 25
+  Form "12_d"   = 230 x 120 ; DoublePage ; 44 x 28 ; 40 x 28
+  Form "13_d"   = 230 x 130 ; DoublePage ; 44 x 30 ; 40 x 28
+  Form "13.5_d" = 230 x 135 ; DoublePage ; 44 x 31 ; 40 x 31
+}
+
+"Braillo 600"
+{
+  CanDoInterpoint
+  NoLeftMargin
+  NoRightMargin
+  MaximumCells = 42
+  UsingEscapeCodes
+  BrailloHGapGraphics
+  Driver = "Emb_BrailloEmbosserDriver"
+  NoParallel
+  Submodel = 4
+  HelpPage = "Braillo_600.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 27 ; 40 x 25
+  Form "A4"   =  83 x 117 ; SinglePage ; 34 x 29 ; 32 x 28
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 42 x 32 ; 40 x 30
+}
+
+"Braillo 600 S2"
+{
+  CanDoInterpoint
+  NoLeftMargin
+  NoRightMargin
+  MaximumCells = 42
+  UsingEscapeCodes
+  BrailloHGapGraphics
+  Driver = "Emb_BrailloEmbosserDriver"
+  NoParallel
+  Submodel = 4
+  HelpPage = "Braillo_600_S2.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 27 ; 40 x 25
+  Form "A4"   =  83 x 117 ; SinglePage ; 34 x 29 ; 32 x 28
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 42 x 32 ; 40 x 30
+}
+
+"Braillo 600 SR"
+"Braillo 600SR"
+{
+  Submodel = 10
+  CanDoInterpoint
+  NoParallel
+  NoLeftMargin
+  NoRightMargin
+  MaximumCells = 42
+  UsingEscapeCodes
+  BrailloHGapGraphics
+  Driver = "Emb_BrailloEmbosserDriver"
+  HelpPage = "Braillo_600_SR.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 27 ; 40 x 25
+  Form "A4"   =  83 x 117 ; SinglePage ; 34 x 29 ; 32 x 28
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 42 x 32 ; 40 x 30
+}
+
+"Braillo 600 SR2"
+{
+  Submodel = 10
+  CanDoInterpoint
+  NoParallel
+  NoLeftMargin
+  NoRightMargin
+  MaximumCells = 42
+  UsingEscapeCodes
+  BrailloHGapGraphics
+  Driver = "Emb_BrailloEmbosserDriver"
+  HelpPage = "Braillo_600_SR.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 27 ; 40 x 25
+  Form "A4"   =  83 x 117 ; SinglePage ; 34 x 29 ; 32 x 28
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 42 x 32 ; 40 x 30
+}
+
+"Braillo 650 SF"
+"Braillo 650 S&F"
+{
+  Driver = "Emb_BrailloEmbosserDriver"
+  Submodel = 9
+  CanDoInterpoint
+  NoParallel
+  NoSerial
+  NoLeftMargin
+  NoRightMargin
+  MaximumCells = 44
+  UsingEscapeCodes
+  HelpPage = "Braillo_650_SF.htm"
+  Form "11_d"   = 230 x 110 ; DoublePage ; 44 x 28 ; 40 x 25
+  Form "12_d"   = 230 x 120 ; DoublePage ; 44 x 28 ; 40 x 28
+  Form "13_d"   = 230 x 130 ; DoublePage ; 44 x 30 ; 40 x 28
+  Form "13.5_d" = 230 x 135 ; DoublePage ; 44 x 31 ; 40 x 31
+}
+
+"Braillo 650 SF2"
+{
+  Driver = "Emb_BrailloEmbosserDriver"
+  Submodel = 9
+  CanDoInterpoint
+  NoParallel
+  NoSerial
+  NoLeftMargin
+  NoRightMargin
+  MaximumCells = 44
+  UsingEscapeCodes
+  HelpPage = "Braillo_650_SF.htm"
+  Form "11_d"   = 230 x 110 ; DoublePage ; 44 x 28 ; 40 x 25
+  Form "12_d"   = 230 x 120 ; DoublePage ; 44 x 28 ; 40 x 28
+  Form "13_d"   = 230 x 130 ; DoublePage ; 44 x 30 ; 40 x 28
+  Form "13.5_d" = 230 x 135 ; DoublePage ; 44 x 31 ; 40 x 31
+}
+
+"Braillo 650 SW"
+{
+  Driver = "Emb_BrailloEmbosserDriver"
+  Submodel = 11
+  CanDoInterpoint
+  NoParallel
+  NoSerial
+  NoLeftMargin
+  NoRightMargin
+  MaximumCells = 44
+  UsingEscapeCodes
+  HelpPage = "Braillo_650_SW.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 22 ; 32 x 22
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 25 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 44 x 25 ; 40 x 25
+  Form "11_d" = 230 x 110 ; DoublePage ; 44 x 28 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 28 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 44 x 28 ; 40 x 28
+  Form "12_d" = 230 x 120 ; DoublePage ; 44 x 28 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "13_w" = 115 x 130 ; SinglePage ; 44 x 30 ; 40 x 28
+  Form "13_d" = 230 x 130 ; DoublePage ; 44 x 30 ; 40 x 28
+  Form "13.5_d" = 230 x 135 ; DoublePage ; 44 x 31 ; 40 x 31
+}
+
+"Braillo 650 SW2"
+{
+  Driver = "Emb_BrailloEmbosserDriver"
+  Submodel = 11
+  CanDoInterpoint
+  NoParallel
+  NoSerial
+  NoLeftMargin
+  NoRightMargin
+  MaximumCells = 44
+  UsingEscapeCodes
+  HelpPage = "Braillo_650_SW.htm"
+  Form "A3_folio"  =  166 x 117 ; DoublePage ; 34 x 29 ; 32 x 28
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 22 ; 32 x 22
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 25 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 44 x 25 ; 40 x 25
+  Form "11_d" = 230 x 110 ; DoublePage ; 44 x 28 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 28 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 44 x 28 ; 40 x 28
+  Form "12_d" = 230 x 120 ; DoublePage ; 44 x 28 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "13_w" = 115 x 130 ; SinglePage ; 44 x 30 ; 40 x 28
+  Form "13_d" = 230 x 130 ; DoublePage ; 44 x 30 ; 40 x 28
+  Form "13.5_d" = 230 x 135 ; DoublePage ; 44 x 31 ; 40 x 31
+}
+
+"Bristol Braille Canute 360"
+"Bristol Braille Canute Mk13"
+{
+  NoParallel
+  NoSerial
+  NoLeftMargin
+  NoRightMargin
+  MaximumCells = 40
+  Encoding = "North American English"
+  Encoding = "British"
+  Form "bbc" =  115 x 40 ; SinglePage ; 40 x 9 ; 40 x 9
+}
+
+"Braillo Comet"
+{
+  StartLeftMargin = 0
+  Driver = "Emb_GenericEmbosserDriver"
+  HelpPage = "Braillo_Comet.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 22 ; 32 x 22
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 25 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 25 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 28 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 40 x 28 ; 40 x 28
+  Form "6_lbl" = 115 x 60 ; SinglePage ; 40 x 11 ; 40 x 11
+  Form "7_lbl" = 115 x 70 ; SinglePage ; 40 x 22 ; 40 x 22
+}
+
+"Cranmer Brailler"
+{
+  EndofPage = 2
+  NoParallel
+  MaximumCells = 42
+  MaximumLines = 26
+  Driver = "Emb_GenericEmbosserDriver"
+  HelpPage = "Cranmer_Brailler.htm"
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 26 ; 40 x 25
+}
+
+"EBrailler Cosmo"
+{
+  YesFTDI
+  NoSerial
+  NoParallel
+  EndofPage = 0
+  PageWrap
+  OneByOne
+  StartLeftMargin = 1
+  MaximumCells = 30
+  MaximumLines = 28
+  Driver = "Emb_Typewriter_EmbosserDriver"
+  HelpPage = "EBrailler_Cosmo.htm"
+  Form "A4"   =  83 x 117 ; SinglePage ; 30 x 26 ; 30 x 26
+  Form "11_n" =  85 x 110 ; SinglePage ; 30 x 24 ; 30 x 24
+  Form "14_n" =  85 x 140 ; SinglePage ; 30 x 32 ; 30 x 32
+}
+
+"Enabling BraillePlace"
+{
+  CanDoInterpoint
+  ETSpeaks
+  PageWrap
+  MaximumCells = 45
+  MaximumLines = 27
+  ETmulti
+  ControlZ
+  ETCAllowEscapeCodes
+  HelpPage = "Enabling_BraillePlace.htm"
+  Driver = "Emb_EnablingEmbosserDriver"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 45 x 27 ; 40 x 25
+}
+
+"Enabling Braille Bookmaker"
+{
+  ETMediumResGraphics
+  ETSpeaks
+  ETHighResGraphics
+  SeparateGraphics=2
+  ETmulti
+  CanDoInterpoint
+  PageWrap
+  MaximumCells = 44
+  MaximumLines = 27
+  ETCAllowEscapeCodes
+  TranSend
+  Driver = "Emb_EnablingEmbosserDriver"
+  Encoding = "North American English"
+  Encoding = "French"
+  Encoding = "German"
+  Encoding = "Spanish"
+  HelpPage = "Enabling_Braille_Bookmaker.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 24 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 44 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 44 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 44 x 32 ; 40 x 30
+}
+
+"Enabling Braille Express"
+{
+  ETMediumResGraphics
+  ETHighResGraphics
+  SeparateGraphics=2
+  CanDoInterpoint
+  ETmulti
+  PageWrap
+  TranSend
+  ETCAllowEscapeCodes
+  Driver = "Emb_EnablingEmbosserDriver"
+  MaximumCells = 44
+  MaximumLines = 27
+  Encoding = "North American English"
+  Encoding = "French"
+  Encoding = "German"
+  Encoding = "Spanish"
+  HelpPage = "Enabling_Braille_Express.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 24 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 44 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 44 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 44 x 32 ; 40 x 30
+}
+
+"Enabling Braille Express-100"
+{
+  ETSpeaks
+  ETMediumResGraphics
+  ETHighResGraphics
+  SeparateGraphics=2
+  CanDoInterpoint
+  ETmulti
+  PageWrap
+  TranSend
+  ETCAllowEscapeCodes
+  Driver = "Emb_EnablingEmbosserDriver"
+  MaximumCells = 44
+  MaximumLines = 27
+  Encoding = "North American English"
+  Encoding = "French"
+  Encoding = "German"
+  Encoding = "Spanish"
+  HelpPage = "Enabling_Braille_Express-100.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 24 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 44 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 44 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 44 x 32 ; 40 x 30
+}
+
+"Enabling Braille Express-150"
+{
+  ETMediumResGraphics
+  ETHighResGraphics
+  SeparateGraphics=2
+  CanDoInterpoint
+  ETmulti
+  PageWrap
+  TranSend
+  ETCAllowEscapeCodes
+  Driver = "Emb_EnablingEmbosserDriver"
+  ETSpeaks
+  MaximumCells = 44
+  MaximumLines = 27
+  Encoding = "North American English"
+  Encoding = "French"
+  Encoding = "German"
+  Encoding = "Spanish"
+  HelpPage = "Enabling_Braille_Express-150.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 24 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 44 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 44 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 44 x 32 ; 40 x 30
+
+}
+
+"Enabling Cyclone"
+{
+  NoSerial
+  NoParallel
+  ETMediumResGraphics
+  SeparateGraphics=2
+  PageWrap
+  TranSend
+  ETCAllowEscapeCodes
+  Driver = "Emb_EnablingEmbosserDriver"
+  MaximumCells = 45
+  MaximumLines = 27
+  ControlZ
+  Encoding = "North American English"
+  Encoding = "French"
+  Encoding = "German"
+  Encoding = "Spanish"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 24 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 45 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 45 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 45 x 32 ; 40 x 30
+}
+
+"Enabling E.T."
+{
+  CanDoInterpoint
+  ETMediumResGraphics
+  ETHighResGraphics
+  SeparateGraphics=2
+  ETmulti
+  PageWrap
+  MaximumCells = 40
+  MaximumLines = 27
+  TranSend
+  ETCAllowEscapeCodes
+  Driver = "Emb_EnablingEmbosserDriver"
+  Encoding = "North American English"
+  Encoding = "French"
+  Encoding = "German"
+  Encoding = "Spanish"
+  HelpPage = "Enabling_E.T..htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 24 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 40 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 40 x 32 ; 40 x 30
+}
+
+"Enabling Juliet 120" V5
+{
+  CanDoInterpoint
+  VPGraphics
+  Index20Graphics
+  IndexMulti
+  Index16Graphics
+  IndexPageInch
+  ControlZ
+  MaximumCells = 48
+  MaximumLines = 27
+  EndofPage = 1
+  YesUSB
+  NoParallel
+  IndexZfold
+  Driver = "Emb_IndexEmbosserDriver"
+  TranSend
+  WindowsDriverName = "ETC Juliet 120"
+  StartLeftMargin = 0
+  InitSequence="BT0,TD0,PN0,DP,LS,TM,BI,CH,LP,MC"
+  HelpPage = "Enabling_Juliet_120.htm"
+  Form "A3"   =  117 x 165 ; SinglePage ; 49 x 41 ; 47 x 40
+  Form "10_n" =  85 x 100 ; SinglePage ; 35 x 23 ; 32 x 24
+  Form "11_n" =  85 x 110 ; SinglePage ; 35 x 27 ; 32 x 25
+  Form "A4"   =  83 x 117 ; SinglePage ; 35 x 29 ; 30 x 27
+  Form "A4_ex" =  98 x 117 ; SinglePage ; 41 x 29 ; 41 x 27
+  Form "11_w" = 115 x 110 ; SinglePage ; 47 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 35 x 29 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 47 x 29 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 35 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 47 x 32 ; 40 x 30
+  Form "10_n_side" = 100 x 85 ; SinglePage ; 40 x 21 ; 38 x 20
+  Form "11_n_side" = 110 x 85 ; SinglePage ; 44 x 21 ; 42 x 20
+  Form "11_w_side" = 110 x 115 ; SinglePage ; 44 x 28 ; 42 x 26
+}
+
+"Enabling Juliet Classic"
+{
+  CanDoInterpoint
+  PageWrap
+  ETMediumResGraphics
+  ETHighResGraphics
+  SeparateGraphics=2
+  ETmulti
+  MaximumCells = 56
+  MaximumLines = 27
+  TranSend
+  ETCAllowEscapeCodes
+  Driver = "Emb_EnablingEmbosserDriver"
+  Encoding = "North American English"
+  Encoding = "French"
+  Encoding = "German"
+  Encoding = "Spanish"
+  HelpPage = "Enabling_Juliet_Classic.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 27 ; 40 x 25
+  Form "11_vw"= 150 x 110 ; SinglePage ; 56 x 27 ; 54 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 30 ; 40 x 28
+  Form "12_vw" = 150 x 120; SinglePage ; 56 x 30 ; 54 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 42 x 32 ; 40 x 30
+}
+
+"Enabling Juliet Pro"
+{
+  CanDoInterpoint
+  ETSpeaks
+  ETMediumResGraphics
+  ETHighResGraphics
+  SeparateGraphics=2
+  PageWrap
+  ETmulti
+  MaximumCells = 56
+  MaximumLines = 27
+  TranSend
+  ETCAllowEscapeCodes
+  Driver = "Emb_EnablingEmbosserDriver"
+  Encoding = "North American English"
+  Encoding = "French"
+  Encoding = "German"
+  Encoding = "Spanish"
+  HelpPage = "Enabling_Juliet_Pro.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 27 ; 40 x 25
+  Form "11_vw"= 150 x 110 ; SinglePage ; 56 x 27 ; 54 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 30 ; 40 x 28
+  Form "12_vw" = 150 x 120; SinglePage ; 56 x 30 ; 54 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 42 x 32 ; 40 x 30
+}
+
+"Enabling Juliet Pro 60"
+{
+  CanDoInterpoint
+  ETSpeaks
+  ETMediumResGraphics
+  ETHighResGraphics
+  SeparateGraphics=2
+  PageWrap
+  ETmulti
+  MaximumCells = 40
+  MaximumLines = 27
+  TranSend
+  ETCAllowEscapeCodes
+  Driver = "Emb_EnablingEmbosserDriver"
+  Encoding = "North American English"
+  Encoding = "French"
+  Encoding = "German"
+  Encoding = "Spanish"
+  HelpPage = "Enabling_Juliet_Pro_60.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 24 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 40 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 40 x 32 ; 40 x 30
+}
+
+"Enabling Marathon"
+{
+  MaximumCells = 42
+  MaximumLines = 27
+  HelpPage = "Enabling_Marathon.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 22 ; 32 x 22
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 42 x 32 ; 40 x 30
+}
+
+"Enabling PED-30"
+{
+  CanDoInterpoint
+  NoMakeupSides
+  MaximumCells = 40
+  MaximumLines = 28
+  EndofPage = 0
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  NoParallel
+  NoMakeupSides
+  PromptNewPage
+  PlateLoadByte = 13
+  HelpPage = "Enabling_PED-30.htm"
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 28 ; 40 x 25
+  Form "12_w" = 115 x 120 ; SinglePage ; 40 x 30 ; 40 x 27
+  Form "nbp"  = 115 x 110 ; SinglePage 1 ; 39 x 28 ; 40 x 25
+}
+
+"Enabling Phoenix Silver"
+"Enabling Phoenix"
+{
+  SubModel = 1
+  NoParallel
+  ETMediumResGraphics
+  ETHighResGraphics
+  SeparateGraphics=2
+  PageWrap
+  TranSend
+  ETCAllowEscapeCodes
+  Baud = 9600
+  Handshaking = Hardware
+  Driver = "Emb_EnablingEmbosserDriver"
+  MaximumCells = 45
+  MaximumLines = 27
+  ControlZ
+  Encoding = "North American English"
+  Encoding = "French"
+  Encoding = "German"
+  Encoding = "Spanish"
+  HelpPage = "Enabling_Phoenix_silver.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 24 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 45 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 45 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 45 x 32 ; 40 x 30
+  HardwareDCB
+  {
+      fRtsControl = Toggle
+      fDtrControl = Disable
+      fInX = FALSE
+      fOutX = FALSE
+      fOutxDsrFlow = FALSE
+      fOutxCtsFlow = TRUE
+  }
+}
+
+"Enabling Phoenix Gold"
+{
+  SubModel = 2
+  NoParallel
+  NoSerial
+  ETMediumResGraphics
+  ETHighResGraphics
+  SeparateGraphics=2
+  PageWrap
+  TranSend
+  ETCAllowEscapeCodes
+  Driver = "Emb_EnablingEmbosserDriver"
+  MaximumCells = 45
+  MaximumLines = 27
+  ControlZ
+  Encoding = "North American English"
+  Encoding = "French"
+  Encoding = "German"
+  Encoding = "Spanish"
+  HelpPage = "Enabling_Phoenix_gold.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 24 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 45 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 45 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 45 x 32 ; 40 x 30
+}
+
+"Enabling Romeo 20/40"
+{
+  PageWrap
+  TranSend
+  ETCAllowEscapeCodes
+  Driver = "Emb_EnablingEmbosserDriver"
+  MaximumCells = 42
+  MaximumLines = 27
+  Encoding = "North American English"
+  Encoding = "French"
+  Encoding = "German"
+  Encoding = "Spanish"
+  HelpPage = "Enabling_Romeo_20_40.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 42 x 32 ; 40 x 30
+}
+
+"Enabling Romeo 25"
+{
+  ETMediumResGraphics
+  ETHighResGraphics
+  SeparateGraphics=2
+  ETmulti
+  PageWrap
+  TranSend
+  ETCAllowEscapeCodes
+  Driver = "Emb_EnablingEmbosserDriver"
+  MaximumCells = 40
+  MaximumLines = 27
+  Encoding = "North American English"
+  Encoding = "French"
+  Encoding = "German"
+  Encoding = "Spanish"
+  HelpPage = "Enabling_Romeo_25.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 40 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 40 x 32 ; 40 x 30
+}
+
+"Enabling Romeo 60" V5
+{
+  VPGraphics
+  Index20Graphics
+  IndexMulti
+  Index16Graphics
+  IndexPageInch
+  ControlZ
+  MaximumCells = 48
+  MaximumLines = 27
+  EndofPage = 1
+  YesUSB
+  NoParallel
+  IndexZfold
+  Driver = "Emb_IndexEmbosserDriver"
+  TranSend
+  WindowsDriverName = "ETC Romeo 60"
+  StartLeftMargin = 0
+  InitSequence="BT0,TD0,PN0,DP,LS,TM,BI,CH,LP,MC"
+  HelpPage = "Enabling_Romeo_60.htm"
+  Form "A3"   =  117 x 165 ; SinglePage ; 49 x 41 ; 47 x 40
+  Form "10_n" =  85 x 100 ; SinglePage ; 35 x 23 ; 32 x 24
+  Form "11_n" =  85 x 110 ; SinglePage ; 35 x 27 ; 32 x 25
+  Form "A4"   =  83 x 117 ; SinglePage ; 35 x 29 ; 30 x 27
+  Form "A4_ex" =  98 x 117 ; SinglePage ; 41 x 29 ; 41 x 27
+  Form "11_w" = 115 x 110 ; SinglePage ; 47 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 35 x 29 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 47 x 29 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 35 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 47 x 32 ; 40 x 30
+  Form "10_n_side" = 100 x 85 ; SinglePage ; 40 x 21 ; 38 x 20
+  Form "11_n_side" = 110 x 85 ; SinglePage ; 44 x 21 ; 42 x 20
+  Form "11_w_side" = 110 x 115 ; SinglePage ; 44 x 28 ; 42 x 26
+}
+
+"Enabling Romeo Attache"
+{
+  ETMediumResGraphics
+  ETHighResGraphics
+  SeparateGraphics=2
+  TranSend
+  ETCAllowEscapeCodes
+  Driver = "Emb_EnablingEmbosserDriver"
+  NarrowWarning
+  PageWrap
+  MaximumCells = 32
+  MaximumLines = 27
+  LfUnix
+  Encoding = "North American English"
+  Encoding = "French"
+  Encoding = "German"
+  Encoding = "Spanish"
+  HelpPage = "Enabling_Romeo_Attache.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 32 x 25 ; 30 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 32 x 27 ; 30 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 32 x 30 ; 30 x 28
+}
+
+"Enabling Romeo Attache (2nd Edition)"
+{
+  ETMediumResGraphics
+  ETHighResGraphics
+  SeparateGraphics=2
+  ETmulti
+  TranSend
+  ETCAllowEscapeCodes
+  Driver = "Emb_EnablingEmbosserDriver"
+  NarrowWarning
+  PageWrap
+  MaximumCells = 32
+  MaximumLines = 27
+  Encoding = "North American English"
+  Encoding = "French"
+  Encoding = "German"
+  Encoding = "Spanish"
+  Form "10_n" =  85 x 100 ; SinglePage ; 32 x 25 ; 30 x 23
+  HelpPage = "Enabling_Romeo_Attache_2nd_Edition.htm"
+  Form "11_n" =  85 x 110 ; SinglePage ; 32 x 27 ; 30 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 32 x 30 ; 30 x 28
+}
+
+"Enabling Romeo Attache Pro"
+{
+  ETSpeaks
+  ETMediumResGraphics
+  ETHighResGraphics
+  SeparateGraphics=2
+  TranSend
+  ETCAllowEscapeCodes
+  Driver = "Emb_EnablingEmbosserDriver"
+  NarrowWarning
+  PageWrap
+  MaximumCells = 32
+  MaximumLines = 27
+  LfUnix
+  Encoding = "North American English"
+  Encoding = "French"
+  Encoding = "German"
+  Encoding = "Spanish"
+  HelpPage = "Enabling_Romeo_Attache_Pro.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 32 x 25 ; 30 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 32 x 27 ; 30 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 32 x 30 ; 30 x 28
+}
+
+"Enabling Romeo Attache Pro (2nd Edition)"
+{
+  ETSpeaks
+  ETMediumResGraphics
+  ETHighResGraphics
+  SeparateGraphics=2
+  ETmulti
+  TranSend
+  ETCAllowEscapeCodes
+  Driver = "Emb_EnablingEmbosserDriver"
+  NarrowWarning
+  PageWrap
+  MaximumCells = 32
+  MaximumLines = 27
+  Encoding = "North American English"
+  Encoding = "French"
+  Encoding = "German"
+  Encoding = "Spanish"
+  HelpPage = "Enabling_Romeo_Attache_Pro_2nd_Edition.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 32 x 25 ; 30 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 32 x 27 ; 30 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 32 x 30 ; 30 x 28
+}
+
+"Enabling Romeo Pro 50"
+{
+  ETSpeaks
+  ETMediumResGraphics
+  ETHighResGraphics
+  SeparateGraphics=2
+  ETmulti
+  PageWrap
+  TranSend
+  ETCAllowEscapeCodes
+  Driver = "Emb_EnablingEmbosserDriver"
+  MaximumCells = 40
+  MaximumLines = 27
+  Encoding = "North American English"
+  Encoding = "French"
+  Encoding = "German"
+  Encoding = "Spanish"
+  HelpPage = "Enabling_Romeo_Pro_50.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 24 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 40 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 40 x 32 ; 40 x 30
+}
+
+"Enabling Romeo Pro LE Narrow"
+"Enabling Romeo PRO LE (24 cell wide Label Edition)"
+{
+  ETSpeaks
+  AllowSeekTOF
+  PageWrap
+  LabellerROM
+  ETCAllowEscapeCodes
+  Driver = "Emb_EnablingEmbosserDriver"
+  MaximumCells = 24
+  MaximumLines = 27
+  Encoding = "North American English"
+  Encoding = "French"
+  Encoding = "German"
+  Encoding = "Spanish"
+  HelpPage = "Enabling_Romeo_Pro_LE_Narrow.htm"
+  Form "0,50 inch label" =  110 x  0 ; SinglePage ; 24 x  1 ; 24 x  1
+  Form "0,75 inch label" = 110 x  10 ; SinglePage ; 24 x  1 ; 24 x  1
+  Form "1,00 inch label" = 110 x  20 ; SinglePage ; 24 x  2 ; 24 x  2
+  Form "1,25 inch label" = 110 x  30 ; SinglePage ; 24 x  3 ; 24 x  2
+  Form "1,50 inch label" = 110 x  40 ; SinglePage ; 24 x  3 ; 24 x  3
+  Form "1,75 inch label" = 110 x  50 ; SinglePage ; 24 x  4 ; 24 x  4
+  Form "2,00 inch label" = 110 x  60 ; SinglePage ; 24 x  5 ; 24 x  4
+  Form "2,25 inch label" = 110 x  70 ; SinglePage ; 24 x  5 ; 24 x  5
+  Form "2,50 inch label" = 110 x  80 ; SinglePage ; 24 x  6 ; 24 x  5
+  Form "2,75 inch label" = 110 x  90 ; SinglePage ; 24 x  6 ; 24 x  6
+  Form "3,00 inch label" = 110 x 100 ; SinglePage ; 24 x  7 ; 24 x  7
+  Form "3,25 inch label" = 110 x 110 ; SinglePage ; 24 x  8 ; 24 x  7
+  Form "3,50 inch label" = 110 x 120 ; SinglePage ; 24 x  8 ; 24 x  8
+  Form "3,75 inch label" = 110 x 130 ; SinglePage ; 24 x  9 ; 24 x  9
+  Form "4,00 inch label" = 110 x 140 ; SinglePage ; 24 x 10 ; 24 x  9
+}
+
+"Enabling Romeo Pro LE Wide"
+{
+  ETSpeaks
+  AllowSeekTOF
+  PageWrap
+  LabellerROM
+  ETCAllowEscapeCodes
+  Driver = "Emb_EnablingEmbosserDriver"
+  MaximumCells = 40
+  MaximumLines = 27
+  Encoding = "North American English"
+  Encoding = "French"
+  Encoding = "German"
+  Encoding = "Spanish"
+  HelpPage = "Enabling_Romeo_Pro_LE_Wide.htm"
+  Form "0,50 inch label" =  110 x  0 ; SinglePage ; 40 x  1 ; 40 x  1
+  Form "0,75 inch label" = 110 x  10 ; SinglePage ; 40 x  1 ; 40 x  1
+  Form "1,00 inch label" = 110 x  20 ; SinglePage ; 40 x  2 ; 40 x  2
+  Form "1,25 inch label" = 110 x  30 ; SinglePage ; 40 x  3 ; 40 x  2
+  Form "1,50 inch label" = 110 x  40 ; SinglePage ; 40 x  3 ; 40 x  3
+  Form "1,75 inch label" = 110 x  50 ; SinglePage ; 40 x  4 ; 40 x  4
+  Form "2,00 inch label" = 110 x  60 ; SinglePage ; 40 x  5 ; 40 x  4
+  Form "2,25 inch label" = 110 x  70 ; SinglePage ; 40 x  5 ; 40 x  5
+  Form "2,50 inch label" = 110 x  80 ; SinglePage ; 40 x  6 ; 40 x  5
+  Form "2,75 inch label" = 110 x  90 ; SinglePage ; 40 x  6 ; 40 x  6
+  Form "3,00 inch label" = 110 x 100 ; SinglePage ; 40 x  7 ; 40 x  7
+  Form "3,25 inch label" = 110 x 110 ; SinglePage ; 40 x  8 ; 40 x  7
+  Form "3,50 inch label" = 110 x 120 ; SinglePage ; 40 x  8 ; 40 x  8
+  Form "3,75 inch label" = 110 x 130 ; SinglePage ; 40 x  9 ; 40 x  9
+  Form "4,00 inch label" = 110 x 140 ; SinglePage ; 40 x 10 ; 40 x  9
+}
+
+"Enabling Thomas"
+{
+  ETMediumResGraphics
+  ETHighResGraphics
+  SeparateGraphics=2
+  PageWrap
+  ETmulti
+  TranSend
+  ETCAllowEscapeCodes
+  Driver = "Emb_EnablingEmbosserDriver"
+  MaximumCells = 40
+  MaximumLines = 27
+  Encoding = "North American English"
+  Encoding = "French"
+  Encoding = "German"
+  Encoding = "Spanish"
+  HelpPage = "Enabling_Thomas.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 24 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 40 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 40 x 32 ; 40 x 30
+}
+
+"Enabling Thomas Pro"
+{
+  ETSpeaks
+  ETMediumResGraphics
+  ETHighResGraphics
+  SeparateGraphics=2
+  PageWrap
+  ETmulti
+  TranSend
+  ETCAllowEscapeCodes
+  Driver = "Emb_EnablingEmbosserDriver"
+  MaximumCells = 40
+  MaximumLines = 27
+  Encoding = "North American English"
+  Encoding = "French"
+  Encoding = "German"
+  Encoding = "Spanish"
+  HelpPage = "Enabling_Thomas_Pro.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 24 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 40 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 40 x 32 ; 40 x 30
+}
+
+"Enabling TranSend LT"
+{
+  Driver = "Emb_EnablingEmbosserDriver"
+  MaximumCells = 40
+  MaximumLines = 25
+  EndofPage = 2
+  Encoding = "North American English"
+  HelpPage = "Enabling_TranSend_LT.htm"
+  Form "11_n" =  85 x 110 ; SinglePage ; 30 x 25 ; 30 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 25 ; 40 x 25
+}
+
+"Enabling TranSend LT (Large Print)"
+{
+  Driver = "Emb_EnablingEmbosserDriver"
+  MaximumCells = 40
+  MaximumLines = 25
+  EndofPage = 2
+  Encoding = "North American English"
+  HelpPage = "Enabling_TranSend_LT_Large_Print.htm"
+  Form "11_n" =  85 x 110 ; SinglePage ; 30 x 22 ; 30 x 22
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 22 ; 40 x 22
+}
+
+"Enabling Trident"
+{
+  NoSerial
+  NoParallel
+  CanDoInterpoint
+  ETMediumResGraphics
+  SeparateGraphics=2
+  PageWrap
+  TranSend
+  ETCAllowEscapeCodes
+  Driver = "Emb_EnablingEmbosserDriver"
+  MaximumCells = 45
+  MaximumLines = 27
+  ControlZ
+  Encoding = "North American English"
+  Encoding = "French"
+  Encoding = "German"
+  Encoding = "Spanish"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 24 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 45 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 45 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 45 x 32 ; 40 x 30
+}
+
+"Freedom Scientific Braille Blazer"
+{
+  LineWrap
+  NarrowWarning
+  StartLeftMargin = 0
+  MaximumCells = 34
+  MaximumLines = 27
+  HelpPage = "Freedom_Scientific_Braille_Blazer.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 24 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 29 ; 32 x 28
+}
+
+"Freedom Scientific Braille Inferno"
+{
+  LineWrap
+  ETmulti
+  StartLeftMargin = 0
+  MaximumCells = 40
+  MaximumLines = 27
+  HelpPage = "Freedom_Scientific_Braille_Inferno.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 24 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 29 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 40 x 29 ; 40 x 28
+}
+
+"Freedom Scientific VersaPoint"
+{
+  DataBits = 7
+  VPGraphics
+  MaximumCells = 42
+  MaximumLines = 26
+  VPmulti
+  UsingEscapeCodes
+  Driver = "Emb_VersapointEmbosserDriver"
+  Encoding = "North American English"
+  Encoding = "British"
+  Encoding = "French"
+  Encoding = "German"
+  Encoding = "Spanish"
+  StartLeftMargin = 0
+  HelpPage = "Freedom_Scientific_VersaPoint.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 22 ; 32 x 22
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 26 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 26 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 28 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 28 ; 40 x 28
+}
+
+"Freedom Scientific VersaPoint Duo"
+{
+  CanDoInterpoint
+  ETMediumResGraphics
+  ETHighResGraphics
+  SeparateGraphics=2
+  ETmulti
+  PageWrap
+  ETCAllowEscapeCodes
+  Driver = "Emb_EnablingEmbosserDriver"
+  MaximumCells = 40
+  MaximumLines = 27
+  Encoding = "North American English"
+  Encoding = "British"
+  Encoding = "French"
+  Encoding = "German"
+  Encoding = "Spanish"
+  HelpPage = "Freedom_Scientific_VersaPoint_Duo.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 24 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 40 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 40 x 32 ; 40 x 30
+}
+
+"Index Everest-D" V2
+{
+  CanDoInterpoint
+  VPGraphics
+  Index20Graphics
+  Index16Graphics
+  MaximumCells = 42
+  MaximumLines = 27
+  EndofPage = 1
+  IndexMulti
+  YesUSB
+  ControlZ
+  IndexPagemm
+  Driver = "Emb_IndexEmbosserDriver"
+  WindowsDriverName = "Everest"
+  LessLinesInterpoint = 1
+  StartLeftMargin = 0
+  HelpPage = "Index_Everest-D.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 36 x 24 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 36 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 36 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 30 ; 40 x 28
+  Form "A4"   =  83 x 117 ; SinglePage ; 35 x 29 ; 30 x 28
+  Form "A4_ex" =  98 x 117 ; SinglePage ; 41 x 29 ; 41 x 27
+}
+
+"Index Everest-D" V3_early-V3
+{
+  CanDoInterpoint
+  VPGraphics
+  Index20Graphics
+  Index16Graphics
+  MaximumCells = 42
+  MaximumLines = 27
+  EndofPage = 1
+  IndexMulti
+  YesUSB
+  ControlZ
+  IndexPagemm
+  Driver = "Emb_IndexEmbosserDriver"
+  WindowsDriverName = "Everest"
+  StartLeftMargin = 0
+  InitSequence="BT0,DP,PW,PL,IM,OM,TM,BM,MC"
+  HelpPage = "Index_Everest-D.htm"
+  Form "A5"   =  58 x  83 ; SinglePage ; 23 x 19 ; 21 x 18
+  Form "A5_landscape" = 83 x 58 ; SinglePage ; 35 x 15 ; 30 x 14
+  Form "A4"   =  83 x 117 ; SinglePage ; 35 x 29 ; 30 x 27
+  Form "A4_ex" =  98 x 117 ; SinglePage ; 41 x 29 ; 41 x 27
+  Form "A4_landscape" = 117 x 83 ; SinglePage ; 42 x 19 ; 40 x 18
+  Form "A3"   =  117 x 165 ; SinglePage ; 42 x 40 ; 40 x 38
+  Form "10_n" =  85 x 100 ; SinglePage ; 36 x 24 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 36 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 36 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 30 ; 40 x 28
+}
+
+"Index Everest-D" V4
+{
+  CanDoInterpoint
+  VPGraphics
+  Index20Graphics
+  Index16Graphics
+  MaximumCells = 47
+  MaximumLines = 27
+  EndofPage = 1
+  IndexMulti
+  YesUSB
+  NoParallel
+  ControlZ
+  IndexPagemm
+  Driver = "Emb_IndexEmbosserDriver"
+  WindowsDriverName = "Everest"
+  StartLeftMargin = 0
+  InitSequence="BT0,TD0,PN0,DP,LS50,TM,BI,CH,LP,MC"
+  HelpPage = "Index_Everest-D.htm"
+  Form "A5"   =  58 x  83 ; SinglePage ; 23 x 19 ; 21 x 18
+  Form "A5_landscape" = 83 x 58 ; SinglePage ; 35 x 15 ; 30 x 14
+  Form "A3"   =  117 x 165 ; SinglePage ; 42 x 41 ; 40 x 40
+  Form "A4"   =  83 x 117 ; SinglePage ; 35 x 29 ; 30 x 27
+  Form "A4_ex" =  98 x 117 ; SinglePage ; 41 x 29 ; 41 x 27
+  Form "A3_landscape" = 165 x 117 ; SinglePage ; 68 x 29 ; 66 x 27
+  Form "A4_landscape" = 117 x 83 ; SinglePage ; 42 x 20 ; 40 x 18
+  Form "A3_folio" = 165 x 117; DoublePage ; 33 x 29 ; 31 x 27
+  Form "A3_ex_folio" = 197 x 117; DoublePage ; 41 x 29 ; 40 x 27
+  Form "A4_folio" = 117 x 83; DoublePage ; 22 x 20 ; 20 x 20
+  Form "10_n" =  85 x 100 ; SinglePage ; 36 x 24 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 36 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 47 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 36 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 47 x 30 ; 40 x 28
+  Form "14_n" =  85 x 140 ; SinglePage ; 36 x 35 ; 32 x 34
+  Form "11_nd" = 170 x 110; DoublePage ; 33 x 28 ; 32 x 25
+  Form "RusBook"   =  96 x 117 ; SinglePage ; 40 x 29 ; 36 x 27
+  Form "RusNote" = 150 x 99; SinglePage ; 41 x 37 ; 38 x 37
+  Form "RusNote_folio" = 150 x 99; DoublePage ; 31 x 25 ; 30 x 23
+}
+
+"Index Everest-D" V5
+{
+  CanDoInterpoint
+  VPGraphics
+  Index20Graphics
+  Index16Graphics
+  MaximumCells = 47
+  MaximumLines = 27
+  EndofPage = 1
+  IndexMulti
+  YesUSB
+  NoParallel
+  ControlZ
+  IndexPagemm
+  Driver = "Emb_IndexEmbosserDriver"
+  WindowsDriverName = "Everest-D V5"
+  StartLeftMargin = 0
+  InitSequence="BT0,TD0,PN0,DP,LS50,TM,BI,CH,LP,MC"
+  HelpPage = "Index_Everest-D.htm"
+  Form "A5"   =  58 x  83 ; SinglePage ; 23 x 19 ; 21 x 18
+  Form "A5_landscape" = 83 x 58 ; SinglePage ; 35 x 15 ; 30 x 14
+  Form "A3"   =  117 x 165 ; SinglePage ; 49 x 42 ; 46 x 40
+  Form "A4"   =  83 x 117 ; SinglePage ; 35 x 29 ; 30 x 27
+  Form "A4_ex" =  98 x 117 ; SinglePage ; 41 x 29 ; 41 x 27
+  Form "A3_landscape" = 165 x 117 ; SinglePage ; 68 x 29 ; 66 x 27
+  Form "A4_landscape" = 117 x 83 ; SinglePage ; 49 x 20 ; 46 x 18
+  Form "A3_folio" = 165 x 117; DoublePage ; 33 x 29 ; 31 x 27
+  Form "A3_ex_folio" = 197 x 117; DoublePage ; 41 x 29 ; 40 x 27
+  Form "A4_folio" = 117 x 83; DoublePage ; 22 x 20 ; 20 x 20
+  Form "10_n" =  85 x 100 ; SinglePage ; 36 x 24 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 36 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 47 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 36 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 47 x 30 ; 40 x 28
+  Form "14_n" =  85 x 140 ; SinglePage ; 36 x 35 ; 32 x 34
+  Form "11_nd" = 170 x 110; DoublePage ; 33 x 28 ; 32 x 25
+  Form "RusBook"   =  96 x 117 ; SinglePage ; 40 x 29 ; 36 x 27
+  Form "RusNote" = 150 x 99; SinglePage ; 41 x 37 ; 38 x 37
+  Form "RusNote_folio" = 150 x 99; DoublePage ; 31 x 25 ; 30 x 23
+}
+
+"Index FanFold" V5
+{
+  CanDoInterpoint
+  VPGraphics
+  Index20Graphics
+  Index16Graphics
+  MaximumCells = 47
+  MaximumLines = 27
+  EndofPage = 1
+  IndexMulti
+  IndexZfold
+  YesUSB
+  NoParallel
+  ControlZ
+  IndexPagemm
+  Driver = "Emb_IndexEmbosserDriver"
+  WindowsDriverName = "FanFold-D"
+  StartLeftMargin = 0
+  InitSequence="BT0,TD0,PN0,DP,LS50,TM,BI,CH,LP,MC"
+  HelpPage = "Index_Everest-D.htm"
+  Form "A5"   =  58 x  83 ; SinglePage ; 23 x 19 ; 21 x 18
+  Form "A5_landscape" = 83 x 58 ; SinglePage ; 35 x 15 ; 30 x 14
+  Form "A3"   =  117 x 165 ; SinglePage ; 42 x 41 ; 40 x 40
+  Form "A4"   =  83 x 117 ; SinglePage ; 35 x 29 ; 30 x 27
+  Form "A4_ex" =  98 x 117 ; SinglePage ; 41 x 29 ; 41 x 27
+  Form "A3_landscape" = 165 x 117 ; SinglePage ; 68 x 29 ; 66 x 27
+  Form "A4_landscape" = 117 x 83 ; SinglePage ; 42 x 20 ; 40 x 18
+  Form "A3_folio" = 165 x 117; DoublePage ; 33 x 29 ; 31 x 27
+  Form "A3_ex_folio" = 197 x 117; DoublePage ; 41 x 29 ; 40 x 27
+  Form "A4_folio" = 117 x 83; DoublePage ; 22 x 20 ; 20 x 20
+  Form "10_n" =  85 x 100 ; SinglePage ; 36 x 24 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 36 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 47 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 36 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 47 x 30 ; 40 x 28
+  Form "14_n" =  85 x 140 ; SinglePage ; 36 x 35 ; 32 x 34
+  Form "11_nd" = 170 x 110; DoublePage ; 33 x 28 ; 32 x 25
+}
+
+"Index 4Waves Pro" V3
+{
+  CanDoInterpoint
+  VPGraphics
+  Index20Graphics
+  IndexMulti
+  Index16Graphics
+  YesUSB
+  IndexZfold
+  ControlZ
+  NoSerial
+  EndofPage = 1
+  MaximumCells = 42
+  MaximumLines = 27
+  IndexPageInch
+  Driver = "Emb_IndexEmbosserDriver"
+  WindowsDriverName = "4Waves"
+  StartLeftMargin = 0
+  InitSequence="BT0,DP,PW,PL,IM,OM,TM,BM,MC"
+  HelpPage = "Index_4Waves_Pro.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 35 x 24 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 35 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 35 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 30 ; 40 x 28
+}
+
+"Index Advanced" V1
+{
+  VPGraphics
+  Index20Graphics
+  Index16Graphics
+  StartLeftMargin = 0
+  MaximumCells = 40
+  MaximumLines = 25
+  HelpPage = "Index_Advanced.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 22 ; 32 x 22
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 25 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 25 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 29 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 40 x 29 ; 40 x 28
+}
+
+"Index Basic (blue bar)" V1
+{
+  StartLeftMargin = 0
+  MaximumCells = 40
+  MaximumLines = 25
+  HelpPage = "Index_Basic_blue_bar.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 22 ; 32 x 22
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 25 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 25 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 29 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 40 x 29 ; 40 x 28
+}
+
+"Index Basic-D" V2
+{
+  CanDoInterpoint
+  VPGraphics
+  Index20Graphics
+  IndexMulti
+  Index16Graphics
+  IndexPageInch
+  ControlZ
+  MaximumCells = 42
+  MaximumLines = 27
+  EndofPage = 1
+  YesUSB
+  IndexZfold
+  Driver = "Emb_IndexEmbosserDriver"
+  WindowsDriverName = "Basic-D"
+  StartLeftMargin = 0
+  LessLinesInterpoint = 1
+  HelpPage = "Index_Basic-D.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 35 x 23 ; 32 x 24
+  Form "11_n" =  85 x 110 ; SinglePage ; 35 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 35 x 29 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 29 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 35 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 42 x 32 ; 40 x 30
+}
+
+"Index Basic-D" V3_early-V3
+{
+  CanDoInterpoint
+  VPGraphics
+  Index20Graphics
+  IndexMulti
+  Index16Graphics
+  IndexPageInch
+  ControlZ
+  MaximumCells = 42
+  MaximumLines = 27
+  EndofPage = 1
+  YesUSB
+  IndexZfold
+  Driver = "Emb_IndexEmbosserDriver"
+  WindowsDriverName = "Basic-D"
+  StartLeftMargin = 0
+  LessLinesInterpoint = 1
+  InitSequence="BT0,DP,PW,PL,IM,OM,TM,BM,MC"
+  HelpPage = "Index_Basic-D.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 35 x 23 ; 32 x 24
+  Form "11_n" =  85 x 110 ; SinglePage ; 35 x 27 ; 32 x 25
+  Form "A4"   =  83 x 117 ; SinglePage ; 35 x 29 ; 30 x 27
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 35 x 29 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 29 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 35 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 42 x 32 ; 40 x 30
+}
+
+"Index Basic-D" V4
+{
+  CanDoInterpoint
+  VPGraphics
+  Index20Graphics
+  IndexMulti
+  Index16Graphics
+  IndexPageInch
+  ControlZ
+  MaximumCells = 48
+  MaximumLines = 27
+  EndofPage = 1
+  YesUSB
+  NoParallel
+  IndexZfold
+  Driver = "Emb_IndexEmbosserDriver"
+  WindowsDriverName = "Basic-D"
+  StartLeftMargin = 0
+  InitSequence="BT0,TD0,PN0,DP,LS50,TM,BI,CH,LP,MC"
+  HelpPage = "Index_Basic-D.htm"
+  Form "A3"   =  117 x 165 ; SinglePage ; 49 x 41 ; 47 x 40
+  Form "10_n" =  85 x 100 ; SinglePage ; 35 x 23 ; 32 x 24
+  Form "11_n" =  85 x 110 ; SinglePage ; 35 x 27 ; 32 x 25
+  Form "A4"   =  83 x 117 ; SinglePage ; 35 x 29 ; 30 x 27
+  Form "A4_ex" =  98 x 117 ; SinglePage ; 41 x 29 ; 41 x 27
+  Form "11_w" = 115 x 110 ; SinglePage ; 47 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 35 x 29 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 47 x 29 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 35 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 47 x 32 ; 40 x 30
+  Form "10_n_side" = 100 x 85 ; SinglePage ; 40 x 21 ; 38 x 20
+  Form "11_n_side" = 110 x 85 ; SinglePage ; 44 x 21 ; 42 x 20
+  Form "11_w_side" = 110 x 115 ; SinglePage ; 44 x 28 ; 42 x 26
+}
+
+"Index Basic-D" V5
+{
+  CanDoInterpoint
+  VPGraphics
+  Index20Graphics
+  IndexMulti
+  Index16Graphics
+  IndexPageInch
+  ControlZ
+  MaximumCells = 48
+  MaximumLines = 27
+  EndofPage = 1
+  YesUSB
+  NoParallel
+  IndexZfold
+  Driver = "Emb_IndexEmbosserDriver"
+  WindowsDriverName = "Basic-D V5"
+  StartLeftMargin = 0
+  InitSequence="BT0,TD0,PN0,DP,LS50,TM,BI,CH,LP,MC"
+  HelpPage = "Index_Basic-D.htm"
+  Form "A3"   =  117 x 165 ; SinglePage ; 49 x 41 ; 47 x 40
+  Form "10_n" =  85 x 100 ; SinglePage ; 35 x 23 ; 32 x 24
+  Form "11_n" =  85 x 110 ; SinglePage ; 35 x 27 ; 32 x 25
+  Form "A4"   =  83 x 117 ; SinglePage ; 35 x 29 ; 30 x 27
+  Form "A4_ex" =  98 x 117 ; SinglePage ; 41 x 29 ; 41 x 27
+  Form "11_w" = 115 x 110 ; SinglePage ; 47 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 35 x 29 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 47 x 29 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 35 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 47 x 32 ; 40 x 30
+  Form "10_n_side" = 100 x 85 ; SinglePage ; 40 x 21 ; 38 x 20
+  Form "11_n_side" = 110 x 85 ; SinglePage ; 44 x 21 ; 42 x 20
+  Form "11_w_side" = 110 x 115 ; SinglePage ; 44 x 28 ; 42 x 26
+}
+
+"Index Basic-S" V2
+{
+  VPGraphics
+  Index20Graphics
+  IndexMulti
+  Index16Graphics
+  IndexPageInch
+  ControlZ
+  MaximumCells = 42
+  MaximumLines = 27
+  EndofPage = 1
+  YesUSB
+  Driver = "Emb_IndexEmbosserDriver"
+  WindowsDriverName = "Basic-S"
+  StartLeftMargin = 0
+  HelpPage = "Index_Basic-S.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 35 x 24 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 35 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 35 x 29 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 29 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 35 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 42 x 32 ; 40 x 30
+}
+
+"Index Basic-S" V3_early-V3
+{
+  VPGraphics
+  Index20Graphics
+  IndexMulti
+  Index16Graphics
+  IndexPageInch
+  ControlZ
+  MaximumCells = 42
+  MaximumLines = 27
+  EndofPage = 1
+  YesUSB
+  Driver = "Emb_IndexEmbosserDriver"
+  WindowsDriverName = "Basic-S"
+  StartLeftMargin = 0
+  InitSequence="BT0,DP,PW,PL,IM,OM,TM,BM,MC"
+  HelpPage = "Index_Basic-S.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 35 x 24 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 35 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 35 x 29 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 29 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 35 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 42 x 32 ; 40 x 30
+}
+
+"Index Braille Box" V4
+{
+  CanDoInterpoint
+  VPGraphics
+  Index20Graphics
+  IndexMulti
+  Index16Graphics
+  YesUSB
+  NoParallel
+  ControlZ
+  NoSerial
+  EndofPage = 1
+  MaximumCells = 47
+  MaximumLines = 27
+  IndexPageInch
+  Driver = "Emb_IndexEmbosserDriver"
+  StartLeftMargin = 0
+  InitSequence="BT0,TD0,PN0,DP,LS50,TM,BI,CH,LP,MC"
+  HelpPage = "Index_Braille_Box.htm"
+  Form "A3"   =  117 x 165 ; SinglePage ; 49 x 41 ; 47 x 40
+  Form "A3_folio" = 165 x 117; DoublePage ; 33 x 29 ; 31 x 27
+  Form "A3_landscape" = 165 x 117 ; SinglePage ; 68 x 29 ; 66 x 27
+  Form "A4"   =  83 x 117 ; SinglePage ; 35 x 29 ; 32 x 27
+  Form "A4_ex" =  98 x 117 ; SinglePage ; 41 x 29 ; 41 x 27
+  Form "A4_folio" = 117 x 83; DoublePage ; 22 x 20 ; 20 x 20
+  Form "11_nd" = 170 x 110; DoublePage ; 33 x 28 ; 32 x 25
+  Form "12_nd" = 170 x 120; DoublePage ; 33 x 29 ; 32 x 28
+  Form "10_n" =  85 x 100 ; SinglePage ; 35 x 24 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 35 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 47 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 35 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 47 x 30 ; 40 x 28
+  Form "RusBook"   =  96 x 117 ; SinglePage ; 40 x 29 ; 36 x 27
+  Form "RusNote" = 150 x 99; SinglePage ; 41 x 37 ; 38 x 37
+  Form "RusNote_folio" = 150 x 99; DoublePage ; 31 x 25 ; 30 x 23
+}
+
+"Index Braille Box" V5
+{
+  CanDoInterpoint
+  VPGraphics
+  Index20Graphics
+  IndexMulti
+  Index16Graphics
+  YesUSB
+  NoParallel
+  ControlZ
+  NoSerial
+  EndofPage = 1
+  MaximumCells = 47
+  MaximumLines = 27
+  IndexPageInch
+  Driver = "Emb_IndexEmbosserDriver"
+  WindowsDriverName = "BrailleBox V5"
+  StartLeftMargin = 0
+  InitSequence="BT0,TD0,PN0,DP,LS50,TM,BI,CH,LP,MC"
+  HelpPage = "Index_Braille_Box.htm"
+  Form "A3"   =  117 x 165 ; SinglePage ; 49 x 41 ; 47 x 40
+  Form "A3_folio" = 165 x 117; DoublePage ; 33 x 29 ; 31 x 27
+  Form "A3_landscape" = 165 x 117 ; SinglePage ; 68 x 29 ; 66 x 27
+  Form "B4_landscape" = 139 x 98 ; SinglePage ; 57 x 24 ; 54 x 24
+  Form "A4"   =  83 x 117 ; SinglePage ; 35 x 29 ; 32 x 27
+  Form "A4_ex" =  98 x 117 ; SinglePage ; 41 x 29 ; 41 x 27
+  Form "A4_folio" = 117 x 83; DoublePage ; 22 x 20 ; 20 x 20
+  Form "11_nd" = 170 x 110; DoublePage ; 33 x 28 ; 32 x 25
+  Form "12_nd" = 170 x 120; DoublePage ; 33 x 29 ; 32 x 28
+  Form "10_n" =  85 x 100 ; SinglePage ; 35 x 24 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 35 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 47 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 35 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 47 x 30 ; 40 x 28
+  Form "RusBook"   =  96 x 117 ; SinglePage ; 40 x 29 ; 36 x 27
+  Form "RusNote" = 150 x 99; SinglePage ; 41 x 37 ; 38 x 37
+  Form "RusNote_folio" = 150 x 99; DoublePage ; 31 x 25 ; 30 x 23
+}
+
+"Index 4x4 PRO" V2
+{
+  CanDoInterpoint
+  RotatePaperSizings
+  VPGraphics
+  Index20Graphics
+  IndexMulti
+  Index16Graphics
+  IndexPagemm
+  ControlZ
+  MaximumCells = 42
+  MaximumLines = 27
+  EndofPage = 1
+  YesUSB
+  Driver = "Emb_IndexEmbosserDriver"
+  WindowsDriverName = "4x4"
+  StartLeftMargin = 0
+  HelpPage = "Index_4x4_PRO.htm"
+  Form "A3_folio" = 165 x 117; DoublePage ; 33 x 29 ; 31 x 27
+  Form "A4_folio" = 117 x 83; DoublePage ; 22 x 20 ; 20 x 20
+  Form "11_nd" = 170 x 110; DoublePage ; 33 x 28 ; 32 x 25
+  Form "12_nd" = 170 x 120; DoublePage ; 33 x 29 ; 32 x 28
+  Form "A4"   =  83 x 117 ; SinglePage ; 35 x 29 ; 32 x 27
+  Form "A4_ex" =  98 x 117 ; SinglePage ; 41 x 29 ; 41 x 27
+  Form "10_n" =  85 x 100 ; SinglePage ; 36 x 24 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 36 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 36 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 30 ; 40 x 28
+}
+
+"Index 4x4 PRO" V3_early-V3
+{
+  CanDoInterpoint
+  RotatePaperSizings
+  VPGraphics
+  Index20Graphics
+  IndexMulti
+  Index16Graphics
+  IndexPagemm
+  ControlZ
+  MaximumCells = 42
+  MaximumLines = 27
+  EndofPage = 1
+  YesUSB
+  Driver = "Emb_IndexEmbosserDriver"
+  WindowsDriverName = "4x4"
+  StartLeftMargin = 0
+  InitSequence="BT0,DP,PW,PL,IM,OM,TM,BM,MC"
+  HelpPage = "Index_4x4_PRO.htm"
+  Form "A3_folio" = 165 x 117; DoublePage ; 33 x 29 ; 31 x 27
+  Form "A3_landscape" = 165 x 117 ; SinglePage ; 68 x 29 ; 66 x 27
+  Form "A4"   =  83 x 117 ; SinglePage ; 35 x 29 ; 32 x 27
+  Form "A4_ex" =  98 x 117 ; SinglePage ; 41 x 29 ; 41 x 27
+  Form "A4_folio" = 117 x 83; DoublePage ; 22 x 20 ; 20 x 20
+  Form "11_nd" = 170 x 110; DoublePage ; 33 x 28 ; 32 x 25
+  Form "12_nd" = 170 x 120; DoublePage ; 33 x 29 ; 32 x 28
+  Form "10_n" =  85 x 100 ; SinglePage ; 36 x 24 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 36 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 36 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 30 ; 40 x 28
+  Form "14_n" =  85 x 140 ; SinglePage ; 36 x 35 ; 32 x 34
+}
+
+"Interpoint NV Elekul 03"
+{
+  ControlD
+  CrMac
+  EndofPage=6
+  NoParallel
+  Baud = 4800
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  Handshaking=Software
+  MaximumCells = 40
+  MaximumLines = 25
+  Encoding = "ELEKUL mode"
+  Encoding = "USA mode"
+  HelpPage = "Interpoint_NV_Elekul_03.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 30 x 23 ; 30 x 22
+  Form "10_w" = 115 x 100 ; SinglePage ; 40 x 23 ; 40 x 22
+  Form "11_n" =  85 x 110 ; SinglePage ; 30 x 27 ; 30 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 30 x 30 ; 30 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 40 x 30 ; 40 x 28
+}
+
+"Interpoint NV Elekul 55"
+{
+  CanDoInterpoint
+  NoParallel
+  Baud = 19200
+  Handshaking=Software
+  EndofPage = 1
+  MaximumCells = 44
+  MaximumLines = 25
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  Driver = "Emb_ElekulEmbosserDriver"
+  HelpPage = "Interpoint_NV_Elekul_55.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 30 x 23 ; 30 x 22
+  Form "10_w" = 115 x 100 ; SinglePage ; 40 x 23 ; 40 x 22
+  Form "10_nd" = 170 x 100 ; DoublePage ; 30 x 23 ; 30 x 22
+  Form "10_d" = 230 x 100 ; DoublePage ; 40 x 23 ; 40 x 22
+  Form "11_n" =  85 x 110 ; SinglePage ; 30 x 27 ; 30 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 27 ; 40 x 25
+  Form "11_nd" = 170 x 110 ; DoublePage ; 30 x 27 ; 30 x 25
+  Form "11_d" = 230 x 110 ; DoublePage ; 40 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 30 x 30 ; 30 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 40 x 30 ; 40 x 28
+  Form "12_nd" = 170 x 120 ; DoublePage ; 30 x 30 ; 30 x 28
+  Form "12_d" = 230 x 120 ; DoublePage ; 40 x 30 ; 40 x 28
+  SoftwareDCB
+    {
+      fInX = FALSE
+      fRtsControl = DISABLE
+    }
+}
+
+"Irie Braille Buddy"
+{
+  Driver = "Emb_TigerEmbosserDriver"
+  WindowsDriverName = "ViewPlus EmBraille 25SN"
+  IniFile = "tigeremp.ini"
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  MaximumCells = 34
+  MaximumLines = 27
+  HelpPage = "Viewplus_Emprint.htm"
+  Form "A4"   =  83 x 117 ; SinglePage ; 35 x 29 ; 30 x 27
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+}
+
+"Irie BrailleTrac 120"
+{
+  Driver = "Emb_TigerEmbosserDriver"
+  WindowsDriverName="Irie AT BrailleTrac 120"
+  CanDoInterpoint
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  MaximumCells = 46
+  MaximumLines = 27
+  HelpPage = "Irie_BrailleTrac120.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 46 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 46 x 30 ; 40 x 28
+}
+
+"Irie BrailleSheet 120"
+{
+  Driver = "Emb_TigerEmbosserDriver"
+  WindowsDriverName="Irie AT BrailleSheet 120"
+  CanDoInterpoint
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  MaximumCells = 46
+  MaximumLines = 27
+  HelpPage = "Irie_BrailleSheet120.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 30 ; 40 x 28
+}
+
+"JTR Corporation ESA-300 Pro"
+{
+  Driver = "Emb_GenericEmbosserDriver"
+  StartLeftMargin = 0
+  MaximumCells = 40
+  MaximumLines = 24
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  NoParallel
+  HelpPage = "JTR_Corporation_ESA-300_Pro.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 30 x 18 ; 32 x 18
+  Form "11_gem" =  100 x 110 ; SinglePage ; 38 x 24 ; 40 x 24
+}
+
+"JTR Corporation ESA-600 Pro"
+{
+  Driver = "Emb_GenericEmbosserDriver"
+  StartLeftMargin = 0
+  MaximumCells = 40
+  MaximumLines = 24
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  NoParallel
+  CanDoInterpoint
+  HelpPage = "JTR_Corporation_ESA-600_Pro.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 30 x 18 ; 32 x 18
+  Form "11_gem" =  100 x 110 ; SinglePage ; 38 x 24 ; 40 x 24
+}
+
+"JTR Corporation ESA-721"
+{
+  Driver = "Emb_GenericEmbosserDriver"
+  CanDoInterpoint
+  ManualInterpoint
+  StartLeftMargin = 0
+  MaximumCells = 40
+  MaximumLines = 24
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  NoParallel
+  HelpPage = "JTR_Corporation_ESA-721.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 30 x 18 ; 32 x 18
+  Form "11_gem" =  100 x 110 ; SinglePage ; 38 x 24 ; 40 x 24
+}
+
+"JTR Corporation ESA-919"
+{
+  Driver = "Emb_GenericEmbosserDriver"
+  CanDoInterpoint
+  StartLeftMargin = 0
+  MaximumCells = 40
+  MaximumLines = 24
+  LessLinesInterpoint = 1
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  NoParallel
+  HelpPage = "JTR_Corporation_ESA-919.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 30 x 18 ; 32 x 18
+}
+
+"JTR Corporation ESA-2000"
+{
+  Driver = "Emb_GenericEmbosserDriver"
+  StartLeftMargin = 0
+  MaximumCells = 40
+  MaximumLines = 24
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  NoParallel
+  CanDoInterpoint
+  HelpPage = "JTR_Corporation_ESA-2000.htm"
+  Form "11_gem" =  100 x 110 ; SinglePage ; 38 x 24 ; 40 x 24
+}
+
+"Nippon Telesoft TP-32"
+{
+  StartLeftMargin = 0
+  NarrowWarning
+  MaximumCells = 32
+  MaximumLines = 24
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  HelpPage = "Nippon_Telesoft_TP-32.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 32 x 24 ; 32 x 20
+}
+
+"Nippon Telesoft BMP-320"
+{
+  Interline
+  Driver = "Emb_BMP_EmbosserDriver"
+  MaximumCells = 32
+  MaximumLines = 22
+  StartLeftMargin = 0
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  HelpPage = "Nippon_Telesoft_BMP-320.htm"
+  Form "10_n" =  85 x 100 ; SinglePage;
+    BrailleOnly = 32 x 22 ; 32 x 20  ;
+    Interline   = 32 x 22 ; 32 x 20
+}
+
+"Nippon Telesoft BPW-32"
+{
+  StartLeftMargin = 0
+  MaximumCells = 32
+  MaximumLines = 24
+  NarrowWarning
+  CanDoInterpoint
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  HelpPage = "Nippon_Telesoft_BPW-32.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 32 x 24 ; 32 x 20
+}
+
+"Nippon Telesoft DOG-Pro"
+"Nippon Telesoft Gemini Super2"
+{
+  Driver = "Emb_Gemini_EmbosserDriver"
+  Submodel = 2
+  Customize = 6
+  StartLeftMargin = 0
+  MaximumCells = 32
+  MaximumLines = 20
+  NarrowWarning
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  YesUSB
+  CanDoInterpoint
+  HelpPage = "Nippon_Telesoft_DOG-Pro.htm"
+  Form "10_mn"  =   80 x 100 ; SinglePage ; 32 x 22 ; 32 x 22
+  Form "10_n"   =   85 x 100 ; SinglePage ; 32 x 22 ; 32 x 22
+  Form "11_n"   =   85 x 110 ; SinglePage ; 32 x 25 ; 32 x 25
+  Form "11_gem" =  100 x 110 ; SinglePage ; 32 x 25 ; 32 x 25
+  Form "12_n"   =   85 x 120 ; SinglePage ; 32 x 27 ; 32 x 27
+}
+
+"Nippon Telesoft Gemini"
+{
+  Driver = "Emb_Gemini_EmbosserDriver"
+  StartLeftMargin = 0
+  MaximumCells = 32
+  MaximumLines = 20
+  Interline
+  NarrowWarning
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  YesUSB
+  CanDoInterpoint
+  ManualInterpoint
+  HelpPage = "Nippon_Telesoft_Gemini.htm"
+  Form "10_n" =  85 x 100 ; SinglePage;
+    BrailleOnly =  32 x 18 ; 32 x 18 ;
+    Interline   =  32 x 18 ; 32 x 18
+  Form "11_n" =  85 x 110 ; SinglePage;
+    BrailleOnly = 32 x 20 ; 32 x 20  ;
+    Interline   = 32 x 20 ; 32 x 20
+  Form "11_gem" =  100 x 110 ; SinglePage;
+    BrailleOnly = 32 x 20 ; 32 x 20  ;
+    Interline   = 32 x 20 ; 32 x 20
+  Form "12_n" =  85 x 120 ; SinglePage;
+    BrailleOnly = 32 x 22 ; 32 x 22  ;
+    Interline   = 32 x 22 ; 32 x 22
+}
+
+"Nippon Gemini (small spacing)"
+{
+  Driver = "Emb_Gemini_EmbosserDriver"
+  StartLeftMargin = 0
+  Interline
+  Customize = 2
+  MaximumCells = 32
+  MaximumLines = 24
+  NarrowWarning
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  YesUSB
+  HelpPage = "Nippon_Gemini_small_spacing.htm"
+  Form "10_n" =  85 x 100 ; SinglePage;
+    BrailleOnly =  32 x 22 ; 32 x 22 ;
+    Interline   =  32 x 22 ; 32 x 22
+  Form "11_n" =  85 x 110 ; SinglePage;
+    BrailleOnly = 32 x 24 ; 32 x 24  ;
+    Interline   = 32 x 24 ; 32 x 24
+  Form "11_gem" =  100 x 110 ; SinglePage;
+    BrailleOnly = 32 x 24 ; 32 x 24  ;
+    Interline   = 32 x 24 ; 32 x 24
+  Form "12_n" =  85 x 120 ; SinglePage;
+    BrailleOnly = 32 x 26 ; 32 x 26  ;
+    Interline   = 32 x 26 ; 32 x 26
+}
+
+"Nippon Telesoft Super Gemini"
+{
+  Driver = "Emb_Gemini_EmbosserDriver"
+  SubModel = 1
+  StartLeftMargin = 0
+  MaximumCells = 32
+  MaximumLines = 20
+  Interline
+  NarrowWarning
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  YesUSB
+  CanDoInterpoint
+  ManualInterpoint
+  HelpPage = "Nippon_Telesoft_Super_Gemini.htm"
+  Form "10_n" =  85 x 100 ; SinglePage;
+    BrailleOnly =  32 x 18 ; 32 x 18 ;
+    Interline   =  32 x 18 ; 32 x 18
+  Form "11_n" =  85 x 110 ; SinglePage;
+    BrailleOnly = 32 x 20 ; 32 x 20  ;
+    Interline   = 32 x 20 ; 32 x 20
+  Form "11_gem" =  100 x 110 ; SinglePage;
+    BrailleOnly = 32 x 20 ; 32 x 20  ;
+    Interline   = 32 x 20 ; 32 x 20
+  Form "12_n" =  85 x 120 ; SinglePage;
+    BrailleOnly = 32 x 22 ; 32 x 22  ;
+    Interline   = 32 x 22 ; 32 x 22
+}
+
+"Nippon Super Gemini (small spacing)"
+{
+  Driver = "Emb_Gemini_EmbosserDriver"
+  SubModel = 1
+  StartLeftMargin = 0
+  Interline
+  Customize = 2
+  MaximumCells = 32
+  MaximumLines = 24
+  NarrowWarning
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  YesUSB
+  HelpPage = "Nippon_Super_Gemini_small_spacing.htm"
+  Form "10_n" =  85 x 100 ; SinglePage;
+    BrailleOnly =  32 x 22 ; 32 x 22 ;
+    Interline   =  32 x 22 ; 32 x 22
+  Form "11_n" =  85 x 110 ; SinglePage;
+    BrailleOnly = 32 x 24 ; 32 x 24  ;
+    Interline   = 32 x 24 ; 32 x 24
+  Form "11_gem" =  100 x 110 ; SinglePage;
+    BrailleOnly = 32 x 24 ; 32 x 24  ;
+    Interline   = 32 x 24 ; 32 x 24
+  Form "12_n" =  85 x 120 ; SinglePage;
+    BrailleOnly = 32 x 26 ; 32 x 26  ;
+    Interline   = 32 x 26 ; 32 x 26
+}
+
+"Pulse Data Paragon"
+{
+  MaximumCells = 40
+  MaximumLines = 27
+  PageWrap
+  VPGraphics
+  ETmulti
+  ETCAllowEscapeCodes
+  Driver = "Emb_EnablingEmbosserDriver"
+  Encoding = "North American English"
+  Encoding = "French"
+  Encoding = "German"
+  Encoding = "Spanish"
+  HelpPage = "Pulse_Data_Paragon.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 40 x 30 ; 40 x 28
+}
+
+"Quantum Mountbatten"
+{
+  Driver = "Emb_MountbattenEmbosserDriver"
+  VPGraphics
+  PromptNewPage
+  MaximumCells = 40
+  MaximumLines = 25
+  StartLeftMargin = 0
+  HelpPage = "Quantum_Mountbatten.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 22 ; 32 x 22
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 25 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 25 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 28 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 40 x 28 ; 40 x 28
+}
+
+"RESUS"
+{
+  CanDoInterpoint
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  MaximumCells = 40
+  MaximumLines = 25
+  HelpPage = "RESUS.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 22 ; 32 x 22
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 25 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 25 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 28 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 40 x 28 ; 40 x 28
+}
+
+"ONCE Porta-Thiel"
+"Thiel PortaThiel"
+{
+  Encoding = "North American English"
+  Encoding = "British"
+  Encoding = "German"
+  Encoding = "French"
+  Encoding = "Spanish"
+  Encoding = "Euro"
+  MaximumCells = 40
+  MaximumLines = 27
+  WindowsDriverName="ONCE Porta-Thiel"
+  PageWrap
+  HelpPage = "Thiel_PortaThiel.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 40 x 30 ; 40 x 28
+}
+
+"Thiel PortaThiel Interpoint"
+{
+  Encoding = "North American English"
+  Encoding = "British"
+  Encoding = "German"
+  Encoding = "French"
+  Encoding = "Spanish"
+  Encoding = "Euro"
+  CanDoInterpoint
+  MaximumCells = 40
+  MaximumLines = 27
+  PageWrap
+  HelpPage = "Thiel_PortaThiel_Interpoint.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 40 x 30 ; 40 x 28
+}
+
+"Thiel Bax 10"
+{
+  Driver = "Emb_ThielEmbosserDriver"
+  CanDoInterpoint
+  MaximumCells = 42
+  MaximumLines = 25
+  NoParallel
+  PageWrap
+  UsingEscapeCodes
+  HelpPage = "Thiel_Bax_10.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 22 ; 32 x 22
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 25 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 25 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 28 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 28 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 30 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 42 x 30 ; 40 x 30
+  Encoding = "North American English"
+  Encoding = "British"
+  Encoding = "German"
+  Encoding = "Spanish"
+}
+
+"Thiel Texto"
+{
+  Driver = "Emb_ThielEmbosserDriver"
+  CanDoInterpoint
+  MaximumCells = 42
+  MaximumLines = 25
+  NoParallel
+  PageWrap
+  UsingEscapeCodes
+  HelpPage = "Thiel_Texto.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 22 ; 32 x 22
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 25 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 25 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 28 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 28 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 30 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 42 x 30 ; 40 x 30
+  Encoding = "North American English"
+  Encoding = "British"
+  Encoding = "German"
+  Encoding = "Spanish"
+}
+
+"Thiel Beta X3"
+{
+  Driver = "Emb_ThielEmbosserDriver"
+  NoParallel
+  NoLeftMargin
+  NoTopMargin
+  MaximumCells = 42
+  MaximumLines = 26
+  PageWrap
+  UsingEscapeCodes
+  Encoding = "North American English"
+  Encoding = "German"
+  HelpPage = "Thiel_Beta_X3.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 22 ; 32 x 22
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 25 ; 32 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 28 ; 32 x 28
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 26 ; 40 x 25
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 29 ; 40 x 28
+  Form "13_w" = 115 x 130 ; SinglePage ; 42 x 31 ; 40 x 30
+}
+
+"ONCE Impacto"
+"Thiel Impacto 600"
+{
+  Driver = "Emb_ThielEmbosserDriver"
+  CanDoInterpoint
+  MaximumCells = 42
+  MaximumLines = 25
+  PageWrap
+  UsingEscapeCodes
+  WindowsDriverName="ONCE Impacto"
+  Encoding = "North American English"
+  Encoding = "British"
+  Encoding = "German"
+  Encoding = "Spanish"
+  HelpPage = "Thiel_Impacto_600.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 22 ; 32 x 22
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 25 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 25 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 28 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 28 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 30 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 42 x 30 ; 40 x 30
+}
+
+"ONCE Impacto Advanced"
+"Thiel Impacto Advanced"
+{
+  Driver = "Emb_ThielAdvancedEmbosserDriver"
+  CanDoInterpoint
+  MaximumCells = 42
+  MaximumLines = 25
+  PageWrap
+  FormNamePrefix="ONCE"
+  UsingEscapeCodes
+  WindowsDriverName="ONCE Impacto Advanced"
+  Encoding = "North American English"
+  Encoding = "Spanish"
+  HelpPage = "Thiel_Impacto_Advanced.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 22
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 42 x 30 ; 40 x 28
+  Form "13_n" =  85 x 130 ; SinglePage ; 34 x 32 ; 32 x 30
+  Form "13_w" = 115 x 130 ; SinglePage ; 42 x 32 ; 40 x 30
+}
+
+"TactPlus/EasyTactix"
+{
+  Driver = "Emb_TigerEmbosserDriver"
+  WindowsDriverName = "EasyTactix"
+  Submodel = 1
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  MaximumCells = 35
+  MaximumLines = 29
+  HelpPage = "EasyTactix.htm"
+  TopMargin    = 250
+  LeftMargin   = 215
+  RightMargin  = 215
+  BottomMargin = 300
+  Form "A4"   =  83 x 117 ; SinglePage ; 35 x 29 ; 30 x 28
+}
+
+"Triformations Personal Brailler"
+{
+  NoParallel
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  MaximumCells = 40
+  MaximumLines = 25
+  HelpPage = "Triformations_Personal_Brailler.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 22 ; 32 x 22
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 25 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 25 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 28 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 40 x 28 ; 40 x 28
+}
+
+"Triformations TED-600"
+{
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  NoParallel
+  MaximumCells = 42
+  MaximumLines = 25
+  HelpPage = "Triformations_TED-600.htm"
+  Form "11_w" = 115 x 110 ; SinglePage ; 42 x 26 ; 40 x 25
+}
+
+"Triformations TRI-170"
+{
+  MaximumCells = 40
+  MaximumLines = 25
+  EndofPage = 3
+  LinesPadded
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  NoParallel
+  HelpPage = "Triformations_TRI-170.htm"
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 25 ; 40 x 25
+}
+
+"Triformations LED-120"
+{
+  MaximumCells = 40
+  MaximumLines = 25
+  EndofPage = 3
+  LinesPadded
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  NoParallel
+  HelpPage = "Triformations_LED-120.htm"
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 25 ; 40 x 25
+}
+
+"ViewPlus Columbia"
+{
+  Driver = "Emb_TigerEmbosserDriver"
+  WindowsDriverName = "ViewPlus Columbia"
+  CanDoInterpoint
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  MaximumCells = 46
+  MaximumLines = 27
+  HelpPage = "ViewPlus_Columbia.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 46 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 46 x 30 ; 40 x 28
+}
+
+"ViewPlus Delta"
+{
+  Driver = "Emb_TigerEmbosserDriver"
+  WindowsDriverName = "ViewPlus Delta"
+  CanDoInterpoint
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  MaximumCells = 46
+  MaximumLines = 27
+  HelpPage = "ViewPlus_Delta.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 46 x 27 ; 40 x 25
+  Form "11_nd" = 170 x 110 ; DoublePage ; 32 x 27 ; 32 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 46 x 30 ; 40 x 28
+}
+
+"ViewPlus Rogue Sheet"
+{
+  Driver = "Emb_TigerEmbosserDriver"
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  MaximumCells = 46
+  MaximumLines = 27
+  HelpPage = "ViewPlus_Delta.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 46 x 27 ; 40 x 25
+  Form "11_nd" = 170 x 110 ; DoublePage ; 32 x 27 ; 32 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 46 x 30 ; 40 x 28
+}
+
+"ViewPlus Tiger Advantage"
+{
+  Driver = "Emb_TigerEmbosserDriver"
+  WindowsDriverName = "Tiger 3D Advantage"
+  IniFile = "tiger3d.ini"
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  MaximumCells = 46
+  MaximumLines = 27
+  HelpPage = "Viewplus_Tiger_Advantage.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 46 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 46 x 30 ; 40 x 28
+}
+
+"ViewPlus Tiger Max"
+{
+  Driver = "Emb_TigerEmbosserDriver"
+  WindowsDriverName = "Tiger Max"
+  IniFile = "tigerpro.ini"
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  MaximumCells = 46
+  MaximumLines = 27
+  HelpPage = "Viewplus_Tiger_Max.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 46 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 46 x 30 ; 40 x 28
+}
+
+"ViewPlus Rogue"
+{
+  Driver = "Emb_TigerEmbosserDriver"
+  IniFile = "tigerpro.ini"
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  MaximumCells = 46
+  MaximumLines = 27
+  HelpPage = "Viewplus_Tiger_Max.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 46 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 46 x 30 ; 40 x 28
+}
+
+"ViewPlus Elite"
+{
+  Driver = "Emb_TigerEmbosserDriver"
+  WindowsDriverName = "Tiger Elite"
+  IniFile = "tigerreah.ini"
+  CanDoInterpoint
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  MaximumCells = 46
+  MaximumLines = 27
+  HelpPage = "Viewplus_Elite.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 46 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 46 x 30 ; 40 x 28
+}
+
+"ViewPlus Elite with Ink Connect"
+{
+  Driver = "Emb_TigerEmbosserDriver"
+  WindowsDriverName = "Tiger Elite"
+  IniFile = "tigerreah.ini"
+  CanDoInterpoint
+  Interline
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  MaximumCells = 46
+  MaximumLines = 27
+  HelpPage = "Viewplus_Elite_with_Ink_Connect.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; BrailleOnly = 34 x 25 ; 32 x 23; Interline = 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; BrailleOnly = 34 x 27 ; 32 x 25; Interline = 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; BrailleOnly = 46 x 27 ; 40 x 25; Interline = 46 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; BrailleOnly = 34 x 30 ; 32 x 28; Interline = 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; BrailleOnly = 46 x 30 ; 40 x 28; Interline = 46 x 30 ; 40 x 28
+}
+
+"ViewPlus Premier"
+{
+  Driver = "Emb_TigerEmbosserDriver"
+  WindowsDriverName = "Tiger Premier"
+  IniFile = "tigerreah.ini"
+  CanDoInterpoint
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  MaximumCells = 46
+  MaximumLines = 27
+  HelpPage = "Viewplus_Premier.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 46 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 46 x 30 ; 40 x 28
+}
+
+"ViewPlus Premier with Ink Connect"
+{
+  Driver = "Emb_TigerEmbosserDriver"
+  WindowsDriverName = "Tiger Premier"
+  IniFile = "tigerreah.ini"
+  CanDoInterpoint
+  Interline
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  MaximumCells = 46
+  MaximumLines = 27
+  HelpPage = "Viewplus_Premier_with_Ink_Connect.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; BrailleOnly = 34 x 25 ; 32 x 23; Interline = 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; BrailleOnly = 34 x 27 ; 32 x 25; Interline = 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; BrailleOnly = 46 x 27 ; 40 x 25; Interline = 46 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; BrailleOnly = 34 x 30 ; 32 x 28; Interline = 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; BrailleOnly = 46 x 30 ; 40 x 28; Interline = 46 x 30 ; 40 x 28
+}
+
+"ViewPlus Tiger Pro"
+{
+  Driver = "Emb_TigerEmbosserDriver"
+  WindowsDriverName = "Tiger Professional"
+  IniFile = "tigerpro.ini"
+  CanDoInterpoint
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  MaximumCells = 46
+  MaximumLines = 27
+  HelpPage = "Viewplus_Tiger_Pro.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 46 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 46 x 30 ; 40 x 28
+}
+
+"ViewPlus Tiger Pro Ink"
+{
+  Driver = "Emb_TigerEmbosserDriver"
+  WindowsDriverName = "ViewPlus Pro Ink"
+  IniFile = "tigerink.ini"
+  CanDoInterpoint
+  Interline
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  MaximumCells = 46
+  MaximumLines = 27
+  HelpPage = "Viewplus_Tiger_Pro_Ink.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ;
+   BrailleOnly = 34 x 25 ; 32 x 23 ;
+   Interline =   34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ;
+   BrailleOnly = 34 x 27 ; 32 x 25 ;
+   Interline =   34 x 27 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ;
+   BrailleOnly = 46 x 27 ; 40 x 25 ;
+   Interline =   46 x 27 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ;
+   BrailleOnly = 34 x 30 ; 32 x 28 ;
+   Interline =   34 x 30 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ;
+   BrailleOnly = 46 x 30 ; 40 x 28 ;
+   Interline =   46 x 30 ; 40 x 28
+}
+
+"ViewPlus EmBraille"
+{
+  Driver = "Emb_TigerEmbosserDriver"
+  WindowsDriverName = "ViewPlus EmBraille 25SN"
+  IniFile = "tigeremp.ini"
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  MaximumCells = 34
+  MaximumLines = 27
+  HelpPage = "Viewplus_Emprint.htm"
+  Form "A4"   =  83 x 117 ; SinglePage ; 35 x 29 ; 30 x 27
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+}
+
+"ViewPlus Emprint"
+{
+  Driver = "Emb_TigerEmbosserDriver"
+  WindowsDriverName = "ViewPlus Emprint"
+  IniFile = "tigeremp.ini"
+  Interline
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  MaximumCells = 34
+  MaximumLines = 27
+  HelpPage = "Viewplus_Emprint.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ;
+   BrailleOnly = 34 x 25 ; 32 x 23 ;
+   Interline =   34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ;
+   BrailleOnly = 34 x 27 ; 32 x 25 ;
+   Interline =   34 x 27 ; 32 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ;
+   BrailleOnly = 34 x 30 ; 32 x 28 ;
+   Interline =   34 x 30 ; 32 x 28
+}
+
+"ViewPlus SpotDot"
+{
+  Driver = "Emb_TigerEmbosserDriver"
+  WindowsDriverName = "ViewPlus SpotDot"
+  IniFile = "spotdot.ini"
+  Interline
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  MaximumCells = 34
+  MaximumLines = 27
+  HelpPage = "Viewplus_SpotDot.htm"
+  Form "A4" =  85 x 100 ; SinglePage ;
+   BrailleOnly = 33 x 26 ; 32 x 25 ;
+   Interline =   33 x 26 ; 32 x 25
+  Form "10_n" =  85 x 100 ; SinglePage ;
+   BrailleOnly = 34 x 25 ; 32 x 23 ;
+   Interline =   34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ;
+   BrailleOnly = 34 x 27 ; 32 x 25 ;
+   Interline =   34 x 27 ; 32 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ;
+   BrailleOnly = 34 x 30 ; 32 x 28 ;
+   Interline =   34 x 30 ; 32 x 28
+}
+
+"ViewPlus Tiger Cub"
+{
+  Driver = "Emb_TigerEmbosserDriver"
+  WindowsDriverName = "Tiger Cub"
+  IniFile = "tigerpro.ini"
+  CanDoInterpoint
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  MaximumCells = 34
+  MaximumLines = 27
+  HelpPage = "Viewplus_Tiger_Cub.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+}
+
+"ViewPlus Tiger Cub Junior"
+{
+  Driver = "Emb_TigerEmbosserDriver"
+  WindowsDriverName = "Tiger Jr."
+  IniFile = "tigerpro.ini"
+  CanDoInterpoint
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  MaximumCells = 34
+  MaximumLines = 27
+  HelpPage = "Viewplus_Tiger_Cub_Junior.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 25 ; 32 x 23
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 27 ; 32 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 30 ; 32 x 28
+}
+
+"VTEK MBOSS-1"
+{
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  MaximumCells = 40
+  MaximumLines = 25
+  HelpPage = "VTEK_MBOSS-1.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 22 ; 32 x 22
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 25 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 25 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 28 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 40 x 28 ; 40 x 28
+}
+
+"VTEK MBOSS-35"
+{
+  NoParallel
+  NoLeftMargin
+  NoRightMargin
+  NoTopMargin
+  MaximumCells = 40
+  MaximumLines = 25
+  HelpPage = "VTEK_MBOSS-35.htm"
+  Form "10_n" =  85 x 100 ; SinglePage ; 34 x 22 ; 32 x 22
+  Form "11_n" =  85 x 110 ; SinglePage ; 34 x 25 ; 32 x 25
+  Form "11_w" = 115 x 110 ; SinglePage ; 40 x 25 ; 40 x 25
+  Form "12_n" =  85 x 120 ; SinglePage ; 34 x 28 ; 32 x 28
+  Form "12_w" = 115 x 120 ; SinglePage ; 40 x 28 ; 40 x 28
+}

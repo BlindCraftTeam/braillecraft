@@ -35,12 +35,29 @@ const XRC: &str = include_str!("../../../ui-native/dialogs.xrc");
 
 /// Room a push button needs beside its text: the padding and border each side.
 const BUTTON_PADDING: i32 = 24;
+/// The room a GTK text field takes around its text (its frame and inner padding, both sides).
+const FIELD_PADDING: i32 = 20;
 
 /// Loads the dialog resources; call once at start.
 pub fn load_resources() -> Result<(), String> {
     let res = XmlResource::get();
     res.init_all_handlers();
     res.load_from_string(XRC)
+}
+
+/// The mnemonic letter of a label: the character after a single &.
+fn mnemonic(label: &str) -> Option<char> {
+    let mut chars = label.chars();
+    while let Some(c) = chars.next() {
+        if c == '&' {
+            match chars.next() {
+                Some('&') => continue,
+                Some(m) if m.is_ascii_alphanumeric() => return Some(m),
+                _ => return None,
+            }
+        }
+    }
+    None
 }
 
 fn spec(id: i32) -> Option<&'static (i32, i32, i32, &'static [(i32, Ctl)])> {
@@ -50,6 +67,8 @@ fn spec(id: i32) -> Option<&'static (i32, i32, i32, &'static [(i32, Ctl)])> {
 pub struct Dlg {
     pub id: i32,
     pub dialog: Dialog,
+    /// A page of a property sheet: its controls are in this panel, the sheet is `dialog`.
+    pub page: Option<Panel>,
 }
 
 /// Dialog units to pixels as Windows converts them: horizontal units are a quarter of the average character
@@ -73,10 +92,77 @@ impl Dlg {
         if let Some(t) = title {
             dialog.set_label(t);
         }
-        let d = Dlg { id, dialog };
+        let d = Dlg { id, dialog, page: None };
         d.fit_labels();
         d.dialog.centre();
         d
+    }
+
+    /// A property sheet: dialog `shell` (its OK and Cancel buttons and its text) holding `pages` (panels, by resource
+    /// id, with their tab names) as tabs. Returns the sheet and its pages; the pages' controls are read and set
+    /// through them, and the sheet is shown and destroyed as a dialog.
+    pub fn sheet(parent: &dyn WxWidget, shell: i32, title: &str, pages: &[(i32, &str)]) -> (Dlg, Vec<Dlg>) {
+        let dialog = XmlResource::get()
+            .load_dialog(Some(parent), &format!("dlg{shell}"))
+            .unwrap_or_else(|| panic!("dialog dlg{shell} is missing from dialogs.xrc"));
+        dialog.set_label(title);
+        let notebook = Notebook::builder(&dialog).build();
+        let mut out = Vec::new();
+        for (pid, tab) in pages {
+            let panel = XmlResource::get()
+                .load_panel(Some(&notebook), &format!("dlg{pid}"))
+                .unwrap_or_else(|| panic!("page dlg{pid} is missing from dialogs.xrc"));
+            if let Some((_, w, h, _)) = spec(*pid) {
+                panel.set_client_size(dialog_units(&panel, *w, *h));
+            }
+            let d = Dlg { id: *pid, dialog, page: Some(panel) };
+            d.fit_labels();
+            panel.set_min_size(panel.get_client_size());
+            notebook.add_page(&panel, tab, out.is_empty(), None);
+            out.push(d);
+        }
+        // The tabs fill the top; OK and Cancel stand in a row below at the right, the sheet's text at the left.
+        let margin = dialog_units(&dialog, 4, 4);
+        let book = notebook.get_best_size();
+        notebook.move_window(margin.width, margin.height);
+        notebook.set_size(book);
+        let sheet = Dlg { id: shell, dialog, page: None };
+        if cfg!(not(windows)) {
+            sheet.plain_ok_cancel();
+        }
+        let row = margin.height * 2 + book.height;
+        let mut x = margin.width + book.width;
+        let mut height = 0;
+        for cid in [2, 1] {
+            if let Some(b) = sheet.win(cid) {
+                let s = b.get_size();
+                x -= s.width;
+                b.move_window(x, row);
+                x -= margin.width;
+                height = height.max(s.height);
+            }
+        }
+        if let Some(t) = sheet.win(6) {
+            t.move_window(margin.width, row + margin.height);
+        }
+        dialog.set_client_size(Size::new(book.width + margin.width * 2, row + height + margin.height * 2));
+        dialog.centre();
+        (sheet, out)
+    }
+
+    /// The client size of the dialog, or of the page.
+    fn client(&self) -> Size {
+        match &self.page {
+            Some(p) => p.get_client_size(),
+            None => self.dialog.get_client_size(),
+        }
+    }
+
+    fn set_client(&self, s: Size) {
+        match &self.page {
+            Some(p) => p.set_client_size(s),
+            None => self.dialog.set_client_size(s),
+        }
     }
 
     /// The dialogs are laid out in dialog units for the font of the system they came from. Where a one-line label
@@ -86,6 +172,9 @@ impl Dlg {
     fn fit_labels(&self) {
         if cfg!(not(windows)) {
             self.fit_drop_downs();
+            self.fit_short_fields();
+            self.plain_ok_cancel();
+            self.wire_label_mnemonics();
         }
         let mut factor = 1.0f64;
         let mut several_lines = Vec::new();
@@ -122,12 +211,101 @@ impl Dlg {
                     w.set_size(Size::new((s.width as f64 * factor).ceil() as i32, s.height));
                 }
             }
-            let c = self.dialog.get_client_size();
-            self.dialog.set_client_size(Size::new((c.width as f64 * factor).ceil() as i32, c.height));
+            let c = self.client();
+            self.set_client(Size::new((c.width as f64 * factor).ceil() as i32, c.height));
         }
         for cid in several_lines {
             if let Some(s) = self.win(cid).and_then(|w| w.as_widget::<StaticText>()) {
                 s.wrap(s.get_size().width);
+            }
+        }
+    }
+
+    /// GTK gives the standard OK and Cancel buttons its own stock labels with letters of their own (Alt+O, Alt+C),
+    /// which take those keys from the dialog's labels; the reference's OK and Cancel have none. They are given their
+    /// own text again, which has no letter.
+    fn plain_ok_cancel(&self) {
+        for cid in [1, 2] {
+            if let Some(b) = self.win(cid).and_then(|w| w.as_widget::<Button>()) {
+                let text = b.get_label().replace(['&', '_'], "");
+                b.set_label(&text);
+            }
+        }
+    }
+
+    /// In a Windows dialog, Alt with a label's underlined letter moves to the control after the label (the next in
+    /// tab order). Elsewhere a label does not do that by itself (buttons and check boxes still take their own
+    /// letters), so each control of the dialog passes Alt with a label's letter to the control after that label.
+    fn wire_label_mnemonics(&self) {
+        let controls = self.controls();
+        let mut keys: Vec<(i32, Window)> = Vec::new();
+        for (i, (cid, kind)) in controls.iter().enumerate() {
+            if !matches!(kind, Ctl::Static | Ctl::Box) {
+                continue;
+            }
+            let Some(letter) = self.win(*cid).and_then(|w| mnemonic(&w.get_label().unwrap_or_default())) else { continue };
+            let target = controls[i + 1..]
+                .iter()
+                .find(|(_, k)| !matches!(k, Ctl::Static | Ctl::Box))
+                .and_then(|(c, _)| self.win(*c));
+            if let Some(t) = target {
+                keys.push((letter.to_ascii_uppercase() as i32, t));
+            }
+        }
+        if keys.is_empty() {
+            return;
+        }
+        for (cid, kind) in controls {
+            if matches!(kind, Ctl::Static | Ctl::Box) {
+                continue;
+            }
+            let Some(w) = self.win(*cid) else { continue };
+            let keys = keys.clone();
+            let handler = move |e: WindowEventData| {
+                if let WindowEventData::Keyboard(k) = &e {
+                    let code = k.get_key_code().unwrap_or(0);
+                    let to = keys.iter().find(|(c, _)| k.alt_down() && !k.control_down() && *c == code);
+                    match to {
+                        Some((_, t)) => t.set_focus(),
+                        None => k.event.skip(true),
+                    }
+                }
+            };
+            match kind {
+                Ctl::Text => w.as_widget::<TextCtrl>().map(|c| c.on_key_down(handler)),
+                Ctl::List => w.as_widget::<ListBox>().map(|c| c.on_key_down(handler)),
+                Ctl::Combo => w.as_widget::<ComboBox>().map(|c| c.on_key_down(handler)),
+                Ctl::Check => w.as_widget::<CheckBox>().map(|c| c.on_key_down(handler)),
+                Ctl::Radio => w.as_widget::<RadioButton>().map(|c| c.on_key_down(handler)),
+                _ => w.as_widget::<Button>().map(|c| c.on_key_down(handler)),
+            };
+        }
+    }
+
+    /// A text field elsewhere than Windows has wider room around its text than a Windows edit box, so a short field
+    /// (a number of cells or lines) would hide its own digits. Such a field grows to the right until it shows three
+    /// digits, where no other control lies beside it in that room.
+    fn fit_short_fields(&self) {
+        for (cid, kind) in self.controls() {
+            if *kind != Ctl::Text {
+                continue;
+            }
+            let Some(w) = self.win(*cid) else { continue };
+            let (p, s) = (w.get_position(), w.get_size());
+            let wanted = w.get_text_extent("000").width + FIELD_PADDING;
+            if s.width <= 0 || s.width >= wanted {
+                continue;
+            }
+            let blocked = self.controls().iter().any(|(other, _)| {
+                self.win(*other).filter(|_| other != cid).is_some_and(|o| {
+                    let (op, os) = (o.get_position(), o.get_size());
+                    let level = op.y < p.y + s.height && p.y < op.y + os.height;
+                    level && op.x >= p.x + s.width && op.x < p.x + wanted
+                })
+            });
+            if !blocked {
+                w.set_min_size(Size::new(wanted, s.height));
+                w.set_size(Size::new(wanted, s.height));
             }
         }
     }
@@ -138,7 +316,10 @@ impl Dlg {
     /// difference, a group around it grows, and the dialog grows. A Windows list box shortens itself to whole rows,
     /// which keeps it clear of a control placed just below its edge; here such a list ends above that control.
     fn fit_drop_downs(&self) {
-        let row = dialog_units(&self.dialog, 0, 12).height;
+        let row = match &self.page {
+            Some(p) => dialog_units(p, 0, 12).height,
+            None => dialog_units(&self.dialog, 0, 12).height,
+        };
         let mut drop_downs: Vec<(i32, i32)> = self
             .controls()
             .iter()
@@ -168,8 +349,8 @@ impl Dlg {
                 }
             }
             if extra > 0 {
-                let c = self.dialog.get_client_size();
-                self.dialog.set_client_size(Size::new(c.width, c.height + extra));
+                let c = self.client();
+                self.set_client(Size::new(c.width, c.height + extra));
             }
         }
         for (cid, kind) in self.controls() {
@@ -202,7 +383,10 @@ impl Dlg {
             2 => "wxID_CANCEL".to_string(),
             n => format!("c{n}"),
         };
-        self.dialog.find_window_by_name(&name)
+        match &self.page {
+            Some(p) => p.find_window_by_name(&name),
+            None => self.dialog.find_window_by_name(&name),
+        }
     }
 
     pub fn text(&self, cid: i32) -> String {
@@ -262,26 +446,35 @@ impl Dlg {
         }
     }
 
+    /// Fills a list or combo box with `items` and chooses `items[selected]`. Many reference boxes sort their items,
+    /// so the choice is made by its text, not by its place in `items`.
     pub fn set_items(&self, cid: i32, items: &[&str], selected: Option<u32>) {
+        let chosen = selected.and_then(|s| items.get(s as usize));
         if let Some(w) = self.win(cid) {
             if let Some(l) = w.as_widget::<ListBox>() {
                 l.clear();
                 for i in items {
                     l.append(i);
                 }
-                if let Some(s) = selected {
-                    l.set_selection(s, true);
+                if let Some(t) = chosen {
+                    l.set_string_selection(t, true);
                 }
             } else if let Some(c) = w.as_widget::<ComboBox>() {
                 c.clear();
                 for i in items {
                     c.append(i);
                 }
-                if let Some(s) = selected {
-                    c.set_selection(s);
+                if let Some(t) = chosen {
+                    c.set_string_selection(t);
                 }
             }
         }
+    }
+
+    /// The place in `items` of the chosen item (found by its text, as the box may sort).
+    pub fn chosen_in(&self, cid: i32, items: &[&str]) -> Option<usize> {
+        let t = self.selected_text(cid)?;
+        items.iter().position(|i| *i == t)
     }
 
     pub fn selection(&self, cid: i32) -> Option<u32> {
@@ -358,6 +551,17 @@ impl Dlg {
         });
         if let Some(w) = first.and_then(|(cid, _)| self.win(*cid)) {
             w.set_focus();
+            // GTK leaves focus where it puts it when the dialog comes up (on a button), whatever was asked before; so
+            // the first field is given focus again once, when the dialog is first active, as in a Windows dialog.
+            let once = std::rc::Rc::new(std::cell::Cell::new(false));
+            self.dialog.on_activate(move |e| {
+                if let WindowEventData::Activate(a) = &e {
+                    if a.is_active() && !once.replace(true) {
+                        w.set_focus();
+                    }
+                    a.event.skip(true);
+                }
+            });
         }
         let code = self.dialog.show_modal();
         if code == wxdragon::id::ID_OK {

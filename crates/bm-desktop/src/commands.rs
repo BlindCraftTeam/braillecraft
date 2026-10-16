@@ -27,7 +27,6 @@ const PLANNED_TEMPLATES: &str = "Templates are built with the BrailleMaker docum
 const PLANNED_PICTURES: &str = "Pictures are built after the core features of version 1.";
 const PLANNED_FORMATTER: &str = "This needs the page formatter, built in step 8 of the plan.";
 
-const FORMS: &[&str] = &["11 x 11.5 inches", "11 x 8.5 inches (Letter)", "A4 (297 x 210 mm)", "11.5 x 11 inches (tractor)"];
 const STYLE_SHOW: &[&str] = &["Recommended and In-Use Styles", "All Styles", "Styles In-Use", "Only Recommended Styles"];
 
 // ------------------------------------------------------------------ messages
@@ -352,7 +351,7 @@ pub fn run(id: i32, checked: bool) {
                 // "When this is checked, most of the other controls on the dialog are disabled" (the manual).
                 let (id, dialog) = (d.id, d.dialog);
                 let apply = move || {
-                    let d = Dlg { id, dialog };
+                    let d = Dlg { id, dialog, page: None };
                     let raw = d.checked(6);
                     for c in 7..=44 {
                         d.enable(c, !raw);
@@ -456,7 +455,7 @@ fn file_new() {
     d.set_radio(&[7, 8], 0);
     d.set_checked(15, false);
     fill_new_dialog(&d, &mut state.borrow_mut(), None);
-    let copy = |d: &Dlg| Dlg { id: d.id, dialog: d.dialog };
+    let copy = |d: &Dlg| Dlg { id: d.id, dialog: d.dialog, page: d.page };
 
     let (dc, st) = (copy(&d), state.clone());
     d.on_button(11, move || {
@@ -1214,16 +1213,11 @@ fn print() {
 }
 
 fn emboss() {
-    let form = app::with(|a| a.memory.get(1032, "document").and_then(|v| {
-        v.iter().find_map(|(c, val)| match (c, val) {
-            (13, crate::dlg::Value::Choice(Some(i))) => FORMS.get(*i as usize).map(|s| s.to_string()),
-            _ => None,
-        })
-    }));
+    let Some((setup, form)) = app::with(|a| a.doc().map(|d| (d.embosser.clone(), d.layout.form.clone()))) else { return };
     let d = open_dialog(1039, None);
     d.set_radio(&[9, 10, 11, 12, 13], 0);
-    d.set_text(23, "(No Target Embosser)");
-    d.set_text(25, &form.unwrap_or_else(|| FORMS[0].to_string()));
+    d.set_text(23, if setup.is_empty() { NO_EMBOSSER } else { &setup });
+    d.set_text(25, &crate::embosser::form_name(&form));
     let ok = d.show() == 1;
     d.destroy();
     if ok {
@@ -1704,39 +1698,185 @@ fn fill_table_properties(d: &Dlg) {
 
 // ------------------------------------------------------------------ Document
 
+/// The Embosser Setup list entry for no setup.
+const NO_EMBOSSER: &str = "(No Target Embosser)";
+
+/// The forms of the kept setup `name`'s model (none for no setup, an unknown setup or an unknown model).
+fn setup_forms(name: &str) -> Vec<bm_core::embossers::Form> {
+    let Some(setup) = crate::embosser::load_setup(name) else { return Vec::new() };
+    crate::embosser::with_catalog(|cat| {
+        cat.ok().and_then(|cat| crate::embosser::find_model(cat, &setup.model)).map(|m| m.forms.clone()).unwrap_or_default()
+    })
+}
+
+/// Fills Embosser Setup's list of setups (7), `selected` chosen.
+fn fill_setup_list(d: &Dlg, selected: &str) {
+    let mut names = vec![NO_EMBOSSER.to_string()];
+    names.extend(crate::embosser::setup_names());
+    let refs: Vec<&str> = names.iter().map(String::as_str).collect();
+    let i = names.iter().position(|n| n == selected).unwrap_or(0);
+    d.set_items(7, &refs, Some(i as u32));
+}
+
+/// Fills Embosser Setup's form box (13) with the forms of the chosen setup, `form` chosen (else the first). The box
+/// sorts its items, so they go in sorted and the choice is found by text.
+fn fill_setup_forms(d: &Dlg, form: &str) {
+    let setup = d.selected_text(7).filter(|s| s != NO_EMBOSSER).unwrap_or_default();
+    let forms = setup_forms(&setup);
+    let mut names: Vec<String> = forms.iter().map(|f| crate::embosser::form_name(&f.id)).collect();
+    names.sort_by_key(|n| n.to_lowercase());
+    let chosen = forms.iter().find(|f| f.id == form).map(|f| crate::embosser::form_name(&f.id));
+    let i = chosen.and_then(|c| names.iter().position(|n| *n == c)).unwrap_or(0);
+    let refs: Vec<&str> = names.iter().map(String::as_str).collect();
+    d.set_items(13, &refs, (!refs.is_empty()).then_some(i as u32));
+    d.enable(13, !refs.is_empty());
+}
+
+/// Document / Global: Embosser Setup (dialog 1032, spec 25 section 2b). Document: the document's setup and its
+/// embosser page layout. Global: the default setup and the layout new documents take; New, Modify Embosser and
+/// Remove (shown in Global only) open the setup sheet and change the kept setups.
 fn embosser_setup(global: bool) {
-    let doc = app::with(|a| a.doc().map(|d| (d.kind, d.cells, d.lines)));
-    let title = global.then_some("Global: Embosser Setup");
-    let key = if global { "global" } else { "document" };
-    let Some(d) = settings_dialog(1032, key, title, |d| {
-        d.set_items(7, &["(No Target Embosser)"], Some(0));
-        d.set_items(13, FORMS, Some(0));
-        d.set_text(15, "40");
-        d.set_text(17, "25");
-        d.set_text(19, "0");
-        d.set_text(21, "0");
-        for b in [8, 9, 10] {
-            d.on_button(b, || message(PLANNED_EMBOSS));
-        }
-    }) else {
+    use crate::embosser as emb;
+    let doc = app::with(|a| a.doc().map(|d| (d.kind, d.cells, d.lines, d.embosser.clone(), d.layout.clone())));
+    if !global && doc.is_none() {
         return;
+    }
+    let (default_layout, default_cells, default_lines) = emb::default_layout();
+    let (setup, layout, cells, lines) = match (&doc, global) {
+        (Some((kind, c, l, name, layout)), false) => {
+            // A braille document shows its own cells and lines; a print document the default layout's.
+            let (c, l) = if *kind == DocKind::Braille { (*c, *l) } else { (default_cells, default_lines) };
+            (name.clone(), layout.clone(), c, l)
+        }
+        _ => (emb::default_setup().unwrap_or_default(), default_layout, default_cells, default_lines),
     };
-    // The document's own cells and lines show in a braille document's setup.
-    if let (false, Some((DocKind::Braille, _, _))) = (global, doc) {
-        let (cells, lines) = (d.number(15), d.number(17));
-        app::with(|a| {
-            if let Some(doc) = a.doc_mut() {
-                if let Some(c) = cells.filter(|c| (10..=100).contains(c)) {
-                    doc.cells = c as u32;
-                }
-                if let Some(l) = lines.filter(|l| (5..=100).contains(l)) {
-                    doc.lines = l as u32;
-                }
-            }
-            a.apply_view();
+    let d = open_dialog(1032, global.then_some("Global: Embosser Setup"));
+    let (id, dialog) = (d.id, d.dialog);
+    fill_setup_list(&d, &setup);
+    fill_setup_forms(&d, &layout.form);
+    d.set_text(15, &cells.to_string());
+    d.set_text(17, &lines.to_string());
+    d.set_text(19, &layout.top_margin.to_string());
+    d.set_text(21, &layout.binding.to_string());
+    d.set_checked(22, layout.interpoint);
+    d.set_checked(23, layout.banner);
+    d.set_checked(24, layout.interline != 0);
+    if let Some(list) = d.win(7).and_then(|w| w.as_widget::<ListBox>()) {
+        list.on_selection_changed(move |_| {
+            let d = Dlg { id, dialog, page: None };
+            let name = d.selected_text(7).unwrap_or_default();
+            let form = emb::load_setup(&name).map(|s| s.form).unwrap_or_default();
+            fill_setup_forms(&d, &form);
         });
     }
+    if global {
+        // New and Modify Embosser open the setup sheet; a setup kept from it is chosen in the list.
+        let sheet = move |modify: bool| {
+            let d = Dlg { id, dialog, page: None };
+            let old = d.selected_text(7).filter(|s| s != NO_EMBOSSER);
+            if modify && old.is_none() {
+                return;
+            }
+            emb::with_catalog(|cat| match cat {
+                Err(e) => message(e),
+                Ok(cat) => {
+                    let mut s = match old.as_deref().filter(|_| modify).and_then(emb::load_setup) {
+                        Some(s) => s,
+                        None => emb::Setup::for_model(cat, ""),
+                    };
+                    if emb::edit(&mut s, cat) {
+                        emb::save_setup(&s, if modify { old.as_deref() } else { None });
+                        fill_setup_list(&d, &s.shown_name());
+                        fill_setup_forms(&d, &s.form);
+                    }
+                }
+            });
+        };
+        d.on_button(8, move || sheet(false));
+        d.on_button(9, move || sheet(true));
+        d.on_button(10, move || {
+            let d = Dlg { id, dialog, page: None };
+            let Some(name) = d.selected_text(7).filter(|s| s != NO_EMBOSSER) else { return };
+            let only = emb::setup_names().len() == 1;
+            let text = if only {
+                format!("Are you sure you want to remove embosser configuration \"{name}\"?  This is currently your only configuration; you will need to create another one before you can emboss.")
+            } else {
+                format!("Are you sure that you want to remove embosser configuration \"{name}\"?")
+            };
+            if yes_no(&text) {
+                emb::remove_setup(&name);
+                fill_setup_list(&d, NO_EMBOSSER);
+                fill_setup_forms(&d, "");
+            }
+        });
+    } else {
+        for b in [8, 9, 10] {
+            d.hide(b);
+        }
+    }
+    let chosen = loop {
+        if d.show() != 1 {
+            break None;
+        }
+        let name = d.selected_text(7).filter(|s| s != NO_EMBOSSER).unwrap_or_default();
+        let forms = setup_forms(&name);
+        let shown = d.selected_text(13).unwrap_or_default();
+        let form = forms.iter().find(|f| crate::embosser::form_name(&f.id) == shown);
+        let field = |cid: i32, current: u32| d.number(cid).filter(|n| *n >= 0).map(|n| n as u32).unwrap_or(current);
+        let (c, l, top, binding) = (field(15, cells), field(17, lines), field(19, layout.top_margin), field(21, layout.binding));
+        let interline = d.checked(24);
+        // The page the form allows (with interline print, the interline page where the form gives one); with no
+        // embosser, 10 to 160 cells and 4 to 40 lines. Cells and binding margin share the line; lines and top margin
+        // share the page (spec 25 2c: both are counted apart from their margin). INFERENCE: the least page with a
+        // form is one cell and one line.
+        let ((max_c, max_l), (min_c, min_l)) = match form {
+            Some(f) => (if interline { f.interline.map(|i| i.0).unwrap_or(f.maximum) } else { f.maximum }, (1, 1)),
+            None => ((160, 40), (10, 4)),
+        };
+        let binding2 = binding.min(max_c.saturating_sub(min_c));
+        let c2 = c.clamp(min_c, max_c.saturating_sub(binding2).max(min_c));
+        let top2 = top.min(max_l.saturating_sub(min_l));
+        let l2 = l.clamp(min_l, max_l.saturating_sub(top2).max(min_l));
+        if (c2, l2, top2, binding2) != (c, l, top, binding) {
+            d.set_text(15, &c2.to_string());
+            d.set_text(17, &l2.to_string());
+            d.set_text(19, &top2.to_string());
+            d.set_text(21, &binding2.to_string());
+            // INFERENCE: the reference message ends with the corrected values (its %s); they are listed here.
+            message(&format!(
+                "BrailleMaker has updated desired document settings to fit the selected page size.\n\nCharacters per line: {c2}\nLines per page: {l2}\nTop margin in lines: {top2}\nBinding margin in characters: {binding2}"
+            ));
+            continue;
+        }
+        let layout = emb::Layout {
+            form: form.map(|f| f.id.clone()).unwrap_or_default(),
+            top_margin: top2,
+            binding: binding2,
+            interpoint: d.checked(22),
+            banner: d.checked(23),
+            interline: u32::from(interline),
+        };
+        break Some((name, layout, c2, l2));
+    };
     d.destroy();
+    let Some((name, layout, cells, lines)) = chosen else { return };
+    if global {
+        emb::set_default_setup(&name);
+        emb::save_default_layout(&layout, cells, lines);
+        app::with(|a| a.apply_view());
+        return;
+    }
+    app::with(|a| {
+        if let Some(doc) = a.doc_mut() {
+            doc.embosser = name;
+            doc.layout = layout;
+            if doc.kind == DocKind::Braille {
+                doc.cells = cells;
+                doc.lines = lines;
+            }
+        }
+        a.apply_view();
+    });
 }
 
 /// The margin fields of Printer Setup (the system page setup's ids): left, top, right, bottom.
@@ -2030,10 +2170,10 @@ fn modify_style() {
     let dialog_id = d.id;
     let dialog = d.dialog;
     if let Some(list) = d.win(8).and_then(|w| w.as_widget::<ListBox>()) {
-        list.on_selection_changed(move |_| load(&Dlg { id: dialog_id, dialog }));
+        list.on_selection_changed(move |_| load(&Dlg { id: dialog_id, dialog, page: None }));
     }
     d.on_button(6, move || {
-        let outer = Dlg { id: dialog_id, dialog };
+        let outer = Dlg { id: dialog_id, dialog, page: None };
         let Some(old) = outer.selected_text(8) else { return };
         let r = Dlg::open(&outer.dialog, 1027, None);
         r.set_text(7, &old);

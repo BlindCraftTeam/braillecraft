@@ -8,6 +8,7 @@ mod commands;
 mod dialog_table;
 mod dlg;
 mod documents;
+mod embosser;
 mod encodings;
 #[cfg(windows)]
 mod jaws_install;
@@ -118,6 +119,14 @@ fn main() {
                 }
             }
             None => eprintln!("BrailleMaker: document templates not found; styles will not be used"),
+        }
+        match resource_dir("embossers", "../../embossers", "embossers.txt") {
+            Some(dir) => {
+                if let Err(e) = embosser::load(&dir) {
+                    eprintln!("BrailleMaker: {e}");
+                }
+            }
+            None => eprintln!("BrailleMaker: embosser models not found; embossing will not be offered"),
         }
         if let Err(e) = dlg::load_resources() {
             eprintln!("BrailleMaker: {e}");

@@ -3777,4 +3777,661 @@
       <size>220,12d</size>
     </object>
   </object>
+  <object class="wxDialog" name="dlg10000">
+    <title>Embosser Setup - Untitled Configuration</title>
+    <size>52,18d</size>
+    <style>wxDEFAULT_DIALOG_STYLE</style>
+    <object class="wxButton" name="wxID_OK">
+      <label>OK</label>
+      <default>1</default>
+      <pos>104,1d</pos>
+      <size>45,12d</size>
+    </object>
+    <object class="wxButton" name="wxID_CANCEL">
+      <label>Cancel</label>
+      <pos>104,1d</pos>
+      <size>45,12d</size>
+    </object>
+    <object class="wxStaticText" name="c6">
+      <label>BrailleMaker</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>8,1d</pos>
+      <size>90,9d</size>
+    </object>
+  </object>
+  <object class="wxPanel" name="dlg10001">
+    <size>280,160d</size>
+    <style>wxTAB_TRAVERSAL</style>
+    <object class="wxStaticBox" name="c12">
+      <label>Output Options</label>
+      <pos>6,41d</pos>
+      <size>268,55d</size>
+    </object>
+    <object class="wxStaticBox" name="c20">
+      <label>Serial</label>
+      <pos>6,97d</pos>
+      <size>268,56d</size>
+    </object>
+    <object class="wxStaticText" name="c4">
+      <label>Embosser Model:</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>8,4d</pos>
+      <size>85,9d</size>
+    </object>
+    <object class="wxComboBox" name="c5">
+      <style>wxCB_READONLY|wxCB_SORT</style>
+      <pos>94,3d</pos>
+      <size>176,187d</size>
+    </object>
+    <object class="wxStaticText" name="c6">
+      <label>Setup Name:</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>8,17d</pos>
+      <size>85,9d</size>
+    </object>
+    <object class="wxTextCtrl" name="c7">
+      <pos>94,16d</pos>
+      <size>176,11d</size>
+    </object>
+    <object class="wxStaticText" name="c8">
+      <label>Configuration location:</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>8,30d</pos>
+      <size>85,9d</size>
+    </object>
+    <object class="wxComboBox" name="c9">
+      <style>wxCB_READONLY|wxCB_SORT</style>
+      <pos>94,29d</pos>
+      <size>176,33d</size>
+    </object>
+    <object class="wxStaticText" name="c10">
+      <label>Default Form:</label>
+      <pos>8,30d</pos>
+      <size>85,12d</size>
+    </object>
+    <object class="wxComboBox" name="c11">
+      <style>wxCB_READONLY|wxCB_SORT</style>
+      <pos>94,29d</pos>
+      <size>176,75d</size>
+    </object>
+    <object class="wxRadioButton" name="c13">
+      <label>Send to Printer:</label>
+      <style>wxRB_GROUP</style>
+      <pos>10,51d</pos>
+      <size>83,9d</size>
+    </object>
+    <object class="wxRadioButton" name="c14">
+      <label>Write to Port:</label>
+      <pos>10,63d</pos>
+      <size>83,9d</size>
+    </object>
+    <object class="wxRadioButton" name="c15">
+      <label>Write to File:</label>
+      <pos>10,75d</pos>
+      <size>83,9d</size>
+    </object>
+    <object class="wxComboBox" name="c16">
+      <style>wxCB_READONLY|wxCB_SORT</style>
+      <pos>94,50d</pos>
+      <size>176,59d</size>
+    </object>
+    <object class="wxComboBox" name="c17">
+      <style>wxCB_READONLY|wxCB_SORT</style>
+      <pos>94,62d</pos>
+      <size>176,59d</size>
+    </object>
+    <object class="wxTextCtrl" name="c18">
+      <pos>94,74d</pos>
+      <size>176,11d</size>
+    </object>
+    <object class="wxStaticText" name="c19">
+      <label>(BrailleMaker will prompt if this is blank)</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>94,86d</pos>
+      <size>176,9d</size>
+    </object>
+    <object class="wxCheckBox" name="c21">
+      <label>Initialize Serial Port</label>
+      <pos>10,107d</pos>
+      <size>230,9d</size>
+    </object>
+    <object class="wxStaticText" name="c22">
+      <label>Baud rate:</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>10,117d</pos>
+      <size>72,9d</size>
+    </object>
+    <object class="wxComboBox" name="c23">
+      <style>wxCB_READONLY|wxCB_SORT</style>
+      <pos>82,116d</pos>
+      <size>42,59d</size>
+    </object>
+    <object class="wxStaticText" name="c24">
+      <label>Parity:</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>140,117d</pos>
+      <size>57,9d</size>
+    </object>
+    <object class="wxComboBox" name="c25">
+      <style>wxCB_READONLY|wxCB_SORT</style>
+      <pos>197,116d</pos>
+      <size>72,59d</size>
+    </object>
+    <object class="wxStaticText" name="c26">
+      <label>Data bits:</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>10,129d</pos>
+      <size>72,9d</size>
+    </object>
+    <object class="wxComboBox" name="c27">
+      <style>wxCB_READONLY|wxCB_SORT</style>
+      <pos>82,128d</pos>
+      <size>42,59d</size>
+    </object>
+    <object class="wxStaticText" name="c28">
+      <label>Stop bits:</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>140,129d</pos>
+      <size>57,9d</size>
+    </object>
+    <object class="wxComboBox" name="c29">
+      <style>wxCB_READONLY|wxCB_SORT</style>
+      <pos>197,128d</pos>
+      <size>72,59d</size>
+    </object>
+    <object class="wxStaticText" name="c30">
+      <label>Handshaking:</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>10,141d</pos>
+      <size>72,9d</size>
+    </object>
+    <object class="wxComboBox" name="c31">
+      <style>wxCB_READONLY|wxCB_SORT</style>
+      <pos>82,140d</pos>
+      <size>92,59d</size>
+    </object>
+  </object>
+  <object class="wxPanel" name="dlg10002">
+    <size>280,150d</size>
+    <style>wxTAB_TRAVERSAL</style>
+    <object class="wxStaticText" name="c4">
+      <label>Embosser Version:</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>8,18d</pos>
+      <size>85,9d</size>
+    </object>
+    <object class="wxComboBox" name="c5">
+      <style>wxCB_READONLY|wxCB_SORT</style>
+      <pos>95,17d</pos>
+      <size>177,59d</size>
+    </object>
+    <object class="wxCheckBox" name="c6">
+      <label>Allow escape codes</label>
+      <pos>8,18d</pos>
+      <size>264,9d</size>
+    </object>
+    <object class="wxCheckBox" name="c7">
+      <label>Manage ET Speaks</label>
+      <pos>8,28d</pos>
+      <size>264,9d</size>
+    </object>
+    <object class="wxCheckBox" name="c8">
+      <label>Leave ET Speaks On</label>
+      <pos>8,38d</pos>
+      <size>264,9d</size>
+    </object>
+    <object class="wxCheckBox" name="c9">
+      <label>Send Seek Top of Form</label>
+      <pos>8,48d</pos>
+      <size>264,9d</size>
+    </object>
+    <object class="wxCheckBox" name="c10">
+      <label>Force new page before graphics</label>
+      <pos>8,58d</pos>
+      <size>264,9d</size>
+    </object>
+    <object class="wxCheckBox" name="c11">
+      <label>Force new page after graphics</label>
+      <pos>8,68d</pos>
+      <size>264,9d</size>
+    </object>
+    <object class="wxCheckBox" name="c12">
+      <label>Page 1 facing down</label>
+      <pos>8,18d</pos>
+      <size>264,9d</size>
+    </object>
+    <object class="wxCheckBox" name="c13">
+      <label>Emboss Serial Number</label>
+      <pos>8,30d</pos>
+      <size>264,9d</size>
+    </object>
+    <object class="wxCheckBox" name="c14">
+      <label>Include separator sheet</label>
+      <pos>8,42d</pos>
+      <size>264,9d</size>
+    </object>
+    <object class="wxStaticText" name="c15">
+      <label>Line space (0 to 16; default=16)</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>8,52d</pos>
+      <size>150,9d</size>
+    </object>
+    <object class="wxTextCtrl" name="c16">
+      <pos>160,51d</pos>
+      <size>35,11d</size>
+    </object>
+    <object class="wxStaticText" name="c17">
+      <label>Line single/double (default=single)</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>8,66d</pos>
+      <size>150,9d</size>
+    </object>
+    <object class="wxComboBox" name="c18">
+      <style>wxCB_READONLY|wxCB_SORT</style>
+      <pos>160,65d</pos>
+      <size>35,11d</size>
+    </object>
+    <object class="wxCheckBox" name="c19">
+      <label>Divide output into binding signatures</label>
+      <pos>8,54d</pos>
+      <size>264,9d</size>
+    </object>
+    <object class="wxStaticText" name="c20">
+      <label>Binding signature sheet count (target):</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>8,64d</pos>
+      <size>150,9d</size>
+    </object>
+    <object class="wxTextCtrl" name="c21">
+      <pos>160,63d</pos>
+      <size>15,11d</size>
+    </object>
+    <object class="wxStaticText" name="c22">
+      <label>Binding signature sheet count (minimum):</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>8,78d</pos>
+      <size>150,9d</size>
+    </object>
+    <object class="wxTextCtrl" name="c23">
+      <pos>160,77d</pos>
+      <size>15,11d</size>
+    </object>
+    <object class="wxCheckBox" name="c24">
+      <label>Legacy Mode</label>
+      <pos>8,18d</pos>
+      <size>264,9d</size>
+    </object>
+    <object class="wxStaticText" name="c25">
+      <label>These settings show how your embosser is set up.</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>8,8d</pos>
+      <size>264,9d</size>
+    </object>
+    <object class="wxStaticText" name="c26">
+      <label></label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>8,33d</pos>
+      <size>120,9d</size>
+    </object>
+    <object class="wxTextCtrl" name="c27">
+      <pos>130,32d</pos>
+      <size>20,11d</size>
+    </object>
+    <object class="wxStaticText" name="c28">
+      <label></label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>155,33d</pos>
+      <size>50,9d</size>
+    </object>
+    <object class="wxStaticText" name="c29">
+      <label>Rightmost cell placement:</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>8,45d</pos>
+      <size>120,9d</size>
+    </object>
+    <object class="wxTextCtrl" name="c30">
+      <pos>130,44d</pos>
+      <size>20,11d</size>
+    </object>
+    <object class="wxStaticText" name="c31">
+      <label></label>
+      <pos>155,45d</pos>
+      <size>50,11d</size>
+    </object>
+    <object class="wxStaticText" name="c32">
+      <label>Top margin setting:</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>8,57d</pos>
+      <size>120,9d</size>
+    </object>
+    <object class="wxTextCtrl" name="c33">
+      <pos>130,56d</pos>
+      <size>20,11d</size>
+    </object>
+    <object class="wxCheckBox" name="c34">
+      <label>Interpoint Embossing is Enabled</label>
+      <pos>8,71d</pos>
+      <size>185,9d</size>
+    </object>
+    <object class="wxStaticText" name="c35">
+      <label>Note: The following settings are not normally changed, even if your braille work is not in English.</label>
+      <pos>8,100d</pos>
+      <size>264,18d</size>
+    </object>
+    <object class="wxStaticText" name="c36">
+      <label>Output encoding:</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>8,119d</pos>
+      <size>90,9d</size>
+    </object>
+    <object class="wxComboBox" name="c37">
+      <style>wxCB_READONLY|wxCB_SORT</style>
+      <pos>100,118d</pos>
+      <size>142,59d</size>
+    </object>
+    <object class="wxStaticText" name="c38">
+      <label>High punctuation:</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>8,131d</pos>
+      <size>90,9d</size>
+    </object>
+    <object class="wxComboBox" name="c39">
+      <style>wxCB_READONLY|wxCB_SORT</style>
+      <pos>100,130d</pos>
+      <size>142,59d</size>
+    </object>
+    <object class="wxStaticText" name="c40">
+      <label>Letter case:</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>8,143d</pos>
+      <size>90,9d</size>
+    </object>
+    <object class="wxComboBox" name="c41">
+      <style>wxCB_READONLY|wxCB_SORT</style>
+      <pos>100,142d</pos>
+      <size>142,59d</size>
+    </object>
+    <object class="wxStaticText" name="c42">
+      <label>PRINT55.EXE Location (do NOT select WPRINT55.EXE):</label>
+      <pos>8,8d</pos>
+      <size>264,18d</size>
+    </object>
+    <object class="wxTextCtrl" name="c43">
+      <pos>8,20d</pos>
+      <size>264,11d</size>
+    </object>
+    <object class="wxCheckBox" name="c44">
+      <label>Reverse Page Order</label>
+      <pos>8,40d</pos>
+      <size>264,9d</size>
+    </object>
+    <object class="wxStaticText" name="c45">
+      <label>VSHIFT:</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>8,60d</pos>
+      <size>25,9d</size>
+    </object>
+    <object class="wxComboBox" name="c46">
+      <style>wxCB_READONLY|wxCB_SORT</style>
+      <pos>35,59d</pos>
+      <size>45,100d</size>
+    </object>
+    <object class="wxStaticText" name="c47">
+      <label>(Auto-Rotate causes automatic monthly VSHIFT rotation, starting with 0 in January.)</label>
+      <pos>8,80d</pos>
+      <size>264,18d</size>
+    </object>
+    <object class="wxStaticText" name="c48">
+      <label>0 in January/May/September</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>8,100d</pos>
+      <size>264,9d</size>
+    </object>
+    <object class="wxStaticText" name="c49">
+      <label>1 in February/June/October</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>8,110d</pos>
+      <size>264,9d</size>
+    </object>
+    <object class="wxStaticText" name="c50">
+      <label>2 in March/July/November</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>8,120d</pos>
+      <size>264,9d</size>
+    </object>
+    <object class="wxStaticText" name="c51">
+      <label>3 in April/August/December</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>8,130d</pos>
+      <size>264,9d</size>
+    </object>
+    <object class="wxCheckBox" name="c52">
+      <label>Z-fold</label>
+      <pos>195,71d</pos>
+      <size>45,9d</size>
+    </object>
+  </object>
+  <object class="wxPanel" name="dlg10003">
+    <size>280,155d</size>
+    <style>wxTAB_TRAVERSAL</style>
+    <object class="wxStaticBox" name="c9">
+      <label>Font Size:</label>
+      <pos>5,51d</pos>
+      <size>146,40d</size>
+    </object>
+    <object class="wxStaticBox" name="c13">
+      <label>Ink Placement Adjustment:</label>
+      <pos>156,51d</pos>
+      <size>116,40d</size>
+    </object>
+    <object class="wxStaticText" name="c4">
+      <label>Printer:</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>5,1d</pos>
+      <size>146,9d</size>
+    </object>
+    <object class="wxComboBox" name="c5">
+      <style>wxCB_READONLY|wxCB_SORT</style>
+      <pos>5,1d</pos>
+      <size>146,40d</size>
+    </object>
+    <object class="wxListBox" name="c6">
+      <style>wxLB_SINGLE|wxLB_ALWAYS_SB</style>
+      <pos>5,14d</pos>
+      <size>146,40d</size>
+    </object>
+    <object class="wxStaticText" name="c7">
+      <label>Font:</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>156,1d</pos>
+      <size>116,9d</size>
+    </object>
+    <object class="wxListBox" name="c8">
+      <style>wxLB_SINGLE|wxLB_ALWAYS_SB</style>
+      <pos>156,14d</pos>
+      <size>116,40d</size>
+    </object>
+    <object class="wxRadioButton" name="c10">
+      <label>&amp;Small</label>
+      <style>wxRB_GROUP</style>
+      <pos>7,61d</pos>
+      <size>143,9d</size>
+    </object>
+    <object class="wxRadioButton" name="c11">
+      <label>&amp;Large Interline (Expanded Braille Gap)</label>
+      <pos>7,70d</pos>
+      <size>143,9d</size>
+    </object>
+    <object class="wxRadioButton" name="c12">
+      <label>Large &amp;Overlapped (Normal Braille Gap)</label>
+      <pos>7,80d</pos>
+      <size>143,9d</size>
+    </object>
+    <object class="wxStaticText" name="c14">
+      <label>&amp;Horizontal Adjustment:</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>158,65d</pos>
+      <size>80,9d</size>
+    </object>
+    <object class="wxTextCtrl" name="c15">
+      <pos>240,64d</pos>
+      <size>20,11d</size>
+    </object>
+    <object class="wxStaticText" name="c16">
+      <label>&amp;Vertical Adjustment:</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>158,75d</pos>
+      <size>80,9d</size>
+    </object>
+    <object class="wxTextCtrl" name="c17">
+      <pos>240,74d</pos>
+      <size>20,11d</size>
+    </object>
+    <object class="wxStaticText" name="c18">
+      <label>For complete support for your TranSend SE system contact:</label>
+      <pos>5,100d</pos>
+      <size>270,18d</size>
+    </object>
+    <object class="wxStaticText" name="c19">
+      <label>If you want to add interline Print and Braille capabilities to BrailleMaker using your Enabling Technologies Braille Embosser please contact:</label>
+      <pos>5,100d</pos>
+      <size>270,18d</size>
+    </object>
+    <object class="wxStaticText" name="c20">
+      <label>Enabling Technologies</label>
+      <pos>5,120d</pos>
+      <size>270,9d</size>
+    </object>
+    <object class="wxStaticText" name="c21">
+      <label>support@brailler.com</label>
+      <pos>5,129d</pos>
+      <size>270,9d</size>
+    </object>
+    <object class="wxStaticText" name="c22">
+      <label>info@brailler.com</label>
+      <pos>5,129d</pos>
+      <size>270,9d</size>
+    </object>
+    <object class="wxStaticText" name="c23">
+      <label>+1-772-225-3687 or visit us at</label>
+      <pos>5,138d</pos>
+      <size>270,9d</size>
+    </object>
+    <object class="wxStaticText" name="c24">
+      <label>www.brailler.com</label>
+      <pos>5,147d</pos>
+      <size>270,9d</size>
+    </object>
+  </object>
+  <object class="wxPanel" name="dlg10004">
+    <size>280,150d</size>
+    <style>wxTAB_TRAVERSAL</style>
+    <object class="wxStaticBox" name="c4">
+      <label>Job setup</label>
+      <pos>6,1d</pos>
+      <size>268,44d</size>
+    </object>
+    <object class="wxStaticBox" name="c10">
+      <label>End of line and page</label>
+      <pos>6,46d</pos>
+      <size>268,54d</size>
+    </object>
+    <object class="wxStaticBox" name="c19">
+      <label>Timing</label>
+      <pos>6,101d</pos>
+      <size>268,44d</size>
+    </object>
+    <object class="wxCheckBox" name="c5">
+      <label>Use custom job setup</label>
+      <pos>10,9d</pos>
+      <size>265,9d</size>
+    </object>
+    <object class="wxStaticText" name="c6">
+      <label>Job start codes:</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>10,20d</pos>
+      <size>55,9d</size>
+    </object>
+    <object class="wxTextCtrl" name="c7">
+      <pos>67,19d</pos>
+      <size>203,11d</size>
+    </object>
+    <object class="wxStaticText" name="c8">
+      <label>Job end codes:</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>10,32d</pos>
+      <size>55,9d</size>
+    </object>
+    <object class="wxTextCtrl" name="c9">
+      <pos>67,31d</pos>
+      <size>203,11d</size>
+    </object>
+    <object class="wxStaticText" name="c11">
+      <label>End of line indicator:</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>10,55d</pos>
+      <size>90,9d</size>
+    </object>
+    <object class="wxComboBox" name="c12">
+      <style>wxCB_READONLY|wxCB_SORT</style>
+      <pos>100,54d</pos>
+      <size>170,59d</size>
+    </object>
+    <object class="wxStaticText" name="c13">
+      <label>End of page indicator:</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>10,67d</pos>
+      <size>90,9d</size>
+    </object>
+    <object class="wxComboBox" name="c14">
+      <style>wxCB_READONLY|wxCB_SORT</style>
+      <pos>100,66d</pos>
+      <size>170,59d</size>
+    </object>
+    <object class="wxCheckBox" name="c15">
+      <label>EOL on a full line</label>
+      <pos>10,79d</pos>
+      <size>126,9d</size>
+    </object>
+    <object class="wxCheckBox" name="c16">
+      <label>EOP on a full page</label>
+      <pos>137,79d</pos>
+      <size>126,9d</size>
+    </object>
+    <object class="wxCheckBox" name="c17">
+      <label>Pad lines</label>
+      <pos>10,89d</pos>
+      <size>126,9d</size>
+    </object>
+    <object class="wxCheckBox" name="c18">
+      <label>Prompt for new sheet</label>
+      <pos>137,89d</pos>
+      <size>126,9d</size>
+    </object>
+    <object class="wxCheckBox" name="c20">
+      <label>Send one character at a time</label>
+      <pos>10,109d</pos>
+      <size>260,9d</size>
+    </object>
+    <object class="wxStaticText" name="c21">
+      <label>Millisecond delay after text characters:</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>10,121d</pos>
+      <size>150,9d</size>
+    </object>
+    <object class="wxTextCtrl" name="c22">
+      <pos>161,120d</pos>
+      <size>25,11d</size>
+    </object>
+    <object class="wxStaticText" name="c23">
+      <label>Extra millisecond after control characters:</label>
+      <style>wxST_NO_AUTORESIZE</style>
+      <pos>10,133d</pos>
+      <size>150,9d</size>
+    </object>
+    <object class="wxTextCtrl" name="c24">
+      <pos>161,132d</pos>
+      <size>25,11d</size>
+    </object>
+  </object>
 </resource>

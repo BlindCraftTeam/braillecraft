@@ -7,6 +7,8 @@
 pub mod codepages;
 pub mod doctext;
 pub mod dxfile;
+pub mod emboss;
+pub mod embossers;
 pub mod engine;
 pub mod format;
 pub mod lbf;

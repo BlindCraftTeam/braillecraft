@@ -119,6 +119,10 @@ pub struct Doc {
     pub chord: usize,
     /// Document, Printer Setup: the document's own printer, paper and margins; None prints with the global ones.
     pub printer: Option<crate::print::PrinterSetup>,
+    /// Document, Embosser Setup: the name of the document's embosser setup (empty: no target embosser) and its
+    /// embosser page layout (form, top and binding margins, interpoint, banner page, interline print).
+    pub embosser: String,
+    pub layout: crate::embosser::Layout,
 }
 
 impl Doc {

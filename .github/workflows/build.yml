@@ -58,7 +58,7 @@ jobs:
         run: cargo test --workspace
 
       # The native desktop program (wxWidgets): a folder that runs as it is, with its braille fonts and its
-      # translation tables, its document templates and its JAWS scripts beside it.
+      # translation tables, its document templates, its embosser models and its JAWS scripts beside it.
       - name: Native program
         shell: bash
         run: |
@@ -68,6 +68,7 @@ jobs:
           cp -r ui/fonts dist/BrailleMaker/fonts
           cp -r tables dist/BrailleMaker/tables
           cp -r templates dist/BrailleMaker/templates
+          cp -r embossers dist/BrailleMaker/embossers
           cp -r scripts/jaws dist/BrailleMaker/jaws
 
       - uses: actions/upload-artifact@v7
