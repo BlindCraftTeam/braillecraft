@@ -47,6 +47,8 @@ const HIDDEN_AT_START: &[(i32, i32)] = &[(1034, 13), (10003, 19), (10003, 22)];
 /// The room a macOS text field keeps inside its width beside the text it wraps (the text cell's padding, both
 /// sides; this program's allowance, a little more than Cocoa's own so a line never wraps where the count did not).
 const MAC_TEXT_INSET: i32 = 6;
+/// The padding a macOS label keeps beside text it shows on one line (two pixels each side).
+const MAC_ONE_LINE_PADDING: i32 = 4;
 
 /// The number of lines `text` takes when its words are wrapped to `width` in `w`'s font (its own line breaks kept).
 fn wrapped_lines(w: &dyn WxWidget, text: &str, width: i32) -> i32 {
@@ -71,6 +73,11 @@ fn wrapped_lines(w: &dyn WxWidget, text: &str, width: i32) -> i32 {
 /// the text into by itself (see fit_labels).
 fn label_lines(w: &dyn WxWidget, text: &str, width: i32) -> i32 {
     if cfg!(target_os = "macos") {
+        // A label sized to its own text (its best width) holds it on one line: the field's best width is the text and
+        // its two-pixel padding each side.
+        if !text.contains('\n') && w.get_text_extent(text).width + MAC_ONE_LINE_PADDING <= width {
+            return 1;
+        }
         wrapped_lines(w, text, width - MAC_TEXT_INSET)
     } else {
         text.split('\n').count() as i32
