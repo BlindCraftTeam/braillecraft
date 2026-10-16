@@ -20,7 +20,6 @@ use bm_core::table_list::TableList;
 
 // Messages for parts of the program that later build steps bring. They say what is missing and where it comes.
 const PLANNED_EBRAILLE: &str = "eBraille output is built after the formatted braille, document and PEF outputs.";
-const PLANNED_PRINT: &str = "Printing is built in step 9 of the plan.";
 const PLANNED_EMBOSS: &str = "Embossing (Index and Enabling embossers, and emboss to file) is built in step 10 of the plan.";
 const PLANNED_SPELL: &str = "The spell checker (Hunspell dictionaries) is built after the core features of version 1.";
 const PLANNED_HELP: &str = "The BrailleMaker help is written with the features it describes; it is not in this build yet.";
@@ -1044,13 +1043,173 @@ pub fn exit_program() {
     });
 }
 
+/// File, Print (dialog 1040, spec 24): copies, the page range, and interline print for a braille document; then the
+/// laid-out pages are printed, one print job per copy.
 fn print() {
+    use crate::dlg::Value;
+    use crate::print::{parse_range, Range};
+    let Some((i, key, braille, caret, (from, to))) = app::with(|a| {
+        a.active.map(|i| {
+            let d = &a.docs[i];
+            (i, d.key, d.kind == DocKind::Braille, d.text.get_insertion_point(), d.text.get_selection())
+        })
+    }) else {
+        return;
+    };
+    let pages = app::with(|a| {
+        let shown = a.docs[i].shown();
+        a.laid_out(i, &shown)
+    });
+    let interline_before = app::with(|a| {
+        a.memory.get(1040, "print").and_then(|v| v.iter().find_map(|(c, val)| match (c, val) {
+            (17, Value::Flag(b)) => Some(*b),
+            _ => None,
+        }))
+    })
+    .unwrap_or(false);
     let d = open_dialog(1040, None);
+    d.set_text(7, "1");
     d.set_radio(&[9, 10, 11, 12, 14], 0);
-    let ok = d.show() == 1;
+    // On a braille document the page-number choice reads "Braille page number(s)": the reference copies control 13's
+    // text into control 12 (spec 24, 2a); control 13 itself is not used.
+    if braille {
+        if let Some(label) = d.win(13).and_then(|w| w.get_label()) {
+            d.set_text(12, &label);
+        }
+    }
+    d.hide(13);
+    d.enable(15, false);
+    d.enable(16, false);
+    let (e15, e16) = (d.win(15), d.win(16));
+    for (radio, numbers, sequence) in [(9, false, false), (10, false, false), (11, false, false), (12, true, false), (14, false, true)] {
+        let (e15, e16) = (e15.clone(), e16.clone());
+        d.on_radio(radio, move || {
+            if let Some(w) = &e15 {
+                w.enable(numbers);
+            }
+            if let Some(w) = &e16 {
+                w.enable(sequence);
+            }
+        });
+    }
+    d.set_checked(17, braille && interline_before);
+    d.enable(17, braille);
+    let (copies, chosen, interline) = loop {
+        if d.show() != 1 {
+            d.destroy();
+            return;
+        }
+        let Some(copies) = d.number(7).filter(|n| (1..=i32::MAX as i64).contains(n)) else {
+            message("You must print or emboss at least 1 copy, or press Cancel to avoid printing any.");
+            continue;
+        };
+        let count = pages.len();
+        let range = match d.radio(&[9, 10, 11, 12, 14]).unwrap_or(0) {
+            0 => (Range::Pages((0..count).map(Some).collect()), false, false),
+            1 => {
+                let p = bm_core::format::locate(&pages, caret.max(0) as usize).0;
+                (Range::Pages(vec![Some(p - 1)]), false, false)
+            }
+            2 => {
+                // INFERENCE: the reference gives an error for an empty selection (spec 24, 2a); its message is not
+                // traced, so the no-pages message stands in.
+                if from >= to {
+                    (Range::NoneFound, false, false)
+                } else {
+                    let first = bm_core::format::locate(&pages, from.max(0) as usize).0;
+                    let last = bm_core::format::locate(&pages, (to - 1).max(0) as usize).0;
+                    (Range::Pages((first - 1..last).map(Some).collect()), false, false)
+                }
+            }
+            // Page n is the n-th laid-out page both for the page numbers and for the page sequence numbers: the
+            // formatter numbers pages from 1 in order.
+            3 => parse_range(&d.text(15), count),
+            _ => parse_range(&d.text(16), count),
+        };
+        let chosen = match range {
+            (Range::Malformed, ..) => {
+                message("The page range specified is not written properly.  Type your page range as in the following example, which requests pages 1 through 7, a blank page, and then page 9 only: 1-7,b,9");
+                continue;
+            }
+            (Range::Empty, ..) => {
+                message("You must enter at least one page number.");
+                continue;
+            }
+            (Range::NoneFound, ..) => {
+                message("That page range does not match any pages found in your document.");
+                continue;
+            }
+            (Range::Pages(p), missing, repeated) => {
+                if missing && !yes_no("The page range you entered must be adjusted because not all pages you specified were found in this document. Do you wish to proceed anyway?") {
+                    continue;
+                }
+                if repeated && !yes_no("The page range you have specified implies that one or more pages will be printed more than once.  Do you wish to proceed?") {
+                    continue;
+                }
+                p
+            }
+        };
+        break (copies as u32, chosen, braille && d.checked(17));
+    };
     d.destroy();
-    if ok {
-        message(PLANNED_PRINT);
+    if braille {
+        app::with(|a| a.memory.put(1040, "print", vec![(17, Value::Flag(interline))]));
+    }
+    let job = app::with(|a| {
+        let doc = &a.docs[i];
+        let (face, _) = a.face(doc.view.font);
+        let print_face = a.settings.fonts.print_face.clone();
+        let f = &a.settings.fonts;
+        // INFERENCE (spec 24, unknown 2): the page text prints in the document's current view font.
+        let size = (!f.print_auto).then_some(if doc.view.font == ViewFont::Print { f.print_output_size } else { f.braille_output_size });
+        let line_numbers = braille
+            && a.memory.get(1034, "").is_some_and(|v| v.iter().any(|(c, val)| matches!((c, val), (10, Value::Flag(true)))));
+        let enc = a.encoding();
+        let styles = translation::style_table(&doc.styles);
+        let pages_rc: Vec<Option<std::rc::Rc<bm_core::format::Page>>> = chosen.iter().map(|p| p.map(|p| std::rc::Rc::new(pages[p].clone()))).collect();
+        let interline_lines = if interline {
+            pages_rc
+                .iter()
+                .map(|p| match p {
+                    Some(p) => p
+                        .lines
+                        .iter()
+                        .map(|l| {
+                            let t = l.text.trim_end();
+                            (!t.trim().is_empty())
+                                .then(|| translation::back(&doc.tables[2], &Shown::plain(t), &doc.initial_codes, enc, &styles).ok().map(|s| s.text))
+                                .flatten()
+                        })
+                        .collect(),
+                    None => Vec::new(),
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
+        let setup = doc.printer.clone().unwrap_or_else(|| a.settings.printer.clone());
+        let job = crate::print::Job {
+            title: doc.name.clone(),
+            pages: pages_rc,
+            interline: interline_lines,
+            face,
+            size,
+            print_face,
+            lines: doc.lines.max(1) as usize,
+            chars: doc.cells.max(1) as usize,
+            line_numbers,
+            margins: setup.margins,
+        };
+        (job, setup)
+    });
+    let (job, setup) = job;
+    let outcome = crate::print::run(key, &setup, job, copies);
+    #[cfg(debug_assertions)]
+    eprintln!("print: {outcome:?}");
+    match outcome {
+        crate::print::Outcome::Failed => message("Printing failed."),
+        crate::print::Outcome::NoPrinter => message("Unable to retrieve printer information from the system."),
+        _ => {}
     }
 }
 
@@ -1580,43 +1739,121 @@ fn embosser_setup(global: bool) {
     d.destroy();
 }
 
+/// The margin fields of Printer Setup (the system page setup's ids): left, top, right, bottom.
+const MARGIN_FIELDS: [i32; 4] = [1155, 1156, 1157, 1158];
+
+/// Fills Printer Setup's paper, orientation and margins from `s`.
+fn show_printer_setup(d: &Dlg, s: &crate::print::PrinterSetup) {
+    let mut papers: Vec<String> = crate::print::PAPERS.iter().map(|p| p.0.to_string()).collect();
+    let name = s.paper_name();
+    if !papers.contains(&name) {
+        papers.push(name.clone());
+    }
+    // The paper box keeps its items sorted (its template style), so they go in sorted and are found by name.
+    papers.sort();
+    let refs: Vec<&str> = papers.iter().map(String::as_str).collect();
+    d.set_items(1137, &refs, papers.iter().position(|p| *p == name).map(|p| p as u32));
+    d.set_items(1138, &["Automatically Select"], Some(0));
+    d.set_radio(&[1056, 1057], usize::from(s.landscape));
+    for (c, m) in MARGIN_FIELDS.iter().zip(s.margins) {
+        d.set_text(*c, &s.margin_text(m));
+    }
+}
+
+/// Document, Printer Setup and Global, Printer Setup (dialog 1071, spec 24, 2b): the paper, orientation and margins,
+/// the printer (Printer... opens the system's printer dialog), and the formatted page size. A print document takes
+/// its lines per page and characters per line from here; a braille document takes its page size from Embosser
+/// Setup, so the two fields are shown but not changed here (INFERENCE: spec 24, 3c reads a braille document's page
+/// size from the embosser setup).
 fn printer_setup(global: bool) {
+    use crate::print::{parse_margin, PrinterSetup, PAPERS};
     let title = if global { "Global: Printer Setup..." } else { "Document: Printer Setup..." };
-    let key = if global { "global" } else { "document" };
-    let doc = app::with(|a| a.doc().map(|d| (d.kind, d.cells, d.lines)));
-    let Some(d) = settings_dialog(1071, key, Some(title), |d| {
-        d.set_items(1137, &["Letter (8.5 x 11 inches)", "Legal (8.5 x 14 inches)", "A4 (210 x 297 mm)"], Some(0));
-        d.set_items(1138, &["Automatically Select"], Some(0));
-        d.set_radio(&[1056, 1057], 0);
-        for c in [1155, 1157, 1156, 1158] {
-            d.set_text(c, "1\"");
-        }
-        let (lines, chars) = match doc {
-            Some((DocKind::Print, c, l)) if !global => (l, c),
-            _ => (50, 80),
-        };
-        d.set_text(2003, &lines.to_string());
-        d.set_text(2005, &chars.to_string());
-        d.on_button(1026, || message(PLANNED_PRINT));
-        d.on_button(1038, || message(PLANNED_HELP));
-    }) else {
+    let doc = app::with(|a| a.doc().map(|d| (d.key, d.kind, d.cells, d.lines, d.printer.clone())));
+    if !global && doc.is_none() {
         return;
+    }
+    let key = if global { 0 } else { doc.as_ref().map(|d| d.0).unwrap_or(0) };
+    let mut setup: PrinterSetup = app::with(|a| match &doc {
+        Some((.., Some(own))) if !global => own.clone(),
+        _ => a.settings.printer.clone(),
+    });
+    let braille_doc = !global && matches!(doc, Some((_, DocKind::Braille, ..)));
+    let (lines, chars) = match doc {
+        Some((_, _, c, l, _)) if !global => (l, c),
+        _ => (setup.lines, setup.chars),
     };
-    if let (false, Some((DocKind::Print, _, _))) = (global, doc) {
-        let (lines, chars) = (d.number(2003), d.number(2005));
-        app::with(|a| {
-            if let Some(doc) = a.doc_mut() {
-                if let Some(l) = lines.filter(|l| (5..=160).contains(l)) {
+    let d = open_dialog(1071, Some(title));
+    show_printer_setup(&d, &setup);
+    d.set_text(2003, &lines.to_string());
+    d.set_text(2005, &chars.to_string());
+    d.enable(2003, !braille_doc);
+    d.enable(2005, !braille_doc);
+    d.closes_with(1026);
+    d.on_button(1038, || message(PLANNED_HELP));
+    let mut driver = None;
+    // Reads the paper and orientation chosen in the dialog into `setup`.
+    let read_paper = |d: &Dlg, setup: &mut PrinterSetup| {
+        if let Some(p) = d.selected_text(1137).and_then(|name| PAPERS.iter().find(|p| p.0 == name)) {
+            setup.paper = (p.1, p.2);
+        }
+        setup.landscape = d.radio(&[1056, 1057]) == Some(1);
+    };
+    loop {
+        match d.show() {
+            1026 => {
+                read_paper(&d, &mut setup);
+                if let Some(chosen) = crate::print::choose_printer(key, &mut setup) {
+                    driver = Some(chosen);
+                    show_printer_setup(&d, &setup);
+                    // The margins typed stay as typed.
+                }
+            }
+            1 => {
+                read_paper(&d, &mut setup);
+                let metric = d.text(MARGIN_FIELDS[0]).to_lowercase().contains("mm");
+                let margins: Option<Vec<i32>> = MARGIN_FIELDS.iter().map(|c| parse_margin(&d.text(*c), setup.metric)).collect();
+                let Some(margins) = margins else {
+                    message("Each margin must be a number of 0 or more, in inches (for example 1\") or in millimetres (for example 25 mm).");
+                    continue;
+                };
+                setup.margins = [margins[0], margins[1], margins[2], margins[3]];
+                setup.metric = metric;
+                break;
+            }
+            _ => {
+                d.destroy();
+                return;
+            }
+        }
+    }
+    let (new_lines, new_chars) = (d.number(2003), d.number(2005));
+    d.destroy();
+    if let Some(data) = driver {
+        crate::print::keep_driver(key, data);
+    }
+    app::with(|a| {
+        if global {
+            if let Some(l) = new_lines.filter(|l| (5..=160).contains(l)) {
+                setup.lines = l as u32;
+            }
+            if let Some(c) = new_chars.filter(|c| (10..=100).contains(c)) {
+                setup.chars = c as u32;
+            }
+            settings_store::save_printer(&setup);
+            a.settings.printer = setup;
+        } else if let Some(doc) = a.doc_mut() {
+            if doc.kind == DocKind::Print {
+                if let Some(l) = new_lines.filter(|l| (5..=160).contains(l)) {
                     doc.lines = l as u32;
                 }
-                if let Some(c) = chars.filter(|c| (10..=100).contains(c)) {
+                if let Some(c) = new_chars.filter(|c| (10..=100).contains(c)) {
                     doc.cells = c as u32;
                 }
             }
-            a.apply_view();
-        });
-    }
-    d.destroy();
+            doc.printer = Some(setup);
+        }
+        a.apply_view();
+    });
 }
 
 /// The grade codes Document, Learning Tables takes out of the initial codes before it puts its own in.
@@ -1962,17 +2199,26 @@ fn global_fonts() {
     d.set_items(7, &faces, faces.iter().position(|f| *f == current.print_face).map(|p| p as u32).or(Some(0)));
     d.set_text(9, &current.print_size.to_string());
     d.set_text(11, &current.braille_size.to_string());
-    d.set_checked(12, true);
-    d.set_text(14, "12");
-    d.set_text(16, "18");
+    // Printed output (spec 24, 2c): auto-determine the point size, or the print font's and the braille fonts' sizes.
+    d.set_checked(12, current.print_auto);
+    d.set_text(14, &current.print_output_size.to_string());
+    d.set_text(16, &current.braille_output_size.to_string());
     d.set_items(18, &status, status.iter().position(|f| *f == current.status_face).map(|p| p as u32).or(Some(0)));
     d.set_text(20, &current.status_size.to_string());
     if d.show() == 1 {
         let print_face = d.selected_text(7);
         let (ps, bs, ss) = (d.number(9), d.number(11), d.number(20));
+        let (auto, pos, bos) = (d.checked(12), d.number(14), d.number(16));
         let status_face = d.selected_text(18);
         app::with(|a| {
             let f = &mut a.settings.fonts;
+            f.print_auto = auto;
+            if let Some(n) = pos.filter(|n| (1..=72).contains(n)) {
+                f.print_output_size = n as i32;
+            }
+            if let Some(n) = bos.filter(|n| (1..=72).contains(n)) {
+                f.braille_output_size = n as i32;
+            }
             if let Some(p) = print_face {
                 f.print_face = p;
             }

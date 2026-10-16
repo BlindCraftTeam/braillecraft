@@ -326,6 +326,21 @@ impl Dlg {
         }
     }
 
+    /// A radio button runs `handler` when it is chosen.
+    pub fn on_radio(&self, cid: i32, handler: impl FnMut() + 'static) {
+        let mut handler = handler;
+        if let Some(r) = self.win(cid).and_then(|w| w.as_widget::<RadioButton>()) {
+            r.on_selected(move |_| handler());
+        }
+    }
+
+    /// Hides a control.
+    pub fn hide(&self, cid: i32) {
+        if let Some(w) = self.win(cid) {
+            w.show(false);
+        }
+    }
+
     /// A push button that closes the dialog, returning its control id from `show`.
     pub fn closes_with(&self, cid: i32) {
         let dialog = self.dialog;

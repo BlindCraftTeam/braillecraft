@@ -102,6 +102,7 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
         last_line_key: String::new(),
         six_down: HashSet::new(),
         chord: 0,
+        printer: None,
     };
     app::with(|a| {
         child_set_title(&doc.frame, &doc.full_name());

@@ -13,6 +13,7 @@ mod encodings;
 mod jaws_install;
 mod menu;
 mod menu_table;
+mod print;
 mod settings_store;
 mod speech;
 mod translation;

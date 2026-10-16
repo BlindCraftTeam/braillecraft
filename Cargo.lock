@@ -4645,8 +4645,6 @@ dependencies = [
 [[package]]
 name = "wxdragon-sys"
 version = "0.9.22"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3858369cb3c4611755ad643348f6d82063c0a3d8aae56b6a4479b46043e5eb1f"
 dependencies = [
  "bindgen",
  "cmake",

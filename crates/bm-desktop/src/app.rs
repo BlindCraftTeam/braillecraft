@@ -117,6 +117,8 @@ pub struct Doc {
     pub last_line_key: String,
     pub six_down: HashSet<usize>,
     pub chord: usize,
+    /// Document, Printer Setup: the document's own printer, paper and margins; None prints with the global ones.
+    pub printer: Option<crate::print::PrinterSetup>,
 }
 
 impl Doc {
@@ -190,6 +192,11 @@ pub struct Fonts {
     pub braille_size: i32,
     pub status_face: String,
     pub status_size: i32,
+    /// Global, Fonts, for printed output: "Auto-determine point size", and the point sizes of the print font and of
+    /// the braille and simulated braille fonts when it is off (spec 24, 2c).
+    pub print_auto: bool,
+    pub print_output_size: i32,
+    pub braille_output_size: i32,
 }
 
 pub struct Settings {
@@ -202,6 +209,8 @@ pub struct Settings {
     /// Global, View Preferences: "Use verbose labels for non-ANSI characters in coded view"; the status line then
     /// shows the character at the caret with its Unicode value, "c {U+XXXX}".
     pub verbose_labels: bool,
+    /// Global, Printer Setup: the printer, paper and margins documents print with when they have none of their own.
+    pub printer: crate::print::PrinterSetup,
 }
 
 impl Default for Settings {
@@ -238,9 +247,13 @@ impl Default for Settings {
                 braille_size: 18,
                 status_face: "Segoe UI".into(),
                 status_size: 12,
+                print_auto: true,
+                print_output_size: 12,
+                braille_output_size: 18,
             },
             reader: ReaderSettings::default(),
             verbose_labels: false,
+            printer: crate::print::PrinterSetup::default(),
         }
     }
 }
@@ -420,7 +433,7 @@ impl App {
         encodings::find(&self.settings.encoding)
     }
 
-    fn face(&self, font: ViewFont) -> (String, i32) {
+    pub fn face(&self, font: ViewFont) -> (String, i32) {
         match font {
             ViewFont::Print => (self.settings.fonts.print_face.clone(), self.settings.fonts.print_size),
             ViewFont::Braille => (self.encoding().font_family("Braille"), self.settings.fonts.braille_size),

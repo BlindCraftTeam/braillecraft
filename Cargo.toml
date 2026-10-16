@@ -1,9 +1,14 @@
 [workspace]
 resolver = "2"
 members = ["crates/bm-core", "crates/bm-louis", "crates/bm-shell", "crates/bm-desktop"]
+exclude = ["vendor"]
 
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.80"
 authors = ["Jeremiah Beasley <jbeasley@jb11.net>"]
+
+# wxdragon-sys 0.9.22 with the printing functions BrailleMaker needs added (vendor/wxdragon-sys/CHANGES-BrailleMaker.txt).
+[patch.crates-io]
+wxdragon-sys = { path = "vendor/wxdragon-sys" }

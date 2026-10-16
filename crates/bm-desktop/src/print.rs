@@ -1,0 +1,656 @@
+//! File, Print and Printer Setup, as the reference program does them (re/spec/24-print.md).
+//!
+//! Printer Setup (dialog 1071, for the document or for the program) keeps the printer, the paper, the orientation,
+//! the margins with their unit and the formatted page size. File, Print (dialog 1040) takes the copies, the page
+//! range and, for a braille document, interline print, then prints the laid-out pages: one print job per copy, each
+//! line drawn in the document's view font at a size that fills the page (Global, Fonts: "Auto-determine point size")
+//! or at the size set there, with the line numbers of a braille page in a column on each side when Global, View
+//! Preferences shows line numbers, and under each braille line its print in a 9-point font when interline print is on.
+//!
+//! The reference program prints through the Windows printer directly; BrailleMaker prints through wxWidgets printing
+//! (wxPrinter and a wxPrintout), our port choice, so the same pages print on Windows, macOS and Linux.
+
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::ffi::{c_void, CString};
+use std::rc::Rc;
+
+use wxdragon::dc::GenericDC;
+use wxdragon::prelude::*;
+use wxdragon_sys as ffi;
+
+use bm_core::format::Page;
+
+/// A paper the Printer Setup dialog lists: its name and its size in tenths of a millimetre.
+pub const PAPERS: &[(&str, i32, i32)] = &[
+    ("Letter (8.5 x 11 inches)", 2159, 2794),
+    ("Legal (8.5 x 14 inches)", 2159, 3556),
+    ("Tabloid (11 x 17 inches)", 2794, 4318),
+    ("Executive (7.25 x 10.5 inches)", 1841, 2667),
+    ("A3 (297 x 420 mm)", 2970, 4200),
+    ("A4 (210 x 297 mm)", 2100, 2970),
+    ("A5 (148 x 210 mm)", 1480, 2100),
+    ("B5 (182 x 257 mm)", 1820, 2570),
+];
+
+/// What Printer Setup keeps: for a document (Document, Printer Setup) or for the program (Global, Printer Setup).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PrinterSetup {
+    /// The printer's name; empty for the system's default printer.
+    pub printer: String,
+    /// The paper's width and height, in tenths of a millimetre.
+    pub paper: (i32, i32),
+    pub landscape: bool,
+    /// The margins in thousandths of an inch: left, top, right, bottom.
+    pub margins: [i32; 4],
+    /// The margins are shown and typed in millimetres (else inches); the reference program keeps the unit with them.
+    pub metric: bool,
+    /// The formatted page size Global, Printer Setup keeps (lines per page, characters per line).
+    pub lines: u32,
+    pub chars: u32,
+}
+
+impl Default for PrinterSetup {
+    fn default() -> Self {
+        // The reference program's defaults: Letter paper (8.5 x 11 inches), and for a print document 54 lines of 65
+        // characters (spec 24, 2b and 3c). One-inch margins are the system page setup's default.
+        PrinterSetup {
+            printer: String::new(),
+            paper: (2159, 2794),
+            landscape: false,
+            margins: [1000; 4],
+            metric: false,
+            lines: 54,
+            chars: 65,
+        }
+    }
+}
+
+impl PrinterSetup {
+    /// The settings section Global, Printer Setup is kept in.
+    pub const SECTION: &'static str = "Printer";
+
+    /// The setup as one settings value: paper, orientation, margins, unit, page size, then the printer's name.
+    pub fn to_text(&self) -> String {
+        let m = self.margins;
+        format!(
+            "{}x{}\t{}\t{},{},{},{}\t{}\t{}\t{}\t{}",
+            self.paper.0,
+            self.paper.1,
+            if self.landscape { "landscape" } else { "portrait" },
+            m[0],
+            m[1],
+            m[2],
+            m[3],
+            if self.metric { "mm" } else { "in" },
+            self.lines,
+            self.chars,
+            self.printer
+        )
+    }
+
+    pub fn from_text(text: &str) -> Option<PrinterSetup> {
+        let f: Vec<&str> = text.splitn(7, '\t').collect();
+        if f.len() != 7 {
+            return None;
+        }
+        let (w, h) = f[0].split_once('x')?;
+        let m: Vec<i32> = f[2].split(',').map(|v| v.trim().parse().ok()).collect::<Option<_>>()?;
+        if m.len() != 4 {
+            return None;
+        }
+        Some(PrinterSetup {
+            paper: (w.parse().ok()?, h.parse().ok()?),
+            landscape: f[1] == "landscape",
+            margins: [m[0], m[1], m[2], m[3]],
+            metric: f[3] == "mm",
+            lines: f[4].parse().ok()?,
+            chars: f[5].parse().ok()?,
+            printer: f[6].to_string(),
+        })
+    }
+
+    /// A margin as the dialog shows it: 1" or 0.75", or 25.4 mm.
+    pub fn margin_text(&self, thousandths: i32) -> String {
+        if self.metric {
+            let mm = thousandths as f64 * 0.0254;
+            format!("{} mm", trim_number(&format!("{mm:.1}")))
+        } else {
+            format!("{}\"", trim_number(&format!("{:.3}", thousandths as f64 / 1000.0)))
+        }
+    }
+
+    /// The paper as the dialog lists it.
+    pub fn paper_name(&self) -> String {
+        match PAPERS.iter().find(|p| (p.1, p.2) == self.paper) {
+            Some(p) => p.0.to_string(),
+            None => format!("Custom ({} x {} mm)", trim_number(&format!("{:.1}", self.paper.0 as f64 / 10.0)), trim_number(&format!("{:.1}", self.paper.1 as f64 / 10.0))),
+        }
+    }
+}
+
+fn trim_number(s: &str) -> String {
+    if s.contains('.') {
+        s.trim_end_matches('0').trim_end_matches('.').to_string()
+    } else {
+        s.to_string()
+    }
+}
+
+/// A margin typed in the dialog, in thousandths of an inch: a number, then " or in for inches, mm or cm (without a
+/// unit, the setup's own). None when it is not a number of 0 or more.
+pub fn parse_margin(text: &str, metric: bool) -> Option<i32> {
+    let t = text.trim().to_lowercase();
+    let (number, unit) = if let Some(n) = t.strip_suffix("mm") {
+        (n, Some(25.4))
+    } else if let Some(n) = t.strip_suffix("cm") {
+        (n, Some(2.54))
+    } else if let Some(n) = t.strip_suffix('"').or_else(|| t.strip_suffix("in")) {
+        (n, Some(1.0))
+    } else {
+        (t.as_str(), None)
+    };
+    let per_inch = unit.unwrap_or(if metric { 25.4 } else { 1.0 });
+    let v: f64 = number.trim().parse().ok()?;
+    (v >= 0.0 && v.is_finite()).then(|| (v / per_inch * 1000.0).round() as i32)
+}
+
+// ------------------------------------------------------------------ print data
+
+/// A wxWidgets print data object (printer, paper, orientation, and the driver's own settings).
+pub struct PrintData(*mut ffi::wxd_PrintData_t);
+
+impl PrintData {
+    fn new() -> PrintData {
+        PrintData(unsafe { ffi::wxd_PrintData_Create() })
+    }
+
+    fn copy_of(other: *mut ffi::wxd_PrintData_t) -> PrintData {
+        let d = PrintData::new();
+        unsafe { ffi::wxd_PrintData_Assign(d.0, other) };
+        d
+    }
+
+    fn printer_name(&self) -> String {
+        let n = unsafe { ffi::wxd_PrintData_GetPrinterName(self.0, std::ptr::null_mut(), 0) };
+        if n <= 0 {
+            return String::new();
+        }
+        let mut buf = vec![0u8; n as usize + 1];
+        unsafe { ffi::wxd_PrintData_GetPrinterName(self.0, buf.as_mut_ptr() as *mut _, buf.len() as i32) };
+        buf.truncate(n as usize);
+        String::from_utf8_lossy(&buf).into_owned()
+    }
+
+    fn paper(&self) -> (i32, i32) {
+        let (mut w, mut h) = (0, 0);
+        unsafe { ffi::wxd_PrintData_GetPaperSizeTenthsMM(self.0, &mut w, &mut h) };
+        (w, h)
+    }
+
+    fn landscape(&self) -> bool {
+        unsafe { ffi::wxd_PrintData_IsLandscape(self.0) }
+    }
+
+    /// Sets the printer, paper and orientation of `setup`.
+    fn apply(&self, setup: &PrinterSetup) {
+        let name = CString::new(setup.printer.as_str()).unwrap_or_default();
+        unsafe {
+            ffi::wxd_PrintData_SetPrinterName(self.0, name.as_ptr());
+            if setup.paper.0 > 0 && setup.paper.1 > 0 {
+                ffi::wxd_PrintData_SetPaperSizeTenthsMM(self.0, setup.paper.0, setup.paper.1);
+            }
+            ffi::wxd_PrintData_SetLandscape(self.0, setup.landscape);
+            ffi::wxd_PrintData_SetNoCopies(self.0, 1);
+        }
+    }
+}
+
+impl Drop for PrintData {
+    fn drop(&mut self) {
+        unsafe { ffi::wxd_PrintData_Destroy(self.0) };
+    }
+}
+
+thread_local! {
+    /// The driver settings chosen with Printer Setup's Printer... button, by document key (0 for Global, Printer
+    /// Setup), kept while the program runs.
+    static DRIVER: RefCell<HashMap<u64, PrintData>> = RefCell::new(HashMap::new());
+}
+
+/// The print data for document `key` (0 for the program): the driver settings last chosen for it, or for the
+/// program, with the printer, paper and orientation of `setup`.
+fn print_data(key: u64, setup: &PrinterSetup) -> PrintData {
+    let d = DRIVER.with(|m| {
+        let m = m.borrow();
+        match m.get(&key).or_else(|| m.get(&0)) {
+            Some(kept) => PrintData::copy_of(kept.0),
+            None => PrintData::new(),
+        }
+    });
+    d.apply(setup);
+    d
+}
+
+/// Printer Setup's Printer... button: the system's printer dialog, to choose the printer and its own settings.
+/// Returns the chosen print data, and `setup` takes its printer, paper and orientation; None when cancelled.
+pub fn choose_printer(key: u64, setup: &mut PrinterSetup) -> Option<PrintData> {
+    let data = print_data(key, setup);
+    let frame = crate::app::frame();
+    unsafe {
+        // wxWidgets 3.3 has no separate printer setup dialog: the system's print dialog chooses the printer and its
+        // settings, and nothing prints from here.
+        let dd = ffi::wxd_PrintDialogData_CreateFromData(data.0);
+        let dialog = ffi::wxd_PrintDialog_Create(frame.handle_ptr(), dd);
+        let ok = ffi::wxd_PrintDialog_ShowModal(dialog) == ID_OK;
+        let chosen = ok.then(|| {
+            let got = ffi::wxd_PrintDialog_GetPrintDialogData(dialog);
+            PrintData::copy_of(ffi::wxd_PrintDialogData_GetPrintData(got))
+        });
+        ffi::wxd_PrintDialog_Destroy(dialog);
+        ffi::wxd_PrintDialogData_Destroy(dd);
+        let chosen = chosen?;
+        setup.printer = chosen.printer_name();
+        let paper = chosen.paper();
+        if paper.0 > 0 && paper.1 > 0 {
+            setup.paper = paper;
+        }
+        setup.landscape = chosen.landscape();
+        Some(chosen)
+    }
+}
+
+/// Keeps the driver settings chosen with Printer... for document `key` (0 for the program).
+pub fn keep_driver(key: u64, data: PrintData) {
+    DRIVER.with(|m| m.borrow_mut().insert(key, data));
+}
+
+// ------------------------------------------------------------------ page ranges
+
+/// What a page range asks for: the pages (indexes into the laid-out pages; None for a blank page, "b"), and what
+/// was wrong with it.
+#[derive(Debug, PartialEq, Eq)]
+pub enum Range {
+    Pages(Vec<Option<usize>>),
+    /// Not written properly (message 2674).
+    Malformed,
+    /// No page number in it (message 2666).
+    Empty,
+    /// None of its pages are in the document (message 2672).
+    NoneFound,
+}
+
+/// A page range as the Print dialog takes it, e.g. "1-7,b,9" (pages 1 through 7, a blank page, page 9): numbers,
+/// ranges a-b, a range to the end a-, and b for a blank page, separated by commas. Page n is the n-th laid-out page.
+/// Also returns whether pages asked for were missing (message 2664) and whether a page comes more than once (2668).
+pub fn parse_range(text: &str, page_count: usize) -> (Range, bool, bool) {
+    let mut out = Vec::new();
+    let (mut missing, mut asked) = (false, false);
+    for item in text.split(',').map(str::trim).filter(|s| !s.is_empty()) {
+        if item.eq_ignore_ascii_case("b") {
+            out.push(None);
+            continue;
+        }
+        let (from, to) = match item.split_once('-') {
+            Some((a, b)) => {
+                let Ok(a) = a.trim().parse::<usize>() else { return (Range::Malformed, false, false) };
+                let b = b.trim();
+                let b = if b.is_empty() {
+                    page_count.max(a)
+                } else {
+                    let Ok(b) = b.parse::<usize>() else { return (Range::Malformed, false, false) };
+                    b
+                };
+                (a, b)
+            }
+            None => {
+                let Ok(n) = item.parse::<usize>() else { return (Range::Malformed, false, false) };
+                (n, n)
+            }
+        };
+        if from == 0 || to < from {
+            return (Range::Malformed, false, false);
+        }
+        asked = true;
+        for n in from..=to {
+            if n <= page_count {
+                out.push(Some(n - 1));
+            } else {
+                missing = true;
+            }
+        }
+    }
+    if !asked && out.is_empty() {
+        return (Range::Empty, false, false);
+    }
+    if !out.iter().any(Option::is_some) && asked {
+        return (Range::NoneFound, false, false);
+    }
+    let mut seen = std::collections::HashSet::new();
+    let repeated = out.iter().flatten().any(|p| !seen.insert(*p));
+    (Range::Pages(out), missing, repeated)
+}
+
+// ------------------------------------------------------------------ the print job
+
+/// One print job: the pages to print and how to draw them.
+pub struct Job {
+    pub title: String,
+    pub pages: Vec<Option<Rc<Page>>>,
+    /// For each page and line, the line's print for interline print (braille documents only).
+    pub interline: Vec<Vec<Option<String>>>,
+    pub face: String,
+    /// The point size to print at; None to find the largest that fits the page.
+    pub size: Option<i32>,
+    pub print_face: String,
+    pub lines: usize,
+    pub chars: usize,
+    pub line_numbers: bool,
+    pub margins: [i32; 4],
+}
+
+/// The page geometry and fonts found for a job on its first page.
+struct Fit {
+    size: i32,
+    char_w: i32,
+    text_h: i32,
+    line_h: i32,
+    number_w: i32,
+}
+
+struct Proxy {
+    job: Rc<Job>,
+    printout: *mut ffi::wxd_Printout_t,
+    fit: Option<Fit>,
+}
+
+impl Proxy {
+    unsafe fn from(user_data: *mut c_void) -> &'static mut Proxy {
+        unsafe { &mut *(user_data as *mut Proxy) }
+    }
+}
+
+unsafe extern "C" fn has_page(user_data: *mut c_void, page: i32) -> bool {
+    let p = unsafe { Proxy::from(user_data) };
+    page >= 1 && page as usize <= p.job.pages.len()
+}
+
+unsafe extern "C" fn page_info(user_data: *mut c_void, min: *mut i32, max: *mut i32, from: *mut i32, to: *mut i32) {
+    let p = unsafe { Proxy::from(user_data) };
+    let n = p.job.pages.len() as i32;
+    unsafe {
+        for (ptr, v) in [(min, 1), (max, n), (from, 1), (to, n)] {
+            if !ptr.is_null() {
+                *ptr = v;
+            }
+        }
+    }
+}
+
+unsafe extern "C" fn print_page(user_data: *mut c_void, page: i32) -> bool {
+    let p = unsafe { Proxy::from(user_data) };
+    let dc_ptr = unsafe { ffi::wxd_Printout_GetDC(p.printout) };
+    if dc_ptr.is_null() {
+        return false;
+    }
+    let dc = unsafe { GenericDC::from_ffi_ptr_unowned(dc_ptr) };
+    let mut g = Geometry::default();
+    unsafe {
+        ffi::wxd_Printout_GetPPIPrinter(p.printout, &mut g.ppi_printer.0, &mut g.ppi_printer.1);
+        ffi::wxd_Printout_GetPPIScreen(p.printout, &mut g.ppi_screen.0, &mut g.ppi_screen.1);
+        ffi::wxd_Printout_GetPageSizePixels(p.printout, &mut g.page.0, &mut g.page.1);
+        ffi::wxd_Printout_GetPaperRectPixels(p.printout, &mut g.paper.0, &mut g.paper.1, &mut g.paper.2, &mut g.paper.3);
+    }
+    let job = p.job.clone();
+    draw_page(&job, &mut p.fit, &dc, &g, page as usize);
+    true
+}
+
+/// What the printer reports about a page: its resolution and the screen's, the printable area's size, and the
+/// paper's rectangle relative to the printable area's origin, all in printer pixels.
+#[derive(Default)]
+struct Geometry {
+    ppi_printer: (i32, i32),
+    ppi_screen: (i32, i32),
+    page: (i32, i32),
+    paper: (i32, i32, i32, i32),
+}
+
+/// Draws page `n` (from 1) of the job. Drawing is in screen-sized units scaled to the printer (as wxWidgets maps a
+/// page), so point sizes print at their size.
+fn draw_page<D: DeviceContext>(job: &Job, fit_found: &mut Option<Fit>, dc: &D, g: &Geometry, n: usize) {
+    let (ppx, ppy) = g.ppi_printer;
+    let (psx, psy) = (g.ppi_screen.0.max(1) as f64, g.ppi_screen.1.max(1) as f64);
+    let (pw, ph) = g.page;
+    let (rx, ry, rw, rh) = g.paper;
+    let (sx, sy) = (ppx.max(1) as f64 / psx, ppy.max(1) as f64 / psy);
+    dc.set_user_scale(sx, sy);
+    let lx = |v: i32| (v as f64 / sx).round() as i32;
+    let ly = |v: i32| (v as f64 / sy).round() as i32;
+    let m = job.margins;
+    let margin_x = |t: i32| (t as f64 * psx / 1000.0).round() as i32;
+    let margin_y = |t: i32| (t as f64 * psy / 1000.0).round() as i32;
+    // The text starts at the larger of the printable area's edge and the margin from the paper's edge (spec 24, 3c).
+    let left = (lx(rx) + margin_x(m[0])).max(0);
+    let top = (ly(ry) + margin_y(m[1])).max(0);
+    let right = (lx(rx + rw) - margin_x(m[2])).min(lx(pw)).max(left + 1);
+    let bottom = (ly(ry + rh) - margin_y(m[3])).min(ly(ph)).max(top + 1);
+    if fit_found.is_none() {
+        *fit_found = Some(fit(dc, job, right - left, bottom - top));
+    }
+    let Some(f) = fit_found.as_ref() else { return };
+    let Some(Some(page)) = job.pages.get(n - 1) else { return };
+    let text_font = crate::app::font(&job.face, f.size);
+    let number_font = crate::app::font(&job.print_face, f.size);
+    let interline_font = crate::app::font(&job.print_face, 9);
+    // Line numbers: one column at the left edge, the text moved right by the width of "25" and a half, and one
+    // column after the text block (spec 24, 3d).
+    let text_x = if job.line_numbers { left + f.number_w + f.number_w / 2 } else { left };
+    let right_numbers = text_x + job.chars as i32 * f.char_w + f.number_w / 2;
+    for (i, line) in page.lines.iter().enumerate().take(job.lines) {
+        let y = top + i as i32 * f.line_h;
+        if job.line_numbers {
+            if let Some(font) = &number_font {
+                dc.set_font(font);
+            }
+            let number = (i + 1).to_string();
+            dc.draw_text(&number, left, y);
+            dc.draw_text(&number, right_numbers, y);
+        }
+        if !line.text.trim().is_empty() {
+            if let Some(font) = &text_font {
+                dc.set_font(font);
+            }
+            dc.draw_text(line.text.trim_end(), text_x, y);
+        }
+        if let Some(Some(print)) = job.interline.get(n - 1).and_then(|l| l.get(i)) {
+            if let Some(font) = &interline_font {
+                dc.set_font(font);
+            }
+            dc.draw_text(print, text_x, y + f.text_h);
+        }
+    }
+}
+
+/// The point size and line height for the job: its own size, or the largest from 1 to 48 points at which its
+/// characters per line and lines per page (with the line-number columns and interline print) fit the space
+/// (spec 24, 3c).
+fn fit<D: DeviceContext>(dc: &D, job: &Job, width: i32, height: i32) -> Fit {
+    let interline = job.interline.iter().flatten().any(Option::is_some);
+    let extra = if interline {
+        crate::app::font(&job.print_face, 9).map(|f| {
+            dc.set_font(&f);
+            dc.get_text_extent("Xg").1
+        })
+    } else {
+        None
+    }
+    .unwrap_or(0);
+    let measure = |size: i32| -> Option<Fit> {
+        let font = crate::app::font(&job.face, size)?;
+        dc.set_font(&font);
+        let (w, h) = dc.get_text_extent(&"x".repeat(job.chars.max(1)));
+        let number_w = if job.line_numbers {
+            crate::app::font(&job.print_face, size).map(|nf| {
+                dc.set_font(&nf);
+                dc.get_text_extent("25").0
+            })?
+        } else {
+            0
+        };
+        let line_h = h + extra + extra / 10;
+        Some(Fit { size, char_w: w / job.chars.max(1) as i32, text_h: h, line_h, number_w })
+    };
+    if let Some(size) = job.size {
+        if let Some(f) = measure(size.max(1)) {
+            return f;
+        }
+    }
+    for size in (1..=48).rev() {
+        if let Some(f) = measure(size) {
+            let used_w = f.char_w * job.chars as i32 + if job.line_numbers { f.number_w * 2 + f.number_w / 2 } else { 0 };
+            if used_w <= width && f.line_h * job.lines as i32 <= height {
+                return f;
+            }
+        }
+    }
+    measure(1).unwrap_or(Fit { size: 1, char_w: 1, text_h: 1, line_h: 1, number_w: 0 })
+}
+
+/// How a print ended.
+#[derive(Debug, PartialEq, Eq)]
+pub enum Outcome {
+    Printed,
+    Cancelled,
+    Failed,
+    /// No print server to get printers from (print_server_reachable).
+    NoPrinter,
+}
+
+/// Prints `job` with the printer, paper and orientation of `setup` (and the driver settings kept for document
+/// `key`), `copies` times: one print job per copy, as the reference program does (spec 24, 3a).
+pub fn run(key: u64, setup: &PrinterSetup, job: Job, copies: u32) -> Outcome {
+    #[cfg(debug_assertions)]
+    if let Ok(folder) = std::env::var("BM_PRINT_TO_PPM") {
+        return render_pages(setup, &job, std::path::Path::new(&folder));
+    }
+    if !print_server_reachable() {
+        return Outcome::NoPrinter;
+    }
+    let data = print_data(key, setup);
+    let frame = crate::app::frame();
+    let job = Rc::new(job);
+    let title = CString::new(job.title.as_str()).unwrap_or_default();
+    unsafe {
+        let dd = ffi::wxd_PrintDialogData_CreateFromData(data.0);
+        let printer = ffi::wxd_Printer_Create(dd);
+        let mut outcome = Outcome::Printed;
+        for _ in 0..copies.max(1) {
+            let mut proxy = Box::new(Proxy { job: job.clone(), printout: std::ptr::null_mut(), fit: None });
+            let user_data = &mut *proxy as *mut Proxy as *mut c_void;
+            proxy.printout = ffi::wxd_Printout_CreateWithCallbacks(
+                title.as_ptr(),
+                user_data,
+                None,
+                None,
+                None,
+                None,
+                None,
+                Some(print_page),
+                Some(has_page),
+                Some(page_info),
+            );
+            let ok = ffi::wxd_Printer_Print(printer, frame.handle_ptr(), proxy.printout, false);
+            ffi::wxd_Printout_Destroy(proxy.printout);
+            if !ok {
+                outcome = if ffi::wxd_Printer_GetLastError() == 1 { Outcome::Cancelled } else { Outcome::Failed };
+                break;
+            }
+        }
+        ffi::wxd_Printer_Destroy(printer);
+        ffi::wxd_PrintDialogData_Destroy(dd);
+        outcome
+    }
+}
+
+/// Whether the system has a print server to ask for printers. On Linux the system print dialog's printer list comes
+/// from CUPS; without a CUPS server to reach, a print waits for it without end, so File, Print says so instead
+/// (BrailleMaker's own check; the reference program shows message 2632 when it cannot get printer information).
+pub fn print_server_reachable() -> bool {
+    if cfg!(target_os = "linux") {
+        std::env::var_os("CUPS_SERVER").is_some()
+            || ["/run/cups/cups.sock", "/var/run/cups/cups.sock"].iter().any(|p| std::path::Path::new(p).exists())
+    } else {
+        true
+    }
+}
+
+/// Debug builds only: with BM_PRINT_TO_PPM set to a folder, File, Print draws each page of the job, with the same
+/// drawing as the printer, into page-N.ppm there (a 96-pixels-per-inch image of the paper) instead of printing, so the
+/// page layout can be checked where no printer exists.
+#[cfg(debug_assertions)]
+fn render_pages(setup: &PrinterSetup, job: &Job, folder: &std::path::Path) -> Outcome {
+    use wxdragon::dc::MemoryDC;
+    let (pw, ph) = if setup.landscape { (setup.paper.1, setup.paper.0) } else { setup.paper };
+    // Tenths of a millimetre to 96 pixels per inch.
+    let (w, h) = ((pw as f64 * 96.0 / 254.0).round() as i32, (ph as f64 * 96.0 / 254.0).round() as i32);
+    let g = Geometry { ppi_printer: (96, 96), ppi_screen: (96, 96), page: (w, h), paper: (0, 0, w, h) };
+    let mut fit_found = None;
+    for n in 1..=job.pages.len() {
+        let Some(mut bitmap) = wxdragon::bitmap::Bitmap::new(w, h) else { return Outcome::Failed };
+        {
+            let mut dc = MemoryDC::new();
+            dc.select_object(&mut bitmap);
+            dc.set_brush(Colour::new(255, 255, 255, 255), BrushStyle::Solid);
+            dc.set_pen(Colour::new(255, 255, 255, 255), 1, PenStyle::Solid);
+            dc.draw_rectangle(0, 0, w, h);
+            dc.set_text_foreground(Colour::new(0, 0, 0, 255));
+            draw_page(job, &mut fit_found, &dc, &g, n);
+        }
+        let Some(rgba) = bitmap.get_rgba_data() else { return Outcome::Failed };
+        let mut ppm = format!("P6\n{w} {h}\n255\n").into_bytes();
+        for px in rgba.chunks(4) {
+            ppm.extend_from_slice(&px[..3]);
+        }
+        if std::fs::write(folder.join(format!("page-{n}.ppm")), ppm).is_err() {
+            return Outcome::Failed;
+        }
+    }
+    Outcome::Printed
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn setup_text_round_trip() {
+        let s = PrinterSetup { printer: "Office Laser".into(), paper: (2100, 2970), landscape: true, margins: [500, 750, 1000, 1250], metric: true, lines: 50, chars: 70 };
+        assert_eq!(PrinterSetup::from_text(&s.to_text()), Some(s));
+    }
+
+    #[test]
+    fn margins_read_and_shown() {
+        assert_eq!(parse_margin("1\"", false), Some(1000));
+        assert_eq!(parse_margin("0.75", false), Some(750));
+        assert_eq!(parse_margin("25.4 mm", false), Some(1000));
+        assert_eq!(parse_margin("2.54", true), Some(100));
+        assert_eq!(parse_margin("-1", false), None);
+        let s = PrinterSetup::default();
+        assert_eq!(s.margin_text(1000), "1\"");
+        assert_eq!(s.margin_text(750), "0.75\"");
+        assert_eq!(PrinterSetup { metric: true, ..s }.margin_text(1000), "25.4 mm");
+    }
+
+    #[test]
+    fn page_ranges() {
+        assert_eq!(parse_range("1-3,b,5", 6), (Range::Pages(vec![Some(0), Some(1), Some(2), None, Some(4)]), false, false));
+        assert_eq!(parse_range("4-", 6), (Range::Pages(vec![Some(3), Some(4), Some(5)]), false, false));
+        assert_eq!(parse_range("5-8", 6), (Range::Pages(vec![Some(4), Some(5)]), true, false));
+        assert_eq!(parse_range("2,2", 6), (Range::Pages(vec![Some(1), Some(1)]), false, true));
+        assert_eq!(parse_range("9", 6).0, Range::NoneFound);
+        assert_eq!(parse_range("x", 6).0, Range::Malformed);
+        assert_eq!(parse_range("3-1", 6).0, Range::Malformed);
+        assert_eq!(parse_range(" ", 6).0, Range::Empty);
+    }
+}

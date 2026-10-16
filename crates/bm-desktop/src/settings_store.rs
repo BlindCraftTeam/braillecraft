@@ -307,6 +307,20 @@ pub fn load(s: &mut Settings) {
             *field = n as i32;
         }
     }
+    if let Some(b) = get_bool("Fonts", "PrintAutoSize") {
+        f.print_auto = b;
+    }
+    let output: [(&str, &mut i32); 2] = [("PrintOutputSize", &mut f.print_output_size), ("BrailleOutputSize", &mut f.braille_output_size)];
+    for (key, field) in output {
+        if let Some(n) = get_number("Fonts", key).filter(|n| (1..=72).contains(n)) {
+            *field = n as i32;
+        }
+    }
+    if let Some(v) = get_text(crate::print::PrinterSetup::SECTION, "Setup") {
+        if let Some(p) = crate::print::PrinterSetup::from_text(&v) {
+            s.printer = p;
+        }
+    }
     let k = &mut s.shortcuts;
     let codes: [(&str, &mut String); 6] = [
         ("Grade0Code", &mut k.grade0),
@@ -385,6 +399,14 @@ pub fn save_fonts(f: &Fonts) {
     set("Fonts", "BrailleDisplaySize", &f.braille_size.to_string());
     set("Fonts", "StatusLineFont", &f.status_face);
     set("Fonts", "StatusLineFontSize", &f.status_size.to_string());
+    set("Fonts", "PrintAutoSize", if f.print_auto { "yes" } else { "no" });
+    set("Fonts", "PrintOutputSize", &f.print_output_size.to_string());
+    set("Fonts", "BrailleOutputSize", &f.braille_output_size.to_string());
+}
+
+/// Global, Printer Setup.
+pub fn save_printer(p: &crate::print::PrinterSetup) {
+    set(crate::print::PrinterSetup::SECTION, "Setup", &p.to_text());
 }
 
 /// Global, Shortcut Preferences.
