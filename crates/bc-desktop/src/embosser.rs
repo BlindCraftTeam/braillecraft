@@ -47,6 +47,31 @@ fn ink_printers(filter: usize) -> Vec<String> {
     })
 }
 
+thread_local! {
+    /// The setups whose unsupported ink printer has been warned about while the program runs (spec 25 17.1: once a
+    /// setup).
+    static INK_WARNED: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
+}
+
+/// Before an embossing job with an ink pass on a TranSend SE embosser (spec 25 17.1): when the setup's ink printer is
+/// not a supported printer (its driver only compatible, or not on the list at all), message 10272 with OK and
+/// Cancel, once a setup; false when Cancel is chosen.
+pub fn ink_printer_accepted(setup: &Setup, ok_cancel: impl FnOnce(&str) -> bool) -> bool {
+    if setup.ink_printer.is_empty() {
+        return true;
+    }
+    let driver = bc_core::emboss_out::printers().into_iter().find(|p| p.name == setup.ink_printer).map(|p| p.driver).unwrap_or_default();
+    if TRANSEND.with(|t| t.borrow().allows(0, &driver)) {
+        return true;
+    }
+    let name = setup.shown_name();
+    if INK_WARNED.with(|w| w.borrow().contains(&name)) {
+        return true;
+    }
+    INK_WARNED.with(|w| w.borrow_mut().push(name));
+    ok_cancel("The printer selected for ink output is not supported. Enabling Technologies cannot provide any Technical Support on unsupported printers.")
+}
+
 /// Runs `f` with the embosser models, or the reason they could not be read (embossing is then disabled).
 pub fn with_catalog<R>(f: impl FnOnce(Result<&Catalog, &str>) -> R) -> R {
     CATALOG.with(|c| match &*c.borrow() {

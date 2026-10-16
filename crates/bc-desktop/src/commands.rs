@@ -47,6 +47,16 @@ fn yes_no(text: &str) -> bool {
         == wxdragon::id::ID_YES
 }
 
+/// OK or Cancel: true for OK.
+fn ok_cancel(text: &str) -> bool {
+    let f = app::frame();
+    MessageDialog::builder(&f, text, "BrailleCraft")
+        .with_style(MessageDialogStyle::OK | MessageDialogStyle::Cancel | MessageDialogStyle::IconInformation)
+        .build()
+        .show_modal()
+        == wxdragon::id::ID_OK
+}
+
 /// Yes, No or Cancel: Some(true), Some(false), None.
 fn yes_no_cancel(text: &str) -> Option<bool> {
     let f = app::frame();
@@ -1364,14 +1374,25 @@ pub fn emboss_with(skip: Option<u32>) {
         let shown = a.docs[i].shown();
         a.laid_out(i, &shown)
     });
-    let (copies, chosen): (u32, Vec<Option<usize>>) = match skip {
-        Some(copies) => (copies, (0..pages.len()).map(Some).collect()),
+    // A TranSend SE embosser has its own File Emboss dialog (1038) with the pass choices (spec 25 17.1): Write Ink
+    // Print and Braille (17), Write Ink Print Only (18), Write Braille Only (19); at open 19 when the document has no
+    // interline print, else 17. The choice sets the document's interline print value (1 for 17 and 18, 2 for 19) and
+    // the job's passes.
+    use bc_core::ink::PassChoice;
+    let transend = model.flag("TranSend");
+    let mut layout = layout;
+    let (copies, chosen, flags): (u32, Vec<Option<usize>>, u32) = match skip {
+        Some(copies) => (copies, (0..pages.len()).map(Some).collect(), bc_core::ink::ALL_PASSES),
         None => {
-            let d = open_dialog(1039, None);
+            let d = open_dialog(if transend { 1038 } else { 1039 }, None);
             d.set_text(7, "1");
             wire_page_range(&d, EMBOSS_RANGE, (14, 15));
             d.set_text(23, &setup.shown_name());
             d.set_text(25, &emb::form_name(&layout.form));
+            if transend {
+                d.set_text(21, &setup.ink_printer);
+                d.set_radio(&[17, 18, 19], if layout.interline == 0 { 2 } else { 0 });
+            }
             let picked = loop {
                 if d.show() != 1 {
                     d.destroy();
@@ -1379,12 +1400,27 @@ pub fn emboss_with(skip: Option<u32>) {
                 }
                 let Some(copies) = copies_field(&d, 7) else { continue };
                 let Some(chosen) = chosen_pages(&d, EMBOSS_RANGE, (14, 15), &pages, caret, selection) else { continue };
-                break (copies, chosen);
+                if !transend {
+                    break (copies, chosen, bc_core::ink::ALL_PASSES);
+                }
+                let choice = match d.radio(&[17, 18, 19]) {
+                    Some(1) => PassChoice::InkOnly,
+                    Some(2) => PassChoice::BrailleOnly,
+                    _ => PassChoice::InkAndBraille,
+                };
+                // Cancel on the unsupported ink printer message leaves the dialog open.
+                if choice != PassChoice::BrailleOnly && !emb::ink_printer_accepted(&setup, ok_cancel) {
+                    continue;
+                }
+                layout.interline = if choice == PassChoice::BrailleOnly { 2 } else { 1 };
+                app::with(|a| a.docs[i].layout.interline = layout.interline);
+                break (copies, chosen, choice.flags());
             };
             d.destroy();
             picked
         }
     };
+    let (ink_pass, braille_pass) = bc_core::ink::passes(flags, &setup.ink_printer, layout.interline != 0);
     // The pages as North American ASCII braille, which the byte pipeline takes: the document's text is in the
     // display encoding (Global, Internationalization), so each character goes to its cell and that cell's character.
     let sides: Vec<Option<Vec<String>>> = app::with(|a| {
@@ -1410,6 +1446,29 @@ pub fn emboss_with(skip: Option<u32>) {
             })
             .collect()
     });
+    // The ink pass first, to the setup's ink printer (spec 25 14.5 and 17): a printer that cannot be printed to ends
+    // the job with message 2382, as a failed first pass does in the reference.
+    if ink_pass {
+        let job = ink_job(i, &name, &setup, &model, &layout, cells, &pages, &chosen, &sides);
+        match crate::print::run_ink(&setup.ink_printer, job, copies) {
+            crate::print::Outcome::Printed => {}
+            crate::print::Outcome::Cancelled => return,
+            _ => {
+                let detail = format!("the ink printer \"{}\" could not be printed to", setup.ink_printer);
+                message(&bc_core::emboss_out::Failure::Printer(detail).message());
+                return;
+            }
+        }
+        // Before the braille pass, prompt 3781 with OK and Cancel; Cancel ends the job. A SuppressFeedPrompts setting
+        // that is not 0 skips it, as in the reference (spec 25 17.5).
+        let suppressed = crate::settings_store::get(crate::settings_store::ROOT, "SuppressFeedPrompts").is_some_and(|v| v.trim() != "0" && !v.trim().is_empty());
+        if braille_pass && !suppressed && !ok_cancel("Place the printed copy in the Braille printer to emboss the document.") {
+            return;
+        }
+    }
+    if !braille_pass {
+        return;
+    }
     let options = emb::job_options(&setup, &model, &layout, cells, lines, copies);
     let bytes = bc_core::emboss::job(&options, &sides, copies);
     let target = match emb::target(&setup) {
@@ -1433,6 +1492,65 @@ pub fn emboss_with(skip: Option<u32>) {
     if let Err(e) = bc_core::emboss_out::send(&target, &name, &bytes) {
         message(&e.message());
     }
+}
+
+/// The ink pass of an embossing job (spec 25 14.3, 14.5, 17.4 and 17.7): for each chosen page, in the job's order,
+/// the print of each run of cells of its lines, the document's back-translation of the run (or a row of full stops
+/// for a fill row), placed in twips by the setup's ink adjustments and the page layout, in the setup's interline font
+/// at the size TranSend SE Font Size gives. With interpoint, even-numbered pages are back pages.
+#[allow(clippy::too_many_arguments)]
+fn ink_job(
+    i: usize,
+    name: &str,
+    setup: &crate::embosser::Setup,
+    model: &bc_core::embossers::Model,
+    layout: &crate::embosser::Layout,
+    cells: u32,
+    pages: &[bc_core::format::Page],
+    chosen: &[Option<usize>],
+    sides: &[Option<Vec<String>>],
+) -> crate::print::InkJob {
+    use bc_core::ink;
+    let key = ink::ink_font_key(setup.transend_font_size);
+    let section = format!("Embosser\\TranSend\\{key}");
+    let setting = |k: &str| crate::settings_store::get(&section, k).and_then(|v| v.trim().parse::<i32>().ok());
+    let (height, vshift) =
+        ink::ink_font(setup.transend_font_size, model.driver() == "Emb_IndexEmbosserDriver", setting("ink_font_size"), setting("ink_vshift"));
+    let prog = |cid: i32| setup.device_other.iter().find(|(c, _)| *c == cid).and_then(|(_, v)| v.trim().parse::<i32>().ok()).unwrap_or(0);
+    let form = model.forms.iter().find(|f| f.id == layout.form);
+    let place = ink::Placement {
+        binding: layout.binding as i32,
+        left_prog: prog(27),
+        top_margin: layout.top_margin as i32,
+        top_prog: prog(33),
+        cells: cells as i32,
+        form_cells: form.map_or(cells as i32, |f| f.maximum.0 as i32),
+        form_width: form.map_or(85, |f| f.width as i32),
+        adjust_h: setup.ink_adjust_h,
+        adjust_v: setup.ink_adjust_v,
+        vshift,
+    };
+    let ink_pages = app::with(|a| {
+        let doc = &a.docs[i];
+        let enc = a.encoding();
+        let styles = translation::style_table(&doc.styles);
+        chosen
+            .iter()
+            .zip(sides)
+            .enumerate()
+            .map(|(k, (page, side))| {
+                let (Some(p), Some(lines)) = (page, side) else { return Vec::new() };
+                let shown: Vec<Vec<char>> = pages[*p].lines.iter().map(|l| l.text.chars().collect()).collect();
+                let back = layout.interpoint && (k + 1) % 2 == 0;
+                ink::page_items(lines, &place, back, |n, run| {
+                    // The run's cells as the document shows them, for its back-translation.
+                    let text: String = shown.get(n).map(|l| l.iter().skip(run.start).take(run.cells.chars().count()).collect()).unwrap_or_default();
+                    translation::back(&doc.tables[2], &Shown::plain(&text), &doc.initial_codes, enc, &styles).map(|s| s.text).unwrap_or_default()
+                })
+            })
+            .collect()
+    });
+    crate::print::InkJob { title: name.to_string(), pages: ink_pages, face: setup.interline_font.clone(), height }
 }
 
 /// File, Translate: a NEW document made from the open one, which is left untouched. A print document becomes a

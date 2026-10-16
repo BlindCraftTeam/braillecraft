@@ -396,6 +396,166 @@ pub fn run(key: u64, setup: &PrinterSetup, job: Job, copies: u32) -> Outcome {
     }
 }
 
+// ------------------------------------------------------------------ the ink pass of an embossing job
+
+/// The ink pass of an embossing job with interline print (spec 25 14.5 and 17): its pages, each a list of pieces of
+/// ink placed in twips from the printable area's top left, drawn in font `face` ("Times New Roman" when empty, as in
+/// the reference) at a cell height of `height` twips.
+pub struct InkJob {
+    pub title: String,
+    pub pages: Vec<Vec<bc_core::ink::Item>>,
+    pub face: String,
+    pub height: i32,
+}
+
+struct InkProxy {
+    job: Rc<InkJob>,
+    printout: *mut ffi::wxd_Printout_t,
+    copies: u32,
+}
+
+impl InkProxy {
+    unsafe fn from(user_data: *mut c_void) -> &'static mut InkProxy {
+        unsafe { &mut *(user_data as *mut InkProxy) }
+    }
+
+    fn count(&self) -> i32 {
+        (self.job.pages.len() as u32 * self.copies.max(1)) as i32
+    }
+}
+
+unsafe extern "C" fn ink_has_page(user_data: *mut c_void, page: i32) -> bool {
+    let p = unsafe { InkProxy::from(user_data) };
+    page >= 1 && page <= p.count()
+}
+
+unsafe extern "C" fn ink_page_info(user_data: *mut c_void, min: *mut i32, max: *mut i32, from: *mut i32, to: *mut i32) {
+    let p = unsafe { InkProxy::from(user_data) };
+    let n = p.count();
+    unsafe {
+        for (ptr, v) in [(min, 1), (max, n), (from, 1), (to, n)] {
+            if !ptr.is_null() {
+                *ptr = v;
+            }
+        }
+    }
+}
+
+unsafe extern "C" fn ink_print_page(user_data: *mut c_void, page: i32) -> bool {
+    let p = unsafe { InkProxy::from(user_data) };
+    let dc_ptr = unsafe { ffi::wxd_Printout_GetDC(p.printout) };
+    if dc_ptr.is_null() {
+        return false;
+    }
+    let dc = unsafe { GenericDC::from_ffi_ptr_unowned(dc_ptr) };
+    let mut ppi = (0, 0);
+    unsafe { ffi::wxd_Printout_GetPPIPrinter(p.printout, &mut ppi.0, &mut ppi.1) };
+    let pages = p.job.pages.len().max(1);
+    draw_ink_page(&p.job, &dc, ppi, (page as usize - 1) % pages);
+    true
+}
+
+/// Draws ink page `n` (from 0): in twips, as the reference draws on a device context in MM_TWIPS; each piece against
+/// the bottom of its box and cut to the box, as its DrawTextW with DT_SINGLELINE | DT_BOTTOM | DT_NOPREFIX and no
+/// DT_NOCLIP does (spec 25 14.5).
+fn draw_ink_page<D: DeviceContext>(job: &InkJob, dc: &D, ppi: (i32, i32), n: usize) {
+    dc.set_user_scale(ppi.0.max(1) as f64 / 1440.0, ppi.1.max(1) as f64 / 1440.0);
+    let face = if job.face.is_empty() { "Times New Roman" } else { job.face.as_str() };
+    // The font at the cell height the reference asks for: measured at 12 points, then sized to it.
+    let Some(probe) = crate::app::font(face, 12) else { return };
+    dc.set_font(&probe);
+    let at12 = dc.get_char_height().max(1);
+    let points = ((12 * job.height) as f64 / at12 as f64).round().max(1.0) as i32;
+    let Some(font) = crate::app::font(face, points) else { return };
+    dc.set_font(&font);
+    let text_h = dc.get_char_height();
+    let Some(items) = job.pages.get(n) else { return };
+    for item in items {
+        dc.set_clipping_region(item.x, item.top, item.width, item.bottom - item.top);
+        dc.draw_text(&item.text, item.x, item.bottom - text_h);
+        dc.destroy_clipping_region();
+    }
+}
+
+/// Prints the ink pass `job` to printer `printer` with its own paper, `copies` times within the one print job (the
+/// reference's copies are made inside each pass, spec 25 17.2), without a print dialog.
+pub fn run_ink(printer: &str, job: InkJob, copies: u32) -> Outcome {
+    #[cfg(debug_assertions)]
+    if let Ok(folder) = std::env::var("BC_PRINT_TO_PPM") {
+        return render_ink_pages(&job, std::path::Path::new(&folder));
+    }
+    if !print_server_reachable() {
+        return Outcome::NoPrinter;
+    }
+    let data = PrintData::new();
+    let name = CString::new(printer).unwrap_or_default();
+    unsafe {
+        ffi::wxd_PrintData_SetPrinterName(data.0, name.as_ptr());
+        ffi::wxd_PrintData_SetNoCopies(data.0, 1);
+    }
+    let frame = crate::app::frame();
+    let title = CString::new(job.title.as_str()).unwrap_or_default();
+    let job = Rc::new(job);
+    unsafe {
+        let dd = ffi::wxd_PrintDialogData_CreateFromData(data.0);
+        let wx_printer = ffi::wxd_Printer_Create(dd);
+        let mut proxy = Box::new(InkProxy { job, printout: std::ptr::null_mut(), copies });
+        let user_data = &mut *proxy as *mut InkProxy as *mut c_void;
+        proxy.printout = ffi::wxd_Printout_CreateWithCallbacks(
+            title.as_ptr(),
+            user_data,
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(ink_print_page),
+            Some(ink_has_page),
+            Some(ink_page_info),
+        );
+        let ok = ffi::wxd_Printer_Print(wx_printer, frame.handle_ptr(), proxy.printout, false);
+        ffi::wxd_Printout_Destroy(proxy.printout);
+        let outcome = if ok {
+            Outcome::Printed
+        } else if ffi::wxd_Printer_GetLastError() == 1 {
+            Outcome::Cancelled
+        } else {
+            Outcome::Failed
+        };
+        ffi::wxd_Printer_Destroy(wx_printer);
+        ffi::wxd_PrintDialogData_Destroy(dd);
+        outcome
+    }
+}
+
+/// For checks: the ink pages drawn to ink-<n>.ppm files in `folder` on US Letter at 96 pixels per inch.
+#[cfg(debug_assertions)]
+fn render_ink_pages(job: &InkJob, folder: &std::path::Path) -> Outcome {
+    use wxdragon::dc::MemoryDC;
+    let (w, h) = (816, 1056);
+    for (n, _) in job.pages.iter().enumerate() {
+        let Some(mut bitmap) = wxdragon::bitmap::Bitmap::new(w, h) else { return Outcome::Failed };
+        {
+            let mut dc = MemoryDC::new();
+            dc.select_object(&mut bitmap);
+            dc.set_brush(Colour::new(255, 255, 255, 255), BrushStyle::Solid);
+            dc.set_pen(Colour::new(255, 255, 255, 255), 1, PenStyle::Solid);
+            dc.draw_rectangle(0, 0, w, h);
+            dc.set_text_foreground(Colour::new(0, 0, 0, 255));
+            draw_ink_page(job, &dc, (96, 96), n);
+        }
+        let Some(rgba) = bitmap.get_rgba_data() else { return Outcome::Failed };
+        let mut ppm = format!("P6\n{w} {h}\n255\n").into_bytes();
+        for px in rgba.chunks(4) {
+            ppm.extend_from_slice(&px[..3]);
+        }
+        if std::fs::write(folder.join(format!("ink-{}.ppm", n + 1)), ppm).is_err() {
+            return Outcome::Failed;
+        }
+    }
+    Outcome::Printed
+}
+
 /// Whether the system has a print server to ask for printers. On Linux the system print dialog's printer list comes
 /// from CUPS; without a CUPS server to reach, a print waits for it without end, so File, Print says so instead
 /// (BrailleCraft's own check; the reference program shows message 2632 when it cannot get printer information).
