@@ -1933,17 +1933,79 @@ fn fill_setup_list(d: &Dlg, selected: &str) {
 }
 
 /// Fills Embosser Setup's form box (13) with the forms of the chosen setup, `form` chosen (else the first). The box
-/// sorts its items, so they go in sorted and the choice is found by text.
+/// sorts its items, so they go in sorted and the choice is found by text. With "(No Target Embosser)" the box holds
+/// the one form of the page block shown, `form` (spec 25 section 12: its text comes from the block, not from an
+/// embosser).
 fn fill_setup_forms(d: &Dlg, form: &str) {
     let setup = d.selected_text(7).filter(|s| s != NO_EMBOSSER).unwrap_or_default();
+    if setup.is_empty() {
+        let name = crate::embosser::form_name(form);
+        let items: Vec<&str> = if form.is_empty() { Vec::new() } else { vec![name.as_str()] };
+        d.set_items(13, &items, (!items.is_empty()).then_some(0));
+        return;
+    }
     let forms = setup_forms(&setup);
-    let mut names: Vec<String> = forms.iter().map(|f| crate::embosser::form_name(&f.id)).collect();
+    // The model's FormNamePrefix picks its variant of each description (spec 25 12.3).
+    let prefix = crate::embosser::setup_form_prefix(&setup);
+    let name_of = |id: &str| crate::embosser::form_name_with_prefix(id, &prefix);
+    let mut names: Vec<String> = forms.iter().map(|f| name_of(&f.id)).collect();
     names.sort_by_key(|n| n.to_lowercase());
-    let chosen = forms.iter().find(|f| f.id == form).map(|f| crate::embosser::form_name(&f.id));
+    let chosen = forms.iter().find(|f| f.id == form).map(|f| name_of(&f.id));
     let i = chosen.and_then(|c| names.iter().position(|n| *n == c)).unwrap_or(0);
     let refs: Vec<&str> = names.iter().map(String::as_str).collect();
     d.set_items(13, &refs, (!refs.is_empty()).then_some(i as u32));
-    d.enable(13, !refs.is_empty());
+}
+
+/// The code of the form Embosser Setup's form box (13) shows: among the chosen setup's forms (named with its model's
+/// prefix), else among all named forms (the no-target box shows the block's form by its plain name).
+fn shown_form(d: &Dlg) -> Option<String> {
+    let shown = d.selected_text(13)?;
+    let setup = d.selected_text(7).filter(|s| s != NO_EMBOSSER).unwrap_or_default();
+    let prefix = crate::embosser::setup_form_prefix(&setup);
+    setup_forms(&setup)
+        .iter()
+        .map(|f| f.id.clone())
+        .find(|id| crate::embosser::form_name_with_prefix(id, &prefix) == shown)
+        .or_else(|| {
+            bc_core::emboss_setup::FORM_NAMES
+                .iter()
+                .map(|(id, _)| id.to_string())
+                .find(|id| crate::embosser::form_name(id) == shown)
+        })
+}
+
+/// What Embosser Setup enables for the list's choice (spec 25 sections 12 and 12.2): a
+/// target is any entry after "(No Target Embosser)". Form (12, 13) and the top and binding margins (18 to 21) only
+/// with a target; Modify and Remove (9, 10) only with a target in Global mode; Emboss in Interpoint (22) only when the
+/// setup's model can emboss interpoint and the setup has interpoint switched on; Interline Print (24) only when the
+/// model has interline print (its Interline property; the reference also allows it when the setup names a TranSend
+/// SE printer, which BrailleCraft does not keep yet). A box that is not allowed is cleared, as the reference clears
+/// those values when it checks the block. Cells, lines and the banner page stay enabled.
+fn apply_setup_target(d: &Dlg, global: bool) {
+    let name = d.selected_text(7).filter(|s| s != NO_EMBOSSER);
+    let target = d.selection(7).is_some_and(|i| i > 0) && name.is_some();
+    let setup = name.as_deref().and_then(crate::embosser::load_setup);
+    let (interpoint, interline) = crate::embosser::with_catalog(|cat| {
+        let model = cat.ok().zip(setup.as_ref()).and_then(|(cat, s)| crate::embosser::find_model(cat, &s.model));
+        (
+            model.is_some_and(|m| m.flag("CanDoInterpoint")) && setup.as_ref().is_some_and(|s| s.interpoint_enabled),
+            model.is_some_and(|m| m.flag("Interline")),
+        )
+    });
+    for cid in [12, 13, 18, 19, 20, 21] {
+        d.enable(cid, target);
+    }
+    for cid in [9, 10] {
+        d.enable(cid, target && global);
+    }
+    d.enable(22, target && interpoint);
+    if !(target && interpoint) {
+        d.set_checked(22, false);
+    }
+    d.enable(24, target && interline);
+    if !(target && interline) {
+        d.set_checked(24, false);
+    }
 }
 
 /// Document / Global: Embosser Setup (dialog 1032, spec 25 section 2b). Document: the document's setup and its
@@ -1983,16 +2045,43 @@ fn embosser_setup(global: bool) {
     d.set_checked(22, layout.interpoint);
     d.set_checked(23, layout.banner);
     d.set_checked(24, layout.interline != 0);
+    apply_setup_target(&d, global);
+    // A new choice in the list keeps the form the page block shows where the new list has it (the reference reads
+    // the block from the controls, then fills the form box and selects the block's form, else its first item).
+    let block_form = std::rc::Rc::new(std::cell::RefCell::new(layout.form.clone()));
+    if let Some(forms) = d.win(13).and_then(|w| w.as_widget::<Choice>()) {
+        let bf = block_form.clone();
+        forms.on_selection_changed(move |_| {
+            if let Some(code) = shown_form(&Dlg { id, dialog, page: None }) {
+                *bf.borrow_mut() = code;
+            }
+        });
+    }
     if let Some(list) = d.win(7).and_then(|w| w.as_widget::<ListBox>()) {
+        let bf = block_form.clone();
         list.on_selection_changed(move |_| {
             let d = Dlg { id, dialog, page: None };
-            let name = d.selected_text(7).unwrap_or_default();
-            let form = emb::load_setup(&name).map(|s| s.form).unwrap_or_default();
+            let form = bf.borrow().clone();
             fill_setup_forms(&d, &form);
+            if let Some(code) = shown_form(&d) {
+                *bf.borrow_mut() = code;
+            }
+            apply_setup_target(&d, global);
         });
     }
     if global {
-        // New and Modify Embosser open the setup sheet; a setup kept from it is chosen in the list.
+        // New and Modify Embosser open the setup sheet; a setup kept from it is chosen in the list, and the form box
+        // and the enabled controls follow it as after a choice in the list.
+        let bf = block_form.clone();
+        let refresh = move |d: &Dlg| {
+            let form = bf.borrow().clone();
+            fill_setup_forms(d, &form);
+            if let Some(code) = shown_form(d) {
+                *bf.borrow_mut() = code;
+            }
+            apply_setup_target(d, true);
+        };
+        let (refresh_sheet, refresh_remove) = (refresh.clone(), refresh);
         let sheet = move |modify: bool| {
             let d = Dlg { id, dialog, page: None };
             let old = d.selected_text(7).filter(|s| s != NO_EMBOSSER);
@@ -2009,13 +2098,14 @@ fn embosser_setup(global: bool) {
                     if emb::edit(&mut s, cat) {
                         emb::save_setup(&s, if modify { old.as_deref() } else { None });
                         fill_setup_list(&d, &s.shown_name());
-                        fill_setup_forms(&d, &s.form);
+                        refresh_sheet(&d);
                     }
                 }
             });
         };
+        let modify_sheet = sheet.clone();
         d.on_button(8, move || sheet(false));
-        d.on_button(9, move || sheet(true));
+        d.on_button(9, move || modify_sheet(true));
         d.on_button(10, move || {
             let d = Dlg { id, dialog, page: None };
             let Some(name) = d.selected_text(7).filter(|s| s != NO_EMBOSSER) else { return };
@@ -2028,7 +2118,7 @@ fn embosser_setup(global: bool) {
             if yes_no(&text) {
                 emb::remove_setup(&name);
                 fill_setup_list(&d, NO_EMBOSSER);
-                fill_setup_forms(&d, "");
+                refresh_remove(&d);
             }
         });
     } else {
@@ -2042,8 +2132,8 @@ fn embosser_setup(global: bool) {
         }
         let name = d.selected_text(7).filter(|s| s != NO_EMBOSSER).unwrap_or_default();
         let forms = setup_forms(&name);
-        let shown = d.selected_text(13).unwrap_or_default();
-        let form = forms.iter().find(|f| crate::embosser::form_name(&f.id) == shown);
+        let shown = shown_form(&d).unwrap_or_default();
+        let form = forms.iter().find(|f| f.id == shown);
         let field = |cid: i32, current: u32| d.number(cid).filter(|n| *n >= 0).map(|n| n as u32).unwrap_or(current);
         let (c, l, top, binding) = (field(15, cells), field(17, lines), field(19, layout.top_margin), field(21, layout.binding));
         let interline = d.checked(24);
@@ -2070,8 +2160,14 @@ fn embosser_setup(global: bool) {
             ));
             continue;
         }
+        // With "(No Target Embosser)" the form stays the block's own (its box is disabled, spec 25 12.1).
+        let form_code = match form {
+            Some(f) => f.id.clone(),
+            None if name.is_empty() => block_form.borrow().clone(),
+            None => String::new(),
+        };
         let layout = emb::Layout {
-            form: form.map(|f| f.id.clone()).unwrap_or_default(),
+            form: form_code,
             top_margin: top2,
             binding: binding2,
             interpoint: d.checked(22),

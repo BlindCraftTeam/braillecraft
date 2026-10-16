@@ -268,8 +268,16 @@ function removeSetup(name) {
   }
 }
 
-// New setups take the European order of default forms for a language other than US English (spec 06).
-const european = () => !/^en-US$/i.test(navigator.language || "en-US");
+// New setups take the European order of default forms when the browser's region is one the reference counts as
+// European (its country code begins with 3 or 4, spec 25 12.3); a language without a region takes its likely one.
+const european = () => {
+  try {
+    const region = new Intl.Locale(navigator.language || "en-US").maximize().region || "";
+    return core.a4Region(region);
+  } catch {
+    return false;
+  }
+};
 
 // ------------------------------------------------------------------ the document
 

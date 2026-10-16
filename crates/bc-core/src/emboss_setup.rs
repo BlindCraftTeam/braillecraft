@@ -78,8 +78,9 @@ pub const LINE_ENDS: &[&str] = &["Carriage return, Line feed (PC)", "Carriage re
 pub const PAGE_ENDS: &[&str] = &["End of Line and Form Feed", "Form Feed only", "Pad page with End of Line", "Control-K (LED-120)", "Nothing", "Puma-style (0x83)"];
 pub const CASES: &[&str] = &["Lowercase", "Uppercase"];
 
-/// The form descriptions the setup shows, by form id. INFERENCE: the reference program's form description strings
-/// (its string table from 10088) follow the same order as these ids sorted; the table matching them was not traced.
+/// The form descriptions the setup shows, by form id: the reference's table of form descriptions in its English
+/// texts (spec 25 section 12.3). Ids are matched without regard to case; a form not in the table shows its id (as A5
+/// and B4_landscape do in the reference).
 pub const FORM_NAMES: &[(&str, &str)] = &[
     ("10_d", "23 by 10 inches (folded booklet)"),
     ("10_mn", "8 by 10 inches"),
@@ -113,18 +114,51 @@ pub const FORM_NAMES: &[(&str, &str)] = &[
     ("A4_ex", "A4 Extended (250 by 297 mm)"),
     ("A4_folio", "A4 (folded booklet)"),
     ("A4_landscape", "A4 (landscape)"),
-    ("A5", "A5"),
     ("A5_landscape", "A5 (landscape)"),
-    ("B4_landscape", "B4 (landscape)"),
-    ("nbp", "38 by 28 Braille Page used by NBP"),
+    ("bbc", "Canute eReader page size"),
+    ("NBP", "38 by 28 Braille Page used by NBP"),
+    ("PUMA", "Puma Zinc Plate 340mm x 285mm"),
     ("RusBook", "Russian bookpage"),
     ("RusNote", "Russian notebook"),
     ("RusNote_folio", "Russian notebook (folded booklet)"),
 ];
 
+/// The descriptions a model whose FormNamePrefix is "once" shows in place of the plain ones (spec 25 12.3); the prefix
+/// picks these texts, it is not written before them.
+pub const ONCE_FORM_NAMES: &[(&str, &str)] = &[
+    ("10_n", "10 inch length, 34 cells"),
+    ("11_n", "11 inch length, 34 cells"),
+    ("11_w", "11 inch length, 42 cells"),
+    ("12_n", "12 inch length, 34 cells"),
+    ("12_w", "12 inch length, 42 cells"),
+    ("13_n", "13 inch length, 34 cells"),
+    ("13_w", "13 inch length, 42 cells"),
+];
+
 /// A form as the setup lists it.
 pub fn form_name(id: &str) -> String {
-    FORM_NAMES.iter().find(|(i, _)| *i == id).map(|(_, n)| n.to_string()).unwrap_or_else(|| id.to_string())
+    form_name_with_prefix(id, "")
+}
+
+/// A form as the setup lists it for a model with FormNamePrefix `prefix` (empty for none): the variant for that
+/// prefix where there is one, else the plain description, else the id.
+pub fn form_name_with_prefix(id: &str, prefix: &str) -> String {
+    let find = |table: &[(&str, &str)]| table.iter().find(|(i, _)| i.eq_ignore_ascii_case(id)).map(|(_, n)| n.to_string());
+    let variant = if prefix.eq_ignore_ascii_case("once") { find(ONCE_FORM_NAMES) } else { None };
+    variant.or_else(|| find(FORM_NAMES)).unwrap_or_else(|| id.to_string())
+}
+
+/// Whether a region (its ISO 3166 two-letter code) takes the European order of default forms. The reference tests
+/// whether the user locale's country code, which is the region's international calling code, begins with 3 or 4
+/// (spec 25 12.3); these are the regions of calling-code zones 3 and 4 (ITU-T E.164), the list being this program's
+/// way of making that test where the system gives a region rather than a calling code.
+pub fn a4_region(region: &str) -> bool {
+    const ZONES_3_4: &[&str] = &[
+        "GR", "NL", "BE", "FR", "ES", "GI", "PT", "LU", "IE", "IS", "AL", "MT", "CY", "FI", "AX", "BG", "HU", "LT", "LV",
+        "EE", "MD", "AM", "BY", "AD", "MC", "SM", "VA", "UA", "RS", "ME", "XK", "HR", "SI", "BA", "MK", "IT", "RO", "CH",
+        "CZ", "SK", "LI", "AT", "GB", "GG", "JE", "IM", "DK", "SE", "NO", "SJ", "PL", "DE",
+    ];
+    ZONES_3_4.iter().any(|r| r.eq_ignore_ascii_case(region))
 }
 
 /// The model of a list label ("Index Everest-D V5": a name, then a firmware range when the model gives one).
@@ -137,10 +171,10 @@ pub fn find_model<'a>(cat: &'a Catalog, label: &str) -> Option<&'a Model> {
     })
 }
 
-/// The form a new setup of `model` starts with: the first the model has of 11_w, 11_n, 10_n (A4, 12_w, 11_w, 11_n,
-/// 10_n in Europe, spec 06), else its first form.
+/// The form a new setup of `model` starts with: the first the model has of 11_w, 11_n, 10_n (A4, 12_w, 12_n, 11_w,
+/// 11_n, 10_n in Europe, spec 25 12.2), else its first form.
 pub fn default_form(model: &Model, european: bool) -> String {
-    let order: &[&str] = if european { &["A4", "12_w", "11_w", "11_n", "10_n"] } else { &["11_w", "11_n", "10_n"] };
+    let order: &[&str] = if european { &["A4", "12_w", "12_n", "11_w", "11_n", "10_n"] } else { &["11_w", "11_n", "10_n"] };
     order
         .iter()
         .find(|id| model.forms.iter().any(|f| f.id == **id))
@@ -371,6 +405,30 @@ mod tests {
     fn catalog() -> Catalog {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../embossers/embossers.txt");
         Catalog::from_texts(&std::fs::read_to_string(path).unwrap(), None).unwrap()
+    }
+
+    #[test]
+    fn form_names_are_the_references_texts() {
+        assert_eq!(form_name("11_w"), "11.5 by 11 inches");
+        // Ids match without regard to case; a form not in the table shows its id.
+        assert_eq!(form_name("nbp"), "38 by 28 Braille Page used by NBP");
+        assert_eq!(form_name("A5"), "A5");
+        assert_eq!(form_name("B4_landscape"), "B4_landscape");
+        assert_eq!(form_name("bbc"), "Canute eReader page size");
+        // The "once" prefix picks its own texts and leaves the others plain.
+        assert_eq!(form_name_with_prefix("11_w", "ONCE"), "11 inch length, 42 cells");
+        assert_eq!(form_name_with_prefix("A4", "ONCE"), "A4");
+        assert_eq!(form_name_with_prefix("11_w", ""), "11.5 by 11 inches");
+    }
+
+    #[test]
+    fn regions_of_calling_zones_three_and_four_take_the_european_forms() {
+        for r in ["GB", "DE", "FR", "PT", "IE", "CZ", "gb"] {
+            assert!(a4_region(r), "{r}");
+        }
+        for r in ["US", "CA", "RU", "AU", "JP", ""] {
+            assert!(!a4_region(r), "{r}");
+        }
     }
 
     #[test]

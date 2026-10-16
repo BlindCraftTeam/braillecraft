@@ -1026,6 +1026,12 @@ pub fn form_name_of(id: &str) -> String {
     form_name(id)
 }
 
+/// Whether region `region` (ISO 3166 two letters) takes the European order of default forms (spec 25 12.3).
+#[wasm_bindgen(js_name = a4Region)]
+pub fn a4_region_of(region: &str) -> bool {
+    bc_core::emboss_setup::a4_region(region)
+}
+
 /// The choice lists of the embosser setup sheet, as JSON: ports, bauds, parities, handshaking, versions, line ends,
 /// page ends and letter cases.
 #[wasm_bindgen]

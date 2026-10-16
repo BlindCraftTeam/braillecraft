@@ -38,11 +38,27 @@ pub fn with_catalog<R>(f: impl FnOnce(Result<&Catalog, &str>) -> R) -> R {
     })
 }
 
-pub use bc_core::emboss_setup::{find_model, form_name, Layout, Output, Setup, BAUDS, CASES, HANDSHAKING, LINE_ENDS, PAGE_ENDS, PARITIES, PORTS, VERSIONS};
+pub use bc_core::emboss_setup::{find_model, form_name, form_name_with_prefix, Layout, Output, Setup, BAUDS, CASES, HANDSHAKING, LINE_ENDS, PAGE_ENDS, PARITIES, PORTS, VERSIONS};
 
-/// Whether new setups take the European order of default forms (spec 06): a language other than US English.
+/// Whether new setups take the European order of default forms (spec 25 12.3): the reference tests the user locale's
+/// country code; here the region of the system's language (its canonical name, such as en_GB: the user locale on
+/// Windows, the locale settings on macOS, LANG on Linux) is tested as bc_core::emboss_setup::a4_region does.
 fn european() -> bool {
-    std::env::var("LANG").is_ok_and(|l| !l.is_empty() && !l.starts_with("en_US") && !l.starts_with("C"))
+    let name = wxdragon::translations::Locale::get_language_canonical_name(wxdragon::translations::Locale::get_system_language())
+        .unwrap_or_default();
+    let region = name.split(['_', '-']).nth(1).unwrap_or("").split(['.', '@']).next().unwrap_or("");
+    bc_core::emboss_setup::a4_region(region)
+}
+
+/// The FormNamePrefix of the model of kept setup `name` (empty when it has none).
+pub fn setup_form_prefix(name: &str) -> String {
+    let Some(setup) = load_setup(name) else { return String::new() };
+    with_catalog(|cat| {
+        cat.ok()
+            .and_then(|cat| find_model(cat, &setup.model))
+            .and_then(|m| m.text("FormNamePrefix").map(str::to_string))
+            .unwrap_or_default()
+    })
 }
 
 /// A new setup of `label`'s model, with the model's own values.
