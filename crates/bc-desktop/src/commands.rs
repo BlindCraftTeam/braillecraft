@@ -2722,9 +2722,35 @@ pub fn jaws_start_up(source: &std::path::Path) {
     }
 }
 
+/// The build date as a long date ("October 16, 2026"), from the time build.rs recorded.
+fn build_date() -> String {
+    long_date(env!("BC_BUILD_EPOCH").parse::<i64>().unwrap_or(0))
+}
+
+/// `seconds` since 1970 (UTC) as a long date.
+fn long_date(seconds: i64) -> String {
+    const MONTHS: [&str; 12] =
+        ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    let days = seconds.div_euclid(86_400);
+    // Days since 1970-01-01 to a calendar date (the proleptic Gregorian calendar).
+    let z = days + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z.rem_euclid(146_097);
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let day = doy - (153 * mp + 2) / 5 + 1;
+    let month = if mp < 10 { mp + 3 } else { mp - 9 };
+    let year = yoe + era * 400 + i64::from(month <= 2);
+    format!("{} {day}, {year}", MONTHS[(month - 1) as usize])
+}
+
+/// Help, About (dialog 1016, spec 04f): 7 the program, 8 its version and build date in the resource's own form; the
+/// service release line (9) stays hidden, as there is none; the reference's licence lines and Activate buttons have
+/// no counterpart here.
 fn about() {
     let d = open_dialog(1016, None);
-    d.set_text(8, &format!("Version {}", env!("CARGO_PKG_VERSION")));
+    d.set_text(8, &format!("Version {}   Build Date: {}", env!("CARGO_PKG_VERSION"), build_date()));
     d.set_text(10, &format!("Braille translation: the BrailleCraft engine, {}", crate::translation::table_count()));
     d.show();
     d.destroy();
@@ -2734,6 +2760,14 @@ fn about() {
 mod tests {
     use super::*;
     use crate::app::open_styles;
+
+    #[test]
+    fn long_dates() {
+        assert_eq!(long_date(0), "January 1, 1970");
+        assert_eq!(long_date(951_782_400), "February 29, 2000");
+        assert_eq!(long_date(1_792_108_800 + 86_399), "October 16, 2026");
+        assert_eq!(long_date(4_107_542_400), "March 1, 2100");
+    }
 
     #[test]
     fn formatted_braille_in_caps_national_and_unicode_encodings() {

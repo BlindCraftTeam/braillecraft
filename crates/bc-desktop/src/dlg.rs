@@ -38,6 +38,12 @@ const BUTTON_PADDING: i32 = 24;
 /// The room a GTK text field takes around its text (its frame and inner padding, both sides).
 const FIELD_PADDING: i32 = 20;
 
+/// Controls the reference hides as its dialog starts, whatever else is set, in the program BrailleCraft follows:
+/// View Preferences 13 "When document opened" (the full program shows 12 in its place, spec 24, 2d.1); TranSend SE
+/// 19 and 22 (shown in place of 18 and 21 only when TranSend is not licensed, spec 25, 13; BrailleCraft has no
+/// licensing, so it is the licensed state).
+const HIDDEN_AT_START: &[(i32, i32)] = &[(1034, 13), (10003, 19), (10003, 22)];
+
 /// Loads the dialog resources; call once at start.
 pub fn load_resources() -> Result<(), String> {
     let res = XmlResource::get();
@@ -181,6 +187,9 @@ impl Dlg {
     /// so its layout stays as it is; text that runs over several lines is then wrapped to its width, as Windows
     /// static text wraps by itself.
     fn fit_labels(&self) {
+        for (_, cid) in HIDDEN_AT_START.iter().filter(|(d, _)| *d == self.id) {
+            self.hide(*cid);
+        }
         if cfg!(not(windows)) {
             self.fit_drop_downs();
             self.fit_short_fields();
