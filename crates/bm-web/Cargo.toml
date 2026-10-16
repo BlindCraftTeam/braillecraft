@@ -1,0 +1,14 @@
+[package]
+name = "bm-web"
+description = "BrailleMaker in the browser: the core's translation, document files, layout and embossing for the web interface"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+bm-core = { path = "../bm-core" }
+wasm-bindgen = "=0.2.129"
