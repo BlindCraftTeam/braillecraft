@@ -23,9 +23,10 @@ impl Engine {
         Translator::from_source(source).map(Engine).map_err(error)
     }
 
-    /// Translates a text (codes written in square brackets, as the editor shows them).
+    /// Translates a text (codes written in square brackets, as the editor shows them), giving the result in the
+    /// same form: codes in brackets, a line break after each new-line and paragraph code.
     pub fn translate(&self, text: &str) -> Result<String, JsError> {
-        self.0.translate(&Shown::marked(text).to_running()).map_err(error)
+        self.0.translate(&Shown::marked(text).to_running()).map(|out| Shown::from_running(&out).text).map_err(error)
     }
 }
 
@@ -326,6 +327,15 @@ mod tests {
         assert_eq!((read.text(), read.embosser()), (",! cat".to_string(), "Index Everest-D V5".to_string()));
         let again = read_document(&read.save(",! dog")).ok().unwrap();
         assert_eq!(again.text(), ",! dog");
+    }
+
+    #[test]
+    fn translation_gives_the_editor_form() {
+        let source = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../tables/en-ueb-g2-forward.bmt")).unwrap();
+        let e = Engine::new(&source).ok().unwrap();
+        let out = e.translate("The cat.\nThe mat.").ok().unwrap();
+        assert!(!out.chars().any(|c| ('\u{1c}'..='\u{1f}').contains(&c)), "{out:?}");
+        assert_eq!(out.lines().count(), 2, "{out:?}");
     }
 
     #[test]

@@ -319,7 +319,14 @@ function buildControls(rid, form) {
       if (c.kind === "list") {
         field.size = 6;
       }
-      if (pendingLabel) {
+      if (pendingLabel && !plain(pendingLabel.label).trim()) {
+        // A blank label (the reference fills some at run time) names nothing: the field is named by the text
+        // before it, else its group.
+        controls.set(pendingLabel.id, document.createElement("span"));
+        pendingLabel = null;
+        const before = [...where.querySelectorAll(":scope > p.text")].at(-1)?.textContent;
+        field.setAttribute("aria-label", before ?? where.querySelector("legend")?.textContent ?? plain(spec.title));
+      } else if (pendingLabel) {
         const label = document.createElement("label");
         label.htmlFor = id;
         label.textContent = plain(pendingLabel.label);
@@ -352,6 +359,7 @@ function buildControls(rid, form) {
       label.append(input, document.createTextNode(plain(c.label)));
       const k = mnemonic(c.label);
       if (k) {
+        input.dataset.mnemonic = k;
         keys.push([k, input]);
       }
       el = label;
@@ -363,6 +371,7 @@ function buildControls(rid, form) {
       button.textContent = plain(c.label);
       const k = mnemonic(c.label);
       if (k) {
+        button.dataset.mnemonic = k;
         keys.push([k, button]);
       }
       el = button;
@@ -441,14 +450,20 @@ function dialogHelpers(controls) {
   };
 }
 
-// Alt with a letter moves to its control, in a dialog or on its shown page.
+// Alt with a letter, in a dialog or on its shown page, as in the desktop program's dialogs: a button's letter presses
+// it, a check box's or radio button's letter chooses it, and a label's or group's letter moves to its control.
 function wireKeys(dialog, keysNow) {
   dialog.addEventListener("keydown", (e) => {
     if (e.altKey && !e.ctrlKey && e.key.length === 1) {
-      const hit = keysNow().find(([k, el]) => k === e.key.toUpperCase() && !el.closest("[hidden]"));
+      const hit = keysNow().find(([k, el]) => k === e.key.toUpperCase() && !el.closest("[hidden]") && !el.disabled);
       if (hit) {
         e.preventDefault();
-        hit[1].focus();
+        const [letter, el] = hit;
+        el.focus();
+        // Only the control's own letter acts on it (a group's letter only moves to its first control).
+        if (el.dataset.mnemonic === letter && !(el.type === "radio" && el.checked)) {
+          el.click();
+        }
       }
     }
   });
@@ -946,6 +961,10 @@ function wirePageRange(d, radios, fields) {
   d.setRadio(radios, 0);
   d.enable(fields[0], false);
   d.enable(fields[1], false);
+  // The two fields sit beside their radio buttons in the reference and have no label of their own: each is named
+  // by its radio button.
+  d.get(fields[0]).setAttribute("aria-label", d.get(radios[3]).closest("label").textContent);
+  d.get(fields[1]).setAttribute("aria-label", d.get(radios[4]).closest("label").textContent);
   radios.forEach((r, i) =>
     d.get(r).addEventListener("change", () => {
       d.enable(fields[0], i === 3);
