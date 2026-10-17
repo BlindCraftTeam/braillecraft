@@ -128,7 +128,7 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   braille document's text can be given to screen readers (UI Automation) as Unicode braille patterns.
 - **Save As.** Formatted braille (BRF in a choice of braille encodings), PEF (Portable Embosser Format), formatted
   text in a choice of code pages (the encoding or code page chosen in the Save As dialog's own Encoding box; each
-  Windows code page written and read by Windows' own table, on every system), coded braille, refreshable braille (.lbf), LaTeX, and the older document format.
+  Windows code page written and read by Windows' own table, on every system), coded braille, refreshable braille (.lbf), HTML, LaTeX, HTML with MathJax (both HTML forms written as the original writes them, with no head, title or language on the plain HTML, and the original's fixed head on the MathJax page), and the older document format.
 - **Printing.** Print documents and braille (with interline print) through the system printer. In File, Print and
   File, Emboss, Selection lays the selected text out as a document of its own and prints or embosses all of its pages;
   a page-number range (p5, iv, 3-, -5) is matched against the pages' own numbers, nearest first with a question when

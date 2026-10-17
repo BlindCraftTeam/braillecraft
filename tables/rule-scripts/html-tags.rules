@@ -1,0 +1,21 @@
+| Codes to tags: a style begin or end code becomes a tag named by the style; every other code becomes a processing code <?$ ... `>
+| This should be run first, before italic treatment.
+| 1;1 2011-2-14 P Sullivan, from txxsgm.sbt
+| states: 1 = normal text
+|   3 = inside general (or unrecognized) begin-tag
+|   4 = inside general (or unrecognized) end-tag
+|   5 = inside processing code
+| Tags treated generally
+| Begin tags
+es=~<~~3~
+es|~~<~~3~
+.~>~3~1~
+~>~3~1~
+| End tags
+ee=~</~~4~
+ee|~~</~~4~
+.~>~4~1~
+~>~4~1~
+| Processing codes
+~<?$~~5~
+~`>~5~1~

@@ -2466,7 +2466,9 @@ const SAVE_TYPES = {
     ["Print document, older format (*.dxp)", "dxp", "older"],
     ["Formatted text (*.prf)", "prf", "formatted"],
     ["Coded text (*.txt)", "txt", "coded"],
+    ["HTML (*.htm)", "htm", "html"],
     ["LaTeX (*.tex)", "tex", "latex"],
+    ["HTML with MathJax (*.htm)", "htm", "mathjax"],
   ],
 };
 
@@ -2629,11 +2631,21 @@ async function saveAs() {
       case "refreshable":
         bytes = (await documentFile()).refreshable(storedText());
         break;
+      case "html":
+        bytes = core.html(
+          editor.value,
+          await fetchBytes("tables/rule-scripts/html-tags.rules"),
+          await fetchBytes("tables/rule-scripts/html-italics.rules"),
+          await fetchBytes("tables/rule-scripts/html-styles.rules"),
+          await fetchBytes("tables/rule-scripts/html-fix.rules"),
+        );
+        break;
       default:
-        bytes = core.latex(
+        // LaTeX, or HTML with MathJax: the text export table and that type's own rule script.
+        bytes = core[type[2]](
           editor.value,
           new TextDecoder().decode(await fetchBytes("tables/table-txxtxa-binary-forward.bmt")),
-          await fetchBytes("tables/rule-scripts/latex.rules"),
+          await fetchBytes(`tables/rule-scripts/${type[2]}.rules`),
         );
     }
     // The document itself keeps its own file and name.

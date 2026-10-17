@@ -1,0 +1,396 @@
+| Internal text to html: formatting commands
+| --
+|245*<?$&gt;`>~<li>~3~3~
+|245*<?$&gt;`>~<ul><li>~1~3~
+|245*<?$&gt;`>~<ul><li>~2~3~
+</1-1>~</p>~~1~
+</1-2>~</p>~~1~
+</1-3>~</p>~~1~
+</1-5>~</p>~~1~
+</1-6>~</p>~~1~
+</1-7>~</p>~~1~
+</1-9>~</p>~~1~
+</11-11>~</p>~~1~
+</11-13>~</p>~~1~
+</11-15>~</p>~~1~
+</11-9>~</p>~~1~
+</13-11>~</p>~~1~
+</13-13>~</p>~~1~
+</13-15>~</p>~~1~
+</13-17>~</p>~~1~
+</3-1>~</p>~~1~
+</3-3>~</p>~~1~
+</3-5>~</p>~~1~
+</3-7>~</p>~~1~
+</3-9>~</p>~~1~
+</4-6>~</p>~~1~
+</5-3>~</p>~~1~
+</5-5>~</p>~~1~
+</5-7>~</p>~~1~
+</5-9>~</p>~~1~
+</7-11>~</p>~~1~
+</7-5>~</p>~~1~
+</7-7>~</p>~~1~
+</7-9>~</p>~~1~
+</9-11>~</p>~~1~
+</9-13>~</p>~~1~
+</9-7>~</p>~~1~
+</9-9>~</p>~~1~
+</AlphabeticDivision>~</p>~~1~
+</alphabeticdivision>~</p>~~1~
+</Attribution>~</p>~~1~
+</attribution>~</p>~~1~
+</b-bodytext>~</p>~~1~
+</bb-boxbegin>~</p>~~1~
+</BB-BoxBegin>~</p>~~1~
+</bd-boxdouble>~</p>~~1~
+</BD-BoxDouble>~</p>~~1~
+</be-boxend>~</p>~~1~
+</BE-BoxEnd>~</p>~~1~
+</bh-boxcenteredhead>~</p>~~1~
+</BH-BoxCenteredHead>~</p>~~1~
+</BoxBottomText>~</p>~~1~
+</boxbottomtext>~</p>~~1~
+</boxtoptext>~</p>~~1~
+</BoxTopText>~</p>~~1~
+</brldisplay>~</p>~~1~
+</C-Caption>~</p>~~1~
+</c-caption>~</p>~~1~
+</c-contents>~</p>~~1~
+</C-Contents>~</p>~~1~
+</C1-ContentsSingleIndent>~</p>~~1~
+</c1-contentssingleindent>~</p>~~1~
+</C2-ContentsMultiIndent>~</p>~~1~
+</c2-contentsmultiindent>~</p>~~1~
+</cd-cbcdisplay>~</p>~~1~
+</CD-CBCDisplay>~</p>~~1~
+</Centered>~</p>~~1~
+</centered>~</p>~~1~
+</CF-CenteredFullLine>~</p>~~1~
+</cf-centeredfullline>~</p>~~1~
+</cg-centeredwithguidedots>~</p>~~1~
+</CG-CenteredWithGuideDots>~</p>~~1~
+</compdisplay>~</p>~~1~
+</compinline>~</code>~~~
+</cr-crossreference>~</p>~~1~
+</CR-CrossReference>~</p>~~1~
+</ct-cartoon>~</p>~~1~
+</CT-Cartoon>~</p>~~1~
+</Directions>~</p>~~1~
+</directions>~</p>~~1~
+</DirectionsNemeth>~</p>~~1~
+</directionsnemeth>~</p>~~1~
+</e-exercise>~</p>~~1~
+</E-Exercise>~</p>~~1~
+</E-ExerciseNemeth>~</p>~~1~
+</e-exercisenemeth>~</p>~~1~
+</E1-ExerciseSingleIndent>~</p>~~1~
+</e1-exercisesingleindent>~</p>~~1~
+</e1p-exercisesingleprotect>~</p>~~1~
+</E1P-ExerciseSingleProtect>~</p>~~1~
+</e2-exercisemultiindent>~</p>~~1~
+</E2-ExerciseMultiIndent>~</p>~~1~
+</E2P-ExerciseMultiProtect>~</p>~~1~
+</e2p-exercisemultiprotect>~</p>~~1~
+</EP-ExerciseNemethProtect>~</p>~~1~
+</ep-exercisenemethprotect>~</p>~~1~
+</footnote>~</p>~~1~
+</Footnote>~</p>~~1~
+</g-glossary>~</p>~~1~
+</G-Glossary>~</p>~~1~
+</G1-GlossarySingleIndent>~</p>~~1~
+</g1-glossarysingleindent>~</p>~~1~
+</g2-glossarymultiindent>~</p>~~1~
+</G2-GlossaryMultiIndent>~</p>~~1~
+</h1-headingcentered>~</center></h1>~~1~
+</h2-headingcell5>~</h2>~~1~
+</h3-headingcell7>~</h3>~~1~
+</I1-Index>~</p>~~1~
+</i1-index>~</p>~~1~
+</I1-IndexSingleIndent>~</p>~~1~
+</i1-indexsingleindent>~</p>~~1~
+</i2-indexmultiindent>~</p>~~1~
+</I2-IndexMultiIndent>~</p>~~1~
+</l-list>~</p>~~1~
+</L-List>~</p>~~1~
+</LeftFlush>~</p>~~1~
+</leftflush>~</p>~~1~
+</list>~</ul>~~1~
+</mainbody>~</p>~~1~
+</MainBody>~</p>~~1~
+</mainbodysingle>~</p>~~1~
+</MainBodySingle>~</p>~~1~
+</NE-NewPageEven>~</p>~~1~
+</ne-newpageeven>~</p>~~1~
+</nn-newpagenext>~</p>~~1~
+</NN-NewPageNext>~</p>~~1~
+</no-newpageodd>~</p>~~1~
+</NO-NewPageOdd>~</p>~~1~
+</noteseparationline>~</p>~~1~
+</NoteSeparationLine>~</p>~~1~
+</p-poetry>~</p>~~1~
+</P-Poetry>~</p>~~1~
+</p>~</p>~~1~
+</P1-Poem1>~</p>~~1~
+</p1-poem1>~</p>~~1~
+</p2-poem2>~</p>~~1~
+</P2-Poem2>~</p>~~1~
+</P3-Poem3>~</p>~~1~
+</p3-poem3>~</p>~~1~
+</p4-poem4>~</p>~~1~
+</P4-Poem4>~</p>~~1~
+</P5-Poem5>~</p>~~1~
+</p5-poem5>~</p>~~1~
+</P6-Poem6>~</p>~~1~
+</p6-poem6>~</p>~~1~
+</para.continue>~</p>~~1~
+</para>~</p>~~1~
+</PP-ProsePlay>~</p>~~1~
+</pp-proseplay>~</p>~~1~
+</prelimpagenumber>~</p>~~1~
+</PrelimPageNumber>~</p>~~1~
+</prelimpagenumbersingle>~</p>~~1~
+</PrelimPageNumberSingle>~</p>~~1~
+</ps-prosestage>~</p>~~1~
+</PS-ProseStage>~</p>~~1~
+</quote>~</blockquote>~~1~
+</Quote>~</p>~~1~
+</refpagenemeth>~</p>~~1~
+</RefPageNemeth>~</p>~~1~
+</refpagenumber>~</p>~~1~
+</RefPageNumber>~</p>~~1~
+</RefPageUEBSwitch>~</p>~~1~
+</refpageuebswitch>~</p>~~1~
+</rf-rightflush>~</p>~~1~
+</RF-RightFlush>~</p>~~1~
+</RunningHead>~</p>~~1~
+</runninghead>~</p>~~1~
+</stairsteptable>~</p>~~1~
+</StairstepTable>~</p>~~1~
+</tg-key>~</p>~~1~
+</TG-Key>~</p>~~1~
+</tp.genaral>~</p>|013|010</div>~~1~
+</tp.title>~</p>|013|010</div>~~1~
+</transcribergeneratedpagenumber>~</p>~~1~
+</TranscriberGeneratedPageNumber>~</p>~~1~
+</TranscriberNote>~</p>~~1~
+</transcribernote>~</p>~~1~
+</VP-VersePlay>~</p>~~1~
+</vp-verseplay>~</p>~~1~
+</VS-VerseStage>~</p>~~1~
+</vs-versestage>~</p>~~1~
+xx<?$#~  ~1~1~
+xx<?$#~  ~3~3~
+xx<?$#~|013|010<table><td>~1~2~
+<?$#~<td>~2~2~
+<?$#1`>~  ~3~3~
+<?$#1`>~|013|010<table><td>~1~2~
+<?$#1`>~<td>~2~2~
+<?$&gt;`>~ ~~~
+<?$&lt;`>~|013|010<br>~~1~
+<?$<`>~~2~2~
+<?$<`>~~~~
+<?$>`>~<td>~2~2~
+<?$>`>~~~~
+<?$fr;p|126".`>~  ~~1~
+<?$fte|126b`>~</b>~~~
+<?$fte|126i`>~</i>~~~
+<?$fte|126u`>~</u>~~~
+<?$fts|126b`>~<b>~~~
+<?$fts|126i`>~<i>~~~
+<?$fts|126u`>~<u>~~~
+<?$hde`>~</h2>~~1~
+<?$hds`>~|013|010<h2>~~1~
+<?$hl1`>~|013|010<li style="text-indent: 0px">~~~
+<?$hl2`>~|013|010<li style="text-indent: 25px">~~~
+<?$hl3`>~|013|010<li style="text-indent: 50px">~~~
+<?$hl4`>~|013|010<li style="text-indent: 75px">~~~
+<?$htbe`>~</td></tr>|013|010</table>~~1~
+<?$htbs;r:0:0:b:n:a`>~<table>|013|010<tr><td>~~2~
+<?$htbs`>~<table>|013|010<tr><td>~~2~
+<?$l`>~|013|010<tr><td>~2~2~
+<?$l`>~</p><p>~~~
+<?$p`>~</p><p>~~~
+<?$pg`>~|013|010<br clear="all" style="page-break-before:always"/>|013|010~~~
+<?$tle`>~</h2>~~1~
+<?$tls`>~<h2>~~1~
+<1-1>~|013|010<p style="margin-left: 0px; text-indent: 0px">~~1~
+<1-2>~|013|010<p style="margin-left: 0px; text-indent: 0px">~~1~
+<1-3>~|013|010<p style="margin-left: 25px; text-indent: -25px">~~1~
+<1-5>~|013|010<p style="margin-left: 50px; text-indent: -50px">~~1~
+<1-6>~|013|010<p style="margin-left: 50px; text-indent: -50px">~~1~
+<1-7>~|013|010<p style="margin-left: 75px; text-indent: -75px">~~1~
+<1-9>~|013|010<p style="margin-left: 100px; text-indent: -100px">~~1~
+<11-11>~|013|010<p style="margin-left: 125px; text-indent: 0px">~~1~
+<11-13>~|013|010<p style="margin-left: 150px; text-indent: -25px">~~1~
+<11-15>~|013|010<p style="margin-left: 175px; text-indent: -50px">~~1~
+<11-9>~|013|010<p style="margin-left: 100px; text-indent: 25px">~~1~
+<13-11>~|013|010<p style="margin-left: 125px; text-indent: 25px">~~1~
+<13-13>~|013|010<p style="margin-left: 150px; text-indent: 0px">~~1~
+<13-15>~|013|010<p style="margin-left: 175px; text-indent: -25px">~~1~
+<13-17>~|013|010<p style="margin-left: 200px; text-indent: -50px">~~1~
+<3-1>~|013|010<p style="margin-left: 0px; text-indent: 25px">~~1~
+<3-3>~|013|010<p style="margin-left: 25px; text-indent: 0px">~~1~
+<3-5>~|013|010<p style="margin-left: 50px; text-indent: -25px">~~1~
+<3-7>~|013|010<p style="margin-left: 75px; text-indent: -50px">~~1~
+<3-9>~|013|010<p style="margin-left: 100px; text-indent: -75px">~~1~
+<4-6>~|013|010<p style="margin-left: 50px; text-indent: -25px">~~1~
+<5-3>~|013|010<p style="margin-left: 25px; text-indent: 25px">~~1~
+<5-5>~|013|010<p style="margin-left: 50px; text-indent: 0px">~~1~
+<5-7>~|013|010<p style="margin-left: 75px; text-indent: -25px">~~1~
+<5-9>~|013|010<p style="margin-left: 100px; text-indent: -50px">~~1~
+<7-11>~|013|010<p style="margin-left: 125px; text-indent: -50px">~~1~
+<7-5>~|013|010<p style="margin-left: 50px; text-indent: 25px">~~1~
+<7-7>~|013|010<p style="margin-left: 75px; text-indent: 0px">~~1~
+<7-9>~|013|010<p style="margin-left: 100px; text-indent: -25px">~~1~
+<9-11>~|013|010<p style="margin-left: 125px; text-indent: -25px">~~1~
+<9-13>~|013|010<p style="margin-left: 150px; text-indent: -50px">~~1~
+<9-7>~|013|010<p style="margin-left: 75px; text-indent: 25px">~~1~
+<9-9>~|013|010<p style="margin-left: 100px; text-indent: 0px">~~1~
+<AlphabeticDivision>~|013|010<p>~~1~
+<alphabeticdivision>~|013|010<p>~~1~
+<attribution>~|013|010<p>~~1~
+<Attribution>~|013|010<p>~~1~
+<b-bodytext>~|013|010<p>~~1~
+<BB-BoxBegin>~|013|010<p>~~1~
+<bb-boxbegin>~|013|010<p>~~1~
+<BD-BoxDouble>~|013|010<p>~~1~
+<bd-boxdouble>~|013|010<p>~~1~
+<BE-BoxEnd>~|013|010<p>~~1~
+<be-boxend>~|013|010<p>~~1~
+<bh-boxcenteredhead>~|013|010<p>~~1~
+<BH-BoxCenteredHead>~|013|010<p>~~1~
+<boxbottomtext>~|013|010<p>~~1~
+<BoxBottomText>~|013|010<p>~~1~
+<BoxTopText>~|013|010<p>~~1~
+<boxtoptext>~|013|010<p>~~1~
+<brldisplay>~|013|010<p>~~1~
+<C-Caption>~|013|010<p>~~1~
+<c-caption>~|013|010<p>~~1~
+<C-Contents>~|013|010<p>~~1~
+<c-contents>~|013|010<p>~~1~
+<C1-ContentsSingleIndent>~|013|010<p>~~1~
+<c1-contentssingleindent>~|013|010<p>~~1~
+<C2-ContentsMultiIndent>~|013|010<p>~~1~
+<c2-contentsmultiindent>~|013|010<p>~~1~
+<CD-CBCDisplay>~|013|010<p>~~1~
+<cd-cbcdisplay>~|013|010<p>~~1~
+<Centered>~|013|010<p>~~1~
+<centered>~|013|010<p>~~1~
+<cf-centeredfullline>~|013|010<p>~~1~
+<CF-CenteredFullLine>~|013|010<p>~~1~
+<CG-CenteredWithGuideDots>~|013|010<p>~~1~
+<cg-centeredwithguidedots>~|013|010<p>~~1~
+<compdisplay>~|013|010<p>~~1~
+<compinline>~<code>~~~
+<CR-CrossReference>~|013|010<p>~~1~
+<cr-crossreference>~|013|010<p>~~1~
+<ct-cartoon>~|013|010<p>~~1~
+<CT-Cartoon>~|013|010<p>~~1~
+<Directions>~|013|010<p>~~1~
+<directions>~|013|010<p>~~1~
+<DirectionsNemeth>~|013|010<p>~~1~
+<directionsnemeth>~|013|010<p>~~1~
+<e-exercise>~|013|010<p>~~1~
+<E-Exercise>~|013|010<p>~~1~
+<E-ExerciseNemeth>~|013|010<p>~~1~
+<e-exercisenemeth>~|013|010<p>~~1~
+<e1-exercisesingleindent>~|013|010<p>~~1~
+<E1-ExerciseSingleIndent>~|013|010<p>~~1~
+<E1P-ExerciseSingleProtect>~|013|010<p>~~1~
+<e1p-exercisesingleprotect>~|013|010<p>~~1~
+<E2-ExerciseMultiIndent>~|013|010<p>~~1~
+<e2-exercisemultiindent>~|013|010<p>~~1~
+<e2p-exercisemultiprotect>~|013|010<p>~~1~
+<E2P-ExerciseMultiProtect>~|013|010<p>~~1~
+<ep-exercisenemethprotect>~|013|010<p>~~1~
+<EP-ExerciseNemethProtect>~|013|010<p>~~1~
+<Footnote>~|013|010<p>~~1~
+<footnote>~|013|010<p>~~1~
+<G-Glossary>~|013|010<p>~~1~
+<g-glossary>~|013|010<p>~~1~
+<G1-GlossarySingleIndent>~|013|010<p>~~1~
+<g1-glossarysingleindent>~|013|010<p>~~1~
+<G2-GlossaryMultiIndent>~|013|010<p>~~1~
+<g2-glossarymultiindent>~|013|010<p>~~1~
+<h1-headingcentered>~|013|010<h1><center>~~1~
+<h2-headingcell5>~|013|010<h2>~~1~
+<h3-headingcell7>~|013|010<h3>~~1~
+<I1-Index>~|013|010<p>~~1~
+<i1-index>~|013|010<p>~~1~
+<i1-indexsingleindent>~|013|010<p>~~1~
+<I1-IndexSingleIndent>~|013|010<p>~~1~
+<i2-indexmultiindent>~|013|010<p>~~1~
+<I2-IndexMultiIndent>~|013|010<p>~~1~
+<l-list>~|013|010<p>~~1~
+<L-List>~|013|010<p>~~1~
+<leftflush>~|013|010<p>~~1~
+<LeftFlush>~|013|010<p>~~1~
+<list>~|013|010<ul>~~3~
+<MainBody>~|013|010<p>~~1~
+<mainbody>~|013|010<p>~~1~
+<mainbodysingle>~|013|010<p>~~1~
+<MainBodySingle>~|013|010<p>~~1~
+<ne-newpageeven>~|013|010<p>~~1~
+<NE-NewPageEven>~|013|010<p>~~1~
+<nn-newpagenext>~|013|010<p>~~1~
+<NN-NewPageNext>~|013|010<p>~~1~
+<no-newpageodd>~|013|010<p>~~1~
+<NO-NewPageOdd>~|013|010<p>~~1~
+<NoteSeparationLine>~|013|010<p>~~1~
+<noteseparationline>~|013|010<p>~~1~
+<P-Poetry>~|013|010<p>~~1~
+<p-poetry>~|013|010<p>~~1~
+<p>~|013|010<p>~~1~
+<p1-poem1>~|013|010<p>~~1~
+<P1-Poem1>~|013|010<p>~~1~
+<P2-Poem2>~|013|010<p>~~1~
+<p2-poem2>~|013|010<p>~~1~
+<p3-poem3>~|013|010<p>~~1~
+<P3-Poem3>~|013|010<p>~~1~
+<p4-poem4>~|013|010<p>~~1~
+<P4-Poem4>~|013|010<p>~~1~
+<P5-Poem5>~|013|010<p>~~1~
+<p5-poem5>~|013|010<p>~~1~
+<P6-Poem6>~|013|010<p>~~1~
+<p6-poem6>~|013|010<p>~~1~
+<para.continue>~|013|010<p>~~1~
+<para>~|013|010<p>~~1~
+<pp-proseplay>~|013|010<p>~~1~
+<PP-ProsePlay>~|013|010<p>~~1~
+<PrelimPageNumber>~|013|010<p>~~1~
+<prelimpagenumber>~|013|010<p>~~1~
+<prelimpagenumbersingle>~|013|010<p>~~1~
+<PrelimPageNumberSingle>~|013|010<p>~~1~
+<ps-prosestage>~|013|010<p>~~1~
+<PS-ProseStage>~|013|010<p>~~1~
+<quote>~|013|010<blockquote>~~1~
+<Quote>~|013|010<blockquote>~~1~
+<refpagenemeth>~|013|010<p>~~1~
+<RefPageNemeth>~|013|010<p>~~1~
+<RefPageNumber>~|013|010<p>~~1~
+<refpagenumber>~|013|010<p>~~1~
+<RefPageUEBSwitch>~|013|010<p>~~1~
+<refpageuebswitch>~|013|010<p>~~1~
+<RF-RightFlush>~|013|010<p>~~1~
+<rf-rightflush>~|013|010<p>~~1~
+<RunningHead>~|013|010<p>~~1~
+<runninghead>~|013|010<p>~~1~
+<StairstepTable>~|013|010<p>~~1~
+<stairsteptable>~|013|010<p>~~1~
+<tg-key>~|013|010<p>~~1~
+<TG-Key>~|013|010<p>~~1~
+<tp.general>~<div style='font-size:26.0pt;border:none;border-bottom:solid #4F81BD 1.0pt;padding:0in 0in 4.0pt 0in;'>|013|010<p class=MsoTitle>|013|010~~1~
+<tp.title>~<div style='font-size:26.0pt;border:none;border-bottom:solid #4F81BD 1.0pt;padding:0in 0in 4.0pt 0in;'>|013|010<p class=MsoTitle>|013|010~~1~
+<transcribergeneratedpagenumber>~|013|010<p>~~1~
+<TranscriberGeneratedPageNumber>~|013|010<p>~~1~
+<TranscriberNote>~|013|010<p>~~1~
+<transcribernote>~|013|010<p>~~1~
+<vp-verseplay>~|013|010<p>~~1~
+<VP-VersePlay>~|013|010<p>~~1~
+<vs-versestage>~|013|010<p>~~1~
+<VS-VerseStage>~|013|010<p>~~1~
+<?$<`>~|013|010<br>~~1~
+<?$pv-1`>~~~1~
+<?$pv1|126t`>~~1~
+

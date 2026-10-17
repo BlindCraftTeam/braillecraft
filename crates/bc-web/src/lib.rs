@@ -1237,6 +1237,24 @@ pub fn latex(text: &str, table: &str, script: &[u8]) -> Result<Vec<u8>, JsError>
     bc_core::rule_script::RuleScript::from_bytes(script, None).map_err(error)?.run(&middle).map_err(error)
 }
 
+/// Save As HTML with MathJax (.htm) for a print document (spec 21): as `latex` with the MathJax rule script
+/// (mathjax.rules), between the fixed head and foot the original writes.
+#[wasm_bindgen]
+pub fn mathjax(text: &str, table: &str, script: &[u8]) -> Result<Vec<u8>, JsError> {
+    let body = latex(text, table, script)?;
+    Ok(bc_core::html_export::with_mathjax(&body))
+}
+
+/// Save As HTML (.htm) for a print document (spec 21): the body as the document file stores it through the HTML
+/// recipe (bc_core::html_export) with its four rule scripts in `bc_core::html_export::SCRIPTS` order.
+#[wasm_bindgen]
+pub fn html(text: &str, tags: &[u8], italics: &[u8], styles: &[u8], fix: &[u8]) -> Result<Vec<u8>, JsError> {
+    let body = dxfile::body_bytes(&shown_of(text).to_running());
+    let open = |b: &[u8]| bc_core::rule_script::RuleScript::from_bytes(b, None).map_err(error);
+    let mut scripts = [open(tags)?, open(italics)?, open(styles)?, open(fix)?];
+    bc_core::html_export::html(&body, &mut scripts).map_err(error)
+}
+
 /// Braille text (editor form) from one encoding to another, cell for cell, as Global, Internationalization changes
 /// the encoding of braille documents; the codes keep their text. `from` and `to` are JSON lists of the 64 cells'
 /// characters as each encoding lists them ("aA" for a cell shown as a or A); a Unicode braille cell is a cell too, and

@@ -44,19 +44,49 @@ thread_local! {
 /// used, the body as the document file stores it goes on unchanged), then the LaTeX rule script, with nothing written
 /// before or after what the script writes.
 pub fn latex(running: &str) -> Result<Vec<u8>, String> {
+    let middle = text_export(running);
+    let mut script = rule_script("latex.rules")?;
+    script.run(&middle).map_err(|e| e.to_string())
+}
+
+/// An HTML with MathJax file from a print document's running text, as the reference program writes it (spec 21):
+/// the text through the text export table as for LaTeX, then the MathJax rule script, between the fixed head and
+/// foot the original writes.
+pub fn mathjax(running: &str) -> Result<Vec<u8>, String> {
+    let middle = text_export(running);
+    let mut script = rule_script("mathjax.rules")?;
+    let body = script.run(&middle).map_err(|e| e.to_string())?;
+    Ok(bc_core::html_export::with_mathjax(&body))
+}
+
+/// An HTML file from a print document's running text (spec 21): the body as the document file stores it through the
+/// HTML recipe (bc_core::html_export).
+pub fn html(running: &str) -> Result<Vec<u8>, String> {
+    let body = bc_core::dxfile::body_bytes(running);
+    let names = bc_core::html_export::SCRIPTS;
+    let mut scripts = [rule_script(names[0])?, rule_script(names[1])?, rule_script(names[2])?, rule_script(names[3])?];
+    bc_core::html_export::html(&body, &mut scripts)
+}
+
+/// The running text through the text export table (txxtxa with the binary scan table); when that table cannot be
+/// used, the body as the document file stores it, unchanged.
+fn text_export(running: &str) -> Vec<u8> {
     let translated = TABLES.with(|t| {
         let t = t.borrow();
         let tr = t.as_ref()?.translator_with_scan("txxtxa", "binary").ok()?;
         tr.translate_marked(running, None, None).ok()
     });
     // The engine writes bytes; its text holds one character per byte.
-    let middle: Vec<u8> = match translated {
+    match translated {
         Some(s) => s.chars().map(|c| c as u32 as u8).collect(),
         None => bc_core::dxfile::body_bytes(running),
-    };
+    }
+}
+
+/// A rule script from the shipped folder (tables/rule-scripts).
+fn rule_script(name: &str) -> Result<bc_core::rule_script::RuleScript, String> {
     let folder = RULES.with(|r| r.borrow().clone()).ok_or("The rule scripts were not found.")?;
-    let mut script = bc_core::rule_script::RuleScript::open(&folder.join("latex.rules")).map_err(|e| format!("latex.rules: {e}"))?;
-    script.run(&middle).map_err(|e| e.to_string())
+    bc_core::rule_script::RuleScript::open(&folder.join(name)).map_err(|e| format!("{name}: {e}"))
 }
 
 /// A coded braille (.bru) or coded text (.txt) file from a document body as the document file stores it (codes as

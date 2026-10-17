@@ -1183,6 +1183,10 @@ enum SaveType {
     Coded,
     /// LaTeX (.tex, spec 22).
     Latex,
+    /// HTML (.htm, spec 21): the HTML recipe.
+    Html,
+    /// HTML with MathJax (.htm, spec 21): the text export table and the MathJax script between a fixed head and foot.
+    HtmlMathJax,
     /// Portable Embosser Format (.pef, bc_core::pef): not in the reference program; the version 1 scope asks for it.
     Pef,
 }
@@ -1205,7 +1209,9 @@ fn save_types(braille: bool) -> &'static [(&'static str, &'static str, SaveType)
             ("Print document, older format (*.dxp)", "dxp", SaveType::OlderDocument),
             ("Formatted text (*.prf)", "prf", SaveType::Formatted),
             ("Coded text (*.txt)", "txt", SaveType::Coded),
+            ("HTML (*.htm)", "htm", SaveType::Html),
             ("LaTeX (*.tex)", "tex", SaveType::Latex),
+            ("HTML with MathJax (*.htm)", "htm", SaveType::HtmlMathJax),
         ]
     }
 }
@@ -1285,7 +1291,9 @@ fn save(key: Option<u64>, as_new: bool) -> bool {
         SaveType::Formatted => write_formatted(key, &chosen, braille, item.max(0) as usize),
         SaveType::Refreshable => write_refreshable(key, &chosen),
         SaveType::Coded => write_coded(key, &chosen),
-        SaveType::Latex => write_latex(key, &chosen),
+        SaveType::Latex => write_text_export(key, &chosen, translation::latex),
+        SaveType::Html => write_text_export(key, &chosen, translation::html),
+        SaveType::HtmlMathJax => write_text_export(key, &chosen, translation::mathjax),
         SaveType::Pef => write_pef(key, &chosen),
         SaveType::OlderDocument => write_document(key, &chosen, 0),
         SaveType::Document => write_document(key, &chosen, 1),
@@ -1461,10 +1469,11 @@ fn prf_bytes(pages: &[bc_core::format::Page], code_page: &str) -> Vec<u8> {
     bc_core::format::formatted_text_file(pages, code_page)
 }
 
-/// Save As LaTeX (.tex) for a print document (translation::latex). The document keeps its own file and name.
-fn write_latex(key: u64, path: &Path) -> bool {
+/// Save As LaTeX (.tex), HTML (.htm) or HTML with MathJax (.htm) for a print document: the running text through
+/// `make` (translation::latex, html, mathjax). The document keeps its own file and name.
+fn write_text_export(key: u64, path: &Path, make: fn(&str) -> Result<Vec<u8>, String>) -> bool {
     let Some(running) = app::with(|a| a.index_of(key).map(|i| a.docs[i].shown().to_running())) else { return false };
-    let out = match translation::latex(&running) {
+    let out = match make(&running) {
         Ok(o) => o,
         Err(e) => {
             message(&e);

@@ -1,0 +1,2650 @@
+| Fix the html; also convert math to LaTeX for Word
+| This runs after the built-in html step and the formatting script
+| 1;1 2015-3-19 cln
+| 1;2 2015-6-25 cln: improving support for [e], [us], [ue], [os], and [oe].
+|     also adding support for the TextWithinMath style.
+| 1;3 2015-6-28 cln: changing style name TextWithinMath to math-TextInMath.
+| 1;4 2015-06-29 cln: fixing support for math-TextInMath style.
+|     Also adding various function names (although cannot be absolutely sure if these are meant as function names).
+| 1;5 2017-07-29 improvements for math not enclosed by [ts] and [te] or math style
+| 1;6 2019-03-27 improvements for the OneWordBridge style
+| 1;7 2019-12-18 support for the new math-separation style
+|     Also changing support for the math-TextInMath style.
+| 1;9 - supporting [kps] and [kpe] codes with gather* structure.
+| 1;10 - cln  preventing the insertion of $ $ for start math style followed immediately by start math-separation style.
+| 1;11 - dfh fix glitch in ext2htm <it> should be underbar
+| 1;12 2024-04-02/cln - some fixes for the OneWordBridge style
+| states: 1 = normal text
+|   6 = inside of math notation
+|   7 = temporary math notation 
+|   8 = temporary math notation, one level up 
+|   9 = temporary math notation, two levels up 
+|   11 = after \mathop{ before termination
+|   12 = after \mathop{ before termination in temporary math notation
+|   13 = after \mathop{ before termination in temporary math notation, one level up
+|   14 = after \text{ before termination 
+| 18 = between kps and kpe codes in technical notation
+| 19 = after start math-separation, before end math-separation 
+| Exception for math Codes in the math-separation style
+<it>~_~1~1~
+</it>~~1~1~
+ <?$tcs`><?$ts`> ~$~1~6~
+<?$tcs`><?$ts`> ~$~1~6~
+ <?$tcs`><?$ts`>~$~1~6~
+<?$tcs`>~~6~
+<?$ts`>~~6~
+<?$te`>~~19~
+<math><math-separation>~~1~19~
+<math> <?$tcs`><?$ts`> <math-separation>~~1~19~
+<math><?$tcs`><?$ts`> <math-separation>~~~19~
+ <math-separation>~$ ~~19~
+<math-separation>~$~~19~
+| xxx
+<math> <?$tcs`><?$ts`> ~$~1~6~
+<math> <?$tcs`><?$ts`>~$~1~6~
+<math><?$tcs`><?$ts`> ~$~1~6~
+| Math Codes (to LaTex)
+<?$ts`><?$te`>~~~~
+<?$ts`>~$~1~6~
+<math> <?$tcs`><?$ts`> <math-separation>~1~~19~
+<math> ~$~1~6~
+<math>~$~1~6~
+<math> <?$tcs`><?$ts`> ~$~1~6~
+<math> <?$tcs`><?$ts`>~$~1~6~
+<math><?$tcs`><?$ts`> ~$~1~6~
+<?$ts`>~~6~6~
+<math>~~6~6~
+<?$te`>~$~6~1~
+<?$te`>~~1~1~
+</math>~$~6~1~
+</math>~~1~1~
+<math-TextInMath></math-TextInMath>~~6~6~
+<math-TextInMath>~\text{~6~14~
+</math-TextInMath>~}~14~6~
+<?$tcs`>~~~~
+<math-separation></math-separation>~~6~6~
+<math-separation>~$~6~19~
+</math-separation>~$~19~6~
+<?$ts`><br>~<br>~6~6~
+</onewordbridge><?$tcs`><?$ts`> ~$~4~6~
+</onewordbridge><?$tcs`><?$ts`>~$~4~6~
+</onewordbridge>~$~4~6~
+ <onewordbridge>~~19~
+</onewordbridge> ~~19~
+</math-separation><onewordbridge>~~19~1~
+ <onewordbridge>~$ ~6~4~
+<onewordbridge>~$ ~6~4~
+<?$tce`>~~~1~
+<?$kps`>~~6~18~
+<?$kpe`>~~18~6~
+<br>~ \\ ~18~18~
+<br><?$te`>~$ <br>~6~1~
+| <br>~$ <br> $~6~6~
+<?$p`><?$te`>~$ <?$p`>~6~1~
+<?$p`>~$ <?$p`> $~6~6~
+<p class=MsoNormal><?$te`>~$ <p class=MsoNormal>~6~1~
+| <p class=MsoNormal>~$ <p class=MsoNormal> $~6~6~
+| Complex math structures inside or outside [ts] and [te]
+<?$sqrts`>~\sqrt{~6~6~
+<?$sqrts`>~\sqrt{~18~18~
+<?$sqrts`>~$\sqrt{~1~7~
+<?$sqrts`>~\sqrt{~7~8~(~
+<?$sqrte`>~}~6~6~
+<?$sqrte`>~}~18~18~
+<?$sqrte`>~}$~7~1~
+<?$sqrte`>~}~8~7~)~
+<?$ixrts`>~\sqrt[~6~6~ 
+<?$ixrts`>~\sqrt[~18~18~ 
+<?$ixrts`>~$\sqrt[~1~7~ 
+<?$ixrts`>~\sqrt[~7~8~(~ 
+<?$ixrtd`>~]{~6~6~ 
+<?$ixrtd`>~]{~18~18~ 
+<?$ixrtd`>~]{~7~7~ 
+<?$ixrtd`>~]{~8~8~ 
+<?$ixrte`>~}~6~6~
+<?$ixrte`>~}~18~18~
+<?$ixrte`>~}$~7~1~
+<?$ixrte`>~}~8~7~)~
+<?$ps`>~^{~6~6~
+<?$ps`>~^{~18~18~
+<?$ps`>~$^{~1~7~
+<?$ps`>~^{~7~8~(~
+<?$ps`>~^{~8~9~(~
+<?$pe`>~}~6~6~
+<?$pe`>~}~18~18~
+<?$pe`>~}$~7~1~
+<?$pe`>~}~8~7~)~
+<?$pe`>~}~9~8~)~
+<?$bs`>~_{~6~6~
+<?$bs`>~_{~18~18~
+<?$bs`>~$_{~1~7~
+<?$bs`>~_{~7~8~(~
+<?$bs`>~_{~8~9~(~
+<?$be`>~}~6~6~
+<?$be`>~}~18~18~
+<?$be`>~}$~7~1~
+<?$be`>~}~8~7~)~
+<?$be`>~}~9~8~)~
+<?$fs`>~\frac{~6~6~
+<?$fs`>~\frac{~18~18~
+<?$fs`>~$\frac{~1~7~
+<?$fs`>~\frac{~7~8~(~
+<?$fs`>~\frac{~8~9~(~
+<?$fs0`>~\frac{~6~6~
+<?$fs0`>~\frac{~18~18~
+<?$fs0`>~$\frac{~1~7~
+<?$fs0`>~\frac{~7~8~(~
+<?$fs0`>~\frac{~8~9~(~
+<?$fl`>~}{~6~6~
+<?$fl`>~}{~18~18~
+<?$fl`>~}{~7~7~
+<?$fl`>~}{~8~8~
+<?$fl`>~}{~9~9~
+<?$fls`>~}{~6~6~
+<?$fls`>~}{~18~18~
+<?$fls`>~}{~7~7~
+<?$fls`>~}{~8~8~
+<?$fls`>~}{~9~9~
+<?$fe`>~}~6~6~
+<?$fe`>~}~18~18~
+<?$fe`>~}$~7~1~)~
+<?$fe`>~}~8~7~)~
+<?$fe`>~}~9~8~)~
+<?$fe0`>~}~6~6~
+<?$fe0`>~}~18~18~
+<?$fe0`>~}$~7~1~)~
+<?$fe0`>~}~8~7~)~
+<?$fe0`>~}~9~8~)~
+<?$e`><?$tcs`><?$ts`>lim~$\lim \limits ~1~6~
+<?$e`>lim~\lim \limits ~6~6~
+<?$e`>lim~\lim \limits ~18~18~
+<?$e`>lim~$\lim \limits ~1~7~
+<?$e`>lim~\lim \limits ~7~8~(~
+<?$e`>lim~\lim \limits ~8~9~(~
+<?$e`><?$tcs`><?$ts`>&#x220f;~$\prod \limits ~1~6~  | 220f 220f N-ary product
+<?$e`>&#x220f;~\prod \limits ~6~6~  | 220f 220f N-ary product
+<?$e`>&#x220f;~\prod \limits ~18~18~  | 220f 220f N-ary product
+<?$e`>&#x220f;~$\prod \limits ~1~7~  | 220f 220f N-ary product
+<?$e`>&#x220f;~\prod \limits ~7~8~(~  | 220f 220f N-ary product
+<?$e`><?$tcs`><?$ts`>&#x03a0;~$\prod \limits ~1~6~  | 03a0 Pi
+<?$e`><?$tcs`><?$ts`>&#x03a0;~$\prod \limits ~6~6~  | 03a0 Pi
+<?$e`><?$tcs`><?$ts`>&#x03a0;~$\prod \limits ~18~18~  | 03a0 Pi
+<?$e`>&#x03a0;~$\prod \limits ~1~7~  | 03a0 Pi
+<?$e`><?$tcs`><?$ts`>&#x2210;~$\coprod \limits ~1~6~  | 2210 2210 N-ary coproduct
+<?$e`>&#x2210;~\coprod \limits ~6~6~  | 2210 2210 N-ary coproduct
+<?$e`>&#x2210;~\coprod \limits ~18~18~  | 2210 2210 N-ary coproduct
+<?$e`>&#x2210;~$\coprod \limits ~1~7~  | 2210 2210 N-ary coproduct
+<?$e`>&#x2210;~\coprod \limits ~7~8~(~  | 2210 2210 N-ary coproduct
+<?$e`><?$tcs`><?$ts`>&#x2211;~$\sum \limits ~1~6~  | 2211 2211 N-ary summation
+<?$e`>&#x2211;~\sum \limits ~6~6~  | 2211 2211 N-ary summation
+<?$e`>&#x2211;~\sum \limits ~18~18~  | 2211 2211 N-ary summation
+<?$e`>&#x2211;~$\sum \limits ~1~7~  | 2211 2211 N-ary summation
+<?$e`>&#x2211;~\sum \limits ~7~8~(~  | 2211 2211 N-ary summation
+<?$e`>&#x2211;~\sum \limits ~8~9~(~  | 2211 2211 N-ary summation
+<?$e`><?$tcs`><?$ts`>&#x03a3;~$\sum \limits ~1~6~  | 2211 03a3 N-ary summation
+<?$e`>&#x03a3;~\sum \limits ~6~6~  | 2211 03a3 N-ary summation
+<?$e`>&#x03a3;~\sum \limits ~18~18~  | 2211 03a3 N-ary summation
+<?$e`>&#x03a3;~$\sum \limits ~1~7~  | 2211 03a3 N-ary summation
+<?$e`>&#x03a3;~\sum \limits ~7~8~(~  | 2211 03a3 N-ary summation
+<?$e`>~\mathop{~6~11~
+<?$e`>~$\mathop{~1~12~
+<?$e`>~\mathop{~7~13~(~
+| xxx
+<?$e`>~\mathop{~8~14~(~
+&#x220f;~\prod ~6~6~  | 220f 220f N-ary product
+&#x220f;~\prod ~18~18~  | 220f 220f N-ary product
+&#x2210;~\coprod ~6~6~  | 2210 2210 N-ary coproduct
+&#x2211;~\sum ~6~6~  | 2211 2211 N-ary summation
+&#x2211;~\sum ~18~18~  | 2211 2211 N-ary summation
+| xxx
+<?$us`>~_{~6~6~
+<?$us`>~_{~18~18~
+<?$us`>~} \limits _{~11~6~
+<?$us`>~} \limits _{~12~7~
+<?$us`>~} \limits _{~13~8~)~
+<?$us`>~} \limits _{~14~9~)~
+<?$us`>~_{~7~7~
+<?$us`>~_{~8~8~
+<?$us`>~_{~9~9~
+<?$ue`>~}~6~6~
+<?$ue`>~}~18~18~
+<?$ue`><?$os`>~}^{~7~7~
+<?$ue`><?$os`>~}^{~8~8~
+<?$ue`><?$os`>~}^{~9~9~
+<?$ue`>~}~7~1~
+<?$ue`>~}~8~7~)~
+<?$ue`>~}~9~8~)~
+<?$os`>~^{~6~6~
+<?$os`>~^{~18~18~
+<?$os`>~} \limits ^{~11~6~
+<?$os`>~} \limits ^{~12~7~
+<?$os`>~} \limits ^{~13~8~)~
+<?$os`>~} \limits ^{~14~9~)~
+<?$os`>~}^{~7~7~
+<?$os`>~}^{~8~8~
+<?$os`>~}^{~9~9~
+<?$oe`>~}~6~6~
+<?$oe`>~}~18~18~
+<?$oe`>~}~7~1~
+<?$oe`>~}~8~7~)~
+<?$oe`>~}~9~8~)~
+| mode 6 rules
+sin ~\sin ~6~6~
+sin|010~\sin|010~6~6~
+sin<?$ps`>~\sin^{~6~6~
+cos ~\cos ~6~6~
+cos|010~\cos|010~6~6~
+cos<?$ps`>~\cos^{~6~6~
+tan ~\tan ~6~6~
+tan|010~\tan|010~6~6~
+tan<?$ps`>~\tan^{~6~6~
+cot ~\cot ~6~6~
+cot|010~\cot|010~6~6~
+cot<?$ps`>~\cot^{~6~6~
+sec ~\sec ~6~6~
+sec|010~\sec|010~6~6~
+sec<?$ps`>~\sec^{~6~6~
+csc ~\csc ~6~6~
+csc|010~\csc|010~6~6~
+csc<?$ps`>~\csc^{~6~6~
+sinh ~\sinh ~6~6~
+sinh|010~\sinh|010~6~6~
+sinh<?$ps`>~\sinh^{~6~6~
+cosh ~\cosh ~6~6~
+cosh|010~\cosh|010~6~6~
+cosh<?$ps`>~\cosh^{~6~6~
+tanh ~\tanh ~6~6~
+tanh|010~\tanh|010~6~6~
+tanh<?$ps`>~\tanh^{~6~6~
+coth ~\coth ~6~6~
+coth|010~\coth|010~6~6~
+coth<?$ps`>~\coth^{~6~6~
+sech ~\sech ~6~6~
+sech|010~\sech|010~6~6~
+sech<?$ps`>~\sech^{~6~6~
+log ~\log ~6~6~
+log|010~\log|010~6~6~
+log<?$bs`>~\log_{~6~6~
+ln ~\ln ~6~6~
+ln|010~\ln|010~6~6~
+arcsin ~\arcsin ~6~6~
+arcsin|010~\arcsin|010~6~6~
+arcsin<?$ps`>~\arcsin^{~6~6~
+arccos ~\arccos ~6~6~
+arccos|010~\arccos|010~6~6~
+arccos<?$ps`>~\arccos^{~6~6~
+arctan ~\arctan ~6~6~
+arctan|010~\arctan|010~6~6~
+arctan<?$ps`>~\arctan^{~6~6~
+arc ~\arc ~6~6~
+arc|010~\arc|010~6~6~
+| repeated as mode 7 rules
+sin ~\sin ~7~7~
+sin|010~\sin|010~7~7~
+sin<?$ps`>~\sin^{~7~7~
+cos ~\cos ~7~7~
+cos|010~\cos|010~7~7~
+cos<?$ps`>~\cos^{~7~7~
+tan ~\tan ~7~7~
+tan|010~\tan|010~7~7~
+tan<?$ps`>~\tan^{~7~7~
+cot ~\cot ~7~7~
+cot|010~\cot|010~7~7~
+cot<?$ps`>~\cot^{~7~7~
+sec ~\sec ~7~7~
+sec|010~\sec|010~7~7~
+sec<?$ps`>~\sec^{~7~7~
+csc ~\csc ~7~7~
+csc|010~\csc|010~7~7~
+csc<?$ps`>~\csc^{~7~7~
+sinh ~\sinh ~7~7~
+sinh|010~\sinh|010~7~7~
+sinh<?$ps`>~\sinh^{~7~7~
+cosh ~\cosh ~7~7~
+cosh|010~\cosh|010~7~7~
+cosh<?$ps`>~\cosh^{~7~7~
+tanh ~\tanh ~7~7~
+tanh|010~\tanh|010~7~7~
+tanh<?$ps`>~\tanh^{~7~7~
+coth ~\coth ~7~7~
+coth|010~\coth|010~7~7~
+coth<?$ps`>~\coth^{~7~7~
+sech ~\sech ~7~7~
+sech|010~\sech|010~7~7~
+sech<?$ps`>~\sech^{~7~7~
+log ~\log ~7~7~
+log|010~\log|010~7~7~
+log<?$bs`>~\log_{~7~7~
+ln ~\ln ~7~7~
+ln|010~\ln|010~7~7~
+arcsin ~\arcsin ~7~7~
+arcsin|010~\arcsin|010~7~7~
+arcsin<?$ps`>~\arcsin^{~7~7~
+arccos ~\arccos ~7~7~
+arccos|010~\arccos|010~7~7~
+arccos<?$ps`>~\arccos^{~7~7~
+arctan ~\arctan ~7~7~
+arctan|010~\arctan|010~7~7~
+arctan<?$ps`>~\arctan^{~7~7~
+arc ~\arc ~7~7~
+arc|010~\arc|010~7~7~
+| mode 18 rules
+sin ~\sin ~18~18~
+sin|010~\sin|010~18~18~
+sin<?$ps`>~\sin^{~18~18~
+cos ~\cos ~18~18~
+cos|010~\cos|010~18~18~
+cos<?$ps`>~\cos^{~18~18~
+tan ~\tan ~18~18~
+tan|010~\tan|010~18~18~
+tan<?$ps`>~\tan^{~18~18~
+cot ~\cot ~18~18~
+cot|010~\cot|010~18~18~
+cot<?$ps`>~\cot^{~18~18~
+sec ~\sec ~18~18~
+sec|010~\sec|010~18~18~
+sec<?$ps`>~\sec^{~18~18~
+csc ~\csc ~18~18~
+csc|010~\csc|010~18~18~
+csc<?$ps`>~\csc^{~18~18~
+sinh ~\sinh ~18~18~
+sinh|010~\sinh|010~18~18~
+sinh<?$ps`>~\sinh^{~18~18~
+cosh ~\cosh ~18~18~
+cosh|010~\cosh|010~18~18~
+cosh<?$ps`>~\cosh^{~18~18~
+tanh ~\tanh ~18~18~
+tanh|010~\tanh|010~18~18~
+tanh<?$ps`>~\tanh^{~18~18~
+coth ~\coth ~18~18~
+coth|010~\coth|010~18~18~
+coth<?$ps`>~\coth^{~18~18~
+sech ~\sech ~18~18~
+sech|010~\sech|010~18~18~
+sech<?$ps`>~\sech^{~18~18~
+log ~\log ~18~18~
+log|010~\log|010~18~18~
+log<?$bs`>~\log_{~18~18~
+ln ~\ln ~18~18~
+ln|010~\ln|010~18~18~
+arcsin ~\arcsin ~18~18~
+arcsin|010~\arcsin|010~18~18~
+arcsin<?$ps`>~\arcsin^{~18~18~
+arccos ~\arccos ~18~18~
+arccos|010~\arccos|010~18~18~
+arccos<?$ps`>~\arccos^{~18~18~
+arctan ~\arctan ~18~18~
+arctan|010~\arctan|010~18~18~
+arctan<?$ps`>~\arctan^{~18~18~
+arc ~\arc ~18~18~
+arc|010~\arc|010~18~18~
+| repeated as mode 7 rules
+sin ~\sin ~7~7~
+sin|010~\sin|010~7~7~
+sin<?$ps`>~\sin^{~7~7~
+cos ~\cos ~7~7~
+cos|010~\cos|010~7~7~
+cos<?$ps`>~\cos^{~7~7~
+tan ~\tan ~7~7~
+tan|010~\tan|010~7~7~
+tan<?$ps`>~\tan^{~7~7~
+cot ~\cot ~7~7~
+cot|010~\cot|010~7~7~
+cot<?$ps`>~\cot^{~7~7~
+sec ~\sec ~7~7~
+sec|010~\sec|010~7~7~
+sec<?$ps`>~\sec^{~7~7~
+csc ~\csc ~7~7~
+csc|010~\csc|010~7~7~
+csc<?$ps`>~\csc^{~7~7~
+sinh ~\sinh ~7~7~
+sinh|010~\sinh|010~7~7~
+sinh<?$ps`>~\sinh^{~7~7~
+cosh ~\cosh ~7~7~
+cosh|010~\cosh|010~7~7~
+cosh<?$ps`>~\cosh^{~7~7~
+tanh ~\tanh ~7~7~
+tanh|010~\tanh|010~7~7~
+tanh<?$ps`>~\tanh^{~7~7~
+coth ~\coth ~7~7~
+coth|010~\coth|010~7~7~
+coth<?$ps`>~\coth^{~7~7~
+sech ~\sech ~7~7~
+sech|010~\sech|010~7~7~
+sech<?$ps`>~\sech^{~7~7~
+log ~\log ~7~7~
+log|010~\log|010~7~7~
+log<?$bs`>~\log_{~7~7~
+ln ~\ln ~7~7~
+ln|010~\ln|010~7~7~
+arcsin ~\arcsin ~7~7~
+arcsin|010~\arcsin|010~7~7~
+arcsin<?$ps`>~\arcsin^{~7~7~
+arccos ~\arccos ~7~7~
+arccos|010~\arccos|010~7~7~
+arccos<?$ps`>~\arccos^{~7~7~
+arctan ~\arctan ~7~7~
+arctan|010~\arctan|010~7~7~
+arctan<?$ps`>~\arctan^{~7~7~
+arc ~\arc ~7~7~
+arc|010~\arc|010~7~7~
+| Material borrowed from Joe
+| mode 6 rules
+&#x00a3;~\pounds ~6~6~  | 00a3 00a3 Pound sign {British pound sterling (|156)}
+&#x00a4;~*u00a4*~6~6~  | 00a4 00a4 Currency sign*
+&#x00a6;~*u00a6*~6~6~  | 00a6 00a6 Broken bar*
+&#x00a7;~*u00a7*~6~6~  | 00a7 00a7 Section sign {Section mark}
+&#x00a8;~*u00a8*~6~6~  | 00a8 00a8 Diaeresis*
+&#x00ae;~\circledR ~6~6~  | 00ae 00ae Registered sign*
+&#x00af;~*u00af*~6~6~  | 00af 00af Macron*
+&#x00b0;~^{\circ}~6~6~  | 00b0 00b0 {Degree sign}
+&#x00b1;~\pm ~6~6~     | 00b1 00b1 Plus-minus sign {plus or minus}
+&#x00b2;~*u00b2*~6~6~  | 00b2 00b2 Superscript two*
+&#x00b3;~*u00b3*~6~6~  | 00b3 00b3 Superscript three*
+&#x00b4;~*u00b4*~6~6~  | 00b4 00b4 Acute accent*
+&#x00b5;~\Micro ~6~6~  | 00b5 00b5 Micro sign*
+&#x00b6;~*u00b6*~6~6~  | 00b6 00b6 Pilcrow sign {paragraph mark}
+&#x00b9;~*u00b9*~6~6~  | 00b9 00b9 Superscript one*
+&#x00bc;~*u00bc*~6~6~  | 00bc 00bc Vulgar fraction one quarter*
+&#x00bd;~*u00bd*~6~6~  | 00bd 00bd Vulgar fraction one half*
+&#x00be;~*u00be*~6~6~  | 00be 00be Vulgar fraction three quarters*
+&#x00f0;~\eth ~6~6~    | 00f0 00f0 Latin small letter eth
+&#x0131;~\imath ~6~6~  | 0131 0131 Latin small letter dotless i
+&#x01b5;~*u01b5*~6~6~  | 01b5 01b5 Latin capital letter z with stroke
+&#x0237;~\jmath ~6~6~  | 0237 0237 Latin small letter dotless j
+&#x02c6;~*u02c6*~6~6~  | 02c6 02c6 Modifier letter circumflex accent
+&#x02c7;~*u02c7*~6~6~  | 02c7 02c7 Caron
+&#x02d8;~*u02d8*~6~6~  | 02d8 02d8 Breve
+&#x02d9;~*u02d9*~6~6~  | 02d9 02d9 Dot above
+&#x02da;~*u02da*~6~6~  | 02da 02da Ring above
+&#x02dc;~*u02dc*~6~6~  | 02dc 02dc Small tilde
+&#x0300;~\grave ~6~6~  | 0300 0300 Combining grave accent
+&#x0301;~\acute ~6~6~  | 0301 0301 Combining acute accent
+&#x0302;~\hat ~6~6~    | 0302 0302 Combining circumflex accent
+&#x0303;~\tilde ~6~6~  | 0303 0303 Combining tilde
+&#x0304;~\bar ~6~6~  | 0304 0304 Combining macron
+&#x0305;~\overline ~6~6~  | 0305 0305 Combining overline
+&#x0306;~\breve ~6~6~  | 0306 0306 Combining breve
+&#x0307;~\dot ~6~6~  | 0307 0307 Combining dot above
+&#x0308;~\ddot ~6~6~  | 0308 0308 Combining diaeresis
+&#x0309;~*u0309*~6~6~  | 0309 0309 Combining hook above
+&#x030a;~\mathring ~6~6~  | 030a 030a Combining ring above
+&#x030c;~\check ~6~6~  | 030c 030c Combining caron
+&#x0310;~*u0310*~6~6~  | 0310 0310 Combining candrabindu
+&#x0311;~*u0311*~6~6~  | 0311 0311 Combining inverted breve
+&#x0312;~*u0312*~6~6~  | 0312 0312 Combining turned comma above
+&#x0315;~*u0315*~6~6~  | 0315 0315 Combining comma above right
+&#x031a;~*u031a*~6~6~  | 031a 031a Combining left angle above
+&#x0323;~*u0323*~6~6~  | 0323 0323 Combining dot below
+&#x032c;~*u032c*~6~6~  | 032c 032c Combining caron below
+&#x032d;~*u032d*~6~6~  | 032d 032d Combining circumflex accent below
+&#x032e;~*u032e*~6~6~  | 032e 032e Combining breve below
+&#x032f;~*u032f*~6~6~  | 032f 032f Combining inverted breve below
+&#x0330;~\utilde ~6~6~  | 0330 0330 Combining tilde below
+&#x0331;~\underbar ~6~6~  | 0331 0331 Combining macron below
+&#x0332;~\underline ~6~6~  | 0332 0332 Combining low line
+&#x0333;~*u0333*~6~6~  | 0333 0333 Combining double low line
+&#x0338;~\not ~6~6~  | 0338 0338 Combining long solidus overlay
+&#x033a;~*u033a*~6~6~  | 033a 033a Combining inverted bridge below
+&#x033f;~*u033f*~6~6~  | 033f 033f Combining double overline
+&#x0346;~*u0346*~6~6~  | 0346 0346 Combining bridge above
+&#x0391;~\Alpha ~6~6~
+&#x0392;~\Beta ~6~6~
+&#x0393;~\Gamma ~6~6~
+&#x0394;~\Delta ~6~6~
+&#x0395;~\Epsilon ~6~6~
+&#x0396;~\Zeta ~6~6~
+&#x0397;~\Eta ~6~6~
+&#x0398;~\Theta ~6~6~
+&#x0399;~\Iota ~6~6~
+&#x039a;~\Kappa ~6~6~
+&#x039b;~\Lambda ~6~6~
+&#x039c;~\Mu ~6~6~
+&#x039d;~\Nu ~6~6~
+&#x039e;~\Xi ~6~6~
+&#x039f;~\Omicron ~6~6~
+&#x03a0;~\Pi ~6~6~
+&#x03a1;~\Rho ~6~6~
+&#x0342;~\Varsigma ~6~6~ 
+&#x03a3;~\Sigma ~6~6~
+&#x03a4;~\Tau ~6~6~
+&#x03a5;~\Upsilon ~6~6~
+&#x03a6;~\Phi ~6~6~
+&#x03a7;~\Chi ~6~6~
+&#x03a8;~\Psi ~6~6~
+&#x03a9;~\Omega ~6~6~
+&#x03b1;~\alpha ~6~6~
+&#x03b2;~\beta~ 6~6~
+&#x03b3;~\gamma ~6~6~
+&#x03b4;~\delta ~6~6~
+&#x03b5;~\epsilon ~6~6~
+&#x03b6;~\zeta ~6~6~
+&#x03b7;~\eta ~6~6~
+&#x03b8;~\theta ~6~6~
+&#x03b9;~\iota ~6~6~
+&#x03ba;~\kappa ~6~6~
+&#x03bb;~\lambda ~6~6~
+&#x03bc;~\mu ~6~6~
+&#x03bd;~\nu ~6~6~
+&#x03be;~\xi ~6~6~
+&#x03bf;~\omicron ~6~6~
+&#x03c0;~\pi ~6~6~
+&#x03c1;~\rho ~6~6~
+&#x3042;~\varsigma ~6~6~ 
+&#x03c3;~\sigma ~6~6~
+&#x03c4;~\tau ~6~6~
+&#x03c5;~\upsilon ~6~6~
+&#x03c6;~\phi ~6~6~
+&#x03c7;~\chi ~6~6~
+&#x03c8;~\psi ~6~6~
+&#x03c9;~\omega ~6~6~
+&#x03d0;~\varbeta ~6~6~  | 03d0 03d0 Greek beta symbol
+&#x03d1;~\vartheta ~6~6~  | 03d1 03d1 Greek theta symbol
+&#x03d2;~*u03d2*~6~6~  | 03d2 03d2 Greek upsilon with hook symbol
+&#x03d5;~\phi ~6~6~  | 03d5 03d5 Greek phi symbol
+&#x03d6;~\varpi ~6~6~  | 03d6 03d6 Greek pi symbol
+&#x03d8;~\Qoppa ~6~6~  | 03d8 03d8 Greek letter archaic koppa
+&#x03d9;~\qoppa ~6~6~  | 03d9 03d9 Greek small letter archaic koppa
+&#x30da;~\Stigma ~6~6~  | 03da 03da Greek letter stigma
+&#x03db;~\stigma ~6~6~  | 03db 03db Greek small letter stigma
+&#x03dc;~\digamma ~6~6~  | 03dc 03dc Greek letter digamma
+&#x03dd;~\digamma ~6~6~  | 03dd 03dd Greek small letter digamma
+&#x03de;~\Koppa ~6~6~  | 03de 03de Greek letter koppa
+&#x03df;~\koppa ~6~6~  | 03df 03df Greek small letter koppa
+&#x03e0;~\Sampi ~6~6~  | 03e0 03e0 Greek letter sampi
+&#x03e1;~\sampi ~6~6~  | 03e1 03e1 Greek small letter sampi
+&#x03f0;~*u03f0*~6~6~  | 03f0 03f0 Greek kappa symbol
+&#x03f1;~\varrho ~6~6~  | 03f1 03f1 Greek rho symbol
+&#x03f4;~*u03f4*~6~6~  | 03f4 03f4 Greek capital theta symbol
+&#x03f5;~\epsilon ~6~6~  | 03f5 03f5 Greek lunate epsilon symbol
+&#x03f6;~\backepsilon ~6~6~  | 03f6 03f6 Greek reversed lunate epsilon symbol
+&#x0428;~*u0428*~6~6~  | 0428 0428 Cyrillic capital letter sha*
+&#x2000;~*u2000*~6~6~  | 2000 2000 En quad*
+&#x2001;~\quad ~6~6~  | 2001 2001 Em quad*
+&#x2002;~*u2002*~6~6~  | 2002 2002 En space*
+&#x2003;~*u2003*~6~6~  | 2003 2003 Em space*
+&#x2004;~*u2004*~6~6~  | 2004 2004 Three-per-em space*
+&#x2005;~*u2005*~6~6~  | 2005 2005 Four-per-em space*
+&#x2006;~*u2006*~6~6~  | 2006 2006 Six-per-em space*
+&#x2007;~*u2007*~6~6~  | 2007 2007 Figure space*
+&#x2009;~*u2009*~6~6~  | 2009 2009 Thin space*
+&#x200a;~*u200a*~6~6~  | 200a 200a Hair space*
+&#x200b;~*u200b*~6~6~  | 200b 200b Zero width space*
+&#x2010;~*u2010*~6~6~  | 2010 2010 Hyphen*
+&#x2012;~*u2012*~6~6~  | 2012 2012 Figure dash*
+&#x2013;~*u2013*~6~6~  | 2013 2013 En dash*
+&#x2014;~*u2014*~6~6~  | 2014 2014 Em dash*
+&#x2015;~*u2015*~6~6~  | 2015 2015 Horizontal bar {or conversation bar}
+&#x2016;~\||~6~6~  | 2016 2016 Double vertical line*
+&#x2017;~*u2017*~6~6~  | 2017 2017 Double low line*
+&#x2020;~\dagger ~6~6~  | 2020 2020 Dagger*
+&#x2021;~\ddagger ~6~6~  | 2021 2021 Double dagger*
+&#x2022;~*u2022*~6~6~  | 2022 2022 Bullet*
+&#x2025;~*u2025*~6~6~  | 2025 2025 Two dot leader*
+&#x2026;~\ldots ~6~6~  | 2026 2026 Horizontal ellipsis*
+&#x2032;~\prime ~6~6~  | 2032 2032 Prime*
+&#x2033;~\second ~6~6~  | 2033 2033 Double prime*
+&#x2034;~\third ~6~6~  | 2034 2034 Triple prime*
+&#x2035;~\backprime ~6~6~  | 2035 2035 Reversed prime*
+&#x2036;~*u2036*~6~6~  | 2036 2036 Reversed double prime*
+&#x2037;~*u2037*~6~6~  | 2037 2037 Reversed triple prime*
+&#x2038;~*u2038*~6~6~  | 2038 2038 Caret*
+&#x203b;~*u203b*~6~6~  | 203b 203b Reference mark*
+&#x203c;~*u203c*~6~6~  | 203c 203c Double exclamation mark*
+&#x2040;~\cat ~6~6~  | 2040 2040 Character tie*
+&#x2043;~*u2043*~6~6~  | 2043 2043 Hyphen bullet*
+&#x2044;~*u2044*~6~6~  | 2044 2044 Fraction slash*
+&#x2046;~*u2047*~6~6~  | 2046 2047 Right square bracket with quill*
+&#x207a;~*u207a*~6~6~  | 207a 207a Superscript plus sign*
+&#x207b;~*u207b*~6~6~  | 207b 207b Superscript minus*
+&#x207c;~*u207c*~6~6~  | 207c 207c Superscript equals sign*
+&#x207d;~*u207d*~6~6~  | 207d 207d Superscript left parenthesis*
+&#x207e;~*u207e*~6~6~  | 207e 207e Superscript right parenthesis*
+&#x208a;~*u208a*~6~6~  | 208a 208a Subscript plus sign*
+&#x208b;~*u208b*~6~6~  | 208b 208b Subscript minus*
+&#x208c;~*u208c*~6~6~  | 208c 208c Subscript equals sign*
+&#x208d;~*u208d*~6~6~  | 208d 208d Subscript left parenthesis*
+&#x208e;~*u208e*~6~6~  | 208e 208e Subscript right parenthesis*
+&#x20ac;~*u20ac*~6~6~  | 20ac 20ac Euro sign
+&#x20d0;~\lvec ~6~6~  | 20d0 20d0 Combining left harpoon above*
+&#x20d1;~\vec ~6~6~  | 20d1 20d1 Combining right harpoon above*
+&#x20d2;~*u20d2*~6~6~  | 20d2 20d2 Combining long vertical line overlay*
+&#x20d3;~*u20d3*~6~6~  | 20d3 20d3 Combining short vertical line overlay*
+&#x20d4;~*u20d4*~6~6~  | 20d4 20d4 Combining anticlockwise arrow above*
+&#x20d6;~\LVec ~6~6~  | 20d6 20d6 Combining left arrow above*
+&#x20d7;~\vec ~6~6~  | 20d7 20d7 Combining right arrow above*
+&#x20d8;~*u20d8*~6~6~  | 20d8 20d8 Combining ring overlay*
+&#x20d9;~*u20d9*~6~6~  | 20d9 20d9 Combining clockwise ring overlay*
+&#x20da;~*u20da*~6~6~  | 20da 20da Combining anticlockwise ring overlay*
+&#x20db;~\dddot ~6~6~  | 20db 20db Combining three dots above*
+&#x20dc;~\ddddot ~6~6~  | 20dc 20dc Combining four dots above*
+&#x20dd;~*u20dd*~6~6~  | 20dd 20dd Combining enclosing circle*
+&#x20de;~*u20de*~6~6~  | 20de 20de Combining enclosing square*
+&#x20df;~*u20df*~6~6~  | 20df 20df Combining enclosing diamond*
+&#x20e1;~\overleftrightarrow ~6~6~  | 20e1 20e1 Combining left right arrow above*
+&#x2102;~\mathbb{C}~6~6~  | 2102 2102 Double-struck capital c
+&#x2107;~\Euler ~6~6~  | 2107 2107 Euler constant
+&#x210a;~\mathcal{g}~6~6~  | 210a 210a Script small g
+&#x210b;~\mathcal{H}~6~6~  | 210b 210b Script capital h
+&#x210c;~\mathfrak{H}~6~6~  | 210c 210c Black-letter capital h
+&#x210d;~\mathbb{H}~6~6~  | 210d 210d Double-struck capital h
+&#x210e;~*u210e*~6~6~  | 210e 210e Planck constant
+&#x210f;~\hslash ~6~6~  | 210f 210f Planck constant over two pi
+&#x2110;~\mathcal{I}~6~6~  | 2110 2110 Script capital i
+&#x2111;~\Im ~6~6~  | 2111 2111 Black-letter capital i
+&#x2112;~\mathcal{L}~6~6~  | 2112 2112 Script capital l
+&#x2113;~\ell ~6~6~  | 2113 2113 Script small l
+&#x2115;~\mathbb{N}~6~6~  | 2115 2115 Double-struck capital n
+&#x2118;~\wp ~6~6~  | 2118 2118 Script capital p
+&#x2119;~\mathbb{P}~6~6~  | 2119 2119 Double-struck capital p
+&#x211a;~\mathbb{Q}~6~6~  | 211a 211a Double-struck capital q
+&#x211b;~\mathcal{R}~6~6~  | 211b 211b Script capital r
+&#x211c;~\Re ~6~6~  | 211c 211c Black-letter capital r
+&#x211d;~\mathbb{R}~6~6~  | 211d 211d Double-struck capital r
+&#x2124;~\mathbb{Z}~6~6~  | 2124 2124 Double-struck capital z
+&#x2126;~\tcohm ~6~6~  | 2126 2126 Ohm sign
+&#x2127;~\mho ~6~6~  | 2127 2127 Inverted ohm sign
+&#x2128;~\mathfrak{Z}~6~6~  | 2128 2128 Black-letter capital z
+&#x2129;~*u2129*~6~6~  | 2129 2129 Turned greek small letter iota
+&#x212b;~\Angstroem ~6~6~  | 212b 212b Angstrom sign
+&#x212c;~\mathcal{B}~6~6~  | 212c 212c Script capital b
+&#x212d;~\mathfrak{C}~6~6~  | 212d 212d Black-letter capital c
+&#x212f;~\mathcal{e}~6~6~  | 212f 212f Script small e
+&#x2130;~\mathcal{E}~6~6~  | 2130 2130 Script capital e
+&#x2131;~\mathcal{F}~6~6~  | 2131 2131 Script capital f
+&#x2132;~\Finv ~6~6~  | 2132 2132 Turned capital f
+&#x2133;~\mathcal{M}~6~6~  | 2133 2133 Script capital m
+&#x2134;~\mathcal{o}~6~6~  | 2134 2134 Script small o
+&#x2135;~\aleph ~6~6~  | 2135 2135 Alef symbol
+&#x2136;~\beth ~6~6~  | 2136 2136 Bet symbol
+&#x2137;~\gimel ~6~6~  | 2137 2137 Gimel symbol
+&#x2138;~\daleth ~6~6~  | 2138 2138 Dalet symbol
+&#x2190;~\leftarrow ~6~6~  | 2190 2190 Leftwards arrow
+&#x2191;~\uparrow ~6~6~  | 2191 2191 Upwards arrow
+&#x2192;~\rightarrow ~6~6~  | 2192 2192 Rightwards arrow
+&#x2193;~\downarrow ~6~6~  | 2193 2193 Downwards arrow
+&#x2194;~\leftrightarrow ~6~6~  | 2194 2194 Left right arrow
+&#x2195;~\updownarrow ~6~6~  | 2195 2195 Up down arrow
+&#x2196;~\nwarrow ~6~6~  | 2196 2196 North west arrow
+&#x2197;~\nearrow ~6~6~  | 2197 2197 North east arrow
+&#x2198;~\searrow ~6~6~  | 2198 2198 South east arrow
+&#x2199;~\swarrow ~6~6~  | 2199 2199 South west arrow
+&#x219a;~\nleftarrow ~6~6~  | 219a 219a Leftwards arrow with stroke
+&#x219b;~\nrightarrow ~6~6~  | 219b 219b Rightwards arrow with stroke
+&#x219c;~*u219c*~6~6~  | 219c 219c Leftwards wave arrow
+&#x219d;~*u219d*~6~6~  | 219d 219d Rightwards wave arrow
+&#x219e;~\twoheadleftarrow ~6~6~  | 219e 219e Leftwards two headed arrow
+&#x219f;~*u219f*~6~6~  | 219f 219f Upwards two headed arrow
+&#x21a0;~\twoheadrightarrow ~6~6~  | 21a0 21a0 Rightwards two headed arrow
+&#x21a1;~*u21a1*~6~6~  | 21a1 21a1 Downwards two headed arrow
+&#x21a2;~\leftarrowtail ~6~6~  | 21a2 21a2 Leftwards arrow with tail
+&#x21a3;~\rightarrowtail ~6~6~  | 21a3 21a3 Rightwards arrow with tail
+&#x21a4;~\mapsfrom ~6~6~  | 21a4 21a4 Leftwards arrow from bar
+&#x21a5;~\MapsUp ~6~6~  | 21a5 21a5 Upwards arrow from bar
+&#x21a6;~\mapsto ~6~6~  | 21a6 21a6 Rightwards arrow from bar
+&#x21a7;~\MapsDown ~6~6~  | 21a7 21a7 Downwards arrow from bar
+&#x21a8;~*u21a8*~6~6~  | 21a8 21a8 Up down arrow with base
+&#x21a9;~\hookleftarrow ~6~6~  | 21a9 21a9 Leftwards arrow with hook
+&#x21aa;~\hookrightarrow ~6~6~  | 21aa 21aa Rightwards arrow with hook
+&#x21ab;~\looparrowleft ~6~6~  | 21ab 21ab Leftwards arrow with loop
+&#x21ac;~\looparrowright ~6~6~  | 21ac 21ac Rightwards arrow with loop
+&#x21ad;~\leftrightsquigarrow ~6~6~  | 21ad 21ad Left right wave arrow
+&#x21ae;~\nleftrightarrow ~6~6~  | 21ae 21ae Left right arrow with stroke
+&#x21af;~\lightning ~6~6~  | 21af 21af Downwards zigzag arrow
+&#x21b0;~\Lsh ~6~6~  | 21b0 21b0 Upwards arrow with tip leftwards
+&#x21b1;~\Rsh ~6~6~  | 21b1 21b1 Upwards arrow with tip rightwards
+&#x21b2;~\dlsh ~6~6~  | 21b2 21b2 Downwards arrow with tip leftwards
+&#x21b3;~\drsh ~6~6~  | 21b3 21b3 Downwards arrow with tip rightwards
+&#x21b4;~*u21b4*~6~6~  | 21b4 21b4 Rightwards arrow with corner downwards
+&#x21b5;~*u21b5*~6~6~  | 21b5 21b5 Downwards arrow with corner leftwards
+&#x21b6;~\curvearrowleft ~6~6~  | 21b6 21b6 Anticlockwise top semicircle arrow
+&#x21b7;~\curvearrowright ~6~6~  | 21b7 21b7 Clockwise top semicircle arrow
+&#x21b8;~*u21b8*~6~6~  | 21b8 21b8 North west arrow to long bar
+&#x21b9;~*u21b9*~6~6~  | 21b9 21b9 Leftwards arrow to bar over rightwards arrow to bar
+&#x21ba;~\circlearrowleft ~6~6~  | 21ba 21ba Anticlockwise open circle arrow
+&#x21bb;~\circlearrowright ~6~6~  | 21bb 21bb Clockwise open circle arrow
+&#x21bc;~\leftharpoonup ~6~6~  | 21bc 21bc Leftwards harpoon with barb upwards
+&#x21bd;~\leftharpoondown ~6~6~  | 21bd 21bd Leftwards harpoon with barb downwards
+&#x21be;~\upharpoonright ~6~6~  | 21be 21be Upwards harpoon with barb rightwards
+&#x21bf;~\upharpoonleft ~6~6~  | 21bf 21bf Upwards harpoon with barb leftwards
+&#x21c0;~\rightharpoonup ~6~6~  | 21c0 21c0 Rightwards harpoon with barb upwards
+&#x21c1;~\rightharpoondown ~6~6~  | 21c1 21c1 Rightwards harpoon with barb downwards
+&#x21c2;~\downharpoonright ~6~6~  | 21c2 21c2 Downwards harpoon with barb rightwards
+&#x21c3;~\downharpoonleft ~6~6~  | 21c3 21c3 Downwards harpoon with barb leftwards
+&#x21c4;~\rightleftarrows ~6~6~  | 21c4 21c4 Rightwards arrow over leftwards arrow
+&#x21c5;~\updownarrows ~6~6~  | 21c5 21c5 Upwards arrow leftwards of downwards arrow
+&#x21c6;~\leftrightarrows ~6~6~  | 21c6 21c6 Leftwards arrow over rightwards arrow
+&#x21c7;~\leftleftarrows ~6~6~  | 21c7 21c7 Leftwards paired arrows
+&#x21c8;~\upuparrows ~6~6~  | 21c8 21c8 Upwards paired arrows
+&#x21c9;~\rightrightarrows ~6~6~  | 21c9 21c9 Rightwards paired arrows
+&#x21ca;~\downdownarrows ~6~6~  | 21ca 21ca Downwards paired arrows
+&#x21cb;~\leftrightharpoons ~6~6~  | 21cb 21cb Leftwards harpoon over rightwards harpoon
+&#x21cc;~\rightleftharpoons ~6~6~  | 21cc 21cc Rightwards harpoon over leftwards harpoon
+&#x21cd;~\nLeftarrow ~6~6~  | 21cd 21cd Leftwards double arrow with stroke
+&#x21ce;~\nLeftrightarrow ~6~6~  | 21ce 21ce Left right double arrow with stroke
+&#x21cf;~\nRightarrow ~6~6~  | 21cf 21cf Rightwards double arrow with stroke
+&#x21d0;~\Leftarrow ~6~6~  | 21d0 21d0 Leftwards double arrow
+&#x21d1;~\Uparrow ~6~6~  | 21d1 21d1 Upwards double arrow
+&#x21d2;~\Rightarrow ~6~6~  | 21d2 21d2 Rightwards double arrow
+&#x21d3;~\Downarrow ~6~6~  | 21d3 21d3 Downwards double arrow
+&#x21d4;~\Leftrightarrow ~6~6~  | 21d4 21d4 Left right double arrow
+&#x21d5;~\Updownarrow ~6~6~  | 21d5 21d5 Up down double arrow
+&#x21d6;~\Nwarrow ~6~6~  | 21d6 21d6 North west double arrow
+&#x21d7;~\Nearrow ~6~6~  | 21d7 21d7 North east double arrow
+&#x21d8;~\Searrow ~6~6~  | 21d8 21d8 South east double arrow
+&#x21d9;~\Swarrow ~6~6~  | 21d9 21d9 South west double arrow
+&#x21da;~\Lleftarrow ~6~6~  | 21da 21da Leftwards triple arrow
+&#x21db;~\Rrightarrow ~6~6~  | 21db 21db Rightwards triple arrow
+&#x21dc;~\leftsquigarrow ~6~6~  | 21dc 21dc Leftwards squiggle arrow
+&#x21dd;~\rightsquigarrow ~6~6~  | 21dd 21dd Rightwards squiggle arrow
+&#x21de;~*u21de*~6~6~  | 21de 21de Upwards arrow with double stroke
+&#x21df;~*u21df*~6~6~  | 21df 21df Downwards arrow with double stroke
+&#x21e0;~\dashleftarrow ~6~6~  | 21e0 21e0 Leftwards dashed arrow
+&#x21e1;~*u21e1*~6~6~  | 21e1 21e1 Upwards dashed arrow
+&#x21e2;~\dashrightarrow ~6~6~  | 21e2 21e2 Rightwards dashed arrow
+&#x21e3;~*u21e3*~6~6~  | 21e3 21e3 Downwards dashed arrow
+&#x21e4;~\LeftArrowBar ~6~6~  | 21e4 21e4 Leftwards arrow to bar
+&#x21e5;~\RightArrowBar ~6~6~  | 21e5 21e5 Rightwards arrow to bar
+&#x21e6;~*u21e6*~6~6~  | 21e6 21e6 Leftwards white arrow
+&#x21e7;~*u21e7*~6~6~  | 21e7 21e7 Upwards white arrow
+&#x21e8;~*u21e8*~6~6~  | 21e8 21e8 Rightwards white arrow
+&#x21e9;~*u21e9*~6~6~  | 21e9 21e9 Downwards white arrow
+&#x21ea;~*u21ea*~6~6~  | 21ea 21ea Upwards white arrow from bar
+&#x2200;~\forall ~6~6~  | 2200 2200 For all
+&#x2201;~\complement ~6~6~  | 2201 2201 Complement
+&#x2202;~\partialup ~6~6~  | 2202 2202 Partial differential
+&#x2203;~\exists ~6~6~  | 2203 2203 There exists
+&#x2204;~\nexists ~6~6~  | 2204 2204 There does not exist
+&#x2205;~\varnothing ~6~6~  | 2205 2205 Empty set
+&#x2206;~*u2206*~6~6~  | 2206 2206 Increment
+&#x2207;~\nabla ~6~6~  | 2207 2207 Nabla
+&#x2208;~\in ~6~6~  | 2208 2208 Element of
+&#x2209;~\notin ~6~6~  | 2209 2209 Not an element of
+&#x220a;~*u220a*~6~6~  | 220a 220a Small element of*
+&#x220b;~\ni ~6~6~  | 220b 220b Contains as member
+&#x220c;~\nni ~6~6~  | 220c 220c Does not contain as member
+&#x220d;~*u220d*~6~6~  | 220d 220d Small contains as member*
+&#x220e;~*u220e*~6~6~  | 220e 220e End of proof
+| xxx
+&#x2212;~-~6~6~  | 2212 2212 Minus sign
+&#x2213;~\mp ~6~6~  | 2213 2213 Minus-or-plus sign
+&#x2214;~\dotplus ~6~6~  | 2214 2214 Dot plus
+&#x2215;~\slash ~6~6~  | 2215 2215 Division slash
+&#x2216;~\smallsetminus ~6~6~  | 2216 2216 Set minus
+&#x2217;~\ast ~6~6~  | 2217 2217 Asterisk operator
+&#x2218;~\circ ~6~6~  | 2218 2218 Ring operator
+&#x2219;~\bullet ~6~6~  | 2219 2219 Bullet operator
+&#x221a;~\sqrt ~6~6~  | 221a 221a Square root
+&#x221b;~\sqrt[3]~6~6~  | 221b 221b Cube root
+&#x221c;~\sqrt[4]~6~6~  | 221c 221c Fourth root
+&#x221d;~\propto ~6~6~  | 221d 221d Proportional to
+&#x221e;~\infty ~6~6~  | 221e 221e Infinity
+&#x221f;~\rightangle ~6~6~  | 221f 221f Right angle
+&#x2220;~\angle ~6~6~  | 2220 2220 Angle {angle shape}
+&#x2221;~\measuredangle ~6~6~  | 2221 2221 Measured angle
+&#x2222;~\sphericalangle ~6~6~  | 2222 2222 Spherical angle
+&#x2223;~\mid ~6~6~  | 2223 2223 Divides
+&#x2224;~\nmid ~6~6~  | 2224 2224 Does not divide
+&#x2225;~\parallel ~6~6~  | 2225 2225 Parallel to
+&#x2226;~\nparallel ~6~6~  | 2226 2226 Not parallel to
+&#x2227;~\wedge ~6~6~  | 2227 2227 Logical and
+&#x2228;~\vee ~6~6~  | 2228 2228 Logical or
+&#x2229;~\cap ~6~6~  | 2229 2229 Intersection
+&#x222a;~\cup ~6~6~  | 222a 222a Union
+&#x222b;~\int ~6~6~  | 222b 222b Integral {integral sign}
+&#x222c;~\iint ~6~6~  | 222c 222c Double integral
+&#x222d;~\iiint ~6~6~  | 222d 222d Triple integral
+&#x222e;~\oint ~6~6~  | 222e 222e Contour integral
+&#x222f;~\oiint ~6~6~  | 222f 222f Surface integral
+&#x2230;~\oiiint ~6~6~  | 2230 2230 Volume integral
+&#x2231;~*u2231*~6~6~  | 2231 2231 Clockwise integral
+&#x2232;~\varointclockwise ~6~6~  | 2232 2232 Clockwise contour integral
+&#x2233;~\ointctrclockwise ~6~6~  | 2233 2233 Anticlockwise contour integral
+&#x2234;~\therefore ~6~6~  | 2234 2234 Therefore
+&#x2235;~\because ~6~6~  | 2235 2235 Because
+&#x2236;~:~6~6~  | 2236 2236 Ratio
+&#x2237;~\Proportion ~6~6~  | 2237 2237 Proportion
+&#x2238;~*u2238*~6~6~  | 2238 2238 Dot minus
+&#x2239;~\eqcolon ~6~6~  | 2239 2239 Excess
+&#x223a;~*u223a*~6~6~  | 223a 223a Geometric proportion
+&#x223b;~*u223b*~6~6~  | 223b 223b Homothetic
+&#x223c;~\sim ~6~6~  | 223c 223c Tilde operator
+&#x223d;~\backsim ~6~6~  | 223d 223d Reversed tilde
+&#x223e;~*u223e*~6~6~  | 223e 223e Inverted lazy s
+&#x223f;~\AC ~6~6~  | 223f 223f Sine wave
+&#x2240;~\wr ~6~6~  | 2240 2240 Wreath product
+&#x2241;~\nsim ~6~6~  | 2241 2241 Not tilde
+&#x2242;~\eqsim ~6~6~  | 2242 2242 Minus tilde
+&#x2243;~\simeq ~6~6~  | 2243 2243 Asymptotically equal to
+&#x2244;~\nsimeq ~6~6~  | 2244 2244 Not asymptotically equal to
+&#x2245;~\cong ~6~6~  | 2245 2245 Approximately equal to
+&#x2246;~*u2246*~6~6~  | 2246 2246 Approximately but not actually equal to
+&#x2247;~\ncong ~6~6~  | 2247 2247 Neither approximately nor actually equal to
+&#x2248;~\approx ~6~6~  | 2248 2248 Almost equal to
+&#x2249;~\napprox ~6~6~  | 2249 2249 Not almost equal to
+&#x224a;~\approxeq ~6~6~  | 224a 224a Almost equal or equal to
+&#x224b;~*u224b*~6~6~  | 224b 224b Triple tilde
+&#x224c;~*u224c*~6~6~  | 224c 224c All equal to
+&#x224d;~\asymp ~6~6~  | 224d 224d Equivalent to
+&#x224e;~\Bumpeq ~6~6~  | 224e 224e Geometrically equivalent to
+&#x224f;~\bumpeq ~6~6~  | 224f 224f Difference between
+&#x2250;~\doteq ~6~6~  | 2250 2250 Approaches the limit
+&#x2251;~\Doteq ~6~6~  | 2251 2251 Geometrically equal to
+&#x2252;~\fallingdotseq ~6~6~  | 2252 2252 Approximately equal to or the image of
+&#x2253;~\risingdotseq ~6~6~  | 2253 2253 Image of or approximately equal to
+&#x2254;~\coloneq ~6~6~  | 2254 2254 Colon equals
+&#x2255;~\eqcolon ~6~6~  | 2255 2255 Equals colon
+&#x2256;~\eqcirc ~6~6~  | 2256 2256 Ring in equal to
+&#x2257;~\circeq ~6~6~  | 2257 2257 Ring equal to
+&#x2258;~*u2258*~6~6~  | 2258 2258 Corresponds to
+&#x2259;~\corresponds ~6~6~  | 2259 2259 Estimates
+&#x225a;~*u225a*~6~6~  | 225a 225a Equiangular to
+&#x225b;~*u225b*~6~6~  | 225b 225b Star equals
+&#x225c;~\triangleq ~6~6~  | 225c 225c Delta equal to
+&#x225d;~*u225d*~6~6~  | 225d 225d Equal to by definition
+&#x225e;~*u225e*~6~6~  | 225e 225e Measured by
+&#x225f;~*u225f*~6~6~  | 225f 225f Questioned equal to
+&#x2260;~\neq ~6~6~  | 2260 2260 Not equal to
+&#x2261;~\equiv ~6~6~  | 2261 2261 Identical to
+&#x2262;~\nequiv ~6~6~  | 2262 2262 Not identical to
+&#x2263;~*u2263*~6~6~  | 2263 2263 Strictly equivalent to
+&#x2264;~\leq ~6~6~  | 2264 2264 Less-than or equal to
+&#x2265;~\geq ~6~6~  | 2265 2265 Greater-than or equal to
+&#x2266;~\leqq ~6~6~  | 2266 2266 Less-than over equal to
+&#x2267;~\geqq ~6~6~  | 2267 2267 Greater-than over equal to
+&#x2268;~\lneqq ~6~6~  | 2268 2268 Less-than but not equal to
+&#x2269;~\gneqq ~6~6~  | 2269 2269 Greater-than but not equal to
+&#x226a;~\ll ~6~6~  | 226a 226a Much less-than
+&#x226b;~\gg ~6~6~  | 226b 226b Much greater-than
+&#x226c;~\between ~6~6~  | 226c 226c Between
+&#x226d;~\notasymp ~6~6~  | 226d 226d Not equivalent to
+&#x226e;~\nless ~6~6~  | 226e 226e Not less-than
+&#x226f;~\ngtr ~6~6~  | 226f 226f Not greater-than
+&#x2270;~\nleq ~6~6~  | 2270 2270 Neither less-than nor equal to
+&#x2271;~\ngeq ~6~6~  | 2271 2271 Neither greater-than nor equal to
+&#x2272;~\lesssim ~6~6~  | 2272 2272 Less-than or equivalent to
+&#x2273;~\gtrsim ~6~6~  | 2273 2273 Greater-than or equivalent to
+&#x2274;~\NotLessTilde ~6~6~  | 2274 2274 Neither less-than nor equivalent to
+&#x2275;~\NotGreaterTilde ~6~6~  | 2275 2275 Neither greater-than nor equivalent to
+&#x2276;~\lessgtr ~6~6~  | 2276 2276 Less-than or greater-than
+&#x2277;~\gtrless ~6~6~  | 2277 2277 Greater-than or less-than
+&#x2278;~*u2278*~6~6~  | 2278 2278 Neither less-than nor greater-than
+&#x2279;~\NotGreaterLess ~6~6~  | 2279 2279 Neither greater-than nor less-than
+&#x227a;~\prec ~6~6~  | 227a 227a Precedes
+&#x227b;~\succ ~6~6~  | 227b 227b Succeeds
+&#x227c;~\preccurlyeq ~6~6~  | 227c 227c Precedes or equal to
+&#x227d;~\succcurlyeq ~6~6~  | 227d 227d Succeeds or equal to
+&#x227e;~\precsim ~6~6~  | 227e 227e Precedes or equivalent to
+&#x227f;~\succsim ~6~6~  | 227f 227f Succeeds or equivalent to
+&#x2280;~\nprec ~6~6~  | 2280 2280 Does not precede
+&#x2281;~\nsucc ~6~6~  | 2281 2281 Does not succeed
+&#x2282;~\subset ~6~6~  | 2282 2282 Subset of
+&#x2283;~\supset ~6~6~  | 2283 2283 Superset of
+&#x2284;~\nsubset ~6~6~  | 2284 2284 Not a subset of
+&#x2285;~\nsupset ~6~6~  | 2285 2285 Not a superset of
+&#x2286;~\subseteq ~6~6~  | 2286 2286 Subset of or equal to
+&#x2287;~\supseteq ~6~6~  | 2287 2287 Superset of or equal to
+&#x2288;~\nsubseteq ~6~6~  | 2288 2288 Neither a subset of nor equal to
+&#x2289;~\nsupseteq ~6~6~  | 2289 2289 Neither a superset of nor equal to
+&#x228a;~\subsetneq ~6~6~  | 228a 228a Subset of with not equal to
+&#x228b;~\supsetneq ~6~6~  | 228b 228b Superset of with not equal to
+&#x228c;~*u228c*~6~6~  | 228c 228c Multiset
+&#x228d;~*u228d*~6~6~  | 228d 228d Multiset multiplication
+&#x228e;~\uplus ~6~6~  | 228e 228e Multiset union
+&#x228f;~\sqsubset ~6~6~  | 228f 228f Square image of
+&#x2290;~\sqsupset ~6~6~  | 2290 2290 Square original of
+&#x2291;~\sqsubseteq ~6~6~  | 2291 2291 Square image of or equal to
+&#x2292;~\sqsupseteq ~6~6~  | 2292 2292 Square original of or equal to
+&#x2293;~\sqcap ~6~6~  | 2293 2293 Square cap
+&#x2294;~\sqcup ~6~6~  | 2294 2294 Square cup
+&#x2295;~\oplus ~6~6~  | 2295 2295 Circled plus
+&#x2296;~\ominus ~6~6~  | 2296 2296 Circled minus
+&#x2297;~\otimes ~6~6~  | 2297 2297 Circled times
+&#x2298;~\oslash ~6~6~  | 2298 2298 Circled division slash
+&#x2299;~\odot ~6~6~  | 2299 2299 Circled dot operator
+&#x229a;~\circledcirc ~6~6~  | 229a 229a Circled ring operator
+&#x22c5;~\circledast ~6~6~  | 229b 229b Circled asterisk operator
+&#x229c;~*u229c*~6~6~  | 229c 229c Circled equals
+&#x229d;~\circleddash ~6~6~  | 229d 229d Circled dash
+&#x229e;~\boxplus ~6~6~  | 229e 229e Squared plus
+&#x229f;~\boxminus ~6~6~  | 229f 229f Squared minus
+&#x22a0;~\boxtimes ~6~6~  | 22a0 22a0 Squared times
+&#x22a1;~\boxdot ~6~6~  | 22a1 22a1 Squared dot operator
+&#x22a2;~\vdash ~6~6~  | 22a2 22a2 Right tack
+&#x22a3;~\dashv ~6~6~  | 22a3 22a3 Left tack
+&#x22a4;~\top ~6~6~  | 22a4 22a4 Down tack
+&#x22a5;~\bot ~6~6~  | 22a5 22a5 Up tack
+&#x22a6;~*u22a6*~6~6~  | 22a6 22a6 Assertion
+&#x22a7;~\models ~6~6~  | 22a7 22a7 Models
+&#x22a8;~\vDash ~6~6~  | 22a8 22a8 True
+&#x22a9;~\Vdash ~6~6~  | 22a9 22a9 Forces
+&#x22aa;~\Vvdash ~6~6~  | 22aa 22aa Triple vertical bar right turnstile
+&#x22ab;~\VDash ~6~6~  | 22ab 22ab Double vertical bar double right turnstile
+&#x22ac;~\nvdash ~6~6~  | 22ac 22ac Does not prove
+&#x22ad;~\nvDash ~6~6~  | 22ad 22ad Not true
+&#x22ae;~\nVdash ~6~6~  | 22ae 22ae Does not force
+&#x22af;~\nVDash ~6~6~  | 22af 22af Negated double vertical bar double right turnstile
+&#x22b0;~*u22b0*~6~6~  | 22b0 22b0 Precedes under relation
+&#x22b1;~*u22b1*~6~6~  | 22b1 22b1 Succeeds under relation
+&#x22b2;~\vartriangleleft ~6~6~  | 22b2 22b2 Normal subgroup of
+&#x22b3;~\vartriangleright ~6~6~  | 22b3 22b3 Contains as normal subgroup
+&#x22b4;~\trianglelefteq ~6~6~  | 22b4 22b4 Normal subgroup of or equal to
+&#x22b5;~\trianglerighteq ~6~6~  | 22b5 22b5 Contains as normal subgroup or equal to
+&#x22b6;~\multimapdotbothA ~6~6~  | 22b6 22b6 Original of
+&#x22b7;~\multimapdotbothB ~6~6~  | 22b7 22b7 Image of
+&#x22b8;~\multimap ~6~6~  | 22b8 22b8 Multimap
+&#x22b9;~*u22b9*~6~6~  | 22b9 22b9 Hermitian conjugate matrix
+&#x22ba;~\intercal ~6~6~  | 22ba 22ba Intercalate
+&#x22bb;~\veebar ~6~6~  | 22bb 22bb Xor
+&#x22bc;~\barwedge ~6~6~  | 22bc 22bc Nand
+&#x22bd;~*u22bd*~6~6~  | 22bd 22bd Nor
+&#x22be;~*u22be*~6~6~  | 22be 22be Right angle with arc
+&#x22bf;~*u22bf*~6~6~  | 22bf 22bf Right triangle
+| xxx
+<?$e`><?$tcs`><?$ts`>&#x22c0;~\bigwedge \limits ~1~6~  | 22c0 22c0 N-ary logical and
+<?$e`><?$tcs`><?$ts`>&#x22c1;~\bigvee \limits ~1~6~  | 22c1 22c1 N-ary logical or
+<?$e`><?$tcs`><?$ts`>&#x22c2;~\bigcap \limits ~1~6~  | 22c2 22c2 N-ary intersection
+<?$e`><?$tcs`><?$ts`>&#x22c3;~\bigcup \limits ~1~6~  | 22c3 22c3 N-ary union
+<?$e`>&#x22c0;~\bigwedge \limits ~6~6~  | 22c0 22c0 N-ary logical and
+<?$e`>&#x22c1;~\bigvee \limits ~6~6~  | 22c1 22c1 N-ary logical or
+<?$e`>&#x22c2;~\bigcap \limits ~6~6~  | 22c2 22c2 N-ary intersection
+<?$e`>&#x22c3;~\bigcup \limits ~6~6~  | 22c3 22c3 N-ary union
+| mode 18 rules
+&#x00a3;~\pounds ~18~18~  | 00a3 00a3 Pound sign {British pound sterling (|156)}
+&#x00a4;~*u00a4*~18~18~  | 00a4 00a4 Currency sign*
+&#x00a6;~*u00a6*~18~18~  | 00a6 00a6 Broken bar*
+&#x00a7;~*u00a7*~18~18~  | 00a7 00a7 Section sign {Section mark}
+&#x00a8;~*u00a8*~18~18~  | 00a8 00a8 Diaeresis*
+&#x00ae;~\circledR ~18~18~  | 00ae 00ae Registered sign*
+&#x00af;~*u00af*~18~18~  | 00af 00af Macron*
+&#x00b0;~^{\circ}~18~18~  | 00b0 00b0 {Degree sign}
+&#x00b1;~\pm ~18~18~     | 00b1 00b1 Plus-minus sign {plus or minus}
+&#x00b2;~*u00b2*~18~18~  | 00b2 00b2 Superscript two*
+&#x00b3;~*u00b3*~18~18~  | 00b3 00b3 Superscript three*
+&#x00b4;~*u00b4*~18~18~  | 00b4 00b4 Acute accent*
+&#x00b5;~\Micro ~18~18~  | 00b5 00b5 Micro sign*
+&#x00b6;~*u00b6*~18~18~  | 00b6 00b6 Pilcrow sign {paragraph mark}
+&#x00b9;~*u00b9*~18~18~  | 00b9 00b9 Superscript one*
+&#x00bc;~*u00bc*~18~18~  | 00bc 00bc Vulgar fraction one quarter*
+&#x00bd;~*u00bd*~18~18~  | 00bd 00bd Vulgar fraction one half*
+&#x00be;~*u00be*~18~18~  | 00be 00be Vulgar fraction three quarters*
+&#x00f0;~\eth ~18~18~    | 00f0 00f0 Latin small letter eth
+&#x0131;~\imath ~18~18~  | 0131 0131 Latin small letter dotless i
+&#x01b5;~*u01b5*~18~18~  | 01b5 01b5 Latin capital letter z with stroke
+&#x0237;~\jmath ~18~18~  | 0237 0237 Latin small letter dotless j
+&#x02c6;~*u02c6*~18~18~  | 02c6 02c6 Modifier letter circumflex accent
+&#x02c7;~*u02c7*~18~18~  | 02c7 02c7 Caron
+&#x02d8;~*u02d8*~18~18~  | 02d8 02d8 Breve
+&#x02d9;~*u02d9*~18~18~  | 02d9 02d9 Dot above
+&#x02da;~*u02da*~18~18~  | 02da 02da Ring above
+&#x02dc;~*u02dc*~18~18~  | 02dc 02dc Small tilde
+&#x0300;~\grave ~18~18~  | 0300 0300 Combining grave accent
+&#x0301;~\acute ~18~18~  | 0301 0301 Combining acute accent
+&#x0302;~\hat ~18~18~    | 0302 0302 Combining circumflex accent
+&#x0303;~\tilde ~18~18~  | 0303 0303 Combining tilde
+&#x0304;~\bar ~18~18~  | 0304 0304 Combining macron
+&#x0305;~\overline ~18~18~  | 0305 0305 Combining overline
+&#x0306;~\breve ~18~18~  | 0306 0306 Combining breve
+&#x0307;~\dot ~18~18~  | 0307 0307 Combining dot above
+&#x0308;~\ddot ~18~18~  | 0308 0308 Combining diaeresis
+&#x0309;~*u0309*~18~18~  | 0309 0309 Combining hook above
+&#x030a;~\mathring ~18~18~  | 030a 030a Combining ring above
+&#x030c;~\check ~18~18~  | 030c 030c Combining caron
+&#x0310;~*u0310*~18~18~  | 0310 0310 Combining candrabindu
+&#x0311;~*u0311*~18~18~  | 0311 0311 Combining inverted breve
+&#x0312;~*u0312*~18~18~  | 0312 0312 Combining turned comma above
+&#x0315;~*u0315*~18~18~  | 0315 0315 Combining comma above right
+&#x031a;~*u031a*~18~18~  | 031a 031a Combining left angle above
+&#x0323;~*u0323*~18~18~  | 0323 0323 Combining dot below
+&#x032c;~*u032c*~18~18~  | 032c 032c Combining caron below
+&#x032d;~*u032d*~18~18~  | 032d 032d Combining circumflex accent below
+&#x032e;~*u032e*~18~18~  | 032e 032e Combining breve below
+&#x032f;~*u032f*~18~18~  | 032f 032f Combining inverted breve below
+&#x0330;~\utilde ~18~18~  | 0330 0330 Combining tilde below
+&#x0331;~\underbar ~18~18~  | 0331 0331 Combining macron below
+&#x0332;~\underline ~18~18~  | 0332 0332 Combining low line
+&#x0333;~*u0333*~18~18~  | 0333 0333 Combining double low line
+&#x0338;~\not ~18~18~  | 0338 0338 Combining long solidus overlay
+&#x033a;~*u033a*~18~18~  | 033a 033a Combining inverted bridge below
+&#x033f;~*u033f*~18~18~  | 033f 033f Combining double overline
+&#x0346;~*u0346*~18~18~  | 0346 0346 Combining bridge above
+&#x0391;~\Alpha ~18~18~
+&#x0392;~\Beta ~18~18~
+&#x0393;~\Gamma ~18~18~
+&#x0394;~\Delta ~18~18~
+&#x0395;~\Epsilon ~18~18~
+&#x0396;~\Zeta ~18~18~
+&#x0397;~\Eta ~18~18~
+&#x0398;~\Theta ~18~18~
+&#x0399;~\Iota ~18~18~
+&#x039a;~\Kappa ~18~18~
+&#x039b;~\Lambda ~18~18~
+&#x039c;~\Mu ~18~18~
+&#x039d;~\Nu ~18~18~
+&#x039e;~\Xi ~18~18~
+&#x039f;~\Omicron ~18~18~
+&#x03a0;~\Pi ~18~18~
+&#x03a1;~\Rho ~18~18~
+&#x0342;~\Varsigma ~18~18~ 
+&#x03a3;~\Sigma ~18~18~
+&#x03a4;~\Tau ~18~18~
+&#x03a5;~\Upsilon ~18~18~
+&#x03a6;~\Phi ~18~18~
+&#x03a7;~\Chi ~18~18~
+&#x03a8;~\Psi ~18~18~
+&#x03a9;~\Omega ~18~18~
+&#x03b1;~\alpha ~18~18~
+&#x03b2;~\beta~ 6~6~
+&#x03b3;~\gamma ~18~18~
+&#x03b4;~\delta ~18~18~
+&#x03b5;~\epsilon ~18~18~
+&#x03b6;~\zeta ~18~18~
+&#x03b7;~\eta ~18~18~
+&#x03b8;~\theta ~18~18~
+&#x03b9;~\iota ~18~18~
+&#x03ba;~\kappa ~18~18~
+&#x03bb;~\lambda ~18~18~
+&#x03bc;~\mu ~18~18~
+&#x03bd;~\nu ~18~18~
+&#x03be;~\xi ~18~18~
+&#x03bf;~\omicron ~18~18~
+&#x03c0;~\pi ~18~18~
+&#x03c1;~\rho ~18~18~
+&#x3042;~\varsigma ~18~18~ 
+&#x03c3;~\sigma ~18~18~
+&#x03c4;~\tau ~18~18~
+&#x03c5;~\upsilon ~18~18~
+&#x03c6;~\phi ~18~18~
+&#x03c7;~\chi ~18~18~
+&#x03c8;~\psi ~18~18~
+&#x03c9;~\omega ~18~18~
+&#x03d0;~\varbeta ~18~18~  | 03d0 03d0 Greek beta symbol
+&#x03d1;~\vartheta ~18~18~  | 03d1 03d1 Greek theta symbol
+&#x03d2;~*u03d2*~18~18~  | 03d2 03d2 Greek upsilon with hook symbol
+&#x03d5;~\phi ~18~18~  | 03d5 03d5 Greek phi symbol
+&#x03d6;~\varpi ~18~18~  | 03d6 03d6 Greek pi symbol
+&#x03d8;~\Qoppa ~18~18~  | 03d8 03d8 Greek letter archaic koppa
+&#x03d9;~\qoppa ~18~18~  | 03d9 03d9 Greek small letter archaic koppa
+&#x30da;~\Stigma ~18~18~  | 03da 03da Greek letter stigma
+&#x03db;~\stigma ~18~18~  | 03db 03db Greek small letter stigma
+&#x03dc;~\digamma ~18~18~  | 03dc 03dc Greek letter digamma
+&#x03dd;~\digamma ~18~18~  | 03dd 03dd Greek small letter digamma
+&#x03de;~\Koppa ~18~18~  | 03de 03de Greek letter koppa
+&#x03df;~\koppa ~18~18~  | 03df 03df Greek small letter koppa
+&#x03e0;~\Sampi ~18~18~  | 03e0 03e0 Greek letter sampi
+&#x03e1;~\sampi ~18~18~  | 03e1 03e1 Greek small letter sampi
+&#x03f0;~*u03f0*~18~18~  | 03f0 03f0 Greek kappa symbol
+&#x03f1;~\varrho ~18~18~  | 03f1 03f1 Greek rho symbol
+&#x03f4;~*u03f4*~18~18~  | 03f4 03f4 Greek capital theta symbol
+&#x03f5;~\epsilon ~18~18~  | 03f5 03f5 Greek lunate epsilon symbol
+&#x03f6;~\backepsilon ~18~18~  | 03f6 03f6 Greek reversed lunate epsilon symbol
+&#x0428;~*u0428*~18~18~  | 0428 0428 Cyrillic capital letter sha*
+&#x2000;~*u2000*~18~18~  | 2000 2000 En quad*
+&#x2001;~\quad ~18~18~  | 2001 2001 Em quad*
+&#x2002;~*u2002*~18~18~  | 2002 2002 En space*
+&#x2003;~*u2003*~18~18~  | 2003 2003 Em space*
+&#x2004;~*u2004*~18~18~  | 2004 2004 Three-per-em space*
+&#x2005;~*u2005*~18~18~  | 2005 2005 Four-per-em space*
+&#x2006;~*u2006*~18~18~  | 2006 2006 Six-per-em space*
+&#x2007;~*u2007*~18~18~  | 2007 2007 Figure space*
+&#x2009;~*u2009*~18~18~  | 2009 2009 Thin space*
+&#x200a;~*u200a*~18~18~  | 200a 200a Hair space*
+&#x200b;~*u200b*~18~18~  | 200b 200b Zero width space*
+&#x2010;~*u2010*~18~18~  | 2010 2010 Hyphen*
+&#x2012;~*u2012*~18~18~  | 2012 2012 Figure dash*
+&#x2013;~*u2013*~18~18~  | 2013 2013 En dash*
+&#x2014;~*u2014*~18~18~  | 2014 2014 Em dash*
+&#x2015;~*u2015*~18~18~  | 2015 2015 Horizontal bar {or conversation bar}
+&#x2016;~\||~18~18~  | 2016 2016 Double vertical line*
+&#x2017;~*u2017*~18~18~  | 2017 2017 Double low line*
+&#x2020;~\dagger ~18~18~  | 2020 2020 Dagger*
+&#x2021;~\ddagger ~18~18~  | 2021 2021 Double dagger*
+&#x2022;~*u2022*~18~18~  | 2022 2022 Bullet*
+&#x2025;~*u2025*~18~18~  | 2025 2025 Two dot leader*
+&#x2026;~\ldots ~18~18~  | 2026 2026 Horizontal ellipsis*
+&#x2032;~\prime ~18~18~  | 2032 2032 Prime*
+&#x2033;~\second ~18~18~  | 2033 2033 Double prime*
+&#x2034;~\third ~18~18~  | 2034 2034 Triple prime*
+&#x2035;~\backprime ~18~18~  | 2035 2035 Reversed prime*
+&#x2036;~*u2036*~18~18~  | 2036 2036 Reversed double prime*
+&#x2037;~*u2037*~18~18~  | 2037 2037 Reversed triple prime*
+&#x2038;~*u2038*~18~18~  | 2038 2038 Caret*
+&#x203b;~*u203b*~18~18~  | 203b 203b Reference mark*
+&#x203c;~*u203c*~18~18~  | 203c 203c Double exclamation mark*
+&#x2040;~\cat ~18~18~  | 2040 2040 Character tie*
+&#x2043;~*u2043*~18~18~  | 2043 2043 Hyphen bullet*
+&#x2044;~*u2044*~18~18~  | 2044 2044 Fraction slash*
+&#x2046;~*u2047*~18~18~  | 2046 2047 Right square bracket with quill*
+&#x207a;~*u207a*~18~18~  | 207a 207a Superscript plus sign*
+&#x207b;~*u207b*~18~18~  | 207b 207b Superscript minus*
+&#x207c;~*u207c*~18~18~  | 207c 207c Superscript equals sign*
+&#x207d;~*u207d*~18~18~  | 207d 207d Superscript left parenthesis*
+&#x207e;~*u207e*~18~18~  | 207e 207e Superscript right parenthesis*
+&#x208a;~*u208a*~18~18~  | 208a 208a Subscript plus sign*
+&#x208b;~*u208b*~18~18~  | 208b 208b Subscript minus*
+&#x208c;~*u208c*~18~18~  | 208c 208c Subscript equals sign*
+&#x208d;~*u208d*~18~18~  | 208d 208d Subscript left parenthesis*
+&#x208e;~*u208e*~18~18~  | 208e 208e Subscript right parenthesis*
+&#x20ac;~*u20ac*~18~18~  | 20ac 20ac Euro sign
+&#x20d0;~\lvec ~18~18~  | 20d0 20d0 Combining left harpoon above*
+&#x20d1;~\vec ~18~18~  | 20d1 20d1 Combining right harpoon above*
+&#x20d2;~*u20d2*~18~18~  | 20d2 20d2 Combining long vertical line overlay*
+&#x20d3;~*u20d3*~18~18~  | 20d3 20d3 Combining short vertical line overlay*
+&#x20d4;~*u20d4*~18~18~  | 20d4 20d4 Combining anticlockwise arrow above*
+&#x20d6;~\LVec ~18~18~  | 20d6 20d6 Combining left arrow above*
+&#x20d7;~\vec ~18~18~  | 20d7 20d7 Combining right arrow above*
+&#x20d8;~*u20d8*~18~18~  | 20d8 20d8 Combining ring overlay*
+&#x20d9;~*u20d9*~18~18~  | 20d9 20d9 Combining clockwise ring overlay*
+&#x20da;~*u20da*~18~18~  | 20da 20da Combining anticlockwise ring overlay*
+&#x20db;~\dddot ~18~18~  | 20db 20db Combining three dots above*
+&#x20dc;~\ddddot ~18~18~  | 20dc 20dc Combining four dots above*
+&#x20dd;~*u20dd*~18~18~  | 20dd 20dd Combining enclosing circle*
+&#x20de;~*u20de*~18~18~  | 20de 20de Combining enclosing square*
+&#x20df;~*u20df*~18~18~  | 20df 20df Combining enclosing diamond*
+&#x20e1;~\overleftrightarrow ~18~18~  | 20e1 20e1 Combining left right arrow above*
+&#x2102;~\mathbb{C}~18~18~  | 2102 2102 Double-struck capital c
+&#x2107;~\Euler ~18~18~  | 2107 2107 Euler constant
+&#x210a;~\mathcal{g}~18~18~  | 210a 210a Script small g
+&#x210b;~\mathcal{H}~18~18~  | 210b 210b Script capital h
+&#x210c;~\mathfrak{H}~18~18~  | 210c 210c Black-letter capital h
+&#x210d;~\mathbb{H}~18~18~  | 210d 210d Double-struck capital h
+&#x210e;~*u210e*~18~18~  | 210e 210e Planck constant
+&#x210f;~\hslash ~18~18~  | 210f 210f Planck constant over two pi
+&#x2110;~\mathcal{I}~18~18~  | 2110 2110 Script capital i
+&#x2111;~\Im ~18~18~  | 2111 2111 Black-letter capital i
+&#x2112;~\mathcal{L}~18~18~  | 2112 2112 Script capital l
+&#x2113;~\ell ~18~18~  | 2113 2113 Script small l
+&#x2115;~\mathbb{N}~18~18~  | 2115 2115 Double-struck capital n
+&#x2118;~\wp ~18~18~  | 2118 2118 Script capital p
+&#x2119;~\mathbb{P}~18~18~  | 2119 2119 Double-struck capital p
+&#x211a;~\mathbb{Q}~18~18~  | 211a 211a Double-struck capital q
+&#x211b;~\mathcal{R}~18~18~  | 211b 211b Script capital r
+&#x211c;~\Re ~18~18~  | 211c 211c Black-letter capital r
+&#x211d;~\mathbb{R}~18~18~  | 211d 211d Double-struck capital r
+&#x2124;~\mathbb{Z}~18~18~  | 2124 2124 Double-struck capital z
+&#x2126;~\tcohm ~18~18~  | 2126 2126 Ohm sign
+&#x2127;~\mho ~18~18~  | 2127 2127 Inverted ohm sign
+&#x2128;~\mathfrak{Z}~18~18~  | 2128 2128 Black-letter capital z
+&#x2129;~*u2129*~18~18~  | 2129 2129 Turned greek small letter iota
+&#x212b;~\Angstroem ~18~18~  | 212b 212b Angstrom sign
+&#x212c;~\mathcal{B}~18~18~  | 212c 212c Script capital b
+&#x212d;~\mathfrak{C}~18~18~  | 212d 212d Black-letter capital c
+&#x212f;~\mathcal{e}~18~18~  | 212f 212f Script small e
+&#x2130;~\mathcal{E}~18~18~  | 2130 2130 Script capital e
+&#x2131;~\mathcal{F}~18~18~  | 2131 2131 Script capital f
+&#x2132;~\Finv ~18~18~  | 2132 2132 Turned capital f
+&#x2133;~\mathcal{M}~18~18~  | 2133 2133 Script capital m
+&#x2134;~\mathcal{o}~18~18~  | 2134 2134 Script small o
+&#x2135;~\aleph ~18~18~  | 2135 2135 Alef symbol
+&#x2136;~\beth ~18~18~  | 2136 2136 Bet symbol
+&#x2137;~\gimel ~18~18~  | 2137 2137 Gimel symbol
+&#x2138;~\daleth ~18~18~  | 2138 2138 Dalet symbol
+&#x2190;~\leftarrow ~18~18~  | 2190 2190 Leftwards arrow
+&#x2191;~\uparrow ~18~18~  | 2191 2191 Upwards arrow
+&#x2192;~\rightarrow ~18~18~  | 2192 2192 Rightwards arrow
+&#x2193;~\downarrow ~18~18~  | 2193 2193 Downwards arrow
+&#x2194;~\leftrightarrow ~18~18~  | 2194 2194 Left right arrow
+&#x2195;~\updownarrow ~18~18~  | 2195 2195 Up down arrow
+&#x2196;~\nwarrow ~18~18~  | 2196 2196 North west arrow
+&#x2197;~\nearrow ~18~18~  | 2197 2197 North east arrow
+&#x2198;~\searrow ~18~18~  | 2198 2198 South east arrow
+&#x2199;~\swarrow ~18~18~  | 2199 2199 South west arrow
+&#x219a;~\nleftarrow ~18~18~  | 219a 219a Leftwards arrow with stroke
+&#x219b;~\nrightarrow ~18~18~  | 219b 219b Rightwards arrow with stroke
+&#x219c;~*u219c*~18~18~  | 219c 219c Leftwards wave arrow
+&#x219d;~*u219d*~18~18~  | 219d 219d Rightwards wave arrow
+&#x219e;~\twoheadleftarrow ~18~18~  | 219e 219e Leftwards two headed arrow
+&#x219f;~*u219f*~18~18~  | 219f 219f Upwards two headed arrow
+&#x21a0;~\twoheadrightarrow ~18~18~  | 21a0 21a0 Rightwards two headed arrow
+&#x21a1;~*u21a1*~18~18~  | 21a1 21a1 Downwards two headed arrow
+&#x21a2;~\leftarrowtail ~18~18~  | 21a2 21a2 Leftwards arrow with tail
+&#x21a3;~\rightarrowtail ~18~18~  | 21a3 21a3 Rightwards arrow with tail
+&#x21a4;~\mapsfrom ~18~18~  | 21a4 21a4 Leftwards arrow from bar
+&#x21a5;~\MapsUp ~18~18~  | 21a5 21a5 Upwards arrow from bar
+&#x21a6;~\mapsto ~18~18~  | 21a6 21a6 Rightwards arrow from bar
+&#x21a7;~\MapsDown ~18~18~  | 21a7 21a7 Downwards arrow from bar
+&#x21a8;~*u21a8*~18~18~  | 21a8 21a8 Up down arrow with base
+&#x21a9;~\hookleftarrow ~18~18~  | 21a9 21a9 Leftwards arrow with hook
+&#x21aa;~\hookrightarrow ~18~18~  | 21aa 21aa Rightwards arrow with hook
+&#x21ab;~\looparrowleft ~18~18~  | 21ab 21ab Leftwards arrow with loop
+&#x21ac;~\looparrowright ~18~18~  | 21ac 21ac Rightwards arrow with loop
+&#x21ad;~\leftrightsquigarrow ~18~18~  | 21ad 21ad Left right wave arrow
+&#x21ae;~\nleftrightarrow ~18~18~  | 21ae 21ae Left right arrow with stroke
+&#x21af;~\lightning ~18~18~  | 21af 21af Downwards zigzag arrow
+&#x21b0;~\Lsh ~18~18~  | 21b0 21b0 Upwards arrow with tip leftwards
+&#x21b1;~\Rsh ~18~18~  | 21b1 21b1 Upwards arrow with tip rightwards
+&#x21b2;~\dlsh ~18~18~  | 21b2 21b2 Downwards arrow with tip leftwards
+&#x21b3;~\drsh ~18~18~  | 21b3 21b3 Downwards arrow with tip rightwards
+&#x21b4;~*u21b4*~18~18~  | 21b4 21b4 Rightwards arrow with corner downwards
+&#x21b5;~*u21b5*~18~18~  | 21b5 21b5 Downwards arrow with corner leftwards
+&#x21b6;~\curvearrowleft ~18~18~  | 21b6 21b6 Anticlockwise top semicircle arrow
+&#x21b7;~\curvearrowright ~18~18~  | 21b7 21b7 Clockwise top semicircle arrow
+&#x21b8;~*u21b8*~18~18~  | 21b8 21b8 North west arrow to long bar
+&#x21b9;~*u21b9*~18~18~  | 21b9 21b9 Leftwards arrow to bar over rightwards arrow to bar
+&#x21ba;~\circlearrowleft ~18~18~  | 21ba 21ba Anticlockwise open circle arrow
+&#x21bb;~\circlearrowright ~18~18~  | 21bb 21bb Clockwise open circle arrow
+&#x21bc;~\leftharpoonup ~18~18~  | 21bc 21bc Leftwards harpoon with barb upwards
+&#x21bd;~\leftharpoondown ~18~18~  | 21bd 21bd Leftwards harpoon with barb downwards
+&#x21be;~\upharpoonright ~18~18~  | 21be 21be Upwards harpoon with barb rightwards
+&#x21bf;~\upharpoonleft ~18~18~  | 21bf 21bf Upwards harpoon with barb leftwards
+&#x21c0;~\rightharpoonup ~18~18~  | 21c0 21c0 Rightwards harpoon with barb upwards
+&#x21c1;~\rightharpoondown ~18~18~  | 21c1 21c1 Rightwards harpoon with barb downwards
+&#x21c2;~\downharpoonright ~18~18~  | 21c2 21c2 Downwards harpoon with barb rightwards
+&#x21c3;~\downharpoonleft ~18~18~  | 21c3 21c3 Downwards harpoon with barb leftwards
+&#x21c4;~\rightleftarrows ~18~18~  | 21c4 21c4 Rightwards arrow over leftwards arrow
+&#x21c5;~\updownarrows ~18~18~  | 21c5 21c5 Upwards arrow leftwards of downwards arrow
+&#x21c6;~\leftrightarrows ~18~18~  | 21c6 21c6 Leftwards arrow over rightwards arrow
+&#x21c7;~\leftleftarrows ~18~18~  | 21c7 21c7 Leftwards paired arrows
+&#x21c8;~\upuparrows ~18~18~  | 21c8 21c8 Upwards paired arrows
+&#x21c9;~\rightrightarrows ~18~18~  | 21c9 21c9 Rightwards paired arrows
+&#x21ca;~\downdownarrows ~18~18~  | 21ca 21ca Downwards paired arrows
+&#x21cb;~\leftrightharpoons ~18~18~  | 21cb 21cb Leftwards harpoon over rightwards harpoon
+&#x21cc;~\rightleftharpoons ~18~18~  | 21cc 21cc Rightwards harpoon over leftwards harpoon
+&#x21cd;~\nLeftarrow ~18~18~  | 21cd 21cd Leftwards double arrow with stroke
+&#x21ce;~\nLeftrightarrow ~18~18~  | 21ce 21ce Left right double arrow with stroke
+&#x21cf;~\nRightarrow ~18~18~  | 21cf 21cf Rightwards double arrow with stroke
+&#x21d0;~\Leftarrow ~18~18~  | 21d0 21d0 Leftwards double arrow
+&#x21d1;~\Uparrow ~18~18~  | 21d1 21d1 Upwards double arrow
+&#x21d2;~\Rightarrow ~18~18~  | 21d2 21d2 Rightwards double arrow
+&#x21d3;~\Downarrow ~18~18~  | 21d3 21d3 Downwards double arrow
+&#x21d4;~\Leftrightarrow ~18~18~  | 21d4 21d4 Left right double arrow
+&#x21d5;~\Updownarrow ~18~18~  | 21d5 21d5 Up down double arrow
+&#x21d6;~\Nwarrow ~18~18~  | 21d6 21d6 North west double arrow
+&#x21d7;~\Nearrow ~18~18~  | 21d7 21d7 North east double arrow
+&#x21d8;~\Searrow ~18~18~  | 21d8 21d8 South east double arrow
+&#x21d9;~\Swarrow ~18~18~  | 21d9 21d9 South west double arrow
+&#x21da;~\Lleftarrow ~18~18~  | 21da 21da Leftwards triple arrow
+&#x21db;~\Rrightarrow ~18~18~  | 21db 21db Rightwards triple arrow
+&#x21dc;~\leftsquigarrow ~18~18~  | 21dc 21dc Leftwards squiggle arrow
+&#x21dd;~\rightsquigarrow ~18~18~  | 21dd 21dd Rightwards squiggle arrow
+&#x21de;~*u21de*~18~18~  | 21de 21de Upwards arrow with double stroke
+&#x21df;~*u21df*~18~18~  | 21df 21df Downwards arrow with double stroke
+&#x21e0;~\dashleftarrow ~18~18~  | 21e0 21e0 Leftwards dashed arrow
+&#x21e1;~*u21e1*~18~18~  | 21e1 21e1 Upwards dashed arrow
+&#x21e2;~\dashrightarrow ~18~18~  | 21e2 21e2 Rightwards dashed arrow
+&#x21e3;~*u21e3*~18~18~  | 21e3 21e3 Downwards dashed arrow
+&#x21e4;~\LeftArrowBar ~18~18~  | 21e4 21e4 Leftwards arrow to bar
+&#x21e5;~\RightArrowBar ~18~18~  | 21e5 21e5 Rightwards arrow to bar
+&#x21e6;~*u21e6*~18~18~  | 21e6 21e6 Leftwards white arrow
+&#x21e7;~*u21e7*~18~18~  | 21e7 21e7 Upwards white arrow
+&#x21e8;~*u21e8*~18~18~  | 21e8 21e8 Rightwards white arrow
+&#x21e9;~*u21e9*~18~18~  | 21e9 21e9 Downwards white arrow
+&#x21ea;~*u21ea*~18~18~  | 21ea 21ea Upwards white arrow from bar
+&#x2200;~\forall ~18~18~  | 2200 2200 For all
+&#x2201;~\complement ~18~18~  | 2201 2201 Complement
+&#x2202;~\partialup ~18~18~  | 2202 2202 Partial differential
+&#x2203;~\exists ~18~18~  | 2203 2203 There exists
+&#x2204;~\nexists ~18~18~  | 2204 2204 There does not exist
+&#x2205;~\varnothing ~18~18~  | 2205 2205 Empty set
+&#x2206;~*u2206*~18~18~  | 2206 2206 Increment
+&#x2207;~\nabla ~18~18~  | 2207 2207 Nabla
+&#x2208;~\in ~18~18~  | 2208 2208 Element of
+&#x2209;~\notin ~18~18~  | 2209 2209 Not an element of
+&#x220a;~*u220a*~18~18~  | 220a 220a Small element of*
+&#x220b;~\ni ~18~18~  | 220b 220b Contains as member
+&#x220c;~\nni ~18~18~  | 220c 220c Does not contain as member
+&#x220d;~*u220d*~18~18~  | 220d 220d Small contains as member*
+&#x220e;~*u220e*~18~18~  | 220e 220e End of proof
+| xxx
+&#x2212;~-~18~18~  | 2212 2212 Minus sign
+&#x2213;~\mp ~18~18~  | 2213 2213 Minus-or-plus sign
+&#x2214;~\dotplus ~18~18~  | 2214 2214 Dot plus
+&#x2215;~\slash ~18~18~  | 2215 2215 Division slash
+&#x2216;~\smallsetminus ~18~18~  | 2216 2216 Set minus
+&#x2217;~\ast ~18~18~  | 2217 2217 Asterisk operator
+&#x2218;~\circ ~18~18~  | 2218 2218 Ring operator
+&#x2219;~\bullet ~18~18~  | 2219 2219 Bullet operator
+&#x221a;~\sqrt ~18~18~  | 221a 221a Square root
+&#x221b;~\sqrt[3]~18~18~  | 221b 221b Cube root
+&#x221c;~\sqrt[4]~18~18~  | 221c 221c Fourth root
+&#x221d;~\propto ~18~18~  | 221d 221d Proportional to
+&#x221e;~\infty ~18~18~  | 221e 221e Infinity
+&#x221f;~\rightangle ~18~18~  | 221f 221f Right angle
+&#x2220;~\angle ~18~18~  | 2220 2220 Angle {angle shape}
+&#x2221;~\measuredangle ~18~18~  | 2221 2221 Measured angle
+&#x2222;~\sphericalangle ~18~18~  | 2222 2222 Spherical angle
+&#x2223;~\mid ~18~18~  | 2223 2223 Divides
+&#x2224;~\nmid ~18~18~  | 2224 2224 Does not divide
+&#x2225;~\parallel ~18~18~  | 2225 2225 Parallel to
+&#x2226;~\nparallel ~18~18~  | 2226 2226 Not parallel to
+&#x2227;~\wedge ~18~18~  | 2227 2227 Logical and
+&#x2228;~\vee ~18~18~  | 2228 2228 Logical or
+&#x2229;~\cap ~18~18~  | 2229 2229 Intersection
+&#x222a;~\cup ~18~18~  | 222a 222a Union
+&#x222b;~\int ~18~18~  | 222b 222b Integral {integral sign}
+&#x222c;~\iint ~18~18~  | 222c 222c Double integral
+&#x222d;~\iiint ~18~18~  | 222d 222d Triple integral
+&#x222e;~\oint ~18~18~  | 222e 222e Contour integral
+&#x222f;~\oiint ~18~18~  | 222f 222f Surface integral
+&#x2230;~\oiiint ~18~18~  | 2230 2230 Volume integral
+&#x2231;~*u2231*~18~18~  | 2231 2231 Clockwise integral
+&#x2232;~\varointclockwise ~18~18~  | 2232 2232 Clockwise contour integral
+&#x2233;~\ointctrclockwise ~18~18~  | 2233 2233 Anticlockwise contour integral
+&#x2234;~\therefore ~18~18~  | 2234 2234 Therefore
+&#x2235;~\because ~18~18~  | 2235 2235 Because
+&#x2236;~:~18~18~  | 2236 2236 Ratio
+&#x2237;~\Proportion ~18~18~  | 2237 2237 Proportion
+&#x2238;~*u2238*~18~18~  | 2238 2238 Dot minus
+&#x2239;~\eqcolon ~18~18~  | 2239 2239 Excess
+&#x223a;~*u223a*~18~18~  | 223a 223a Geometric proportion
+&#x223b;~*u223b*~18~18~  | 223b 223b Homothetic
+&#x223c;~\sim ~18~18~  | 223c 223c Tilde operator
+&#x223d;~\backsim ~18~18~  | 223d 223d Reversed tilde
+&#x223e;~*u223e*~18~18~  | 223e 223e Inverted lazy s
+&#x223f;~\AC ~18~18~  | 223f 223f Sine wave
+&#x2240;~\wr ~18~18~  | 2240 2240 Wreath product
+&#x2241;~\nsim ~18~18~  | 2241 2241 Not tilde
+&#x2242;~\eqsim ~18~18~  | 2242 2242 Minus tilde
+&#x2243;~\simeq ~18~18~  | 2243 2243 Asymptotically equal to
+&#x2244;~\nsimeq ~18~18~  | 2244 2244 Not asymptotically equal to
+&#x2245;~\cong ~18~18~  | 2245 2245 Approximately equal to
+&#x2246;~*u2246*~18~18~  | 2246 2246 Approximately but not actually equal to
+&#x2247;~\ncong ~18~18~  | 2247 2247 Neither approximately nor actually equal to
+&#x2248;~\approx ~18~18~  | 2248 2248 Almost equal to
+&#x2249;~\napprox ~18~18~  | 2249 2249 Not almost equal to
+&#x224a;~\approxeq ~18~18~  | 224a 224a Almost equal or equal to
+&#x224b;~*u224b*~18~18~  | 224b 224b Triple tilde
+&#x224c;~*u224c*~18~18~  | 224c 224c All equal to
+&#x224d;~\asymp ~18~18~  | 224d 224d Equivalent to
+&#x224e;~\Bumpeq ~18~18~  | 224e 224e Geometrically equivalent to
+&#x224f;~\bumpeq ~18~18~  | 224f 224f Difference between
+&#x2250;~\doteq ~18~18~  | 2250 2250 Approaches the limit
+&#x2251;~\Doteq ~18~18~  | 2251 2251 Geometrically equal to
+&#x2252;~\fallingdotseq ~18~18~  | 2252 2252 Approximately equal to or the image of
+&#x2253;~\risingdotseq ~18~18~  | 2253 2253 Image of or approximately equal to
+&#x2254;~\coloneq ~18~18~  | 2254 2254 Colon equals
+&#x2255;~\eqcolon ~18~18~  | 2255 2255 Equals colon
+&#x2256;~\eqcirc ~18~18~  | 2256 2256 Ring in equal to
+&#x2257;~\circeq ~18~18~  | 2257 2257 Ring equal to
+&#x2258;~*u2258*~18~18~  | 2258 2258 Corresponds to
+&#x2259;~\corresponds ~18~18~  | 2259 2259 Estimates
+&#x225a;~*u225a*~18~18~  | 225a 225a Equiangular to
+&#x225b;~*u225b*~18~18~  | 225b 225b Star equals
+&#x225c;~\triangleq ~18~18~  | 225c 225c Delta equal to
+&#x225d;~*u225d*~18~18~  | 225d 225d Equal to by definition
+&#x225e;~*u225e*~18~18~  | 225e 225e Measured by
+&#x225f;~*u225f*~18~18~  | 225f 225f Questioned equal to
+&#x2260;~\neq ~18~18~  | 2260 2260 Not equal to
+&#x2261;~\equiv ~18~18~  | 2261 2261 Identical to
+&#x2262;~\nequiv ~18~18~  | 2262 2262 Not identical to
+&#x2263;~*u2263*~18~18~  | 2263 2263 Strictly equivalent to
+&#x2264;~\leq ~18~18~  | 2264 2264 Less-than or equal to
+&#x2265;~\geq ~18~18~  | 2265 2265 Greater-than or equal to
+&#x2266;~\leqq ~18~18~  | 2266 2266 Less-than over equal to
+&#x2267;~\geqq ~18~18~  | 2267 2267 Greater-than over equal to
+&#x2268;~\lneqq ~18~18~  | 2268 2268 Less-than but not equal to
+&#x2269;~\gneqq ~18~18~  | 2269 2269 Greater-than but not equal to
+&#x226a;~\ll ~18~18~  | 226a 226a Much less-than
+&#x226b;~\gg ~18~18~  | 226b 226b Much greater-than
+&#x226c;~\between ~18~18~  | 226c 226c Between
+&#x226d;~\notasymp ~18~18~  | 226d 226d Not equivalent to
+&#x226e;~\nless ~18~18~  | 226e 226e Not less-than
+&#x226f;~\ngtr ~18~18~  | 226f 226f Not greater-than
+&#x2270;~\nleq ~18~18~  | 2270 2270 Neither less-than nor equal to
+&#x2271;~\ngeq ~18~18~  | 2271 2271 Neither greater-than nor equal to
+&#x2272;~\lesssim ~18~18~  | 2272 2272 Less-than or equivalent to
+&#x2273;~\gtrsim ~18~18~  | 2273 2273 Greater-than or equivalent to
+&#x2274;~\NotLessTilde ~18~18~  | 2274 2274 Neither less-than nor equivalent to
+&#x2275;~\NotGreaterTilde ~18~18~  | 2275 2275 Neither greater-than nor equivalent to
+&#x2276;~\lessgtr ~18~18~  | 2276 2276 Less-than or greater-than
+&#x2277;~\gtrless ~18~18~  | 2277 2277 Greater-than or less-than
+&#x2278;~*u2278*~18~18~  | 2278 2278 Neither less-than nor greater-than
+&#x2279;~\NotGreaterLess ~18~18~  | 2279 2279 Neither greater-than nor less-than
+&#x227a;~\prec ~18~18~  | 227a 227a Precedes
+&#x227b;~\succ ~18~18~  | 227b 227b Succeeds
+&#x227c;~\preccurlyeq ~18~18~  | 227c 227c Precedes or equal to
+&#x227d;~\succcurlyeq ~18~18~  | 227d 227d Succeeds or equal to
+&#x227e;~\precsim ~18~18~  | 227e 227e Precedes or equivalent to
+&#x227f;~\succsim ~18~18~  | 227f 227f Succeeds or equivalent to
+&#x2280;~\nprec ~18~18~  | 2280 2280 Does not precede
+&#x2281;~\nsucc ~18~18~  | 2281 2281 Does not succeed
+&#x2282;~\subset ~18~18~  | 2282 2282 Subset of
+&#x2283;~\supset ~18~18~  | 2283 2283 Superset of
+&#x2284;~\nsubset ~18~18~  | 2284 2284 Not a subset of
+&#x2285;~\nsupset ~18~18~  | 2285 2285 Not a superset of
+&#x2286;~\subseteq ~18~18~  | 2286 2286 Subset of or equal to
+&#x2287;~\supseteq ~18~18~  | 2287 2287 Superset of or equal to
+&#x2288;~\nsubseteq ~18~18~  | 2288 2288 Neither a subset of nor equal to
+&#x2289;~\nsupseteq ~18~18~  | 2289 2289 Neither a superset of nor equal to
+&#x228a;~\subsetneq ~18~18~  | 228a 228a Subset of with not equal to
+&#x228b;~\supsetneq ~18~18~  | 228b 228b Superset of with not equal to
+&#x228c;~*u228c*~18~18~  | 228c 228c Multiset
+&#x228d;~*u228d*~18~18~  | 228d 228d Multiset multiplication
+&#x228e;~\uplus ~18~18~  | 228e 228e Multiset union
+&#x228f;~\sqsubset ~18~18~  | 228f 228f Square image of
+&#x2290;~\sqsupset ~18~18~  | 2290 2290 Square original of
+&#x2291;~\sqsubseteq ~18~18~  | 2291 2291 Square image of or equal to
+&#x2292;~\sqsupseteq ~18~18~  | 2292 2292 Square original of or equal to
+&#x2293;~\sqcap ~18~18~  | 2293 2293 Square cap
+&#x2294;~\sqcup ~18~18~  | 2294 2294 Square cup
+&#x2295;~\oplus ~18~18~  | 2295 2295 Circled plus
+&#x2296;~\ominus ~18~18~  | 2296 2296 Circled minus
+&#x2297;~\otimes ~18~18~  | 2297 2297 Circled times
+&#x2298;~\oslash ~18~18~  | 2298 2298 Circled division slash
+&#x2299;~\odot ~18~18~  | 2299 2299 Circled dot operator
+&#x229a;~\circledcirc ~18~18~  | 229a 229a Circled ring operator
+&#x22c5;~\circledast ~18~18~  | 229b 229b Circled asterisk operator
+&#x229c;~*u229c*~18~18~  | 229c 229c Circled equals
+&#x229d;~\circleddash ~18~18~  | 229d 229d Circled dash
+&#x229e;~\boxplus ~18~18~  | 229e 229e Squared plus
+&#x229f;~\boxminus ~18~18~  | 229f 229f Squared minus
+&#x22a0;~\boxtimes ~18~18~  | 22a0 22a0 Squared times
+&#x22a1;~\boxdot ~18~18~  | 22a1 22a1 Squared dot operator
+&#x22a2;~\vdash ~18~18~  | 22a2 22a2 Right tack
+&#x22a3;~\dashv ~18~18~  | 22a3 22a3 Left tack
+&#x22a4;~\top ~18~18~  | 22a4 22a4 Down tack
+&#x22a5;~\bot ~18~18~  | 22a5 22a5 Up tack
+&#x22a6;~*u22a6*~18~18~  | 22a6 22a6 Assertion
+&#x22a7;~\models ~18~18~  | 22a7 22a7 Models
+&#x22a8;~\vDash ~18~18~  | 22a8 22a8 True
+&#x22a9;~\Vdash ~18~18~  | 22a9 22a9 Forces
+&#x22aa;~\Vvdash ~18~18~  | 22aa 22aa Triple vertical bar right turnstile
+&#x22ab;~\VDash ~18~18~  | 22ab 22ab Double vertical bar double right turnstile
+&#x22ac;~\nvdash ~18~18~  | 22ac 22ac Does not prove
+&#x22ad;~\nvDash ~18~18~  | 22ad 22ad Not true
+&#x22ae;~\nVdash ~18~18~  | 22ae 22ae Does not force
+&#x22af;~\nVDash ~18~18~  | 22af 22af Negated double vertical bar double right turnstile
+&#x22b0;~*u22b0*~18~18~  | 22b0 22b0 Precedes under relation
+&#x22b1;~*u22b1*~18~18~  | 22b1 22b1 Succeeds under relation
+&#x22b2;~\vartriangleleft ~18~18~  | 22b2 22b2 Normal subgroup of
+&#x22b3;~\vartriangleright ~18~18~  | 22b3 22b3 Contains as normal subgroup
+&#x22b4;~\trianglelefteq ~18~18~  | 22b4 22b4 Normal subgroup of or equal to
+&#x22b5;~\trianglerighteq ~18~18~  | 22b5 22b5 Contains as normal subgroup or equal to
+&#x22b6;~\multimapdotbothA ~18~18~  | 22b6 22b6 Original of
+&#x22b7;~\multimapdotbothB ~18~18~  | 22b7 22b7 Image of
+&#x22b8;~\multimap ~18~18~  | 22b8 22b8 Multimap
+&#x22b9;~*u22b9*~18~18~  | 22b9 22b9 Hermitian conjugate matrix
+&#x22ba;~\intercal ~18~18~  | 22ba 22ba Intercalate
+&#x22bb;~\veebar ~18~18~  | 22bb 22bb Xor
+&#x22bc;~\barwedge ~18~18~  | 22bc 22bc Nand
+&#x22bd;~*u22bd*~18~18~  | 22bd 22bd Nor
+&#x22be;~*u22be*~18~18~  | 22be 22be Right angle with arc
+&#x22bf;~*u22bf*~18~18~  | 22bf 22bf Right triangle
+| xxx
+<?$e`><?$tcs`><?$ts`>&#x22c0;~\bigwedge \limits ~1~6~  | 22c0 22c0 N-ary logical and
+<?$e`><?$tcs`><?$ts`>&#x22c1;~\bigvee \limits ~1~6~  | 22c1 22c1 N-ary logical or
+<?$e`><?$tcs`><?$ts`>&#x22c2;~\bigcap \limits ~1~6~  | 22c2 22c2 N-ary intersection
+<?$e`><?$tcs`><?$ts`>&#x22c3;~\bigcup \limits ~1~6~  | 22c3 22c3 N-ary union
+<?$e`>&#x22c0;~\bigwedge \limits ~18~18~  | 22c0 22c0 N-ary logical and
+<?$e`>&#x22c1;~\bigvee \limits ~18~18~  | 22c1 22c1 N-ary logical or
+<?$e`>&#x22c2;~\bigcap \limits ~18~18~  | 22c2 22c2 N-ary intersection
+<?$e`>&#x22c3;~\bigcup \limits ~18~18~  | 22c3 22c3 N-ary union
+| xxx
+&#x22c0;~\bigwedge ~6~6~  | 22c0 22c0 N-ary logical and
+&#x22c1;~\bigvee ~6~6~  | 22c1 22c1 N-ary logical or
+&#x22c2;~\bigcap ~6~6~  | 22c2 22c2 N-ary intersection
+&#x22c3;~\bigcup ~6~6~  | 22c3 22c3 N-ary union
+&#x22c4;~\diamond ~6~6~  | 22c4 22c4 Diamond operator
+&#x229b;~\cdot ~6~6~  | 22c5 22c5 Dot operator {dot multiplication, "times"}
+&#x22c6;~\star ~6~6~  | 22c6 22c6 Star operator
+&#x22c7;~\divideontimes ~6~6~  | 22c7 22c7 Division times
+&#x22c8;~\bowtie ~6~6~  | 22c8 22c8 Bowtie
+&#x22c9;~\ltimes ~6~6~  | 22c9 22c9 Left normal factor semidirect product
+&#x22ca;~\rtimes ~6~6~  | 22ca 22ca Right normal factor semidirect product
+&#x22cb;~\leftthreetimes ~6~6~  | 22cb 22cb Left semidirect product
+&#x22cc;~\rightthreetimes ~6~6~  | 22cc 22cc Right semidirect product
+&#x22cd;~\backsimeq ~6~6~  | 22cd 22cd Reversed tilde equals
+&#x22ce;~\curlyvee ~6~6~  | 22ce 22ce Curly logical or
+&#x22cf;~\curlywedge ~6~6~  | 22cf 22cf Curly logical and
+&#x22d0;~\Subset ~6~6~  | 22d0 22d0 Double subset
+&#x22d1;~\Supset ~6~6~  | 22d1 22d1 Double superset
+&#x22d2;~\Cap ~6~6~  | 22d2 22d2 Double intersection
+&#x22d3;~\Cup ~6~6~  | 22d3 22d3 Double union
+&#x22d4;~\pitchfork ~6~6~  | 22d4 22d4 Pitchfork
+&#x22d5;~\hash ~6~6~  | 22d5 22d5 Equal and parallel to
+&#x22d6;~\lessdot ~6~6~  | 22d6 22d6 Less-than with dot
+&#x22d7;~\gtrdot ~6~6~  | 22d7 22d7 Greater-than with dot
+&#x22d8;~\lll ~6~6~  | 22d8 22d8 Very much less-than
+&#x22d9;~\ggg ~6~6~  | 22d9 22d9 Very much greater-than
+&#x22da;~\lesseqgtr ~6~6~  | 22da 22da Less-than equal to or greater-than
+&#x22db;~\gtreqless ~6~6~  | 22db 22db Greater-than equal to or less-than
+&#x22dc;~*u22dc*~6~6~  | 22dc 22dc Equal to or less-than
+&#x22dd;~*u22dd*~6~6~  | 22dd 22dd Equal to or greater-than
+&#x22de;~\curlyeqprec ~6~6~  | 22de 22de Equal to or precedes
+&#x22df;~\curlyeqsucc ~6~6~  | 22df 22df Equal to or succeeds
+&#x22e0;~\npreceq ~6~6~  | 22e0 22e0 Does not precede or equal
+&#x22e1;~\nsucceq ~6~6~  | 22e1 22e1 Does not succeed or equal
+&#x22e2;~\nsqsubseteq ~6~6~  | 22e2 22e2 Not square image of or equal to
+&#x22e3;~\nsqsupseteq ~6~6~  | 22e3 22e3 Not square original of or equal to
+&#x22e4;~*u22e4*~6~6~  | 22e4 22e4 Square image of or not equal to
+&#x22e5;~*u22e5*~6~6~  | 22e5 22e5 Square original of or not equal to
+&#x22e6;~\lnsim ~6~6~  | 22e6 22e6 Less-than but not equivalent to
+&#x22e7;~\gnsim ~6~6~  | 22e7 22e7 Greater-than but not equivalent to
+&#x22e8;~\precnsim ~6~6~  | 22e8 22e8 Precedes but not equivalent to
+&#x22e9;~\succnsim ~6~6~  | 22e9 22e9 Succeeds but not equivalent to
+&#x22ea;~\ntriangleleft ~6~6~  | 22ea 22ea Not normal subgroup of
+&#x22eb;~\ntriangleright ~6~6~  | 22eb 22eb Does not contain as normal subgroup
+&#x22ec;~\ntrianglelefteq ~6~6~  | 22ec 22ec Not normal subgroup of or equal to
+&#x22ed;~\ntrianglerighteq ~6~6~  | 22ed 22ed Does not contain as normal subgroup or equal
+&#x22ee;~\vdots ~6~6~  | 22ee 22ee Vertical ellipsis
+&#x22ef;~\cdots ~6~6~  | 22ef 22ef Midline horizontal ellipsis
+&#x22f0;~\iddots ~6~6~  | 22f0 22f0 Up right diagonal ellipsis
+&#x22f1;~\ddots ~6~6~  | 22f1 22f1 Down right diagonal ellipsis
+&#x2300;~\diameter ~6~6~  | 2300 2300 Diameter sign*
+&#x2302;~*u2302*~6~6~  | 2302 2302 House*
+&#x2305;~*u2305*~6~6~  | 2305 2305 Projective*
+&#x2306;~*u2306*~6~6~  | 2306 2306 Perspective*
+&#x2308;~\lceil ~6~6~  | 2308 2308 Left ceiling*
+&#x2309;~\rceil ~6~6~  | 2309 2309 Right ceiling*
+&#x230a;~\lfloor ~6~6~  | 230a 230a Left floor*
+&#x230b;~\rfloor ~6~6~  | 230b 230b Right floor*
+&#x2310;~\invneg ~6~6~  | 2310 2310 Reversed not sign*
+&#x2311;~\wasylozenge ~6~6~  | 2311 2311 Square lozenge*
+&#x2312;~*u2312*~6~6~  | 2312 2312 Arc*
+&#x2313;~*u2313*~6~6~  | 2313 2313 Segment*
+&#x2317;~*u2317*~6~6~  | 2317 2317 Viewdata square*
+&#x2319;~*u2319*~6~6~  | 2319 2319 Turned not sign*
+&#x231c;~\ulcorner ~6~6~  | 231c 231c Top left corner*
+&#x231d;~\urcorner ~6~6~  | 231d 231d Top right corner*
+&#x231e;~\llcorner ~6~6~  | 231e 231e Bottom left corner*
+&#x231f;~\lrcorner ~6~6~  | 231f 231f Bottom right corner*
+&#x2320;~*u2320*~6~6~  | 2320 2320 Top half integral*
+&#x2321;~*u2321*~6~6~  | 2321 2321 Bottom half integral*
+&#x2322;~\frown ~6~6~  | 2322 2322 Frown*
+&#x2323;~\smile ~6~6~  | 2323 2323 Smile*
+&#x232c;~*u232c*~6~6~  | 232c 232c Benzene ring*
+&#x2332;~*u2332*~6~6~  | 2332 2332 Conical taper*
+&#x2336;~*u2336*~6~6~  | 2336 2336 Apl functional symbol i-beam*
+&#x2337;~*u2337*~6~6~  | 2337 2337 Apl functional symbol squish quad*
+&#x2338;~*u2338*~6~6~  | 2338 2338 Apl functional symbol quad equal*
+&#x2339;~\APLinv ~6~6~  | 2339 2339 Apl functional symbol quad divide*
+&#x233a;~*u233a*~6~6~  | 233a 233a Apl functional symbol quad diamond*
+&#x233b;~*u233b*~6~6~  | 233b 233b Apl functional symbol quad jot*
+&#x233c;~*u233c*~6~6~  | 233c 233c Apl functional symbol quad circle*
+&#x233d;~*u233d*~6~6~  | 233d 233d Apl functional symbol circle stile*
+&#x233e;~*u233e*~6~6~  | 233e 233e Apl functional symbol circle jot*
+&#x233f;~\notslash ~6~6~  | 233f 233f Apl functional symbol slash bar*
+&#x2340;~\notbackslash ~6~6~  | 2340 2340 Apl functional symbol backslash bar*
+&#x2341;~*u2341*~6~6~  | 2341 2341 Apl functional symbol quad slash*
+&#x2342;~*u2342*~6~6~  | 2342 2342 Apl functional symbol quad backslash*
+&#x2343;~*u2343*~6~6~  | 2343 2343 Apl functional symbol quad less-than*
+&#x2344;~*u2344*~6~6~  | 2344 2344 Apl functional symbol quad greater-than*
+&#x2345;~*u2345*~6~6~  | 2345 2345 Apl functional symbol leftwards vane*
+&#x2346;~*u2346*~6~6~  | 2346 2346 Apl functional symbol rightwards vane*
+&#x2347;~\APLleftarrowbox ~6~6~  | 2347 2347 Apl functional symbol quad leftwards arrow*
+&#x2348;~\APLrightarrowbox ~6~6~  | 2348 2348 Apl functional symbol quad rightwards arrow*
+&#x2349;~*u2349*~6~6~  | 2349 2349 Apl functional symbol circle backslash*
+&#x234a;~*u234a*~6~6~  | 234a 234a Apl functional symbol down tack underbar*
+&#x234b;~*u234b*~6~6~  | 234b 234b Apl functional symbol delta stile*
+&#x234c;~*u234c*~6~6~  | 234c 234c Apl functional symbol quad down caret*
+&#x234d;~*u234d*~6~6~  | 234d 234d Apl functional symbol quad delta*
+&#x234e;~*u234e*~6~6~  | 234e 234e Apl functional symbol down tack jot*
+&#x234f;~*u234f*~6~6~  | 234f 234f Apl functional symbol upwards vane*
+&#x2350;~\APLuparrowbox ~6~6~  | 2350 2350 Apl functional symbol quad upwards arrow*
+&#x2351;~*u2351*~6~6~  | 2351 2351 Apl functional symbol up tack overbar*
+&#x2352;~*u2352*~6~6~  | 2352 2352 Apl functional symbol del stile*
+&#x2353;~*u2353*~6~6~  | 2353 2353 Apl functional symbol quad up caret*
+&#x2354;~*u2354*~6~6~  | 2354 2354 Apl functional symbol quad del*
+&#x2355;~*u2355*~6~6~  | 2355 2355 Apl functional symbol up tack jot*
+&#x2356;~*u2356*~6~6~  | 2356 2356 Apl functional symbol downwards vane*
+&#x2357;~\APLdownarrowbox ~6~6~  | 2357 2357 Apl functional symbol quad downwards arrow*
+&#x2358;~*u2358*~6~6~  | 2358 2358 Apl functional symbol quote underbar*
+&#x2359;~*u2359*~6~6~  | 2359 2359 Apl functional symbol delta underbar*
+&#x235a;~*u235a*~6~6~  | 235a 235a Apl functional symbol diamond underbar*
+&#x235b;~*u235b*~6~6~  | 235b 235b Apl functional symbol jot underbar*
+&#x235c;~*u235c*~6~6~  | 235c 235c Apl functional symbol circle underbar*
+&#x235d;~\APLcomment ~6~6~  | 235d 235d Apl functional symbol up shoe jot*
+&#x235e;~\APLinput ~6~6~  | 235e 235e Apl functional symbol quote quad*
+&#x235f;~\APLlog ~6~6~  | 235f 235f Apl functional symbol circle star*
+&#x2360;~*u2360*~6~6~  | 2360 2360 Apl functional symbol quad colon*
+&#x2361;~*u2361*~6~6~  | 2361 2361 Apl functional symbol up tack diaeresis*
+&#x2362;~*u2362*~6~6~  | 2362 2362 Apl functional symbol del diaeresis*
+&#x2363;~*u2363*~6~6~  | 2363 2363 Apl functional symbol star diaeresis*
+&#x2364;~*u2364*~6~6~  | 2364 2364 Apl functional symbol jot diaeresis*
+&#x2365;~*u2365*~6~6~  | 2365 2365 Apl functional symbol circle diaeresis*
+&#x2366;~*u2366*~6~6~  | 2366 2366 Apl functional symbol down shoe stile*
+&#x2367;~*u2367*~6~6~  | 2367 2367 Apl functional symbol left shoe stile*
+&#x2368;~*u2368*~6~6~  | 2368 2368 Apl functional symbol tilde diaeresis*
+&#x2369;~*u2369*~6~6~  | 2369 2369 Apl functional symbol greater-than diaeresis*
+&#x236a;~*u236a*~6~6~  | 236a 236a Apl functional symbol comma bar*
+&#x236b;~*u236b*~6~6~  | 236b 236b Apl functional symbol del tilde*
+&#x236c;~*u236c*~6~6~  | 236c 236c Apl functional symbol zilde*
+&#x236d;~*u236d*~6~6~  | 236d 236d Apl functional symbol stile tilde*
+&#x236e;~*u236e*~6~6~  | 236e 236e Apl functional symbol semicolon underbar*
+&#x236f;~*u236f*~6~6~  | 236f 236f Apl functional symbol quad not equal*
+&#x2370;~*u2370*~6~6~  | 2370 2370 Apl functional symbol quad question*
+&#x2371;~*u2371*~6~6~  | 2371 2371 Apl functional symbol down caret tilde*
+&#x2372;~*u2372*~6~6~  | 2372 2372 Apl functional symbol up caret tilde*
+&#x2373;~*u2373*~6~6~  | 2373 2373 Apl functional symbol iota*
+&#x2374;~*u2374*~6~6~  | 2374 2374 Apl functional symbol rho*
+&#x2375;~*u2375*~6~6~  | 2375 2375 Apl functional symbol omega*
+&#x2376;~*u2376*~6~6~  | 2376 2376 Apl functional symbol alpha underbar*
+&#x2377;~*u2377*~6~6~  | 2377 2377 Apl functional symbol epsilon underbar*
+&#x2378;~*u2378*~6~6~  | 2378 2378 Apl functional symbol iota underbar*
+&#x2379;~*u2379*~6~6~  | 2379 2379 Apl functional symbol omega underbar*
+&#x237a;~*u237c*~6~6~  | 237a 237c Apl functional symbol alpha*
+&#x2506;~*u2506*~6~6~  | 2506 2506 Box drawings light triple dash vertical*
+&#x2580;~*u2580*~6~6~  | 2580 2580 Upper half block*
+&#x2584;~*u2584*~6~6~  | 2584 2584 Lower half block*
+&#x2588;~*u2588*~6~6~  | 2588 2588 Full block*
+&#x258c;~*u258c*~6~6~  | 258c 258c Left half block*
+&#x2590;~*u2590*~6~6~  | 2590 2590 Right half block*
+&#x2591;~*u2591*~6~6~  | 2591 2591 Light shade*
+&#x2592;~*u2592*~6~6~  | 2592 2592 Medium shade*
+&#x2593;~*u2593*~6~6~  | 2593 2593 Dark shade*
+&#x25a0;~*u25a0*~6~6~  | 25a0 25a0 Black square
+&#x25a1;~*u25a1*~6~6~  | 25a1 25a1 White square
+&#x25a2;~*u25a2*~6~6~  | 25a2 25a2 White square with rounded corners
+&#x25a3;~*u25a3*~6~6~  | 25a3 25a3 White square containing black small square
+&#x25a4;~*u25a4*~6~6~  | 25a4 25a4 Square with horizontal fill
+&#x25a5;~*u25a5*~6~6~  | 25a5 25a5 Square with vertical fill
+&#x25a6;~*u25a6*~6~6~  | 25a6 25a6 Square with orthogonal crosshatch fill
+&#x25a7;~*u25a7*~6~6~  | 25a7 25a7 Square with upper left to lower right fill
+&#x25a8;~*u25a8*~6~6~  | 25a8 25a8 Square with upper right to lower left fill
+&#x25a9;~*u25a9*~6~6~  | 25a9 25a9 Square with diagonal crosshatch fill
+&#x25aa;~*u25aa*~6~6~  | 25aa 25aa Black small square
+&#x25ab;~*u25ab*~6~6~  | 25ab 25ab White small square
+&#x25ac;~*u25ac*~6~6~  | 25ac 25ac Black rectangle
+&#x25ad;~*u25ad*~6~6~  | 25ad 25ad White rectangle
+&#x25ae;~*u25ae*~6~6~  | 25ae 25ae Black vertical rectangle
+&#x25af;~*u25af*~6~6~  | 25af 25af White vertical rectangle
+&#x25b0;~*u25b0*~6~6~  | 25b0 25b0 Black parallelogram
+&#x25b1;~*u25b1*~6~6~  | 25b1 25b1 White parallelogram
+&#x25b2;~*u25b2*~6~6~  | 25b2 25b2 Black up-pointing triangle
+&#x25b3;~\bigtriangleup ~6~6~  | 25b3 25b3 White up-pointing triangle {triangle shape}
+&#x25b4;~\blacktriangleup ~6~6~  | 25b4 25b4 Black up-pointing small triangle
+&#x25b5;~\smalltriangleup ~6~6~  | 25b5 25b5 White up-pointing small triangle
+&#x25b6;~\RHD ~6~6~  | 25b6 25b6 Black right-pointing triangle
+&#x25b7;~\rhd ~6~6~  | 25b7 25b7 White right-pointing triangle
+&#x25b8;~\blacktriangleright ~6~6~  | 25b8 25b8 Black right-pointing small triangle
+&#x25b9;~\smalltriangleright ~6~6~  | 25b9 25b9 White right-pointing small triangle
+&#x25ba;~*u25ba*~6~6~  | 25ba 25ba Black right-pointing pointer
+&#x25bb;~*u25bb*~6~6~  | 25bb 25bb White right-pointing pointer
+&#x25bc;~*u25bc*~6~6~  | 25bc 25bc Black down-pointing triangle
+&#x25bd;~\bigtriangledown ~6~6~  | 25bd 25bd White down-pointing triangle
+&#x25be;~\blacktriangledown ~6~6~  | 25be 25be Black down-pointing small triangle
+&#x25bf;~\smalltriangledown ~6~6~  | 25bf 25bf White down-pointing small triangle
+&#x25c0;~\LHD ~6~6~  | 25c0 25c0 Black left-pointing triangle
+&#x25c1;~\lhd ~6~6~  | 25c1 25c1 White left-pointing triangle
+&#x25c2;~\blacktriangleleft ~6~6~  | 25c2 25c2 Black left-pointing small triangle
+&#x25c3;~\smalltriangleleft ~6~6~  | 25c3 25c3 White left-pointing small triangle
+&#x25c4;~*u25c4*~6~6~  | 25c4 25c4 Black left-pointing pointer
+&#x25c5;~*u25c5*~6~6~  | 25c5 25c5 White left-pointing pointer
+&#x25c6;~\Diamondblack ~6~6~  | 25c6 25c6 Black diamond
+&#x25c7;~\Diamond ~6~6~  | 25c7 25c7 White diamond
+&#x25c8;~*u25c8*~6~6~  | 25c8 25c8 White diamond containing black small diamond
+&#x25c9;~*u25c9*~6~6~  | 25c9 25c9 Fisheye
+&#x25ca;~\lozenge ~6~6~  | 25ca 25ca Lozenge
+&#x25cb;~\Circle ~6~6~  | 25cb 25cb White circle
+&#x25cc;~*u25cc*~6~6~  | 25cc 25cc Dotted circle
+&#x25cd;~*u25cd*~6~6~  | 25cd 25cd Circle with vertical fill
+&#x25ce;~*u25ce*~6~6~  | 25ce 25ce Bullseye
+&#x25cf;~\CIRCLE ~6~6~  | 25cf 25cf Black circle
+&#x25d0;~\LEFTcircle ~6~6~  | 25d0 25d0 Circle with left half black
+&#x25d1;~\RIGHTcircle ~6~6~  | 25d1 25d1 Circle with right half black
+&#x25d2;~*u25d2*~6~6~  | 25d2 25d2 Circle with lower half black
+&#x25d3;~*u25d3*~6~6~  | 25d3 25d3 Circle with upper half black
+&#x25d4;~*u25d4*~6~6~  | 25d4 25d4 Circle with upper right quadrant black
+&#x25d5;~*u25d5*~6~6~  | 25d5 25d5 Circle with all but upper left quadrant black
+&#x25d6;~\LEFTCIRCLE ~6~6~  | 25d6 25d6 Left half black circle
+&#x25d7;~\RIGHTCIRCLE ~6~6~  | 25d7 25d7 Right half black circle
+&#x25d8;~*u25d8*~6~6~  | 25d8 25d8 Inverse bullet
+&#x25d9;~*u25d9*~6~6~  | 25d9 25d9 Inverse white circle
+&#x25da;~*u25da*~6~6~  | 25da 25da Upper half inverse white circle
+&#x25db;~*u25db*~6~6~  | 25db 25db Lower half inverse white circle
+&#x25dc;~*u25dc*~6~6~  | 25dc 25dc Upper left quadrant circular arc
+&#x25dd;~*u25dd*~6~6~  | 25dd 25dd Upper right quadrant circular arc
+&#x25de;~*u25de*~6~6~  | 25de 25de Lower right quadrant circular arc
+&#x25df;~*u25df*~6~6~  | 25df 25df Lower left quadrant circular arc
+&#x25e0;~*u25e0*~6~6~  | 25e0 25e0 Upper half circle
+&#x25e1;~*u25e1*~6~6~  | 25e1 25e1 Lower half circle
+&#x25e2;~*u25e2*~6~6~  | 25e2 25e2 Black lower right triangle
+&#x25e3;~*u25e3*~6~6~  | 25e3 25e3 Black lower left triangle
+&#x25e4;~*u25e4*~6~6~  | 25e4 25e4 Black upper left triangle
+&#x25e5;~*u25e5*~6~6~  | 25e5 25e5 Black upper right triangle
+&#x25e6;~*u25e6*~6~6~  | 25e6 25e6 White bullet
+&#x25e7;~*u25e7*~6~6~  | 25e7 25e7 Square with left half black
+&#x25e8;~*u25e8*~6~6~  | 25e8 25e8 Square with right half black
+&#x25e9;~*u25e9*~6~6~  | 25e9 25e9 Square with upper left diagonal half black
+&#x25ea;~*u25ea*~6~6~  | 25ea 25ea Square with lower right diagonal half black
+&#x25eb;~\boxbar ~6~6~  | 25eb 25eb White square with vertical bisecting line
+&#x25ec;~*u25ec*~6~6~  | 25ec 25ec White up-pointing triangle with dot
+&#x25ed;~*u25ed*~6~6~  | 25ed 25ed Up-pointing triangle with left half black
+&#x25ee;~*u25ee*~6~6~  | 25ee 25ee Up-pointing triangle with right half black
+&#x25ef;~*u25ef*~6~6~  | 25ef 25ef Large circle
+&#x270e;~\pencil ~6~6~  | 270e 270e Lower right pencil
+&#x2713;~\checkmark ~6~6~  | 2713 2713 Check mark
+&#x2717;~\ballotx ~6~6~  | 2717 2717 Ballot x
+&#x2720;~\maltese ~6~6~  | 2720 2720 Maltese cross
+&#x272a;~*u272a*~6~6~  | 272a 272a Circled white star
+&#x2736;~*u2736*~6~6~  | 2736 2736 Six pointed black star
+&#x273d;~*u273d*~6~6~  | 273d 273d Heavy teardrop-spoked asterisk
+&#x2772;~*u2772*~6~6~  | 2772 2772 Light left tortoise shell bracket ornament
+&#x2773;~*u2773*~6~6~  | 2773 2773 Light right tortoise shell bracket ornament
+&#x279b;~*u279b*~6~6~  | 279b 279b Drafting point rightwards arrow
+&#x27a2;~\arrowbullet ~6~6~  | 27a2 27a2 Three-d top-lighted rightwards arrowhead
+&#x27c0;~*u27c0*~6~6~  | 27c0 27c0 Three dimensional angle
+&#x27c1;~*u27c1*~6~6~  | 27c1 27c1 White triangle containing small white triangle
+&#x27c2;~\perp ~6~6~  | 27c2 27c2 Perpendicular
+&#x27c3;~*u27c3*~6~6~  | 27c3 27c3 Open subset
+&#x27c4;~*u27c4*~6~6~  | 27c4 27c4 Open superset
+&#x27c5;~\Lbag ~6~6~  | 27c5 27c5 Left s-shaped bag delimiter
+&#x27c6;~\Rbag ~6~6~  | 27c6 27c6 Right s-shaped bag delimiter
+&#x27c7;~*u27c7*~6~6~  | 27c7 27c7 Or with dot inside
+&#x27c8;~*u27c8*~6~6~  | 27c8 27c8 Reverse solidus preceding subset
+&#x27c9;~*u27c9*~6~6~  | 27c9 27c9 Superset preceding solidus
+&#x27cc;~*u27cc*~6~6~  | 27cc 27cc Long division
+&#x27d0;~\Diamonddot ~6~6~  | 27d0 27d0 White diamond with centred dot
+&#x27d1;~*u27d1*~6~6~  | 27d1 27d1 And with dot
+&#x27d2;~*u27d2*~6~6~  | 27d2 27d2 Element of opening upwards
+&#x27d3;~*u27d3*~6~6~  | 27d3 27d3 Lower right corner with dot
+&#x27d4;~*u27d4*~6~6~  | 27d4 27d4 Upper left corner with dot
+&#x27d5;~*u27d5*~6~6~  | 27d5 27d5 Left outer join
+&#x27d6;~*u27d6*~6~6~  | 27d6 27d6 Right outer join
+&#x27d7;~*u27d7*~6~6~  | 27d7 27d7 Full outer join
+&#x27d8;~*u27d8*~6~6~  | 27d8 27d8 Large up tack
+&#x27d9;~*u27d9*~6~6~  | 27d9 27d9 Large down tack
+&#x27da;~*u27da*~6~6~  | 27da 27da Left and right double turnstile
+&#x27db;~*u27db*~6~6~  | 27db 27db Left and right tack
+&#x27dc;~\multimapinv ~6~6~  | 27dc 27dc Left multimap
+&#x27dd;~*u27dd*~6~6~  | 27dd 27dd Long right tack
+&#x27de;~*u27de*~6~6~  | 27de 27de Long left tack
+&#x27df;~*u27df*~6~6~  | 27df 27df Up tack with circle above
+&#x27e0;~*u27e0*~6~6~  | 27e0 27e0 Lozenge divided by horizontal rule
+&#x27e1;~*u27e1*~6~6~  | 27e1 27e1 White concave-sided diamond
+&#x27e2;~*u27e2*~6~6~  | 27e2 27e2 White concave-sided diamond with leftwards tick
+&#x27e3;~*u27e3*~6~6~  | 27e3 27e3 White concave-sided diamond with rightwards tick
+&#x27e4;~*u27e4*~6~6~  | 27e4 27e4 White square with leftwards tick
+&#x27e5;~*u27e5*~6~6~  | 27e5 27e5 White square with rightwards tick
+&#x27e6;~\llbracket ~6~6~  | 27e6 27e6 Mathematical left white square bracket
+&#x27e7;~\rrbracket ~6~6~  | 27e7 27e7 Mathematical right white square bracket
+&#x27e8;~\langle ~6~6~  | 27e8 27e8 Mathematical left angle bracket
+&#x27e9;~\rangle ~6~6~  | 27e9 27e9 Mathematical right angle bracket
+&#x27ea;~\lang ~6~6~  | 27ea 27ea Mathematical left double angle bracket
+&#x27eb;~\rang ~6~6~  | 27eb 27eb Mathematical right double angle bracket
+&#x27ec;~*u27ec*~6~6~  | 27ec 27ec Mathematical left white tortoise shell bracket
+&#x27ed;~*u27ed*~6~6~  | 27ed 27ed Mathematical right white tortoise shell bracket
+&#x27ee;~\lgroup ~6~6~  | 27ee 27ee Mathematical left flattened parenthesis
+&#x27ef;~\rgroup ~6~6~  | 27ef 27ef Mathematical right flattened parenthesis
+&#x27f0;~*u27f0*~6~6~  | 27f0 27f0 Upwards quadruple arrow
+&#x27f1;~*u27f1*~6~6~  | 27f1 27f1 Downwards quadruple arrow
+&#x27f2;~*u27f2*~6~6~  | 27f2 27f2 Anticlockwise gapped circle arrow
+&#x27f3;~*u27f3*~6~6~  | 27f3 27f3 Clockwise gapped circle arrow
+&#x27f4;~*u27f4*~6~6~  | 27f4 27f4 Right arrow with circled plus
+&#x27f5;~\longleftarrow ~6~6~  | 27f5 27f5 Long leftwards arrow
+&#x27f6;~\longrightarrow ~6~6~  | 27f6 27f6 Long rightwards arrow
+&#x27f7;~\longleftrightarrow ~6~6~  | 27f7 27f7 Long left right arrow
+&#x27f8;~\Longleftarrow ~6~6~  | 27f8 27f8 Long leftwards double arrow
+&#x27f9;~\Longrightarrow ~6~6~  | 27f9 27f9 Long rightwards double arrow
+&#x27fa;~\Longleftrightarrow ~6~6~  | 27fa 27fa Long left right double arrow
+&#x27fb;~\longmapsfrom ~6~6~  | 27fb 27fb Long leftwards arrow from bar
+&#x27fc;~\longmapsto ~6~6~  | 27fc 27fc Long rightwards arrow from bar
+&#x27fd;~\Longmapsfrom ~6~6~  | 27fd 27fd Long leftwards double arrow from bar
+&#x27fe;~\Longmapsto ~6~6~  | 27fe 27fe Long rightwards double arrow from bar
+&#x27ff;~*u27ff*~6~6~  | 27ff 27ff Long rightwards squiggle arrow
+&#x2900;~\psur ~6~6~  | 2900 2900 Rightwards two-headed arrow with vertical stroke
+&#x2901;~*u2901*~6~6~  | 2901 2901 Rightwards two-headed arrow with double vertical stroke
+&#x2902;~*u2902*~6~6~  | 2902 2902 Leftwards double arrow with vertical stroke
+&#x2903;~*u2903*~6~6~  | 2903 2903 Rightwards double arrow with vertical stroke
+&#x2904;~*u2904*~6~6~  | 2904 2904 Left right double arrow with vertical stroke
+&#x2905;~*u2905*~6~6~  | 2905 2905 Rightwards two-headed arrow from bar
+&#x2906;~\Mapsfrom ~6~6~  | 2906 2906 Leftwards double arrow from bar
+&#x2907;~\Mapsto ~6~6~  | 2907 2907 Rightwards double arrow from bar
+&#x2908;~*u2908*~6~6~  | 2908 2908 Downwards arrow with horizontal stroke
+&#x2909;~*u2909*~6~6~  | 2909 2909 Upwards arrow with horizontal stroke
+&#x290a;~*u290a*~6~6~  | 290a 290a Upwards triple arrow
+&#x290b;~*u290b*~6~6~  | 290b 290b Downwards triple arrow
+&#x290c;~*u290c*~6~6~  | 290c 290c Leftwards double dash arrow
+&#x290d;~*u290d*~6~6~  | 290d 290d Rightwards double dash arrow
+&#x290e;~*u290e*~6~6~  | 290e 290e Leftwards triple dash arrow
+&#x290f;~*u290f*~6~6~  | 290f 290f Rightwards triple dash arrow
+&#x2910;~*u2910*~6~6~  | 2910 2910 Rightwards two-headed triple dash arrow
+&#x2911;~*u2911*~6~6~  | 2911 2911 Rightwards arrow with dotted stem
+&#x2912;~\UpArrowBar ~6~6~  | 2912 2912 Upwards arrow to bar
+&#x2913;~\DownArrowBar ~6~6~  | 2913 2913 Downwards arrow to bar
+&#x2914;~\pinj ~6~6~  | 2914 2914 Rightwards arrow with tail with vertical stroke
+&#x2915;~\finj ~6~6~  | 2915 2915 Rightwards arrow with tail with double vertical stroke
+&#x2916;~\bij ~6~6~  | 2916 2916 Rightwards two-headed arrow with tail
+&#x2917;~*u2917*~6~6~  | 2917 2917 Rightwards two-headed arrow with tail with vertical stroke
+&#x2918;~*u2918*~6~6~  | 2918 2918 Rightwards two-headed arrow with tail with double vertical stroke
+&#x2919;~*u2919*~6~6~  | 2919 2919 Leftwards arrow-tail
+&#x291a;~*u291a*~6~6~  | 291a 291a Rightwards arrow-tail
+&#x291b;~*u291b*~6~6~  | 291b 291b Leftwards double arrow-tail
+&#x291c;~*u291c*~6~6~  | 291c 291c Rightwards double arrow-tail
+&#x291d;~*u291d*~6~6~  | 291d 291d Leftwards arrow to black diamond
+&#x291e;~*u291e*~6~6~  | 291e 291e Rightwards arrow to black diamond
+&#x291f;~*u291f*~6~6~  | 291f 291f Leftwards arrow from bar to black diamond
+&#x2920;~*u2920*~6~6~  | 2920 2920 Rightwards arrow from bar to black diamond
+&#x2921;~*u2921*~6~6~  | 2921 2921 North west and south east arrow
+&#x2922;~*u2922*~6~6~  | 2922 2922 North east and south west arrow
+&#x2923;~*u2923*~6~6~  | 2923 2923 North west arrow with hook
+&#x2924;~*u2924*~6~6~  | 2924 2924 North east arrow with hook
+&#x2925;~*u2925*~6~6~  | 2925 2925 South east arrow with hook
+&#x2926;~*u2926*~6~6~  | 2926 2926 South west arrow with hook
+&#x2927;~*u2927*~6~6~  | 2927 2927 North west arrow and north east arrow
+&#x2928;~*u2928*~6~6~  | 2928 2928 North east arrow and south east arrow
+&#x2929;~*u2929*~6~6~  | 2929 2929 South east arrow and south west arrow
+&#x292a;~*u292a*~6~6~  | 292a 292a South west arrow and north west arrow
+&#x292b;~*u292b*~6~6~  | 292b 292b Rising diagonal crossing falling diagonal
+&#x292c;~*u292c*~6~6~  | 292c 292c Falling diagonal crossing rising diagonal
+&#x292d;~*u292d*~6~6~  | 292d 292d South east arrow crossing north east arrow
+&#x292e;~*u292e*~6~6~  | 292e 292e North east arrow crossing south east arrow
+&#x292f;~*u292f*~6~6~  | 292f 292f Falling diagonal crossing north east arrow
+&#x2930;~*u2930*~6~6~  | 2930 2930 Rising diagonal crossing south east arrow
+&#x2931;~*u2931*~6~6~  | 2931 2931 North east arrow crossing north west arrow
+&#x2932;~*u2932*~6~6~  | 2932 2932 North west arrow crossing north east arrow
+&#x2933;~\leadsto ~6~6~  | 2933 2933 Wave arrow pointing directly right
+&#x2934;~*u2934*~6~6~  | 2934 2934 Arrow pointing rightwards then curving upwards
+&#x2935;~*u2935*~6~6~  | 2935 2935 Arrow pointing rightwards then curving downwards
+&#x2936;~*u2936*~6~6~  | 2936 2936 Arrow pointing downwards then curving leftwards
+&#x2937;~*u2937*~6~6~  | 2937 2937 Arrow pointing downwards then curving rightwards
+&#x2938;~*u2938*~6~6~  | 2938 2938 Right-side arc clockwise arrow
+&#x2939;~*u2939*~6~6~  | 2939 2939 Left-side arc anticlockwise arrow
+&#x293a;~*u293a*~6~6~  | 293a 293a Top arc anticlockwise arrow
+&#x293b;~*u293b*~6~6~  | 293b 293b Bottom arc anticlockwise arrow
+&#x293c;~*u293c*~6~6~  | 293c 293c Top arc clockwise arrow with minus
+&#x293d;~*u293d*~6~6~  | 293d 293d Top arc anticlockwise arrow with plus
+&#x293e;~*u293e*~6~6~  | 293e 293e Lower right semicircular clockwise arrow
+&#x293f;~*u293f*~6~6~  | 293f 293f Lower left semicircular anticlockwise arrow
+&#x2940;~*u2940*~6~6~  | 2940 2940 Anticlockwise closed circle arrow
+&#x2941;~*u2941*~6~6~  | 2941 2941 Clockwise closed circle arrow
+&#x2942;~*u2942*~6~6~  | 2942 2942 Rightwards arrow above short leftwards arrow
+&#x2943;~*u2943*~6~6~  | 2943 2943 Leftwards arrow above short rightwards arrow
+&#x2944;~*u2944*~6~6~  | 2944 2944 Short rightwards arrow above leftwards arrow
+&#x2945;~*u2945*~6~6~  | 2945 2945 Rightwards arrow with plus below
+&#x2946;~*u2946*~6~6~  | 2946 2946 Leftwards arrow with plus below
+&#x2947;~*u2947*~6~6~  | 2947 2947 Rightwards arrow through x
+&#x2948;~*u2948*~6~6~  | 2948 2948 Left right arrow through small circle
+&#x2949;~*u2949*~6~6~  | 2949 2949 Upwards two-headed arrow from small circle
+&#x294a;~\leftrightharpoon ~6~6~  | 294a 294a Left barb up right barb down harpoon
+&#x294b;~\rightleftharpoon ~6~6~  | 294b 294b Left barb down right barb up harpoon
+&#x294c;~*u294c*~6~6~  | 294c 294c Up barb right down barb left harpoon
+&#x294d;~*u294d*~6~6~  | 294d 294d Up barb left down barb right harpoon
+&#x294e;~\leftrightharpoonup ~6~6~  | 294e 294e Left barb up right barb up harpoon
+&#x294f;~\rightupdownharpoon ~6~6~  | 294f 294f Up barb right down barb right harpoon
+&#x2950;~\leftrightharpoondown ~6~6~  | 2950 2950 Left barb down right barb down harpoon
+&#x2951;~\leftupdownharpoon ~6~6~  | 2951 2951 Up barb left down barb left harpoon
+&#x2952;~\LeftVectorBar ~6~6~  | 2952 2952 Leftwards harpoon with barb up to bar
+&#x2953;~\RightVectorBar ~6~6~  | 2953 2953 Rightwards harpoon with barb up to bar
+&#x2954;~\RightUpVectorBar ~6~6~  | 2954 2954 Upwards harpoon with barb right to bar
+&#x2955;~\RightDownVectorBar ~6~6~  | 2955 2955 Downwards harpoon with barb right to bar
+&#x2956;~\DownLeftVectorBar ~6~6~  | 2956 2956 Leftwards harpoon with barb down to bar
+&#x2957;~\DownRightVectorBar ~6~6~  | 2957 2957 Rightwards harpoon with barb down to bar
+&#x2958;~\LeftUpVectorBar ~6~6~  | 2958 2958 Upwards harpoon with barb left to bar
+&#x2959;~\LeftDownVectorBar ~6~6~  | 2959 2959 Downwards harpoon with barb left to bar
+&#x295a;~\LeftTeeVector ~6~6~  | 295a 295a Leftwards harpoon with barb up from bar
+&#x295b;~\RightTeeVector ~6~6~  | 295b 295b Rightwards harpoon with barb up from bar
+&#x295c;~\RightUpTeeVector ~6~6~  | 295c 295c Upwards harpoon with barb right from bar
+&#x295d;~\RightDownTeeVector ~6~6~  | 295d 295d Downwards harpoon with barb right from bar
+&#x295e;~\DownLeftTeeVector ~6~6~  | 295e 295e Leftwards harpoon with barb down from bar
+&#x295f;~\DownRightTeeVector ~6~6~  | 295f 295f Rightwards harpoon with barb down from bar
+&#x2960;~\LeftUpTeeVector ~6~6~  | 2960 2960 Upwards harpoon with barb left from bar
+&#x2961;~\LeftDownTeeVector ~6~6~  | 2961 2961 Downwards harpoon with barb left from bar
+&#x2962;~\leftleftharpoons ~6~6~  | 2962 2962 Leftwards harpoon with barb up above leftwards harpoon with barb down
+&#x2963;~\upupharpoons ~6~6~  | 2963 2963 Upwards harpoon with barb left beside upwards harpoon with barb right
+&#x2964;~\rightrightharpoons ~6~6~  | 2964 2964 Rightwards harpoon with barb up above rightwards harpoon with barb down
+&#x2965;~\downdownharpoons ~6~6~  | 2965 2965 Downwards harpoon with barb left beside downwards harpoon with barb right
+&#x2966;~*u2966*~6~6~  | 2966 2966 Leftwards harpoon with barb up above rightwards harpoon with barb up
+&#x2967;~*u2967*~6~6~  | 2967 2967 Leftwards harpoon with barb down above rightwards harpoon with barb down
+&#x2968;~*u2968*~6~6~  | 2968 2968 Rightwards harpoon with barb up above leftwards harpoon with barb up
+&#x2969;~*u2969*~6~6~  | 2969 2969 Rightwards harpoon with barb down above leftwards harpoon with barb down
+&#x296a;~\leftbarharpoon ~6~6~  | 296a 296a Leftwards harpoon with barb up above long dash
+&#x296b;~\barleftharpoon ~6~6~  | 296b 296b Leftwards harpoon with barb down below long dash
+&#x296c;~\rightbarharpoon ~6~6~  | 296c 296c Rightwards harpoon with barb up above long dash
+&#x296d;~\barrightharpoon ~6~6~  | 296d 296d Rightwards harpoon with barb down below long dash
+&#x296e;~\updownharpoons ~6~6~  | 296e 296e Upwards harpoon with barb left beside downwards harpoon with barb right
+&#x296f;~\downupharpoons ~6~6~  | 296f 296f Downwards harpoon with barb left beside upwards harpoon with barb right
+&#x2970;~*u2970*~6~6~  | 2970 2970 Right double arrow with rounded head
+&#x2971;~*u2971*~6~6~  | 2971 2971 Equals sign above rightwards arrow
+&#x2972;~*u2972*~6~6~  | 2972 2972 Tilde operator above rightwards arrow
+&#x2973;~*u2973*~6~6~  | 2973 2973 Leftwards arrow above tilde operator
+&#x2974;~*u2974*~6~6~  | 2974 2974 Rightwards arrow above tilde operator
+&#x2975;~*u2975*~6~6~  | 2975 2975 Rightwards arrow above almost equal to
+&#x2976;~*u2976*~6~6~  | 2976 2976 Less-than above leftwards arrow
+&#x2977;~*u2977*~6~6~  | 2977 2977 Leftwards arrow through less-than
+&#x2978;~*u2978*~6~6~  | 2978 2978 Greater-than above rightwards arrow
+&#x2979;~*u2979*~6~6~  | 2979 2979 Subset above rightwards arrow
+&#x297a;~*u297a*~6~6~  | 297a 297a Leftwards arrow through subset
+&#x297b;~*u297b*~6~6~  | 297b 297b Superset above leftwards arrow
+&#x297c;~\strictfi ~6~6~  | 297c 297c Left fish tail
+&#x297d;~\strictif ~6~6~  | 297d 297d Right fish tail
+&#x297e;~*u297e*~6~6~  | 297e 297e Up fish tail
+&#x297f;~*u297f*~6~6~  | 297f 297f Down fish tail
+&#x2980;~\VERT ~6~6~  | 2980 2980 Triple vertical bar delimiter
+&#x2981;~\spot ~6~6~  | 2981 2981 Z notation spot
+&#x2982;~*u2982*~6~6~  | 2982 2982 Z notation type colon
+&#x2983;~*u2983*~6~6~  | 2983 2983 Left white curly bracket
+&#x2984;~*u2984*~6~6~  | 2984 2984 Right white curly bracket
+&#x2985;~\Lparen ~6~6~  | 2985 2985 Left white parenthesis
+&#x2986;~\Rparen ~6~6~  | 2986 2986 Right white parenthesis
+<?$e`><?$tcs`><?$ts`>&#x2987;~\lim \limits ~1~6~  | 2987 2987 Z notation left image bracket
+<?$e`>&#x2987;~\lim \limits ~6~6~  | 2987 2987 Z notation left image bracket
+&#x2987;~\lim ~6~6~  | 2987 2987 Z notation left image bracket
+&#x2988;~\rimg ~6~6~  | 2988 2988 Z notation right image bracket
+&#x2989;~\lblot ~6~6~  | 2989 2989 Z notation left binding bracket
+&#x298a;~\rblot ~6~6~  | 298a 298a Z notation right binding bracket
+&#x298b;~*u298b*~6~6~  | 298b 298b Left square bracket with underbar
+&#x298c;~*u298c*~6~6~  | 298c 298c Right square bracket with underbar
+&#x298d;~*u298d*~6~6~  | 298d 298d Left square bracket with tick in top corner
+&#x298e;~*u298e*~6~6~  | 298e 298e Right square bracket with tick in bottom corner
+&#x298f;~*u298f*~6~6~  | 298f 298f Left square bracket with tick in bottom corner
+&#x2990;~*u2990*~6~6~  | 2990 2990 Right square bracket with tick in top corner
+&#x2991;~*u2991*~6~6~  | 2991 2991 Left angle bracket with dot
+&#x2992;~*u2992*~6~6~  | 2992 2992 Right angle bracket with dot
+&#x2993;~*u2993*~6~6~  | 2993 2993 Left arc less-than bracket
+&#x2994;~*u2994*~6~6~  | 2994 2994 Right arc greater-than bracket
+&#x2995;~*u2995*~6~6~  | 2995 2995 Double left arc greater-than bracket
+&#x2996;~*u2996*~6~6~  | 2996 2996 Double right arc less-than bracket
+&#x2997;~*u2997*~6~6~  | 2997 2997 Left black tortoise shell bracket
+&#x2998;~*u2998*~6~6~  | 2998 2998 Right black tortoise shell bracket
+&#x2999;~*u2999*~6~6~  | 2999 2999 Dotted fence
+&#x299a;~*u299a*~6~6~  | 299a 299a Vertical zigzag line
+&#x299b;~*u299b*~6~6~  | 299b 299b Measured angle opening left
+&#x299c;~*u299c*~6~6~  | 299c 299c Right angle variant with square
+&#x299d;~*u299d*~6~6~  | 299d 299d Measured right angle with dot
+&#x299e;~*u299e*~6~6~  | 299e 299e Angle with s inside
+&#x299f;~*u299f*~6~6~  | 299f 299f Acute angle
+&#x29a0;~*u29a0*~6~6~  | 29a0 29a0 Spherical angle opening left
+&#x29a1;~*u29a1*~6~6~  | 29a1 29a1 Spherical angle opening up
+&#x29a2;~*u29a2*~6~6~  | 29a2 29a2 Turned angle
+&#x29a3;~*u29a3*~6~6~  | 29a3 29a3 Reversed angle
+&#x29a4;~*u29a4*~6~6~  | 29a4 29a4 Angle with underbar
+&#x29a5;~*u29a5*~6~6~  | 29a5 29a5 Reversed angle with underbar
+&#x29a6;~*u29a6*~6~6~  | 29a6 29a6 Oblique angle opening up
+&#x29a7;~*u29a7*~6~6~  | 29a7 29a7 Oblique angle opening down
+&#x29a8;~*u29a8*~6~6~  | 29a8 29a8 Measured angle with open arm ending in arrow pointing up and right
+&#x29a9;~*u29a9*~6~6~  | 29a9 29a9 Measured angle with open arm ending in arrow pointing up and left
+&#x29aa;~*u29aa*~6~6~  | 29aa 29aa Measured angle with open arm ending in arrow pointing down and right
+&#x29ab;~*u29ab*~6~6~  | 29ab 29ab Measured angle with open arm ending in arrow pointing down and left
+&#x29ac;~*u29ac*~6~6~  | 29ac 29ac Measured angle with open arm ending in arrow pointing right and up
+&#x29ad;~*u29ad*~6~6~  | 29ad 29ad Measured angle with open arm ending in arrow pointing left and up
+&#x29ae;~*u29ae*~6~6~  | 29ae 29ae Measured angle with open arm ending in arrow pointing right and down
+&#x29af;~*u29af*~6~6~  | 29af 29af Measured angle with open arm ending in arrow pointing left and down
+&#x29b0;~*u29b0*~6~6~  | 29b0 29b0 Reversed empty set
+&#x29b1;~*u29b1*~6~6~  | 29b1 29b1 Empty set with overbar
+&#x29b2;~*u29b2*~6~6~  | 29b2 29b2 Empty set with small circle above
+&#x29b3;~*u29b3*~6~6~  | 29b3 29b3 Empty set with right arrow above
+&#x29b4;~*u29b4*~6~6~  | 29b4 29b4 Empty set with left arrow above
+&#x29b5;~*u29b5*~6~6~  | 29b5 29b5 Circle with horizontal bar
+&#x29b6;~*u29b6*~6~6~  | 29b6 29b6 Circled vertical bar
+&#x29b7;~*u29b7*~6~6~  | 29b7 29b7 Circled parallel
+&#x29b8;~\circledbslash ~6~6~  | 29b8 29b8 Circled reverse solidus
+&#x29b9;~*u29b9*~6~6~  | 29b9 29b9 Circled perpendicular
+&#x29ba;~*u29ba*~6~6~  | 29ba 29ba Circle divided by horizontal bar and top half divided by vertical bar
+&#x29bb;~*u29bb*~6~6~  | 29bb 29bb Circle with superimposed x
+&#x29bc;~*u29bc*~6~6~  | 29bc 29bc Circled anticlockwise-rotated division sign
+&#x29bd;~*u29bd*~6~6~  | 29bd 29bd Up arrow through circle
+&#x29be;~*u29be*~6~6~  | 29be 29be Circled white bullet
+&#x29bf;~*u29bf*~6~6~  | 29bf 29bf Circled bullet
+&#x29c0;~\circledless ~6~6~  | 29c0 29c0 Circled less-than
+&#x29c1;~\circledgtr ~6~6~  | 29c1 29c1 Circled greater-than
+&#x29c2;~*u29c2*~6~6~  | 29c2 29c2 Circle with small circle to the right
+&#x29c3;~*u29c3*~6~6~  | 29c3 29c3 Circle with two horizontal strokes to the right
+&#x29c4;~\boxslash ~6~6~  | 29c4 29c4 Squared rising diagonal slash
+&#x29c5;~\boxbslash ~6~6~  | 29c5 29c5 Squared falling diagonal slash
+&#x29c6;~\boxast ~6~6~  | 29c6 29c6 Squared asterisk
+&#x29c7;~\boxcircle ~6~6~  | 29c7 29c7 Squared small circle
+&#x29c8;~\boxbox ~6~6~  | 29c8 29c8 Squared square
+&#x29c9;~*u29c9*~6~6~  | 29c9 29c9 Two joined squares
+&#x29ca;~*u29ca*~6~6~  | 29ca 29ca Triangle with dot above
+&#x29cb;~*u29cb*~6~6~  | 29cb 29cb Triangle with underbar
+&#x29cc;~*u29cc*~6~6~  | 29cc 29cc S in triangle
+&#x29cd;~*u29cd*~6~6~  | 29cd 29cd Triangle with serifs at bottom
+&#x29ce;~*u29ce*~6~6~  | 29ce 29ce Right triangle above left triangle
+&#x29cf;~\LeftTriangleBar ~6~6~  | 29cf 29cf Left triangle beside vertical bar
+&#x29d0;~\RightTriangleBar ~6~6~  | 29d0 29d0 Vertical bar beside right triangle
+&#x29d1;~*u29d1*~6~6~  | 29d1 29d1 Bowtie with left half black
+&#x29d2;~*u29d2*~6~6~  | 29d2 29d2 Bowtie with right half black
+&#x29d3;~*u29d3*~6~6~  | 29d3 29d3 Black bowtie
+&#x29d4;~*u29d4*~6~6~  | 29d4 29d4 Times with left half black
+&#x29d5;~*u29d5*~6~6~  | 29d5 29d5 Times with right half black
+&#x29d6;~*u29d6*~6~6~  | 29d6 29d6 White hourglass
+&#x29d7;~*u29d7*~6~6~  | 29d7 29d7 Black hourglass
+&#x29d8;~*u29d8*~6~6~  | 29d8 29d8 Left wiggly fence
+&#x29d9;~*u29d9*~6~6~  | 29d9 29d9 Right wiggly fence
+&#x29da;~*u29da*~6~6~  | 29da 29da Left double wiggly fence
+&#x29db;~*u29db*~6~6~  | 29db 29db Right double wiggly fence
+&#x29dc;~*u29dc*~6~6~  | 29dc 29dc Incomplete infinity
+&#x29dd;~*u29dd*~6~6~  | 29dd 29dd Tie over infinity
+&#x29de;~*u29de*~6~6~  | 29de 29de Infinity negated with vertical bar
+&#x29df;~\multimapboth ~6~6~  | 29df 29df Double-ended multimap
+&#x29e0;~*u29e0*~6~6~  | 29e0 29e0 Square with contoured outline
+&#x29e1;~*u29e1*~6~6~  | 29e1 29e1 Increases as
+&#x29e2;~*u29e2*~6~6~  | 29e2 29e2 Shuffle product
+&#x29e3;~*u29e3*~6~6~  | 29e3 29e3 Equals sign and slanted parallel
+&#x29e4;~*u29e4*~6~6~  | 29e4 29e4 Equals sign and slanted parallel with tilde above
+&#x29e5;~*u29e5*~6~6~  | 29e5 29e5 Identical to and slanted parallel
+&#x29e6;~*u29e6*~6~6~  | 29e6 29e6 Gleich stark
+&#x29e7;~*u29e7*~6~6~  | 29e7 29e7 Thermodynamic
+&#x29e8;~*u29e8*~6~6~  | 29e8 29e8 Down-pointing triangle with left half black
+&#x29e9;~*u29e9*~6~6~  | 29e9 29e9 Down-pointing triangle with right half black
+&#x29ea;~*u29ea*~6~6~  | 29ea 29ea Black diamond with down arrow
+&#x29eb;~\blacklozenge ~6~6~  | 29eb 29eb Black lozenge
+&#x29ec;~*u29ec*~6~6~  | 29ec 29ec White circle with down arrow
+&#x29ed;~*u29ed*~6~6~  | 29ed 29ed Black circle with down arrow
+&#x29ee;~*u29ee*~6~6~  | 29ee 29ee Error-barred white square
+&#x29ef;~*u29ef*~6~6~  | 29ef 29ef Error-barred black square
+&#x29f0;~*u29f0*~6~6~  | 29f0 29f0 Error-barred white diamond
+&#x29f1;~*u29f1*~6~6~  | 29f1 29f1 Error-barred black diamond
+&#x29f2;~*u29f2*~6~6~  | 29f2 29f2 Error-barred white circle
+&#x29f3;~*u29f3*~6~6~  | 29f3 29f3 Error-barred black circle
+&#x29f4;~*u29f4*~6~6~  | 29f4 29f4 Rule-delayed
+&#x29f5;~\setminus ~6~6~  | 29f5 29f5 Reverse solidus operator
+&#x29f6;~*u29f6*~6~6~  | 29f6 29f6 Solidus with overbar
+&#x29f7;~*u29f7*~6~6~  | 29f7 29f7 Reverse solidus with horizontal stroke
+&#x29f8;~*u29f8*~6~6~  | 29f8 29f8 Big solidus
+&#x29f9;~\zhide ~6~6~  | 29f9 29f9 Big reverse solidus
+&#x29fa;~*u29fa*~6~6~  | 29fa 29fa Double plus
+&#x29fb;~*u29fb*~6~6~  | 29fb 29fb Triple plus
+&#x29fc;~*u29fc*~6~6~  | 29fc 29fc Left-pointing curved angle bracket
+&#x29fd;~*u29fd*~6~6~  | 29fd 29fd Right-pointing curved angle bracket
+&#x29fe;~*u29fe*~6~6~  | 29fe 29fe Tiny
+&#x29ff;~*u29ff*~6~6~  | 29ff 29ff Miny
+| xxx
+&#x22c0;~\bigwedge ~18~18~  | 22c0 22c0 N-ary logical and
+&#x22c1;~\bigvee ~18~18~  | 22c1 22c1 N-ary logical or
+&#x22c2;~\bigcap ~18~18~  | 22c2 22c2 N-ary intersection
+&#x22c3;~\bigcup ~18~18~  | 22c3 22c3 N-ary union
+&#x22c4;~\diamond ~18~18~  | 22c4 22c4 Diamond operator
+&#x229b;~\cdot ~18~18~  | 22c5 22c5 Dot operator {dot multiplication, "times"}
+&#x22c6;~\star ~18~18~  | 22c6 22c6 Star operator
+&#x22c7;~\divideontimes ~18~18~  | 22c7 22c7 Division times
+&#x22c8;~\bowtie ~18~18~  | 22c8 22c8 Bowtie
+&#x22c9;~\ltimes ~18~18~  | 22c9 22c9 Left normal factor semidirect product
+&#x22ca;~\rtimes ~18~18~  | 22ca 22ca Right normal factor semidirect product
+&#x22cb;~\leftthreetimes ~18~18~  | 22cb 22cb Left semidirect product
+&#x22cc;~\rightthreetimes ~18~18~  | 22cc 22cc Right semidirect product
+&#x22cd;~\backsimeq ~18~18~  | 22cd 22cd Reversed tilde equals
+&#x22ce;~\curlyvee ~18~18~  | 22ce 22ce Curly logical or
+&#x22cf;~\curlywedge ~18~18~  | 22cf 22cf Curly logical and
+&#x22d0;~\Subset ~18~18~  | 22d0 22d0 Double subset
+&#x22d1;~\Supset ~18~18~  | 22d1 22d1 Double superset
+&#x22d2;~\Cap ~18~18~  | 22d2 22d2 Double intersection
+&#x22d3;~\Cup ~18~18~  | 22d3 22d3 Double union
+&#x22d4;~\pitchfork ~18~18~  | 22d4 22d4 Pitchfork
+&#x22d5;~\hash ~18~18~  | 22d5 22d5 Equal and parallel to
+&#x22d6;~\lessdot ~18~18~  | 22d6 22d6 Less-than with dot
+&#x22d7;~\gtrdot ~18~18~  | 22d7 22d7 Greater-than with dot
+&#x22d8;~\lll ~18~18~  | 22d8 22d8 Very much less-than
+&#x22d9;~\ggg ~18~18~  | 22d9 22d9 Very much greater-than
+&#x22da;~\lesseqgtr ~18~18~  | 22da 22da Less-than equal to or greater-than
+&#x22db;~\gtreqless ~18~18~  | 22db 22db Greater-than equal to or less-than
+&#x22dc;~*u22dc*~18~18~  | 22dc 22dc Equal to or less-than
+&#x22dd;~*u22dd*~18~18~  | 22dd 22dd Equal to or greater-than
+&#x22de;~\curlyeqprec ~18~18~  | 22de 22de Equal to or precedes
+&#x22df;~\curlyeqsucc ~18~18~  | 22df 22df Equal to or succeeds
+&#x22e0;~\npreceq ~18~18~  | 22e0 22e0 Does not precede or equal
+&#x22e1;~\nsucceq ~18~18~  | 22e1 22e1 Does not succeed or equal
+&#x22e2;~\nsqsubseteq ~18~18~  | 22e2 22e2 Not square image of or equal to
+&#x22e3;~\nsqsupseteq ~18~18~  | 22e3 22e3 Not square original of or equal to
+&#x22e4;~*u22e4*~18~18~  | 22e4 22e4 Square image of or not equal to
+&#x22e5;~*u22e5*~18~18~  | 22e5 22e5 Square original of or not equal to
+&#x22e6;~\lnsim ~18~18~  | 22e6 22e6 Less-than but not equivalent to
+&#x22e7;~\gnsim ~18~18~  | 22e7 22e7 Greater-than but not equivalent to
+&#x22e8;~\precnsim ~18~18~  | 22e8 22e8 Precedes but not equivalent to
+&#x22e9;~\succnsim ~18~18~  | 22e9 22e9 Succeeds but not equivalent to
+&#x22ea;~\ntriangleleft ~18~18~  | 22ea 22ea Not normal subgroup of
+&#x22eb;~\ntriangleright ~18~18~  | 22eb 22eb Does not contain as normal subgroup
+&#x22ec;~\ntrianglelefteq ~18~18~  | 22ec 22ec Not normal subgroup of or equal to
+&#x22ed;~\ntrianglerighteq ~18~18~  | 22ed 22ed Does not contain as normal subgroup or equal
+&#x22ee;~\vdots ~18~18~  | 22ee 22ee Vertical ellipsis
+&#x22ef;~\cdots ~18~18~  | 22ef 22ef Midline horizontal ellipsis
+&#x22f0;~\iddots ~18~18~  | 22f0 22f0 Up right diagonal ellipsis
+&#x22f1;~\ddots ~18~18~  | 22f1 22f1 Down right diagonal ellipsis
+&#x2300;~\diameter ~18~18~  | 2300 2300 Diameter sign*
+&#x2302;~*u2302*~18~18~  | 2302 2302 House*
+&#x2305;~*u2305*~18~18~  | 2305 2305 Projective*
+&#x2306;~*u2306*~18~18~  | 2306 2306 Perspective*
+&#x2308;~\lceil ~18~18~  | 2308 2308 Left ceiling*
+&#x2309;~\rceil ~18~18~  | 2309 2309 Right ceiling*
+&#x230a;~\lfloor ~18~18~  | 230a 230a Left floor*
+&#x230b;~\rfloor ~18~18~  | 230b 230b Right floor*
+&#x2310;~\invneg ~18~18~  | 2310 2310 Reversed not sign*
+&#x2311;~\wasylozenge ~18~18~  | 2311 2311 Square lozenge*
+&#x2312;~*u2312*~18~18~  | 2312 2312 Arc*
+&#x2313;~*u2313*~18~18~  | 2313 2313 Segment*
+&#x2317;~*u2317*~18~18~  | 2317 2317 Viewdata square*
+&#x2319;~*u2319*~18~18~  | 2319 2319 Turned not sign*
+&#x231c;~\ulcorner ~18~18~  | 231c 231c Top left corner*
+&#x231d;~\urcorner ~18~18~  | 231d 231d Top right corner*
+&#x231e;~\llcorner ~18~18~  | 231e 231e Bottom left corner*
+&#x231f;~\lrcorner ~18~18~  | 231f 231f Bottom right corner*
+&#x2320;~*u2320*~18~18~  | 2320 2320 Top half integral*
+&#x2321;~*u2321*~18~18~  | 2321 2321 Bottom half integral*
+&#x2322;~\frown ~18~18~  | 2322 2322 Frown*
+&#x2323;~\smile ~18~18~  | 2323 2323 Smile*
+&#x232c;~*u232c*~18~18~  | 232c 232c Benzene ring*
+&#x2332;~*u2332*~18~18~  | 2332 2332 Conical taper*
+&#x2336;~*u2336*~18~18~  | 2336 2336 Apl functional symbol i-beam*
+&#x2337;~*u2337*~18~18~  | 2337 2337 Apl functional symbol squish quad*
+&#x2338;~*u2338*~18~18~  | 2338 2338 Apl functional symbol quad equal*
+&#x2339;~\APLinv ~18~18~  | 2339 2339 Apl functional symbol quad divide*
+&#x233a;~*u233a*~18~18~  | 233a 233a Apl functional symbol quad diamond*
+&#x233b;~*u233b*~18~18~  | 233b 233b Apl functional symbol quad jot*
+&#x233c;~*u233c*~18~18~  | 233c 233c Apl functional symbol quad circle*
+&#x233d;~*u233d*~18~18~  | 233d 233d Apl functional symbol circle stile*
+&#x233e;~*u233e*~18~18~  | 233e 233e Apl functional symbol circle jot*
+&#x233f;~\notslash ~18~18~  | 233f 233f Apl functional symbol slash bar*
+&#x2340;~\notbackslash ~18~18~  | 2340 2340 Apl functional symbol backslash bar*
+&#x2341;~*u2341*~18~18~  | 2341 2341 Apl functional symbol quad slash*
+&#x2342;~*u2342*~18~18~  | 2342 2342 Apl functional symbol quad backslash*
+&#x2343;~*u2343*~18~18~  | 2343 2343 Apl functional symbol quad less-than*
+&#x2344;~*u2344*~18~18~  | 2344 2344 Apl functional symbol quad greater-than*
+&#x2345;~*u2345*~18~18~  | 2345 2345 Apl functional symbol leftwards vane*
+&#x2346;~*u2346*~18~18~  | 2346 2346 Apl functional symbol rightwards vane*
+&#x2347;~\APLleftarrowbox ~18~18~  | 2347 2347 Apl functional symbol quad leftwards arrow*
+&#x2348;~\APLrightarrowbox ~18~18~  | 2348 2348 Apl functional symbol quad rightwards arrow*
+&#x2349;~*u2349*~18~18~  | 2349 2349 Apl functional symbol circle backslash*
+&#x234a;~*u234a*~18~18~  | 234a 234a Apl functional symbol down tack underbar*
+&#x234b;~*u234b*~18~18~  | 234b 234b Apl functional symbol delta stile*
+&#x234c;~*u234c*~18~18~  | 234c 234c Apl functional symbol quad down caret*
+&#x234d;~*u234d*~18~18~  | 234d 234d Apl functional symbol quad delta*
+&#x234e;~*u234e*~18~18~  | 234e 234e Apl functional symbol down tack jot*
+&#x234f;~*u234f*~18~18~  | 234f 234f Apl functional symbol upwards vane*
+&#x2350;~\APLuparrowbox ~18~18~  | 2350 2350 Apl functional symbol quad upwards arrow*
+&#x2351;~*u2351*~18~18~  | 2351 2351 Apl functional symbol up tack overbar*
+&#x2352;~*u2352*~18~18~  | 2352 2352 Apl functional symbol del stile*
+&#x2353;~*u2353*~18~18~  | 2353 2353 Apl functional symbol quad up caret*
+&#x2354;~*u2354*~18~18~  | 2354 2354 Apl functional symbol quad del*
+&#x2355;~*u2355*~18~18~  | 2355 2355 Apl functional symbol up tack jot*
+&#x2356;~*u2356*~18~18~  | 2356 2356 Apl functional symbol downwards vane*
+&#x2357;~\APLdownarrowbox ~18~18~  | 2357 2357 Apl functional symbol quad downwards arrow*
+&#x2358;~*u2358*~18~18~  | 2358 2358 Apl functional symbol quote underbar*
+&#x2359;~*u2359*~18~18~  | 2359 2359 Apl functional symbol delta underbar*
+&#x235a;~*u235a*~18~18~  | 235a 235a Apl functional symbol diamond underbar*
+&#x235b;~*u235b*~18~18~  | 235b 235b Apl functional symbol jot underbar*
+&#x235c;~*u235c*~18~18~  | 235c 235c Apl functional symbol circle underbar*
+&#x235d;~\APLcomment ~18~18~  | 235d 235d Apl functional symbol up shoe jot*
+&#x235e;~\APLinput ~18~18~  | 235e 235e Apl functional symbol quote quad*
+&#x235f;~\APLlog ~18~18~  | 235f 235f Apl functional symbol circle star*
+&#x2360;~*u2360*~18~18~  | 2360 2360 Apl functional symbol quad colon*
+&#x2361;~*u2361*~18~18~  | 2361 2361 Apl functional symbol up tack diaeresis*
+&#x2362;~*u2362*~18~18~  | 2362 2362 Apl functional symbol del diaeresis*
+&#x2363;~*u2363*~18~18~  | 2363 2363 Apl functional symbol star diaeresis*
+&#x2364;~*u2364*~18~18~  | 2364 2364 Apl functional symbol jot diaeresis*
+&#x2365;~*u2365*~18~18~  | 2365 2365 Apl functional symbol circle diaeresis*
+&#x2366;~*u2366*~18~18~  | 2366 2366 Apl functional symbol down shoe stile*
+&#x2367;~*u2367*~18~18~  | 2367 2367 Apl functional symbol left shoe stile*
+&#x2368;~*u2368*~18~18~  | 2368 2368 Apl functional symbol tilde diaeresis*
+&#x2369;~*u2369*~18~18~  | 2369 2369 Apl functional symbol greater-than diaeresis*
+&#x236a;~*u236a*~18~18~  | 236a 236a Apl functional symbol comma bar*
+&#x236b;~*u236b*~18~18~  | 236b 236b Apl functional symbol del tilde*
+&#x236c;~*u236c*~18~18~  | 236c 236c Apl functional symbol zilde*
+&#x236d;~*u236d*~18~18~  | 236d 236d Apl functional symbol stile tilde*
+&#x236e;~*u236e*~18~18~  | 236e 236e Apl functional symbol semicolon underbar*
+&#x236f;~*u236f*~18~18~  | 236f 236f Apl functional symbol quad not equal*
+&#x2370;~*u2370*~18~18~  | 2370 2370 Apl functional symbol quad question*
+&#x2371;~*u2371*~18~18~  | 2371 2371 Apl functional symbol down caret tilde*
+&#x2372;~*u2372*~18~18~  | 2372 2372 Apl functional symbol up caret tilde*
+&#x2373;~*u2373*~18~18~  | 2373 2373 Apl functional symbol iota*
+&#x2374;~*u2374*~18~18~  | 2374 2374 Apl functional symbol rho*
+&#x2375;~*u2375*~18~18~  | 2375 2375 Apl functional symbol omega*
+&#x2376;~*u2376*~18~18~  | 2376 2376 Apl functional symbol alpha underbar*
+&#x2377;~*u2377*~18~18~  | 2377 2377 Apl functional symbol epsilon underbar*
+&#x2378;~*u2378*~18~18~  | 2378 2378 Apl functional symbol iota underbar*
+&#x2379;~*u2379*~18~18~  | 2379 2379 Apl functional symbol omega underbar*
+&#x237a;~*u237c*~18~18~  | 237a 237c Apl functional symbol alpha*
+&#x2506;~*u2506*~18~18~  | 2506 2506 Box drawings light triple dash vertical*
+&#x2580;~*u2580*~18~18~  | 2580 2580 Upper half block*
+&#x2584;~*u2584*~18~18~  | 2584 2584 Lower half block*
+&#x2588;~*u2588*~18~18~  | 2588 2588 Full block*
+&#x258c;~*u258c*~18~18~  | 258c 258c Left half block*
+&#x2590;~*u2590*~18~18~  | 2590 2590 Right half block*
+&#x2591;~*u2591*~18~18~  | 2591 2591 Light shade*
+&#x2592;~*u2592*~18~18~  | 2592 2592 Medium shade*
+&#x2593;~*u2593*~18~18~  | 2593 2593 Dark shade*
+&#x25a0;~*u25a0*~18~18~  | 25a0 25a0 Black square
+&#x25a1;~*u25a1*~18~18~  | 25a1 25a1 White square
+&#x25a2;~*u25a2*~18~18~  | 25a2 25a2 White square with rounded corners
+&#x25a3;~*u25a3*~18~18~  | 25a3 25a3 White square containing black small square
+&#x25a4;~*u25a4*~18~18~  | 25a4 25a4 Square with horizontal fill
+&#x25a5;~*u25a5*~18~18~  | 25a5 25a5 Square with vertical fill
+&#x25a6;~*u25a6*~18~18~  | 25a6 25a6 Square with orthogonal crosshatch fill
+&#x25a7;~*u25a7*~18~18~  | 25a7 25a7 Square with upper left to lower right fill
+&#x25a8;~*u25a8*~18~18~  | 25a8 25a8 Square with upper right to lower left fill
+&#x25a9;~*u25a9*~18~18~  | 25a9 25a9 Square with diagonal crosshatch fill
+&#x25aa;~*u25aa*~18~18~  | 25aa 25aa Black small square
+&#x25ab;~*u25ab*~18~18~  | 25ab 25ab White small square
+&#x25ac;~*u25ac*~18~18~  | 25ac 25ac Black rectangle
+&#x25ad;~*u25ad*~18~18~  | 25ad 25ad White rectangle
+&#x25ae;~*u25ae*~18~18~  | 25ae 25ae Black vertical rectangle
+&#x25af;~*u25af*~18~18~  | 25af 25af White vertical rectangle
+&#x25b0;~*u25b0*~18~18~  | 25b0 25b0 Black parallelogram
+&#x25b1;~*u25b1*~18~18~  | 25b1 25b1 White parallelogram
+&#x25b2;~*u25b2*~18~18~  | 25b2 25b2 Black up-pointing triangle
+&#x25b3;~\bigtriangleup ~18~18~  | 25b3 25b3 White up-pointing triangle {triangle shape}
+&#x25b4;~\blacktriangleup ~18~18~  | 25b4 25b4 Black up-pointing small triangle
+&#x25b5;~\smalltriangleup ~18~18~  | 25b5 25b5 White up-pointing small triangle
+&#x25b6;~\RHD ~18~18~  | 25b6 25b6 Black right-pointing triangle
+&#x25b7;~\rhd ~18~18~  | 25b7 25b7 White right-pointing triangle
+&#x25b8;~\blacktriangleright ~18~18~  | 25b8 25b8 Black right-pointing small triangle
+&#x25b9;~\smalltriangleright ~18~18~  | 25b9 25b9 White right-pointing small triangle
+&#x25ba;~*u25ba*~18~18~  | 25ba 25ba Black right-pointing pointer
+&#x25bb;~*u25bb*~18~18~  | 25bb 25bb White right-pointing pointer
+&#x25bc;~*u25bc*~18~18~  | 25bc 25bc Black down-pointing triangle
+&#x25bd;~\bigtriangledown ~18~18~  | 25bd 25bd White down-pointing triangle
+&#x25be;~\blacktriangledown ~18~18~  | 25be 25be Black down-pointing small triangle
+&#x25bf;~\smalltriangledown ~18~18~  | 25bf 25bf White down-pointing small triangle
+&#x25c0;~\LHD ~18~18~  | 25c0 25c0 Black left-pointing triangle
+&#x25c1;~\lhd ~18~18~  | 25c1 25c1 White left-pointing triangle
+&#x25c2;~\blacktriangleleft ~18~18~  | 25c2 25c2 Black left-pointing small triangle
+&#x25c3;~\smalltriangleleft ~18~18~  | 25c3 25c3 White left-pointing small triangle
+&#x25c4;~*u25c4*~18~18~  | 25c4 25c4 Black left-pointing pointer
+&#x25c5;~*u25c5*~18~18~  | 25c5 25c5 White left-pointing pointer
+&#x25c6;~\Diamondblack ~18~18~  | 25c6 25c6 Black diamond
+&#x25c7;~\Diamond ~18~18~  | 25c7 25c7 White diamond
+&#x25c8;~*u25c8*~18~18~  | 25c8 25c8 White diamond containing black small diamond
+&#x25c9;~*u25c9*~18~18~  | 25c9 25c9 Fisheye
+&#x25ca;~\lozenge ~18~18~  | 25ca 25ca Lozenge
+&#x25cb;~\Circle ~18~18~  | 25cb 25cb White circle
+&#x25cc;~*u25cc*~18~18~  | 25cc 25cc Dotted circle
+&#x25cd;~*u25cd*~18~18~  | 25cd 25cd Circle with vertical fill
+&#x25ce;~*u25ce*~18~18~  | 25ce 25ce Bullseye
+&#x25cf;~\CIRCLE ~18~18~  | 25cf 25cf Black circle
+&#x25d0;~\LEFTcircle ~18~18~  | 25d0 25d0 Circle with left half black
+&#x25d1;~\RIGHTcircle ~18~18~  | 25d1 25d1 Circle with right half black
+&#x25d2;~*u25d2*~18~18~  | 25d2 25d2 Circle with lower half black
+&#x25d3;~*u25d3*~18~18~  | 25d3 25d3 Circle with upper half black
+&#x25d4;~*u25d4*~18~18~  | 25d4 25d4 Circle with upper right quadrant black
+&#x25d5;~*u25d5*~18~18~  | 25d5 25d5 Circle with all but upper left quadrant black
+&#x25d6;~\LEFTCIRCLE ~18~18~  | 25d6 25d6 Left half black circle
+&#x25d7;~\RIGHTCIRCLE ~18~18~  | 25d7 25d7 Right half black circle
+&#x25d8;~*u25d8*~18~18~  | 25d8 25d8 Inverse bullet
+&#x25d9;~*u25d9*~18~18~  | 25d9 25d9 Inverse white circle
+&#x25da;~*u25da*~18~18~  | 25da 25da Upper half inverse white circle
+&#x25db;~*u25db*~18~18~  | 25db 25db Lower half inverse white circle
+&#x25dc;~*u25dc*~18~18~  | 25dc 25dc Upper left quadrant circular arc
+&#x25dd;~*u25dd*~18~18~  | 25dd 25dd Upper right quadrant circular arc
+&#x25de;~*u25de*~18~18~  | 25de 25de Lower right quadrant circular arc
+&#x25df;~*u25df*~18~18~  | 25df 25df Lower left quadrant circular arc
+&#x25e0;~*u25e0*~18~18~  | 25e0 25e0 Upper half circle
+&#x25e1;~*u25e1*~18~18~  | 25e1 25e1 Lower half circle
+&#x25e2;~*u25e2*~18~18~  | 25e2 25e2 Black lower right triangle
+&#x25e3;~*u25e3*~18~18~  | 25e3 25e3 Black lower left triangle
+&#x25e4;~*u25e4*~18~18~  | 25e4 25e4 Black upper left triangle
+&#x25e5;~*u25e5*~18~18~  | 25e5 25e5 Black upper right triangle
+&#x25e6;~*u25e6*~18~18~  | 25e6 25e6 White bullet
+&#x25e7;~*u25e7*~18~18~  | 25e7 25e7 Square with left half black
+&#x25e8;~*u25e8*~18~18~  | 25e8 25e8 Square with right half black
+&#x25e9;~*u25e9*~18~18~  | 25e9 25e9 Square with upper left diagonal half black
+&#x25ea;~*u25ea*~18~18~  | 25ea 25ea Square with lower right diagonal half black
+&#x25eb;~\boxbar ~18~18~  | 25eb 25eb White square with vertical bisecting line
+&#x25ec;~*u25ec*~18~18~  | 25ec 25ec White up-pointing triangle with dot
+&#x25ed;~*u25ed*~18~18~  | 25ed 25ed Up-pointing triangle with left half black
+&#x25ee;~*u25ee*~18~18~  | 25ee 25ee Up-pointing triangle with right half black
+&#x25ef;~*u25ef*~18~18~  | 25ef 25ef Large circle
+&#x270e;~\pencil ~18~18~  | 270e 270e Lower right pencil
+&#x2713;~\checkmark ~18~18~  | 2713 2713 Check mark
+&#x2717;~\ballotx ~18~18~  | 2717 2717 Ballot x
+&#x2720;~\maltese ~18~18~  | 2720 2720 Maltese cross
+&#x272a;~*u272a*~18~18~  | 272a 272a Circled white star
+&#x2736;~*u2736*~18~18~  | 2736 2736 Six pointed black star
+&#x273d;~*u273d*~18~18~  | 273d 273d Heavy teardrop-spoked asterisk
+&#x2772;~*u2772*~18~18~  | 2772 2772 Light left tortoise shell bracket ornament
+&#x2773;~*u2773*~18~18~  | 2773 2773 Light right tortoise shell bracket ornament
+&#x279b;~*u279b*~18~18~  | 279b 279b Drafting point rightwards arrow
+&#x27a2;~\arrowbullet ~18~18~  | 27a2 27a2 Three-d top-lighted rightwards arrowhead
+&#x27c0;~*u27c0*~18~18~  | 27c0 27c0 Three dimensional angle
+&#x27c1;~*u27c1*~18~18~  | 27c1 27c1 White triangle containing small white triangle
+&#x27c2;~\perp ~18~18~  | 27c2 27c2 Perpendicular
+&#x27c3;~*u27c3*~18~18~  | 27c3 27c3 Open subset
+&#x27c4;~*u27c4*~18~18~  | 27c4 27c4 Open superset
+&#x27c5;~\Lbag ~18~18~  | 27c5 27c5 Left s-shaped bag delimiter
+&#x27c6;~\Rbag ~18~18~  | 27c6 27c6 Right s-shaped bag delimiter
+&#x27c7;~*u27c7*~18~18~  | 27c7 27c7 Or with dot inside
+&#x27c8;~*u27c8*~18~18~  | 27c8 27c8 Reverse solidus preceding subset
+&#x27c9;~*u27c9*~18~18~  | 27c9 27c9 Superset preceding solidus
+&#x27cc;~*u27cc*~18~18~  | 27cc 27cc Long division
+&#x27d0;~\Diamonddot ~18~18~  | 27d0 27d0 White diamond with centred dot
+&#x27d1;~*u27d1*~18~18~  | 27d1 27d1 And with dot
+&#x27d2;~*u27d2*~18~18~  | 27d2 27d2 Element of opening upwards
+&#x27d3;~*u27d3*~18~18~  | 27d3 27d3 Lower right corner with dot
+&#x27d4;~*u27d4*~18~18~  | 27d4 27d4 Upper left corner with dot
+&#x27d5;~*u27d5*~18~18~  | 27d5 27d5 Left outer join
+&#x27d6;~*u27d6*~18~18~  | 27d6 27d6 Right outer join
+&#x27d7;~*u27d7*~18~18~  | 27d7 27d7 Full outer join
+&#x27d8;~*u27d8*~18~18~  | 27d8 27d8 Large up tack
+&#x27d9;~*u27d9*~18~18~  | 27d9 27d9 Large down tack
+&#x27da;~*u27da*~18~18~  | 27da 27da Left and right double turnstile
+&#x27db;~*u27db*~18~18~  | 27db 27db Left and right tack
+&#x27dc;~\multimapinv ~18~18~  | 27dc 27dc Left multimap
+&#x27dd;~*u27dd*~18~18~  | 27dd 27dd Long right tack
+&#x27de;~*u27de*~18~18~  | 27de 27de Long left tack
+&#x27df;~*u27df*~18~18~  | 27df 27df Up tack with circle above
+&#x27e0;~*u27e0*~18~18~  | 27e0 27e0 Lozenge divided by horizontal rule
+&#x27e1;~*u27e1*~18~18~  | 27e1 27e1 White concave-sided diamond
+&#x27e2;~*u27e2*~18~18~  | 27e2 27e2 White concave-sided diamond with leftwards tick
+&#x27e3;~*u27e3*~18~18~  | 27e3 27e3 White concave-sided diamond with rightwards tick
+&#x27e4;~*u27e4*~18~18~  | 27e4 27e4 White square with leftwards tick
+&#x27e5;~*u27e5*~18~18~  | 27e5 27e5 White square with rightwards tick
+&#x27e6;~\llbracket ~18~18~  | 27e6 27e6 Mathematical left white square bracket
+&#x27e7;~\rrbracket ~18~18~  | 27e7 27e7 Mathematical right white square bracket
+&#x27e8;~\langle ~18~18~  | 27e8 27e8 Mathematical left angle bracket
+&#x27e9;~\rangle ~18~18~  | 27e9 27e9 Mathematical right angle bracket
+&#x27ea;~\lang ~18~18~  | 27ea 27ea Mathematical left double angle bracket
+&#x27eb;~\rang ~18~18~  | 27eb 27eb Mathematical right double angle bracket
+&#x27ec;~*u27ec*~18~18~  | 27ec 27ec Mathematical left white tortoise shell bracket
+&#x27ed;~*u27ed*~18~18~  | 27ed 27ed Mathematical right white tortoise shell bracket
+&#x27ee;~\lgroup ~18~18~  | 27ee 27ee Mathematical left flattened parenthesis
+&#x27ef;~\rgroup ~18~18~  | 27ef 27ef Mathematical right flattened parenthesis
+&#x27f0;~*u27f0*~18~18~  | 27f0 27f0 Upwards quadruple arrow
+&#x27f1;~*u27f1*~18~18~  | 27f1 27f1 Downwards quadruple arrow
+&#x27f2;~*u27f2*~18~18~  | 27f2 27f2 Anticlockwise gapped circle arrow
+&#x27f3;~*u27f3*~18~18~  | 27f3 27f3 Clockwise gapped circle arrow
+&#x27f4;~*u27f4*~18~18~  | 27f4 27f4 Right arrow with circled plus
+&#x27f5;~\longleftarrow ~18~18~  | 27f5 27f5 Long leftwards arrow
+&#x27f6;~\longrightarrow ~18~18~  | 27f6 27f6 Long rightwards arrow
+&#x27f7;~\longleftrightarrow ~18~18~  | 27f7 27f7 Long left right arrow
+&#x27f8;~\Longleftarrow ~18~18~  | 27f8 27f8 Long leftwards double arrow
+&#x27f9;~\Longrightarrow ~18~18~  | 27f9 27f9 Long rightwards double arrow
+&#x27fa;~\Longleftrightarrow ~18~18~  | 27fa 27fa Long left right double arrow
+&#x27fb;~\longmapsfrom ~18~18~  | 27fb 27fb Long leftwards arrow from bar
+&#x27fc;~\longmapsto ~18~18~  | 27fc 27fc Long rightwards arrow from bar
+&#x27fd;~\Longmapsfrom ~18~18~  | 27fd 27fd Long leftwards double arrow from bar
+&#x27fe;~\Longmapsto ~18~18~  | 27fe 27fe Long rightwards double arrow from bar
+&#x27ff;~*u27ff*~18~18~  | 27ff 27ff Long rightwards squiggle arrow
+&#x2900;~\psur ~18~18~  | 2900 2900 Rightwards two-headed arrow with vertical stroke
+&#x2901;~*u2901*~18~18~  | 2901 2901 Rightwards two-headed arrow with double vertical stroke
+&#x2902;~*u2902*~18~18~  | 2902 2902 Leftwards double arrow with vertical stroke
+&#x2903;~*u2903*~18~18~  | 2903 2903 Rightwards double arrow with vertical stroke
+&#x2904;~*u2904*~18~18~  | 2904 2904 Left right double arrow with vertical stroke
+&#x2905;~*u2905*~18~18~  | 2905 2905 Rightwards two-headed arrow from bar
+&#x2906;~\Mapsfrom ~18~18~  | 2906 2906 Leftwards double arrow from bar
+&#x2907;~\Mapsto ~18~18~  | 2907 2907 Rightwards double arrow from bar
+&#x2908;~*u2908*~18~18~  | 2908 2908 Downwards arrow with horizontal stroke
+&#x2909;~*u2909*~18~18~  | 2909 2909 Upwards arrow with horizontal stroke
+&#x290a;~*u290a*~18~18~  | 290a 290a Upwards triple arrow
+&#x290b;~*u290b*~18~18~  | 290b 290b Downwards triple arrow
+&#x290c;~*u290c*~18~18~  | 290c 290c Leftwards double dash arrow
+&#x290d;~*u290d*~18~18~  | 290d 290d Rightwards double dash arrow
+&#x290e;~*u290e*~18~18~  | 290e 290e Leftwards triple dash arrow
+&#x290f;~*u290f*~18~18~  | 290f 290f Rightwards triple dash arrow
+&#x2910;~*u2910*~18~18~  | 2910 2910 Rightwards two-headed triple dash arrow
+&#x2911;~*u2911*~18~18~  | 2911 2911 Rightwards arrow with dotted stem
+&#x2912;~\UpArrowBar ~18~18~  | 2912 2912 Upwards arrow to bar
+&#x2913;~\DownArrowBar ~18~18~  | 2913 2913 Downwards arrow to bar
+&#x2914;~\pinj ~18~18~  | 2914 2914 Rightwards arrow with tail with vertical stroke
+&#x2915;~\finj ~18~18~  | 2915 2915 Rightwards arrow with tail with double vertical stroke
+&#x2916;~\bij ~18~18~  | 2916 2916 Rightwards two-headed arrow with tail
+&#x2917;~*u2917*~18~18~  | 2917 2917 Rightwards two-headed arrow with tail with vertical stroke
+&#x2918;~*u2918*~18~18~  | 2918 2918 Rightwards two-headed arrow with tail with double vertical stroke
+&#x2919;~*u2919*~18~18~  | 2919 2919 Leftwards arrow-tail
+&#x291a;~*u291a*~18~18~  | 291a 291a Rightwards arrow-tail
+&#x291b;~*u291b*~18~18~  | 291b 291b Leftwards double arrow-tail
+&#x291c;~*u291c*~18~18~  | 291c 291c Rightwards double arrow-tail
+&#x291d;~*u291d*~18~18~  | 291d 291d Leftwards arrow to black diamond
+&#x291e;~*u291e*~18~18~  | 291e 291e Rightwards arrow to black diamond
+&#x291f;~*u291f*~18~18~  | 291f 291f Leftwards arrow from bar to black diamond
+&#x2920;~*u2920*~18~18~  | 2920 2920 Rightwards arrow from bar to black diamond
+&#x2921;~*u2921*~18~18~  | 2921 2921 North west and south east arrow
+&#x2922;~*u2922*~18~18~  | 2922 2922 North east and south west arrow
+&#x2923;~*u2923*~18~18~  | 2923 2923 North west arrow with hook
+&#x2924;~*u2924*~18~18~  | 2924 2924 North east arrow with hook
+&#x2925;~*u2925*~18~18~  | 2925 2925 South east arrow with hook
+&#x2926;~*u2926*~18~18~  | 2926 2926 South west arrow with hook
+&#x2927;~*u2927*~18~18~  | 2927 2927 North west arrow and north east arrow
+&#x2928;~*u2928*~18~18~  | 2928 2928 North east arrow and south east arrow
+&#x2929;~*u2929*~18~18~  | 2929 2929 South east arrow and south west arrow
+&#x292a;~*u292a*~18~18~  | 292a 292a South west arrow and north west arrow
+&#x292b;~*u292b*~18~18~  | 292b 292b Rising diagonal crossing falling diagonal
+&#x292c;~*u292c*~18~18~  | 292c 292c Falling diagonal crossing rising diagonal
+&#x292d;~*u292d*~18~18~  | 292d 292d South east arrow crossing north east arrow
+&#x292e;~*u292e*~18~18~  | 292e 292e North east arrow crossing south east arrow
+&#x292f;~*u292f*~18~18~  | 292f 292f Falling diagonal crossing north east arrow
+&#x2930;~*u2930*~18~18~  | 2930 2930 Rising diagonal crossing south east arrow
+&#x2931;~*u2931*~18~18~  | 2931 2931 North east arrow crossing north west arrow
+&#x2932;~*u2932*~18~18~  | 2932 2932 North west arrow crossing north east arrow
+&#x2933;~\leadsto ~18~18~  | 2933 2933 Wave arrow pointing directly right
+&#x2934;~*u2934*~18~18~  | 2934 2934 Arrow pointing rightwards then curving upwards
+&#x2935;~*u2935*~18~18~  | 2935 2935 Arrow pointing rightwards then curving downwards
+&#x2936;~*u2936*~18~18~  | 2936 2936 Arrow pointing downwards then curving leftwards
+&#x2937;~*u2937*~18~18~  | 2937 2937 Arrow pointing downwards then curving rightwards
+&#x2938;~*u2938*~18~18~  | 2938 2938 Right-side arc clockwise arrow
+&#x2939;~*u2939*~18~18~  | 2939 2939 Left-side arc anticlockwise arrow
+&#x293a;~*u293a*~18~18~  | 293a 293a Top arc anticlockwise arrow
+&#x293b;~*u293b*~18~18~  | 293b 293b Bottom arc anticlockwise arrow
+&#x293c;~*u293c*~18~18~  | 293c 293c Top arc clockwise arrow with minus
+&#x293d;~*u293d*~18~18~  | 293d 293d Top arc anticlockwise arrow with plus
+&#x293e;~*u293e*~18~18~  | 293e 293e Lower right semicircular clockwise arrow
+&#x293f;~*u293f*~18~18~  | 293f 293f Lower left semicircular anticlockwise arrow
+&#x2940;~*u2940*~18~18~  | 2940 2940 Anticlockwise closed circle arrow
+&#x2941;~*u2941*~18~18~  | 2941 2941 Clockwise closed circle arrow
+&#x2942;~*u2942*~18~18~  | 2942 2942 Rightwards arrow above short leftwards arrow
+&#x2943;~*u2943*~18~18~  | 2943 2943 Leftwards arrow above short rightwards arrow
+&#x2944;~*u2944*~18~18~  | 2944 2944 Short rightwards arrow above leftwards arrow
+&#x2945;~*u2945*~18~18~  | 2945 2945 Rightwards arrow with plus below
+&#x2946;~*u2946*~18~18~  | 2946 2946 Leftwards arrow with plus below
+&#x2947;~*u2947*~18~18~  | 2947 2947 Rightwards arrow through x
+&#x2948;~*u2948*~18~18~  | 2948 2948 Left right arrow through small circle
+&#x2949;~*u2949*~18~18~  | 2949 2949 Upwards two-headed arrow from small circle
+&#x294a;~\leftrightharpoon ~18~18~  | 294a 294a Left barb up right barb down harpoon
+&#x294b;~\rightleftharpoon ~18~18~  | 294b 294b Left barb down right barb up harpoon
+&#x294c;~*u294c*~18~18~  | 294c 294c Up barb right down barb left harpoon
+&#x294d;~*u294d*~18~18~  | 294d 294d Up barb left down barb right harpoon
+&#x294e;~\leftrightharpoonup ~18~18~  | 294e 294e Left barb up right barb up harpoon
+&#x294f;~\rightupdownharpoon ~18~18~  | 294f 294f Up barb right down barb right harpoon
+&#x2950;~\leftrightharpoondown ~18~18~  | 2950 2950 Left barb down right barb down harpoon
+&#x2951;~\leftupdownharpoon ~18~18~  | 2951 2951 Up barb left down barb left harpoon
+&#x2952;~\LeftVectorBar ~18~18~  | 2952 2952 Leftwards harpoon with barb up to bar
+&#x2953;~\RightVectorBar ~18~18~  | 2953 2953 Rightwards harpoon with barb up to bar
+&#x2954;~\RightUpVectorBar ~18~18~  | 2954 2954 Upwards harpoon with barb right to bar
+&#x2955;~\RightDownVectorBar ~18~18~  | 2955 2955 Downwards harpoon with barb right to bar
+&#x2956;~\DownLeftVectorBar ~18~18~  | 2956 2956 Leftwards harpoon with barb down to bar
+&#x2957;~\DownRightVectorBar ~18~18~  | 2957 2957 Rightwards harpoon with barb down to bar
+&#x2958;~\LeftUpVectorBar ~18~18~  | 2958 2958 Upwards harpoon with barb left to bar
+&#x2959;~\LeftDownVectorBar ~18~18~  | 2959 2959 Downwards harpoon with barb left to bar
+&#x295a;~\LeftTeeVector ~18~18~  | 295a 295a Leftwards harpoon with barb up from bar
+&#x295b;~\RightTeeVector ~18~18~  | 295b 295b Rightwards harpoon with barb up from bar
+&#x295c;~\RightUpTeeVector ~18~18~  | 295c 295c Upwards harpoon with barb right from bar
+&#x295d;~\RightDownTeeVector ~18~18~  | 295d 295d Downwards harpoon with barb right from bar
+&#x295e;~\DownLeftTeeVector ~18~18~  | 295e 295e Leftwards harpoon with barb down from bar
+&#x295f;~\DownRightTeeVector ~18~18~  | 295f 295f Rightwards harpoon with barb down from bar
+&#x2960;~\LeftUpTeeVector ~18~18~  | 2960 2960 Upwards harpoon with barb left from bar
+&#x2961;~\LeftDownTeeVector ~18~18~  | 2961 2961 Downwards harpoon with barb left from bar
+&#x2962;~\leftleftharpoons ~18~18~  | 2962 2962 Leftwards harpoon with barb up above leftwards harpoon with barb down
+&#x2963;~\upupharpoons ~18~18~  | 2963 2963 Upwards harpoon with barb left beside upwards harpoon with barb right
+&#x2964;~\rightrightharpoons ~18~18~  | 2964 2964 Rightwards harpoon with barb up above rightwards harpoon with barb down
+&#x2965;~\downdownharpoons ~18~18~  | 2965 2965 Downwards harpoon with barb left beside downwards harpoon with barb right
+&#x2966;~*u2966*~18~18~  | 2966 2966 Leftwards harpoon with barb up above rightwards harpoon with barb up
+&#x2967;~*u2967*~18~18~  | 2967 2967 Leftwards harpoon with barb down above rightwards harpoon with barb down
+&#x2968;~*u2968*~18~18~  | 2968 2968 Rightwards harpoon with barb up above leftwards harpoon with barb up
+&#x2969;~*u2969*~18~18~  | 2969 2969 Rightwards harpoon with barb down above leftwards harpoon with barb down
+&#x296a;~\leftbarharpoon ~18~18~  | 296a 296a Leftwards harpoon with barb up above long dash
+&#x296b;~\barleftharpoon ~18~18~  | 296b 296b Leftwards harpoon with barb down below long dash
+&#x296c;~\rightbarharpoon ~18~18~  | 296c 296c Rightwards harpoon with barb up above long dash
+&#x296d;~\barrightharpoon ~18~18~  | 296d 296d Rightwards harpoon with barb down below long dash
+&#x296e;~\updownharpoons ~18~18~  | 296e 296e Upwards harpoon with barb left beside downwards harpoon with barb right
+&#x296f;~\downupharpoons ~18~18~  | 296f 296f Downwards harpoon with barb left beside upwards harpoon with barb right
+&#x2970;~*u2970*~18~18~  | 2970 2970 Right double arrow with rounded head
+&#x2971;~*u2971*~18~18~  | 2971 2971 Equals sign above rightwards arrow
+&#x2972;~*u2972*~18~18~  | 2972 2972 Tilde operator above rightwards arrow
+&#x2973;~*u2973*~18~18~  | 2973 2973 Leftwards arrow above tilde operator
+&#x2974;~*u2974*~18~18~  | 2974 2974 Rightwards arrow above tilde operator
+&#x2975;~*u2975*~18~18~  | 2975 2975 Rightwards arrow above almost equal to
+&#x2976;~*u2976*~18~18~  | 2976 2976 Less-than above leftwards arrow
+&#x2977;~*u2977*~18~18~  | 2977 2977 Leftwards arrow through less-than
+&#x2978;~*u2978*~18~18~  | 2978 2978 Greater-than above rightwards arrow
+&#x2979;~*u2979*~18~18~  | 2979 2979 Subset above rightwards arrow
+&#x297a;~*u297a*~18~18~  | 297a 297a Leftwards arrow through subset
+&#x297b;~*u297b*~18~18~  | 297b 297b Superset above leftwards arrow
+&#x297c;~\strictfi ~18~18~  | 297c 297c Left fish tail
+&#x297d;~\strictif ~18~18~  | 297d 297d Right fish tail
+&#x297e;~*u297e*~18~18~  | 297e 297e Up fish tail
+&#x297f;~*u297f*~18~18~  | 297f 297f Down fish tail
+&#x2980;~\VERT ~18~18~  | 2980 2980 Triple vertical bar delimiter
+&#x2981;~\spot ~18~18~  | 2981 2981 Z notation spot
+&#x2982;~*u2982*~18~18~  | 2982 2982 Z notation type colon
+&#x2983;~*u2983*~18~18~  | 2983 2983 Left white curly bracket
+&#x2984;~*u2984*~18~18~  | 2984 2984 Right white curly bracket
+&#x2985;~\Lparen ~18~18~  | 2985 2985 Left white parenthesis
+&#x2986;~\Rparen ~18~18~  | 2986 2986 Right white parenthesis
+<?$e`><?$tcs`><?$ts`>&#x2987;~\lim \limits ~1~6~  | 2987 2987 Z notation left image bracket
+<?$e`>&#x2987;~\lim \limits ~18~18~  | 2987 2987 Z notation left image bracket
+&#x2987;~\lim ~18~18~  | 2987 2987 Z notation left image bracket
+&#x2988;~\rimg ~18~18~  | 2988 2988 Z notation right image bracket
+&#x2989;~\lblot ~18~18~  | 2989 2989 Z notation left binding bracket
+&#x298a;~\rblot ~18~18~  | 298a 298a Z notation right binding bracket
+&#x298b;~*u298b*~18~18~  | 298b 298b Left square bracket with underbar
+&#x298c;~*u298c*~18~18~  | 298c 298c Right square bracket with underbar
+&#x298d;~*u298d*~18~18~  | 298d 298d Left square bracket with tick in top corner
+&#x298e;~*u298e*~18~18~  | 298e 298e Right square bracket with tick in bottom corner
+&#x298f;~*u298f*~18~18~  | 298f 298f Left square bracket with tick in bottom corner
+&#x2990;~*u2990*~18~18~  | 2990 2990 Right square bracket with tick in top corner
+&#x2991;~*u2991*~18~18~  | 2991 2991 Left angle bracket with dot
+&#x2992;~*u2992*~18~18~  | 2992 2992 Right angle bracket with dot
+&#x2993;~*u2993*~18~18~  | 2993 2993 Left arc less-than bracket
+&#x2994;~*u2994*~18~18~  | 2994 2994 Right arc greater-than bracket
+&#x2995;~*u2995*~18~18~  | 2995 2995 Double left arc greater-than bracket
+&#x2996;~*u2996*~18~18~  | 2996 2996 Double right arc less-than bracket
+&#x2997;~*u2997*~18~18~  | 2997 2997 Left black tortoise shell bracket
+&#x2998;~*u2998*~18~18~  | 2998 2998 Right black tortoise shell bracket
+&#x2999;~*u2999*~18~18~  | 2999 2999 Dotted fence
+&#x299a;~*u299a*~18~18~  | 299a 299a Vertical zigzag line
+&#x299b;~*u299b*~18~18~  | 299b 299b Measured angle opening left
+&#x299c;~*u299c*~18~18~  | 299c 299c Right angle variant with square
+&#x299d;~*u299d*~18~18~  | 299d 299d Measured right angle with dot
+&#x299e;~*u299e*~18~18~  | 299e 299e Angle with s inside
+&#x299f;~*u299f*~18~18~  | 299f 299f Acute angle
+&#x29a0;~*u29a0*~18~18~  | 29a0 29a0 Spherical angle opening left
+&#x29a1;~*u29a1*~18~18~  | 29a1 29a1 Spherical angle opening up
+&#x29a2;~*u29a2*~18~18~  | 29a2 29a2 Turned angle
+&#x29a3;~*u29a3*~18~18~  | 29a3 29a3 Reversed angle
+&#x29a4;~*u29a4*~18~18~  | 29a4 29a4 Angle with underbar
+&#x29a5;~*u29a5*~18~18~  | 29a5 29a5 Reversed angle with underbar
+&#x29a6;~*u29a6*~18~18~  | 29a6 29a6 Oblique angle opening up
+&#x29a7;~*u29a7*~18~18~  | 29a7 29a7 Oblique angle opening down
+&#x29a8;~*u29a8*~18~18~  | 29a8 29a8 Measured angle with open arm ending in arrow pointing up and right
+&#x29a9;~*u29a9*~18~18~  | 29a9 29a9 Measured angle with open arm ending in arrow pointing up and left
+&#x29aa;~*u29aa*~18~18~  | 29aa 29aa Measured angle with open arm ending in arrow pointing down and right
+&#x29ab;~*u29ab*~18~18~  | 29ab 29ab Measured angle with open arm ending in arrow pointing down and left
+&#x29ac;~*u29ac*~18~18~  | 29ac 29ac Measured angle with open arm ending in arrow pointing right and up
+&#x29ad;~*u29ad*~18~18~  | 29ad 29ad Measured angle with open arm ending in arrow pointing left and up
+&#x29ae;~*u29ae*~18~18~  | 29ae 29ae Measured angle with open arm ending in arrow pointing right and down
+&#x29af;~*u29af*~18~18~  | 29af 29af Measured angle with open arm ending in arrow pointing left and down
+&#x29b0;~*u29b0*~18~18~  | 29b0 29b0 Reversed empty set
+&#x29b1;~*u29b1*~18~18~  | 29b1 29b1 Empty set with overbar
+&#x29b2;~*u29b2*~18~18~  | 29b2 29b2 Empty set with small circle above
+&#x29b3;~*u29b3*~18~18~  | 29b3 29b3 Empty set with right arrow above
+&#x29b4;~*u29b4*~18~18~  | 29b4 29b4 Empty set with left arrow above
+&#x29b5;~*u29b5*~18~18~  | 29b5 29b5 Circle with horizontal bar
+&#x29b6;~*u29b6*~18~18~  | 29b6 29b6 Circled vertical bar
+&#x29b7;~*u29b7*~18~18~  | 29b7 29b7 Circled parallel
+&#x29b8;~\circledbslash ~18~18~  | 29b8 29b8 Circled reverse solidus
+&#x29b9;~*u29b9*~18~18~  | 29b9 29b9 Circled perpendicular
+&#x29ba;~*u29ba*~18~18~  | 29ba 29ba Circle divided by horizontal bar and top half divided by vertical bar
+&#x29bb;~*u29bb*~18~18~  | 29bb 29bb Circle with superimposed x
+&#x29bc;~*u29bc*~18~18~  | 29bc 29bc Circled anticlockwise-rotated division sign
+&#x29bd;~*u29bd*~18~18~  | 29bd 29bd Up arrow through circle
+&#x29be;~*u29be*~18~18~  | 29be 29be Circled white bullet
+&#x29bf;~*u29bf*~18~18~  | 29bf 29bf Circled bullet
+&#x29c0;~\circledless ~18~18~  | 29c0 29c0 Circled less-than
+&#x29c1;~\circledgtr ~18~18~  | 29c1 29c1 Circled greater-than
+&#x29c2;~*u29c2*~18~18~  | 29c2 29c2 Circle with small circle to the right
+&#x29c3;~*u29c3*~18~18~  | 29c3 29c3 Circle with two horizontal strokes to the right
+&#x29c4;~\boxslash ~18~18~  | 29c4 29c4 Squared rising diagonal slash
+&#x29c5;~\boxbslash ~18~18~  | 29c5 29c5 Squared falling diagonal slash
+&#x29c6;~\boxast ~18~18~  | 29c6 29c6 Squared asterisk
+&#x29c7;~\boxcircle ~18~18~  | 29c7 29c7 Squared small circle
+&#x29c8;~\boxbox ~18~18~  | 29c8 29c8 Squared square
+&#x29c9;~*u29c9*~18~18~  | 29c9 29c9 Two joined squares
+&#x29ca;~*u29ca*~18~18~  | 29ca 29ca Triangle with dot above
+&#x29cb;~*u29cb*~18~18~  | 29cb 29cb Triangle with underbar
+&#x29cc;~*u29cc*~18~18~  | 29cc 29cc S in triangle
+&#x29cd;~*u29cd*~18~18~  | 29cd 29cd Triangle with serifs at bottom
+&#x29ce;~*u29ce*~18~18~  | 29ce 29ce Right triangle above left triangle
+&#x29cf;~\LeftTriangleBar ~18~18~  | 29cf 29cf Left triangle beside vertical bar
+&#x29d0;~\RightTriangleBar ~18~18~  | 29d0 29d0 Vertical bar beside right triangle
+&#x29d1;~*u29d1*~18~18~  | 29d1 29d1 Bowtie with left half black
+&#x29d2;~*u29d2*~18~18~  | 29d2 29d2 Bowtie with right half black
+&#x29d3;~*u29d3*~18~18~  | 29d3 29d3 Black bowtie
+&#x29d4;~*u29d4*~18~18~  | 29d4 29d4 Times with left half black
+&#x29d5;~*u29d5*~18~18~  | 29d5 29d5 Times with right half black
+&#x29d6;~*u29d6*~18~18~  | 29d6 29d6 White hourglass
+&#x29d7;~*u29d7*~18~18~  | 29d7 29d7 Black hourglass
+&#x29d8;~*u29d8*~18~18~  | 29d8 29d8 Left wiggly fence
+&#x29d9;~*u29d9*~18~18~  | 29d9 29d9 Right wiggly fence
+&#x29da;~*u29da*~18~18~  | 29da 29da Left double wiggly fence
+&#x29db;~*u29db*~18~18~  | 29db 29db Right double wiggly fence
+&#x29dc;~*u29dc*~18~18~  | 29dc 29dc Incomplete infinity
+&#x29dd;~*u29dd*~18~18~  | 29dd 29dd Tie over infinity
+&#x29de;~*u29de*~18~18~  | 29de 29de Infinity negated with vertical bar
+&#x29df;~\multimapboth ~18~18~  | 29df 29df Double-ended multimap
+&#x29e0;~*u29e0*~18~18~  | 29e0 29e0 Square with contoured outline
+&#x29e1;~*u29e1*~18~18~  | 29e1 29e1 Increases as
+&#x29e2;~*u29e2*~18~18~  | 29e2 29e2 Shuffle product
+&#x29e3;~*u29e3*~18~18~  | 29e3 29e3 Equals sign and slanted parallel
+&#x29e4;~*u29e4*~18~18~  | 29e4 29e4 Equals sign and slanted parallel with tilde above
+&#x29e5;~*u29e5*~18~18~  | 29e5 29e5 Identical to and slanted parallel
+&#x29e6;~*u29e6*~18~18~  | 29e6 29e6 Gleich stark
+&#x29e7;~*u29e7*~18~18~  | 29e7 29e7 Thermodynamic
+&#x29e8;~*u29e8*~18~18~  | 29e8 29e8 Down-pointing triangle with left half black
+&#x29e9;~*u29e9*~18~18~  | 29e9 29e9 Down-pointing triangle with right half black
+&#x29ea;~*u29ea*~18~18~  | 29ea 29ea Black diamond with down arrow
+&#x29eb;~\blacklozenge ~18~18~  | 29eb 29eb Black lozenge
+&#x29ec;~*u29ec*~18~18~  | 29ec 29ec White circle with down arrow
+&#x29ed;~*u29ed*~18~18~  | 29ed 29ed Black circle with down arrow
+&#x29ee;~*u29ee*~18~18~  | 29ee 29ee Error-barred white square
+&#x29ef;~*u29ef*~18~18~  | 29ef 29ef Error-barred black square
+&#x29f0;~*u29f0*~18~18~  | 29f0 29f0 Error-barred white diamond
+&#x29f1;~*u29f1*~18~18~  | 29f1 29f1 Error-barred black diamond
+&#x29f2;~*u29f2*~18~18~  | 29f2 29f2 Error-barred white circle
+&#x29f3;~*u29f3*~18~18~  | 29f3 29f3 Error-barred black circle
+&#x29f4;~*u29f4*~18~18~  | 29f4 29f4 Rule-delayed
+&#x29f5;~\setminus ~18~18~  | 29f5 29f5 Reverse solidus operator
+&#x29f6;~*u29f6*~18~18~  | 29f6 29f6 Solidus with overbar
+&#x29f7;~*u29f7*~18~18~  | 29f7 29f7 Reverse solidus with horizontal stroke
+&#x29f8;~*u29f8*~18~18~  | 29f8 29f8 Big solidus
+&#x29f9;~\zhide ~18~18~  | 29f9 29f9 Big reverse solidus
+&#x29fa;~*u29fa*~18~18~  | 29fa 29fa Double plus
+&#x29fb;~*u29fb*~18~18~  | 29fb 29fb Triple plus
+&#x29fc;~*u29fc*~18~18~  | 29fc 29fc Left-pointing curved angle bracket
+&#x29fd;~*u29fd*~18~18~  | 29fd 29fd Right-pointing curved angle bracket
+&#x29fe;~*u29fe*~18~18~  | 29fe 29fe Tiny
+&#x29ff;~*u29ff*~18~18~  | 29ff 29ff Miny
+| xxx
+<?$e`><?$tcs`><?$ts`>&#x2a00;~\bigodot \limits ~1~6~  | 2a00 2a00 N-ary circled dot operator
+<?$e`><?$tcs`><?$ts`>&#x2a01;~\bigoplus \limits ~1~6~  | 2a01 2a01 N-ary circled plus operator
+<?$e`><?$tcs`><?$ts`>&#x2a02;~\bigotimes \limits ~1~6~  | 2a02 2a02 N-ary circled times operator
+| <?$e`><?$tcs`><?$ts`>&#x2a03;~*u2a03*~1~6~  | 2a03 2a03 N-ary union operator with dot
+<?$e`><?$tcs`><?$ts`>&#x2a04;~\biguplus \limits ~1~6~  | 2a04 2a04 N-ary union operator with plus
+<?$e`><?$tcs`><?$ts`>&#x2a05;~\bigsqcap \limits ~1~6~  | 2a05 2a05 N-ary square intersection operator
+<?$e`><?$tcs`><?$ts`>&#x2a06;~\bigsqcup \limits ~1~6~  | 2a06 2a06 N-ary square union operator
+| <?$e`><?$tcs`><?$ts`>&#x2a07;~*u2a07*~1~6~  | 2a07 2a07 Two logical and operator
+| <?$e`><?$tcs`><?$ts`>&#x2a08;~*u2a08*~1~6~  | 2a08 2a08 Two logical or operator
+<?$e`><?$tcs`><?$ts`>&#x2a09;~\varprod \limits ~1~6~  | 2a09 2a09 N-ary times operator
+| xxx
+<?$e`>&#x2a00;~\bigodot \limits ~6~6~  | 2a00 2a00 N-ary circled dot operator
+<?$e`>&#x2a01;~\bigoplus \limits ~6~6~  | 2a01 2a01 N-ary circled plus operator
+<?$e`>&#x2a02;~\bigotimes \limits ~6~6~  | 2a02 2a02 N-ary circled times operator
+| <?$e`>&#x2a03;~*u2a03*~6~6~  | 2a03 2a03 N-ary union operator with dot
+<?$e`>&#x2a04;~\biguplus \limits ~6~6~  | 2a04 2a04 N-ary union operator with plus
+<?$e`>&#x2a05;~\bigsqcap \limits ~6~6~  | 2a05 2a05 N-ary square intersection operator
+<?$e`>&#x2a06;~\bigsqcup \limits ~6~6~  | 2a06 2a06 N-ary square union operator
+| <?$e`>&#x2a07;~*u2a07*~6~6~  | 2a07 2a07 Two logical and operator
+| <?$e`>&#x2a08;~*u2a08*~6~6~  | 2a08 2a08 Two logical or operator
+<?$e`>&#x2a09;~\varprod \limits ~6~6~  | 2a09 2a09 N-ary times operator
+| xxx
+<?$e`>&#x2a00;~\bigodot \limits ~18~18~  | 2a00 2a00 N-ary circled dot operator
+<?$e`>&#x2a01;~\bigoplus \limits ~18~18~  | 2a01 2a01 N-ary circled plus operator
+<?$e`>&#x2a02;~\bigotimes \limits ~18~18~  | 2a02 2a02 N-ary circled times operator
+| <?$e`>&#x2a03;~*u2a03*~18~18~  | 2a03 2a03 N-ary union operator with dot
+<?$e`>&#x2a04;~\biguplus \limits ~18~18~  | 2a04 2a04 N-ary union operator with plus
+<?$e`>&#x2a05;~\bigsqcap \limits ~18~18~  | 2a05 2a05 N-ary square intersection operator
+<?$e`>&#x2a06;~\bigsqcup \limits ~18~18~  | 2a06 2a06 N-ary square union operator
+| <?$e`>&#x2a07;~*u2a07*~18~18~  | 2a07 2a07 Two logical and operator
+| <?$e`>&#x2a08;~*u2a08*~18~18~  | 2a08 2a08 Two logical or operator
+<?$e`>&#x2a09;~\varprod \limits ~18~18~  | 2a09 2a09 N-ary times operator
+| xxx
+<?$e`>&#x2a00;~\bigodot \limits ~6~6~  | 2a00 2a00 N-ary circled dot operator
+<?$e`>&#x2a01;~\bigoplus \limits ~6~6~  | 2a01 2a01 N-ary circled plus operator
+<?$e`>&#x2a02;~\bigotimes \limits ~6~6~  | 2a02 2a02 N-ary circled times operator
+| <?$e`>&#x2a03;~*u2a03*~6~6~  | 2a03 2a03 N-ary union operator with dot
+<?$e`>&#x2a04;~\biguplus \limits ~6~6~  | 2a04 2a04 N-ary union operator with plus
+<?$e`>&#x2a05;~\bigsqcap \limits ~6~6~  | 2a05 2a05 N-ary square intersection operator
+<?$e`>&#x2a06;~\bigsqcup \limits ~6~6~  | 2a06 2a06 N-ary square union operator
+| <?$e`>&#x2a07;~*u2a07*~6~6~  | 2a07 2a07 Two logical and operator
+| <?$e`>&#x2a08;~*u2a08*~6~6~  | 2a08 2a08 Two logical or operator
+<?$e`>&#x2a09;~\varprod \limits ~6~6~  | 2a09 2a09 N-ary times operator
+| xxx
+<?$e`>&#x2a00;~\bigodot \limits ~18~18~  | 2a00 2a00 N-ary circled dot operator
+<?$e`>&#x2a01;~\bigoplus \limits ~18~18~  | 2a01 2a01 N-ary circled plus operator
+<?$e`>&#x2a02;~\bigotimes \limits ~18~18~  | 2a02 2a02 N-ary circled times operator
+| <?$e`>&#x2a03;~*u2a03*~18~18~  | 2a03 2a03 N-ary union operator with dot
+<?$e`>&#x2a04;~\biguplus \limits ~18~18~  | 2a04 2a04 N-ary union operator with plus
+<?$e`>&#x2a05;~\bigsqcap \limits ~18~18~  | 2a05 2a05 N-ary square intersection operator
+<?$e`>&#x2a06;~\bigsqcup \limits ~18~18~  | 2a06 2a06 N-ary square union operator
+| <?$e`>&#x2a07;~*u2a07*~18~18~  | 2a07 2a07 Two logical and operator
+| <?$e`>&#x2a08;~*u2a08*~18~18~  | 2a08 2a08 Two logical or operator
+<?$e`>&#x2a09;~\varprod \limits ~18~18~  | 2a09 2a09 N-ary times operator
+$ $~ ~
+$ $~ ~

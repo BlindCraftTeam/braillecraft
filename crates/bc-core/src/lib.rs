@@ -7,6 +7,8 @@
 pub mod cmdline;
 pub mod codepages;
 pub mod doctext;
+pub mod docx;
+pub mod word;
 pub mod braide;
 pub mod editor;
 pub mod dxfile;
@@ -20,6 +22,7 @@ pub mod find;
 pub mod font_list;
 pub mod format;
 pub mod fview;
+pub mod html_export;
 pub mod pef;
 pub mod pdf_import;
 pub mod pimbri;

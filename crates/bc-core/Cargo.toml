@@ -17,6 +17,8 @@ serde = { version = "1", features = ["derive"] }
 pdf-extract = "=0.12.1"
 # PDF import: letter plus combining marks composed into one character, as the import's u8kdkc step does.
 unicode-normalization = "=0.1.25"
+# Word import: the .docx package is a zip; its parts are inflated with the same crate the PDF reader already builds.
+flate2 = "=1.1.10"
 
 [dev-dependencies]
 serde_json = "1"
