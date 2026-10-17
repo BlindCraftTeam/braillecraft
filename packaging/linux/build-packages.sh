@@ -66,7 +66,7 @@ Summary: Braille translation, formatting and embossing
 License: MIT OR Apache-2.0
 Vendor: BlindCraft Team
 Packager: BlindCraft <info@blindcraft.dev>
-URL: https://github.com/jeremiahbeasley/braillecraft
+URL: https://github.com/BlindCraftTeam/braillecraft
 BuildArch: x86_64
 AutoReqProv: yes
 %description
