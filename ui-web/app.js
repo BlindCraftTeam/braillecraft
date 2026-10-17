@@ -553,7 +553,7 @@ const sixDown = new Set();
 let chord = 0;
 const sixKeyDot = (e) => (e.key.length === 1 ? settings.sixKeySet.indexOf(e.key.toLowerCase()) : -1);
 editor.addEventListener("keydown", (e) => {
-  if (doc.kind !== "braille" || !doc.view.six_key || e.ctrlKey || e.altKey || e.metaKey) return;
+  if (!doc.view.six_key || e.ctrlKey || e.altKey || e.metaKey) return;
   const dot = sixKeyDot(e);
   if (dot >= 0) {
     e.preventDefault();
@@ -562,7 +562,7 @@ editor.addEventListener("keydown", (e) => {
   }
 });
 editor.addEventListener("keyup", (e) => {
-  if (doc.kind !== "braille" || !doc.view.six_key) return;
+  if (!doc.view.six_key) return;
   const dot = sixKeyDot(e);
   if (dot < 0) return;
   sixDown.delete(dot);
@@ -3413,13 +3413,8 @@ const COMMANDS = {
   1303: () => setView((v) => (v.font = "print")),
   1304: () => setView((v) => (v.font = "braille")),
   1305: () => setView((v) => (v.font = "simbraille")),
-  1307: async () => {
-    if (doc.kind !== "braille" && !doc.view.six_key) {
-      await message("Six-key entry is for braille documents.");
-      return;
-    }
-    setView((v) => (v.six_key = !v.six_key));
-  },
+  // Six-key entry in either kind of document, as in the original.
+  1307: () => setView((v) => (v.six_key = !v.six_key)),
   1309: () => setView((v) => (v.codes = !v.codes)),
   1310: () => setView((v) => (v.translated = !v.translated)),
   1103: closeDocument,

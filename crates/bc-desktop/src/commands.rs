@@ -2434,12 +2434,11 @@ fn set_font(font: ViewFont) {
     set_view(|v| v.font = font);
 }
 
+/// View, Six-Key Entry, in either kind of document as in the original: in a print document a chord types its cell's
+/// braille-encoding character.
 fn six_key(on: bool) {
-    let braille = app::with(|a| a.doc().map(|d| d.kind == DocKind::Braille));
-    match braille {
-        Some(false) if on => message("Six-key entry is for braille documents."),
-        Some(_) => set_view(|v| v.six_key = on),
-        None => {}
+    if app::with(|a| a.doc().is_some()) {
+        set_view(|v| v.six_key = on);
     }
 }
 

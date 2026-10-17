@@ -268,7 +268,7 @@ pub fn area_key(key: u64, code: i32, _unicode: i32, mods: i32) -> bool {
         let Some(i) = a.index_of(key) else { return };
         // Six-key entry: the six keys make a braille cell, entered when the last of them is let go.
         let d = &mut a.docs[i];
-        if d.kind == DocKind::Braille && d.view.six_key && !control && !alt {
+        if d.view.six_key && !control && !alt {
             if let Some(dot) = six_key_dot(&a.settings.six_key_set, code) {
                 let d = &mut a.docs[i];
                 d.six_down.insert(dot);
@@ -336,7 +336,7 @@ fn key_up(key: u64, code: i32) {
         let set = a.settings.six_key_set.clone();
         let enc = a.encoding();
         let d = &mut a.docs[i];
-        if d.kind == DocKind::Braille && d.view.six_key {
+        if d.view.six_key {
             if let Some(dot) = six_key_dot(&set, code) {
                 d.six_down.remove(&dot);
                 // The cell is entered when the last key of the chord is released.
