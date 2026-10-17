@@ -6,13 +6,115 @@
 //! written '#', and nothing is written before the text (no byte-order mark). Text is converted one character at a
 //! time, as the reference's page writer does.
 //!
-//! Here the single-byte code pages come from data/codepages.txt, the multi-byte ones from encoding_rs.
-//! INTERIM: the reference uses the Windows tables; encoding_rs follows the WHATWG Encoding Standard, which differs
-//! from them in a few rare characters, and the four Mac multi-byte code pages are written with the nearest encoding
-//! (Shift_JIS, Big5, EUC-KR, GBK).
+//! A name the reference writes through a Windows code page uses that page's own table, as Windows itself wrote it
+//! (data/windows-code-pages.bin, from the windows-code-pages CI artifact by tools/codepages/make_windows_tables.py).
+//! ISO-8859-14, which the reference writes through wxWidgets' own table, and ISO-8859-10, whose Windows code page
+//! (28600) a standard Windows does not have, keep the standard tables of data/codepages.txt (INFERENCE for
+//! ISO-8859-10: the reference's fallback for a missing page was not traced past spec 04d-F). ISO-2022-JP is read by
+//! encoding_rs: Windows gives no table for reading it one byte sequence at a time.
 
 use std::collections::HashMap;
 use std::sync::OnceLock;
+
+/// The Windows code page the reference writes each name through (spec 04d-F, its code page switch).
+fn windows_page(name: &str) -> Option<u32> {
+    Some(match name {
+        "ISO-8859-2" => 28592,
+        "ISO-8859-3" => 28593,
+        "ISO-8859-4" => 28594,
+        "ISO-8859-5" => 28595,
+        "ISO-8859-6" => 28596,
+        "ISO-8859-7" => 28597,
+        "ISO-8859-8" => 28598,
+        "ISO-8859-9" => 28599,
+        "ISO-8859-11" | "WINDOWS-874" => 874,
+        "ISO-8859-13" => 28603,
+        "ISO-8859-15" => 28605,
+        "KOI8-R" => 20866,
+        "KOI8-U" => 21866,
+        "WINDOWS-437" => 437,
+        "WINDOWS-866" => 866,
+        "WINDOWS-932" => 932,
+        "WINDOWS-936" => 936,
+        "WINDOWS-949" => 949,
+        "WINDOWS-950" => 950,
+        "WINDOWS-1250" => 1250,
+        "WINDOWS-1251" => 1251,
+        "WINDOWS-1252" => 1252,
+        "WINDOWS-1253" => 1253,
+        "WINDOWS-1254" => 1254,
+        "WINDOWS-1255" => 1255,
+        "WINDOWS-1256" => 1256,
+        "WINDOWS-1257" => 1257,
+        "WINDOWS-1258" => 1258,
+        "EUC-JP" => 20932,
+        "MacRoman" => 10000,
+        "MacJapanese" => 10001,
+        "MacChineseTrad" => 10002,
+        "MacKorean" => 10003,
+        "MacArabic" => 10004,
+        "MacHebrew" => 10005,
+        "MacGreek" => 10006,
+        "MacCyrillic" => 10007,
+        "MacChineseSimp" => 10008,
+        "MacRomanian" => 10010,
+        "MacThai" => 10021,
+        "MacCentralEurRoman" => 10029,
+        "MacIcelandic" => 10079,
+        "MacCroatian" => 10082,
+        "ISO-2022-JP" => 50222,
+        _ => return None,
+    })
+}
+
+/// One Windows code page: the bytes it writes for each UTF-16 unit, and the units it reads for each byte sequence.
+struct WindowsPage {
+    write: HashMap<u16, Vec<u8>>,
+    read: HashMap<Vec<u8>, Vec<u16>>,
+}
+
+/// The Windows code pages, by number (data/windows-code-pages.bin).
+fn windows_pages() -> &'static HashMap<u32, WindowsPage> {
+    static PAGES: OnceLock<HashMap<u32, WindowsPage>> = OnceLock::new();
+    PAGES.get_or_init(|| {
+        let data: &[u8] = include_bytes!("../data/windows-code-pages.bin");
+        let mut out = HashMap::new();
+        let mut at = 6;
+        let mut take = |n: usize| {
+            let s = &data[at..at + n];
+            at += n;
+            s
+        };
+        let u16_at = |s: &[u8]| u16::from_le_bytes([s[0], s[1]]);
+        let u32_at = |s: &[u8]| u32::from_le_bytes([s[0], s[1], s[2], s[3]]);
+        let count = u16_at(take(2));
+        for _ in 0..count {
+            let page = u32_at(take(4));
+            let n = u32_at(take(4));
+            let mut write = HashMap::with_capacity(n as usize);
+            for _ in 0..n {
+                let unit = u16_at(take(2));
+                let len = take(1)[0] as usize;
+                write.insert(unit, take(len).to_vec());
+            }
+            let n = u32_at(take(4));
+            let mut read = HashMap::with_capacity(n as usize);
+            for _ in 0..n {
+                let len = take(1)[0] as usize;
+                let bytes = take(len).to_vec();
+                let m = take(1)[0] as usize;
+                let units = take(2 * m).chunks_exact(2).map(u16_at).collect();
+                read.insert(bytes, units);
+            }
+            out.insert(page, WindowsPage { write, read });
+        }
+        out
+    })
+}
+
+fn windows(name: &str) -> Option<&'static WindowsPage> {
+    windows_page(name).and_then(|p| windows_pages().get(&p))
+}
 
 /// The names in the order Save As lists them; the first is chosen every time.
 pub const NAMES: [&str; 82] = [
@@ -91,11 +193,12 @@ pub fn decode(name: &str, bytes: &[u8]) -> String {
             })
             .collect(),
         "UTF-7" => decode_utf7(bytes),
+        "ISO-2022-JP" => encoding_rs::ISO_2022_JP.decode_without_bom_handling(bytes).0.into_owned(),
         _ => {
-            if let Some(table) = single_byte_read().get(name) {
+            if let Some(page) = windows(name) {
+                read_windows(page, bytes)
+            } else if let Some(table) = single_byte_read().get(name) {
                 bytes.iter().map(|&b| table[b as usize].unwrap_or(char::from(b))).collect()
-            } else if let Some(enc) = multi_byte(name) {
-                enc.decode_without_bom_handling(bytes).0.into_owned()
             } else {
                 bytes.iter().map(|&b| char::from(b)).collect()
             }
@@ -118,17 +221,24 @@ pub fn default_import(system: Option<&str>) -> &'static str {
     }
 }
 
-/// The multi-byte code pages and the encoding each is written with.
-fn multi_byte(name: &str) -> Option<&'static encoding_rs::Encoding> {
-    Some(match name {
-        "WINDOWS-932" | "MacJapanese" => encoding_rs::SHIFT_JIS,
-        "WINDOWS-936" | "MacChineseSimp" => encoding_rs::GBK,
-        "WINDOWS-949" | "MacKorean" => encoding_rs::EUC_KR,
-        "WINDOWS-950" | "MacChineseTrad" => encoding_rs::BIG5,
-        "EUC-JP" => encoding_rs::EUC_JP,
-        "ISO-2022-JP" => encoding_rs::ISO_2022_JP,
-        _ => return None,
-    })
+/// Bytes read through a Windows code page: a two-byte sequence the page reads, else one byte; a byte the page does not
+/// read is the character of the same number.
+fn read_windows(page: &WindowsPage, bytes: &[u8]) -> String {
+    let mut units: Vec<u16> = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if let Some(u) = bytes.get(i..i + 2).and_then(|pair| page.read.get(pair)) {
+            units.extend(u);
+            i += 2;
+        } else if let Some(u) = page.read.get(&bytes[i..i + 1]) {
+            units.extend(u);
+            i += 1;
+        } else {
+            units.push(u16::from(bytes[i]));
+            i += 1;
+        }
+    }
+    char::decode_utf16(units).map(|c| c.unwrap_or('\u{fffd}')).collect()
 }
 
 /// UTF-7 for one character (RFC 2152): letters, digits, space, line ends and the characters '(),-./:?' as
@@ -216,13 +326,13 @@ pub fn encode_char(name: &str, c: char) -> Option<Vec<u8>> {
         "UTF-32LE" => return Some((c as u32).to_le_bytes().to_vec()),
         _ => {}
     }
+    if let Some(page) = windows(name) {
+        // One UTF-16 unit at a time, as Windows was asked: a character outside the BMP cannot be written.
+        let u = c.encode_utf16(&mut units);
+        return if u.len() == 1 { page.write.get(&u[0]).cloned() } else { None };
+    }
     if let Some(table) = single_byte().get(name) {
         return table.get(&c).map(|b| vec![*b]);
-    }
-    if let Some(enc) = multi_byte(name) {
-        let one = c.to_string();
-        let (bytes, _, unmappable) = enc.encode(&one);
-        return (!unmappable).then(|| bytes.into_owned());
     }
     // ISO-8859-1, and a name the reference has no converter for: plain Latin-1.
     ((c as u32) <= 0xFF).then(|| vec![c as u32 as u8])
@@ -245,14 +355,24 @@ mod tests {
     use super::*;
 
     #[test]
-    fn every_listed_single_byte_code_page_has_its_table() {
+    fn every_listed_code_page_has_its_table() {
         for name in NAMES {
             let latin1 = name == "ISO-8859-1" || name == "ISO-8859-12" || name == "WINDOWS-1361";
-            if !name.starts_with("UTF") && multi_byte(name).is_none() && !name.starts_with("Mac") && !latin1 {
+            if let Some(p) = windows_page(name) {
+                assert!(windows_pages().contains_key(&p), "{name} {p}");
+            } else if !name.starts_with("UTF") && !name.starts_with("Mac") && !latin1 {
                 assert!(single_byte().contains_key(name), "{name}");
             }
         }
-        assert_eq!(single_byte().len(), 37);
+    }
+
+    #[test]
+    fn windows_tables_as_windows_writes_them() {
+        // Windows-1252 writes and reads its C1 bytes; 932 has no yen sign at 0x5C.
+        assert_eq!(encode("WINDOWS-1252", "\u{81}"), b"\x81".to_vec());
+        assert_eq!(encode("WINDOWS-932", "\u{a5}"), b"#".to_vec());
+        assert_eq!(decode("WINDOWS-932", b"\x82\xa0A"), "\u{3042}A");
+        assert_eq!(decode("MacJapanese", b"\x82\xa0"), "\u{3042}");
     }
 
     #[test]
