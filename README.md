@@ -127,7 +127,9 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   layout; a document whose printer the computer no longer has prints with the global printer after saying so.
   Printer Setup corrects a page size outside 7 to 160 characters and 1 to 100 lines and asks before taking it (Cancel
   returns to the field); Global, Printer Setup and Global, Embosser Setup first say, once unless asked to repeat, that
-  they do not change the open document.
+  they do not change the open document. The embosser setup sheet's General page offers the configuration location
+  (current user or all users; kept with the setup) and its Device Settings page lists only the model's own firmware
+  versions and shows the Braillo rows by the model's sub-model, as the original does.
 - **Embossing.** Embosser setups for 139 embosser models, including Index and Enabling Technologies, with page ranges and
   copies, to a printer queue, a serial port or a file. Embossers on an FTDI USB connection (the EBrailler Cosmo) are
   listed and embossed to through FTDI's own driver library where it is installed. TranSend SE printers get their ink

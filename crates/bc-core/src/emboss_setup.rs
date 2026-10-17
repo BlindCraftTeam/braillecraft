@@ -27,6 +27,9 @@ pub struct Setup {
     pub name: String,
     /// The model as the list shows it: its name and firmware range, e.g. "Index Everest-D V5".
     pub model: String,
+    /// General page, Configuration location: kept for all users on this computer rather than the current user.
+    /// PORT CHOICE: BrailleCraft keeps every setup in the user's own settings on every system, so this is kept with
+    /// the setup and changes nothing else.
     pub all_users: bool,
     /// The default form's id.
     pub form: String,
@@ -384,6 +387,41 @@ fn version_range(versions: &str) -> Option<(usize, usize)> {
     }
 }
 
+/// The General page's Configuration location choices, in the original's order; the second is `Setup::all_users`.
+pub const LOCATIONS: [&str; 2] = ["Current user", "All users on this computer"];
+
+/// The Device Settings version list (5) for a model label, as the original fills it: the versions of the model's
+/// range, with "(unspecified)" first only when the range holds more than one; a model without a range gets the
+/// whole list. Returns the items, the version number of the first real version in them, and whether the model has
+/// a single version (then its one item is chosen).
+pub fn version_list(cat: &Catalog, label: &str) -> (Vec<&'static str>, usize, bool) {
+    match cat.versions(label).and_then(version_range) {
+        Some((first, last)) if first == last => (vec![VERSIONS[first]], first, true),
+        Some((first, last)) => (std::iter::once(VERSIONS[0]).chain(VERSIONS[first..=last].iter().copied()).collect(), first, false),
+        None => (VERSIONS.to_vec(), 1, false),
+    }
+}
+
+/// The place of a setup's version number in `version_list`'s items.
+pub fn version_place(version: usize, first: usize, single: bool) -> usize {
+    if single || version == 0 {
+        0
+    } else {
+        version.saturating_sub(first) + 1
+    }
+}
+
+/// The version number of a place chosen in `version_list`'s items.
+pub fn version_at(place: usize, first: usize, single: bool) -> usize {
+    if single {
+        first
+    } else if place == 0 {
+        0
+    } else {
+        place + first - 1
+    }
+}
+
 pub fn default_form(model: &Model, european: bool) -> String {
     let order: &[&str] = if european { &["A4", "12_w", "12_n", "11_w", "11_n", "10_n"] } else { &["11_w", "11_n", "10_n"] };
     order
@@ -479,6 +517,7 @@ impl Setup {
             data_bits: new.data_bits,
             stop_bits: new.stop_bits,
             handshaking: new.handshaking,
+            all_users: self.all_users,
             escape_codes: new.escape_codes,
             interpoint_enabled: new.interpoint_enabled,
             encoding: new.encoding,
@@ -898,6 +937,20 @@ mod tests {
         assert_eq!(cells & 0xf, 2);
         layout.form = "zz".into();
         assert_eq!(check(&setup, model, &layout, 40, 25), Check::FormNotDefined);
+    }
+
+    #[test]
+    fn the_version_list_holds_the_models_own_versions() {
+        let cat = catalog();
+        let (items, first, single) = version_list(&cat, "Index Everest-D V5");
+        assert_eq!((items, first, single), (vec!["Version 5"], 6, true));
+        assert_eq!(version_place(6, 6, true), 0);
+        assert_eq!(version_at(0, 6, true), 6);
+        let ranged = cat.names().into_iter().find(|n| cat.versions(n).is_some_and(|v| v.contains('-'))).expect("a model with a version range");
+        let (items, first, single) = version_list(&cat, &ranged);
+        assert!(!single && items[0] == "(unspecified)" && items.len() > 2, "{ranged}: {items:?}");
+        assert_eq!(version_at(version_place(first, first, false), first, false), first);
+        assert_eq!(version_place(0, first, false), 0);
     }
 
     #[test]

@@ -948,8 +948,8 @@ pub fn layout_show(page: i32) {
     let (sheet, pages) = Dlg::sheet(&crate::app::frame(), 10000, "Embosser Setup - layout check", &[(page, name)]);
     // As the setup sheet shows the General page: Configuration location (8, 9) hidden where Default Form stands.
     if page == 10001 {
-        pages[0].hide(8);
-        pages[0].hide(9);
+        pages[0].hide(10);
+        pages[0].hide(11);
     }
     if page == 10002 {
         crate::embosser::layout_device_page(&pages[0]);

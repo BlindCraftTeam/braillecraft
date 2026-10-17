@@ -81,7 +81,7 @@ pub fn with_catalog<R>(f: impl FnOnce(Result<&Catalog, &str>) -> R) -> R {
     })
 }
 
-pub use bc_core::emboss_setup::{find_model, form_name, form_name_with_prefix, Layout, Output, Setup, TranSendPrinters, BAUDS, CASES, HANDSHAKING, LINE_ENDS, PAGE_ENDS, PARITIES, TRANSEND_FILTERS, VERSIONS};
+pub use bc_core::emboss_setup::{find_model, form_name, form_name_with_prefix, Layout, Output, Setup, TranSendPrinters, BAUDS, CASES, HANDSHAKING, LINE_ENDS, PAGE_ENDS, PARITIES, TRANSEND_FILTERS};
 
 /// Whether new setups take the European order of default forms (spec 25 12.3): the reference tests the user locale's
 /// country code; here the region of the system's language (its canonical name, such as en_GB: the user locale on
@@ -272,8 +272,10 @@ fn fill_sheet(general: &Dlg, device: &Dlg, advanced: &Dlg, s: &Setup, cat: &Cata
     let chosen = model.and_then(|m| m.forms.iter().position(|f| f.id == s.form)).map(|i| i as u32);
     general.set_items(11, &form_refs, chosen);
     general.enable(11, !form_refs.is_empty());
-    // Device settings.
-    device.set_items(5, VERSIONS, Some(s.version.min(VERSIONS.len() - 1) as u32));
+    general.set_items(9, &bc_core::emboss_setup::LOCATIONS, Some(u32::from(s.all_users)));
+    // Device settings: the version list holds the model's own versions.
+    let (versions, first, single) = bc_core::emboss_setup::version_list(cat, &s.model);
+    device.set_items(5, &versions, Some(bc_core::emboss_setup::version_place(s.version, first, single) as u32));
     device.set_checked(6, s.escape_codes);
     device.set_checked(7, s.et_speaks_manage);
     device.set_checked(8, s.et_speaks_on);
@@ -414,8 +416,8 @@ fn show_device(device: &Dlg, model: Option<&Model>, version: usize, escapes: boo
     let (margins, interpoint, encoding) = if tiger || elekul {
         (false, false, false)
     } else if index {
-        // Below Embosser Version 4: "(unspecified)" to the two Version 3 entries.
-        (version < 5, true, true)
+        // Below Version 3 (ROM 10.25 or newer): "(unspecified)", Version 1, Version 2 and the older Version 3.
+        (version < 4, true, true)
     } else if enabling {
         (!escapes, !escapes, true)
     } else if braillo {
@@ -424,14 +426,16 @@ fn show_device(device: &Dlg, model: Option<&Model>, version: usize, escapes: boo
         (!in_use, !in_use, true)
     };
     let rows = margins && model.is_some();
-    let groups: [(i32, i32, bool); 14] = [
+    // The Braillo rows by the model's SubModel number (the original's sub-model table): 15 to 18 for 1, 4, 5, 6
+    // and 10; 19 to 23 for 9 and 11.
+    let sub = |set: &[i64]| model.and_then(|m| m.number("SubModel")).is_some_and(|n| set.contains(&n));
+    let groups: [(i32, i32, bool); 15] = [
         (4, 5, index),
         (6, 6, enabling),
         (7, 11, enabling && in_use),
         (12, 14, braillo),
-        // INFERENCE: the reference shows 15-18 and 19-23 for Braillo models by submodel bits whose meaning was not
-        // traced (spec 25, unknowns); both rows lie at the same place, so neither is shown.
-        (15, 23, false),
+        (15, 18, braillo && sub(&[1, 4, 5, 6, 10])),
+        (19, 23, braillo && sub(&[9, 11])),
         (24, 24, tiger),
         (25, 25, margins),
         (26, 28, rows && !flag("NoLeftMargin")),
@@ -462,13 +466,18 @@ fn show_device(device: &Dlg, model: Option<&Model>, version: usize, escapes: boo
 /// The Device Settings groups shown again for the model, version and escape codes now chosen on the sheet.
 fn refresh_device(general: &Dlg, device: &Dlg) {
     let model = general.selected_text(5).unwrap_or_default();
-    let version = device.chosen_in(5, VERSIONS).unwrap_or(0);
     let escapes = device.checked(6);
     with_catalog(|cat| {
         if let Ok(cat) = cat {
-            show_device(device, find_model(cat, &model), version, escapes);
+            show_device(device, find_model(cat, &model), chosen_version(device, cat, &model), escapes);
         }
     });
+}
+
+/// The version number chosen in the Device Settings version list (5), filled for `model`.
+fn chosen_version(device: &Dlg, cat: &Catalog, model: &str) -> usize {
+    let (_, first, single) = bc_core::emboss_setup::version_list(cat, model);
+    bc_core::emboss_setup::version_at(device.selection(5).unwrap_or(0) as usize, first, single)
 }
 
 /// The TranSend SE page filled from a new setup of the first model with TranSend, for the layout check's picture.
@@ -489,11 +498,10 @@ fn build_sheet(setup: &Setup, cat: &Catalog) -> (Dlg, Vec<Dlg>) {
     let pages = [(10001, "General"), (10002, "Device Settings"), (10003, "TranSend SE"), (10004, "Advanced")];
     let title = format!("Embosser Setup - {}", if setup.shown_name().is_empty() { "Untitled Configuration".to_string() } else { setup.shown_name() });
     let (sheet, p) = Dlg::sheet(&crate::app::frame(), 10000, &title, &pages);
-    // The reference places Configuration location (8, 9) and Default Form (10, 11) at the same spot and shows one.
-    // INFERENCE (which one it shows when was not traced): Default Form; setups are kept in the user's own settings,
-    // so a location for all users has no meaning here.
-    p[0].hide(8);
-    p[0].hide(9);
+    // The reference places Configuration location (8, 9) and Default Form (10, 11) at the same spot and shows
+    // Configuration location (audit print-emboss E10); the setup's form follows its model.
+    p[0].hide(10);
+    p[0].hide(11);
     fill_sheet(&p[0], &p[1], &p[3], setup, cat, true);
     fill_transend(&p[2], setup);
     (sheet, p)
@@ -640,13 +648,12 @@ pub fn edit(setup: &mut Setup, cat: &Catalog) -> bool {
             crate::commands::message("Please select an embosser model.");
             continue;
         }
-        let mut s = read_sheet(&p, setup, cat, &model);
+        let s = read_sheet(&p, setup, cat, &model);
         let taken = setup_names().into_iter().any(|n| n == s.shown_name() && n != setup.shown_name());
         if taken {
             crate::commands::message(&format!("You already have a configuration named \"{}\".  Please give a different name.", s.shown_name()));
             continue;
         }
-        s.all_users = false;
         *setup = s;
         break true;
     };
@@ -661,11 +668,7 @@ fn read_sheet(p: &[Dlg], base: &Setup, cat: &Catalog, model: &str) -> Setup {
     let mut s = base.clone();
     s.model = model.to_string();
     s.name = general.text(7).trim().to_string();
-    if let (Some(m), Some(shown)) = (find_model(cat, model), general.selected_text(11)) {
-        if let Some(f) = m.forms.iter().find(|f| form_name(&f.id) == shown) {
-            s.form = f.id.clone();
-        }
-    }
+    s.all_users = general.selected_text(9).as_deref() == Some(bc_core::emboss_setup::LOCATIONS[1]);
     s.output = match general.radio(&[13, 14, 15]) {
         Some(0) => Output::Printer(general.selected_text(16).unwrap_or_default()),
         Some(2) => Output::File(general.text(18).trim().to_string()),
@@ -682,7 +685,7 @@ fn read_sheet(p: &[Dlg], base: &Setup, cat: &Catalog, model: &str) -> Setup {
     s.data_bits = general.selected_text(27).and_then(|b| b.parse().ok()).unwrap_or(s.data_bits);
     s.stop_bits = general.selected_text(29).and_then(|b| b.parse().ok()).unwrap_or(s.stop_bits);
     s.handshaking = general.chosen_in(31, HANDSHAKING).unwrap_or(s.handshaking);
-    s.version = device.chosen_in(5, VERSIONS).unwrap_or(0);
+    s.version = chosen_version(device, cat, model);
     s.escape_codes = device.checked(6);
     s.et_speaks_manage = device.checked(7);
     s.et_speaks_on = device.checked(8);

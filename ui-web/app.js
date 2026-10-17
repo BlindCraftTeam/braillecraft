@@ -842,6 +842,10 @@ function dialogHelpers(controls) {
       const el = get(id);
       if (el) (el.closest(".row") ?? el).hidden = true;
     },
+    show(id, on) {
+      const el = get(id);
+      if (el) (el.closest(".row") ?? el).hidden = !on;
+    },
     // Every field's value, for the dialogs that remember what was chosen last (the desktop program's dialog memory).
     values() {
       const out = [];
@@ -1128,16 +1132,23 @@ async function editSetup(setup, cat) {
   const advanced = built[3].d;
   const transend = built[2].d;
   const fill = (s, models) => fillSheet(general, device, advanced, s, cat, lists, models);
-  // The reference places Configuration location (8, 9) and Default Form (10, 11) at the same spot and shows one:
-  // Default Form (INFERENCE, as in the desktop program).
-  general.hide(8);
-  general.hide(9);
+  // The reference places Configuration location (8, 9) and Default Form (10, 11) at the same spot and shows
+  // Configuration location (audit print-emboss E10); the setup's form follows its model.
+  general.hide(10);
+  general.hide(11);
   fill(setup, true);
   fillTranSend(transend, setup, lists);
   const hasModel = () => !(general.selected(5) ?? "(").startsWith("(");
   setTranSendTab(cat.flag(setup.model, "TranSend"));
   showGeneral(general, hasModel());
   showOutput(general, advanced, hasModel());
+  // The Device Settings groups shown again for the model, version and escape codes now chosen.
+  const refreshDevice = () => {
+    const model = hasModel() ? general.selected(5) : "";
+    showDevice(device, cat, model, chosenVersion(device, cat, model), device.checked(6));
+  };
+  device.get(5).addEventListener("change", refreshDevice);
+  device.get(6).addEventListener("change", refreshDevice);
   // The output controls follow the output and the port chosen and Initialize Serial Port.
   for (const cid of [13, 14, 15, 17, 21]) {
     general.get(cid)?.addEventListener("change", () => showOutput(general, advanced, hasModel()));
@@ -1147,9 +1158,7 @@ async function editSetup(setup, cat) {
     const s = structuredClone(base);
     s.model = model;
     s.name = general.text(7).trim();
-    const forms = JSON.parse(cat.forms(model));
-    const form = forms.find((f) => f.name === general.selected(11));
-    if (form) s.form = form.id;
+    s.all_users = general.selected(9) === LOCATIONS[1];
     const out = general.radio([13, 14, 15]);
     s.output =
       out === 0
@@ -1164,7 +1173,7 @@ async function editSetup(setup, cat) {
     s.data_bits = Number(general.selected(27)) || s.data_bits;
     s.stop_bits = Number(general.selected(29)) || s.stop_bits;
     s.handshaking = general.chosenIn(31, lists.handshaking) ?? s.handshaking;
-    s.version = device.chosenIn(5, lists.versions) ?? 0;
+    s.version = chosenVersion(device, cat, model);
     s.escape_codes = device.checked(6);
     s.et_speaks_manage = device.checked(7);
     s.et_speaks_on = device.checked(8);
@@ -1212,6 +1221,7 @@ async function editSetup(setup, cat) {
     showGeneral(general, !!model);
     showOutput(general, advanced, !!model);
     setTranSendTab(!!model && cat.flag(model, "TranSend"));
+    refreshDevice();
   });
   let answer = null;
   addButtons(10000, dialog, form, sheetControls, async () => {
@@ -1225,7 +1235,6 @@ async function editSetup(setup, cat) {
       await message(`You already have a configuration named "${shownName(s)}".  Please give a different name.`);
       return false;
     }
-    s.all_users = false;
     answer = s;
     return true;
   });
@@ -1320,9 +1329,10 @@ function fillSheet(general, device, advanced, s, cat, lists, models) {
   const forms = JSON.parse(cat.forms(s.model));
   general.setItems(11, forms.map((f) => f.name), forms.findIndex((f) => f.id === s.form));
   general.enable(11, forms.length > 0);
-  const has = (k) => cat.flag(s.model, k);
-  const index = cat.driver(s.model).includes("Index");
-  device.setItems(5, lists.versions, Math.min(s.version, lists.versions.length - 1));
+  general.setItems(9, LOCATIONS, s.all_users ? 1 : 0);
+  // Device settings: the version list holds the model's own versions.
+  const versions = JSON.parse(cat.version_list(s.model));
+  device.setItems(5, versions.items, versions.single || s.version === 0 ? 0 : Math.max(0, s.version - versions.first) + 1);
   device.setChecked(6, s.escape_codes);
   device.setChecked(7, !!s.et_speaks_manage);
   device.setChecked(8, !!s.et_speaks_on);
@@ -1337,19 +1347,7 @@ function fillSheet(general, device, advanced, s, cat, lists, models) {
   device.setChecked(52, s.z_fold);
   // The page's other fields as the setup has them; one it does not hold is empty (spec 25 18.3).
   for (const cid of [16, 21, 23, 27, 30, 33, 43]) device.setText(cid, s.device_other.find(([c]) => c === cid)?.[1] ?? "");
-  // INFERENCE (as in the desktop program): the device fields shown for a model follow its properties.
-  for (const [cid, on] of [
-    [4, index],
-    [5, index],
-    [6, has("ETCAllowEscapeCodes") || has("UsingEscapeCodes")],
-    [7, has("ETSpeaks")],
-    [8, has("ETSpeaks")],
-    [9, has("AllowSeekTOF")],
-    [34, has("CanDoInterpoint")],
-    [52, has("IndexZfold")],
-  ]) {
-    device.enable(cid, on);
-  }
+  showDevice(device, cat, s.model, s.version, s.escape_codes);
   advanced.setChecked(5, s.custom_codes);
   advanced.setText(7, s.start_codes);
   advanced.setText(9, s.end_codes);
@@ -1362,6 +1360,63 @@ function fillSheet(general, device, advanced, s, cat, lists, models) {
   advanced.setChecked(20, s.one_at_a_time);
   advanced.setText(22, String(s.text_delay));
   advanced.setText(24, String(s.control_delay));
+}
+
+// The General page's Configuration location choices, in the original's order; the second is the setup's all_users.
+const LOCATIONS = ["Current user", "All users on this computer"];
+
+// The version number chosen in the Device Settings version list (5), filled for `model`.
+function chosenVersion(device, cat, model) {
+  const { items, first, single } = JSON.parse(cat.version_list(model));
+  const place = Math.max(0, items.indexOf(device.selected(5)));
+  return single ? first : place === 0 ? 0 : place + first - 1;
+}
+
+// The Device Settings page as the original shows it (spec 25, resource 10002; the desktop program's show_device):
+// one group of controls per embosser driver at the same places, only the model's driver's group shown; the margin
+// rows, the interpoint box and the encoding rows by the driver and by whether escape codes are in use; the Braillo
+// rows by the model's SubModel number (15 to 18 for 1, 4, 5, 6 and 10; 19 to 23 for 9 and 11).
+function showDevice(device, cat, model, version, escapes) {
+  const driver = model ? cat.driver(model) : "";
+  const index = driver === "Emb_IndexEmbosserDriver";
+  const enabling = driver === "Emb_EnablingEmbosserDriver";
+  const braillo = driver === "Emb_BrailloEmbosserDriver";
+  const tiger = driver === "Emb_TigerEmbosserDriver";
+  const elekul = driver === "Emb_ElekulEmbosserDriver";
+  const flag = (k) => !!model && cat.flag(model, k);
+  const inUse = flag("UsingEscapeCodes") || escapes;
+  let margins, interpoint, encoding;
+  if (tiger || elekul) [margins, interpoint, encoding] = [false, false, false];
+  else if (index) [margins, interpoint, encoding] = [version < 4, true, true];
+  else if (enabling) [margins, interpoint, encoding] = [!escapes, !escapes, true];
+  else if (braillo) [margins, interpoint, encoding] = [false, false, true];
+  else [margins, interpoint, encoding] = [!inUse, !inUse, true];
+  const rows = margins && !!model;
+  const sub = (set) => !!model && set.includes(cat.number(model, "SubModel"));
+  const groups = [
+    [4, 5, index],
+    [6, 6, enabling],
+    [7, 11, enabling && inUse],
+    [12, 14, braillo],
+    [15, 18, braillo && sub([1, 4, 5, 6, 10])],
+    [19, 23, braillo && sub([9, 11])],
+    [24, 24, tiger],
+    [25, 25, margins],
+    [26, 28, rows && !flag("NoLeftMargin")],
+    [29, 31, rows && !flag("NoRightMargin")],
+    [32, 33, rows && !flag("NoTopMargin")],
+    [34, 34, interpoint],
+    [35, 41, encoding],
+    [42, 51, elekul],
+    [52, 52, index],
+  ];
+  for (const [first, last, on] of groups) for (let cid = first; cid <= last; cid++) device.show(cid, on);
+  for (let cid = 6; cid <= 31; cid++) device.enable(cid, !!model);
+  device.enable(7, inUse && flag("ETSpeaks"));
+  device.enable(8, inUse && flag("ETSpeaks"));
+  device.enable(9, inUse && flag("AllowSeekTOF"));
+  device.enable(34, flag("CanDoInterpoint"));
+  device.enable(52, flag("IndexZfold"));
 }
 
 // ------------------------------------------------------------------ Embosser Setup (dialog 1032)

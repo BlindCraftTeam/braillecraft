@@ -1472,6 +1472,18 @@ impl Embossers {
         find_model(&self.0, label).is_some_and(|m| m.flag(key))
     }
 
+    /// A model's number property (SubModel and the like); 0 when it has none.
+    pub fn number(&self, label: &str, key: &str) -> i32 {
+        find_model(&self.0, label).and_then(|m| m.number(key)).unwrap_or(0) as i32
+    }
+
+    /// The Device Settings version list for a model, as JSON {items, first, single}
+    /// (bc_core::emboss_setup::version_list).
+    pub fn version_list(&self, label: &str) -> String {
+        let (items, first, single) = bc_core::emboss_setup::version_list(&self.0, label);
+        serde_json::json!({ "items": items, "first": first, "single": single }).to_string()
+    }
+
     /// A setup given as JSON after a change of its model to `label` on the setup sheet (spec 25 18.3), as JSON.
     pub fn with_model(&self, setup: &str, label: &str, european: bool) -> Result<String, JsError> {
         let s: Setup = serde_json::from_str(setup).map_err(|e| JsError::new(&e.to_string()))?;
