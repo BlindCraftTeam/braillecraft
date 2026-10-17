@@ -715,11 +715,9 @@ impl App {
         } else {
             bc_core::format::Layout::print(cells, lines)
         };
-        // INTERIM: a print document's own pages carry no number line until the print page layout is traced.
-        if braille {
-            layout.numbers_even = bc_core::format::Corner::from_code(d.page_numbers[0]);
-            layout.numbers_odd = bc_core::format::Corner::from_code(d.page_numbers[1]);
-        }
+        // Page numbers on even and odd pages, for print documents too (in digits, with no numeric indicator).
+        layout.numbers_even = bc_core::format::Corner::from_code(d.page_numbers[0]);
+        layout.numbers_odd = bc_core::format::Corner::from_code(d.page_numbers[1]);
         layout.first_number_shown = d.page_numbers[4].max(1) as usize;
         (h.finish(), layout, crate::translation::style_table(&d.styles))
     }

@@ -69,7 +69,8 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   that setting is on, and the Cursor Locator: a rectangle that closes in on the caret when a document is opened or
   translated, when the view changes, or when Shift is pressed alone.
 - **Braille pages.** Lines per page, cells per line, margins, centred headings and page numbering, shown in the
-  status line as page, line and column. Each document's styles (headings, lists, paragraphs) are laid out from its
+  status line as page, line and column. A page number shares the first or last line with text, which keeps three
+  cells clear of it; print documents get page numbers too, and [pg] codes can renumber pages. Each document's styles (headings, lists, paragraphs) are laid out from its
   own style list. Running heads and feet are kept out of the body text; showing them at the top and bottom of later
   pages is still being built.
 - **Save As.** Formatted braille (BRF in a choice of braille encodings), PEF (Portable Embosser Format), formatted

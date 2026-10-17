@@ -463,12 +463,27 @@ function caretLine() {
 
 // The status line, as the desktop program shows it (bc_core::status): the current style, Page, Line and Column on the
 // laid-out pages (left out in coded view), the character at the caret, and Keys.
+// Gives the core the active document's page numbering, which its pages are laid out with. A new document takes
+// its template's, once its document file is made.
+function syncNumbering() {
+  if (doc.file) {
+    core.set_page_numbering(Uint16Array.from(doc.file.page_numbers));
+    return;
+  }
+  core.set_page_numbering(new Uint16Array(5));
+  const d = doc;
+  documentFile().then(() => {
+    if (d === doc) showStatus();
+  });
+}
+
 function showStatus() {
   if (!core) {
     const { line, column } = caretLine();
     statusLine.textContent = `Current Style: None  Line:${line}  Column:${column}`;
     return;
   }
+  syncNumbering();
   // As in the desktop program, the text as it is shown (in the shown encoding) is laid out.
   const status = core.status_line(editor.value, doc.cells, doc.lines, doc.kind === "braille", editor.selectionStart, doc.view.codes, settings.verbose, doc.view.six_key, doc.highlight !== null && doc.highlight !== undefined);
   if (statusLine.textContent !== status) statusLine.textContent = status;

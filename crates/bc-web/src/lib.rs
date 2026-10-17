@@ -908,11 +908,32 @@ pub fn emboss_job(text: &str, cells: u32, lines: u32, copies: u32) -> Vec<u8> {
     bc_core::emboss::job(&options, &sides, copies)
 }
 
-/// A document's pages: a braille document in braille pages, a print document in print pages (as the desktop
-/// program lays them out for File Print and File Emboss).
+thread_local! {
+    /// The active document's page numbering (the five values of Document, Page Numbering), which its pages are laid
+    /// out with.
+    static NUMBERING: std::cell::Cell<[u16; 5]> = const { std::cell::Cell::new([0; 5]) };
+}
+
+/// Sets the page numbering the active document's pages are laid out with: braille page numbers on even pages and
+/// on odd pages, print page numbers on even and odd pages, and the first page whose number is shown.
+#[wasm_bindgen]
+pub fn set_page_numbering(numbers: Vec<u16>) {
+    let mut n = [0u16; 5];
+    for (k, v) in numbers.into_iter().take(5).enumerate() {
+        n[k] = v;
+    }
+    NUMBERING.with(|c| c.set(n));
+}
+
+/// A document's pages: a braille document in braille pages, a print document in print pages, with the active
+/// document's page numbering (as the desktop program lays them out for the view, File Print and File Emboss).
 fn laid_out(text: &str, cells: u32, lines: u32, braille: bool) -> Vec<bc_core::format::Page> {
     let (c, l) = (cells.max(1) as usize, lines.max(1) as usize);
-    let layout = if braille { bc_core::format::Layout::braille(c, l) } else { bc_core::format::Layout::print(c, l) };
+    let mut layout = if braille { bc_core::format::Layout::braille(c, l) } else { bc_core::format::Layout::print(c, l) };
+    let n = NUMBERING.with(|c| c.get());
+    layout.numbers_even = bc_core::format::Corner::from_code(n[0]);
+    layout.numbers_odd = bc_core::format::Corner::from_code(n[1]);
+    layout.first_number_shown = n[4].max(1) as usize;
     bc_core::format::format(&shown_of(text), &layout, None)
 }
 

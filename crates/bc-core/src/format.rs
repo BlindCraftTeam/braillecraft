@@ -225,11 +225,17 @@ fn split_code(code: &str) -> (&str, Vec<i64>) {
     (name, numbers)
 }
 
-/// The braille page number: the numeric indicator and the digits as the letters a to j.
-fn braille_number(n: usize) -> String {
-    let mut s = String::from("#");
-    for d in n.to_string().chars() {
-        s.push(b"jabcdefghi"[d.to_digit(10).unwrap_or(0) as usize] as char);
+/// A page number as the page shows it: the prefix [pgN~X] set, then in a braille document the numeric indicator
+/// and the digits as the letters a to j, in a print document the digits.
+fn page_number(n: usize, prefix: Option<char>, braille: bool) -> String {
+    let mut s: String = prefix.into_iter().collect();
+    if braille {
+        s.push('#');
+        for d in n.to_string().chars() {
+            s.push(b"jabcdefghi"[d.to_digit(10).unwrap_or(0) as usize] as char);
+        }
+    } else {
+        s.push_str(&n.to_string());
     }
     s
 }
@@ -238,9 +244,22 @@ fn braille_number(n: usize) -> String {
 struct Formatter {
     layout: Layout,
     pages: Vec<Page>,
-    /// Lines of the page being filled (text lines only; number lines are added when the page is finished).
+    /// Lines of the page being filled (its number is put on its line when the page is finished).
     page: Vec<Line>,
+    /// The page counter: the number of the page being filled; [pgN] sets the next page's; the prefix [pgN~X] sets.
+    counter: usize,
+    next_counter: Option<usize>,
+    prefix: Option<char>,
+    /// Where page numbers go on odd and even pages and the first number shown; [svpnp] and [svpfd] change them from
+    /// the next page.
+    numbers_odd: Corner,
+    numbers_even: Corner,
+    first_number_shown: usize,
+    next_numbers: Option<(Corner, Corner)>,
+    next_first_shown: Option<usize>,
     page_start: Option<usize>,
+    /// Where the last page finished starts (a page with no text starts there too).
+    last_start: usize,
     line: Line,
     /// Where the next text on the line starts.
     start_col: usize,
@@ -270,7 +289,16 @@ impl Formatter {
             layout: layout.clone(),
             pages: Vec::new(),
             page: Vec::new(),
+            counter: 1,
+            next_counter: None,
+            prefix: None,
+            numbers_odd: layout.numbers_odd,
+            numbers_even: layout.numbers_even,
+            first_number_shown: layout.first_number_shown,
+            next_numbers: None,
+            next_first_shown: None,
             page_start: None,
+            last_start: 0,
             line: Line::default(),
             start_col: 0,
             left: 0,
@@ -290,7 +318,7 @@ impl Formatter {
     /// Records document position `pos` at the pen: after the line's last cell, or where the line's text will start.
     fn mark(&mut self, pos: usize) {
         let used = self.line.text.chars().count();
-        let col = if self.line_has_text() { used } else { self.start_col.max(used) };
+        let col = if self.line_has_text() { used } else { self.start_col.max(used).max(self.rooms().0) };
         self.line.marks.push((pos, col));
     }
 
@@ -318,27 +346,50 @@ impl Formatter {
         cell.clamp(0, self.layout.cells.saturating_sub(1) as i64) as usize
     }
 
+    /// Where the line's words wrap: the right margin, or the room a page number on the line keeps.
     fn width(&self) -> usize {
-        self.layout.cells.saturating_sub(self.right).max(1)
+        self.layout.cells.saturating_sub(self.right.max(self.rooms().1)).max(1)
     }
 
-    /// The number of the page being filled (1-based) and the corner its number goes in.
+    /// The corner the number of the page being filled goes in (none before the first page shown). INFERENCE: odd
+    /// and even are those of the page counter (the reference's parity flag is not traced to its source).
     fn corner(&self) -> Corner {
-        let n = self.pages.len() + 1;
-        if n < self.layout.first_number_shown {
+        if self.counter < self.first_number_shown {
             return Corner::None;
         }
-        if n % 2 == 0 {
-            self.layout.numbers_even
+        if self.counter % 2 == 0 {
+            self.numbers_even
         } else {
-            self.layout.numbers_odd
+            self.numbers_odd
         }
     }
 
-    /// Text lines a page holds: the lines per page less a line for a number at the top or bottom.
+    /// The page number of the page being filled, as shown.
+    fn number_text(&self) -> String {
+        page_number(self.counter, self.prefix, self.layout.braille)
+    }
+
+    /// The lines a page holds. A page number takes no line of its own: it goes on the first or last line, beside the
+    /// text (rooms).
     fn capacity(&self) -> usize {
+        self.layout.lines.max(1)
+    }
+
+    /// The cells the page number keeps on the line being filled, at its start and at its end: the number's length
+    /// and three more on the first line for a number at the top, on the last line for one at the bottom.
+    fn rooms(&self) -> (usize, usize) {
         let c = self.corner();
-        self.layout.lines.saturating_sub(usize::from(c.top()) + usize::from(c.bottom())).max(1)
+        let at = self.page.len();
+        if (c.top() && at == 0) || (c.bottom() && at + 1 == self.capacity()) {
+            let room = self.number_text().chars().count() + 3;
+            if c.right() {
+                (0, room)
+            } else {
+                (room, 0)
+            }
+        } else {
+            (0, 0)
+        }
     }
 
     fn line_has_text(&self) -> bool {
@@ -391,32 +442,49 @@ impl Formatter {
 
     fn finish_page(&mut self) {
         let corner = self.corner();
-        let number = self.pages.len() + 1;
+        let number = self.number_text();
         let mut lines = std::mem::take(&mut self.page);
         let room = self.capacity();
         lines.resize(room, Line::default());
-        let number_line = || {
-            let text = if self.layout.braille { braille_number(number) } else { number.to_string() };
-            let pad = if corner.right() { self.layout.cells.saturating_sub(text.chars().count()) } else { 0 };
-            let text = format!("{}{text}", " ".repeat(pad));
-            let sources = vec![None; text.chars().count()];
-            Line { text, sources, marks: Vec::new() }
-        };
-        if corner.top() {
-            lines.insert(0, number_line());
+        // The number goes on the first line (at the top) or the last (at the bottom), at its start or its end; the
+        // text on that line was kept clear of it.
+        let at = if corner.top() { Some(0) } else if corner.bottom() { Some(room - 1) } else { None };
+        if let Some(line) = at.and_then(|k| lines.get_mut(k)) {
+            let len = number.chars().count();
+            let col = if corner.right() { self.layout.cells.saturating_sub(len) } else { 0 };
+            let mut text: Vec<char> = line.text.chars().collect();
+            if text.len() < col + len {
+                text.resize(col + len, ' ');
+                line.sources.resize(col + len, None);
+            }
+            for (k, c) in number.chars().enumerate() {
+                text[col + k] = c;
+                line.sources[col + k] = None;
+            }
+            line.text = text.into_iter().collect();
         }
-        if corner.bottom() {
-            lines.push(number_line());
-        }
-        let start = self.page_start.take().unwrap_or_else(|| self.pages.last().map_or(0, |p| p.start));
+        let start = self.page_start.take().unwrap_or(self.last_start);
+        self.last_start = start;
         self.pages.push(Page { lines, start });
+        // The next page: its counter, and the number settings changed on this one.
+        self.counter = self.next_counter.take().unwrap_or(self.counter + 1);
+        if let Some((odd, even)) = self.next_numbers.take() {
+            self.numbers_odd = odd;
+            self.numbers_even = even;
+        }
+        if let Some(first) = self.next_first_shown.take() {
+            self.first_number_shown = first;
+        }
     }
 
     fn new_page(&mut self) {
         if self.line_has_text() {
             self.end_line(self.left);
         }
-        self.finish_page();
+        // A page its last line already finished is not finished again (that would be a blank page).
+        if !self.page.is_empty() || self.pages.is_empty() {
+            self.finish_page();
+        }
         self.start_col = self.left;
     }
 
@@ -438,11 +506,11 @@ impl Formatter {
             self.flush_right = false;
             let len = cells.len();
             let used = self.line.text.chars().count();
-            if used + 1 + len > self.layout.cells {
+            if used + 1 + len > self.layout.cells.saturating_sub(self.rooms().1) {
                 self.end_line(self.left + self.runover_offset);
             }
             let used = self.line.text.chars().count();
-            for _ in used..self.layout.cells.saturating_sub(len) {
+            for _ in used..self.layout.cells.saturating_sub(self.rooms().1).saturating_sub(len) {
                 self.put(' ', None);
             }
             for (k, &(c, s)) in cells.iter().enumerate() {
@@ -460,7 +528,7 @@ impl Formatter {
             let used = self.line.text.chars().count();
             let has_text = self.line_has_text();
             let gap = usize::from(has_text && !self.touching);
-            let start = if has_text { used + gap } else { self.start_col.max(used) };
+            let start = if has_text { used + gap } else { self.start_col.max(used).max(self.rooms().0) };
             if start + rest.len() > width && has_text {
                 self.touching = false;
                 self.end_line(self.left + self.runover_offset);
@@ -570,14 +638,30 @@ impl Formatter {
                 self.blank_between = first.unwrap_or(1).clamp(0, most) as usize;
             }
             "pg" => {
+                // [pgN~X]: the next page is numbered N, with X before its number.
+                if let Some(n) = first.filter(|&n| n > 0) {
+                    self.next_counter = Some(n as usize);
+                }
                 if self.after_page_code && !self.page_has_text() {
                     // Two page codes in a row: a blank page.
                     self.finish_page();
                 } else {
                     self.new_page();
                 }
+                if let Some((_, x)) = code.split_once('~') {
+                    self.prefix = x.chars().next().filter(|&c| c != ' ');
+                }
                 self.after_page_code = true;
             }
+            // [svpnpA:B] where page numbers go from the next page, A on odd and B on even pages (0 none, 1 upper left,
+            // 2 upper right, 3 lower left, 4 lower right); alone, lower right on both.
+            "svpnp" => {
+                let (odd, even) = if n.is_empty() { (4, 4) } else { (n[0], n.get(1).copied().unwrap_or(0)) };
+                let corner = |v: i64| Corner::from_code(v.clamp(0, 4) as u16);
+                self.next_numbers = Some((corner(odd), corner(even)));
+            }
+            // [svpfdN] the first page whose number is shown, from the next page.
+            "svpfd" => self.next_first_shown = Some(first.unwrap_or(1).max(1) as usize),
             "top" => {
                 if self.page_has_text() {
                     self.new_page();
@@ -631,7 +715,9 @@ impl Formatter {
     }
 
     fn heading_lines(&mut self, words: &[(String, Vec<Option<usize>>)], need: i64, skip: i64) {
-        let width = self.width();
+        // On a page number's line a centred line keeps twice the number's room, so it stays centred on the line.
+        let (l, r) = self.rooms();
+        let width = self.layout.cells.saturating_sub(self.right.max(2 * l.max(r))).max(1);
         let mut lines: Vec<Line> = Vec::new();
         let mut line = Line::default();
         for (w, s) in words {
@@ -719,6 +805,7 @@ impl Formatter {
         if let Some(s) = f.page_start {
             f.page_start = Some(map(s)?);
         }
+        f.last_start = map(f.last_start)?;
         if let Some(h) = &mut f.heading {
             for (_, sources) in &mut h.0 {
                 for s in sources.iter_mut().flatten() {
@@ -804,6 +891,7 @@ fn is_layout(code: &str) -> bool {
     matches!(
         split_code(code).0,
         "<" | "l" | "p" | "sk" | "ind" | "inm" | "ptys" | "ptye" | "rm" | "svsbl" | "pg" | "top" | "cp" | "fr" | "hds" | "hde"
+            | "svpnp" | "svpfd"
             | "tls" | "tle" | "tld" | "rfs" | "rfe" | "kps" | "kpe" | "sc"
     )
 }
@@ -1179,11 +1267,28 @@ mod tests {
         let mut layout = Layout::braille(10, 3);
         layout.numbers_odd = Corner::LowerRight;
         layout.numbers_even = Corner::LowerRight;
+        // The number shares the last line with text, which keeps three cells clear of it.
         let pages = format(&m("a\nb\nc[pg]d"), &layout, None);
-        assert_eq!(pages.len(), 3);
-        assert_eq!(texts(&pages[0]), ["a", "b", "        #a"]);
-        assert_eq!(texts(&pages[1]), ["c", "", "        #b"]);
-        assert_eq!(texts(&pages[2]), ["d", "", "        #c"]);
+        assert_eq!(pages.len(), 2);
+        assert_eq!(texts(&pages[0]), ["a", "b", "c       #a"]);
+        assert_eq!(texts(&pages[1]), ["d", "", "        #b"]);
+        let pages = format(&m("a\nb\nccc dd"), &layout, None);
+        assert_eq!(texts(&pages[0]), ["a", "b", "ccc     #a"]);
+        assert_eq!(texts(&pages[1])[0], "dd");
+        // At the upper left, text on the first line starts three cells after the number; [pgN~X] numbers the next
+        // page N with X before it; a print document's number is in digits.
+        layout.numbers_odd = Corner::UpperLeft;
+        layout.numbers_even = Corner::UpperLeft;
+        let pages = format(&m("a[pg9~p]b"), &layout, None);
+        assert_eq!(texts(&pages[0])[0], "#a   a");
+        assert_eq!(texts(&pages[1])[0], "p#i   b");
+        let mut print = Layout::print(10, 2);
+        print.numbers_odd = Corner::LowerRight;
+        assert_eq!(texts(&format(&m("a"), &print, None)[0]), ["a", "         1"]);
+        // [svpnp] changes where numbers go from the next page.
+        let pages = format(&m("a [svpnp0:0]b[pg]c"), &layout, None);
+        assert_eq!(texts(&pages[0])[0], "#a   a b");
+        assert_eq!(texts(&pages[1])[0], "c");
     }
 
     #[test]
