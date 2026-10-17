@@ -132,6 +132,9 @@ pub struct Line {
 pub struct Page {
     pub lines: Vec<Line>,
     pub start: usize,
+    /// The print page numbers ([lea]) met on this page, as laid out, with the document place of each (Edit, Goto by
+    /// reference page).
+    pub print_labels: Vec<(String, usize)>,
 }
 
 /// A piece of the document: a character with its position (in characters), a space, or a code.
@@ -364,6 +367,8 @@ struct Formatter {
     next_print: Option<(Corner, Corner)>,
     print_number: Option<String>,
     print_since: usize,
+    /// Print page numbers met since the last page was finished, with their places (Page::print_labels).
+    labels: Vec<(String, usize)>,
     page_print: Option<String>,
     change_line: Option<usize>,
     lea: bool,
@@ -445,6 +450,7 @@ impl Formatter {
             next_print: None,
             print_number: None,
             print_since: 0,
+            labels: Vec::new(),
             page_print: None,
             change_line: None,
             lea: false,
@@ -686,6 +692,9 @@ impl Formatter {
     fn print_page(&mut self, cells: &[(char, Option<usize>)]) {
         self.word_marks.clear();
         let text: String = cells.iter().take(36).map(|c| c.0).collect();
+        if let Some(place) = cells.iter().find_map(|c| c.1) {
+            self.labels.push((text.clone(), place));
+        }
         self.print_number = Some(text.clone());
         let next_top = if self.odd { self.print_even } else { self.print_odd }.top();
         let at_top = !self.line_has_text() && (!self.opened || self.page.len() == 0);
@@ -849,7 +858,8 @@ impl Formatter {
         self.retried = false;
         let start = self.page_start.take().unwrap_or(self.last_start);
         self.last_start = start;
-        self.pages.push(Page { lines, start });
+        let print_labels = std::mem::take(&mut self.labels);
+        self.pages.push(Page { lines, start, print_labels });
         // The next page: its counter, and the number settings changed on this one.
         self.counter = self.next_counter.take().unwrap_or(self.counter + 1);
         if let Some((odd, even)) = self.next_numbers.take() {
@@ -1461,6 +1471,9 @@ impl Formatter {
                 }
             }
         }
+        for l in &mut f.labels {
+            l.1 = map(l.1)?;
+        }
         for m in &mut f.word_marks {
             m.0 = map(m.0)?;
         }
@@ -1662,6 +1675,9 @@ impl Join {
             for line in &mut page.lines {
                 move_line(line, map)?;
             }
+            for l in &mut page.print_labels {
+                l.1 = map(l.1)?;
+            }
         }
         let mut later = self.checkpoints.split_off(k + 1);
         for c in &mut later {
@@ -1815,6 +1831,73 @@ pub fn reformat(
     };
     let pages = formatter.run_from(&new, start, word, &mut checkpoints, Some(join));
     (pages, Trail { pieces: new, checkpoints, layout: Some(layout.clone()) })
+}
+
+/// Edit, Goto as the original goes there: the document place of the cell at page, line and column (1-based), only
+/// when that cell is there and came from a place in the document; None otherwise.
+pub fn exact_position(pages: &[Page], page: usize, line: usize, column: usize) -> Option<usize> {
+    let ln = pages.get(page.checked_sub(1)?)?.lines.get(line.checked_sub(1)?)?;
+    *ln.sources.get(column.checked_sub(1)?)?
+}
+
+/// Edit, Goto, "go to the closest location", as the original: lines are counted through the document
+/// (`lines_per_page` to a page) and tried outward from the one asked for (that line, the one before, the one after,
+/// two before, ...); on the first line that has one, the cell with a document place nearest the column (that column,
+/// one left, one right, ...). Answers the place and its page, line and column (1-based), or None.
+pub fn closest_position(
+    pages: &[Page],
+    page: usize,
+    line: usize,
+    column: usize,
+    lines_per_page: usize,
+) -> Option<(usize, (usize, usize, usize))> {
+    let lpp = lines_per_page.max(1);
+    let total = pages.len() * lpp;
+    let want = (page.max(1) - 1).saturating_mul(lpp).saturating_add(line.max(1) - 1) as i64;
+    let col = (column.max(1) - 1) as i64;
+    let cell = |g: i64, c: i64| -> Option<usize> {
+        if g < 0 || c < 0 || g as usize >= total {
+            return None;
+        }
+        let ln = pages.get(g as usize / lpp)?.lines.get(g as usize % lpp)?;
+        *ln.sources.get(c as usize)?
+    };
+    let width = |g: i64| -> Option<usize> {
+        (g >= 0 && (g as usize) < total).then(|| pages.get(g as usize / lpp).and_then(|p| p.lines.get(g as usize % lpp)))?.map(|l| l.sources.len())
+    };
+    let mut d = 0i64;
+    loop {
+        let lines = if d == 0 { vec![want] } else { vec![want - d, want + d] };
+        if lines.iter().all(|&g| g < 0 || g as usize >= total) && d > 0 {
+            return None;
+        }
+        for g in lines {
+            let Some(w) = width(g) else { continue };
+            let mut e = 0i64;
+            while col - e >= 0 || col + e < w as i64 {
+                for c in if e == 0 { vec![col] } else { vec![col - e, col + e] } {
+                    if let Some(place) = cell(g, c) {
+                        let g = g as usize;
+                        return Some((place, (g / lpp + 1, g % lpp + 1, c as usize + 1)));
+                    }
+                }
+                e += 1;
+            }
+        }
+        d += 1;
+    }
+}
+
+/// Edit, Goto with "Use reference page number", as the original: the place of the first print page number laid out
+/// as `number` would be (in a braille document the braille number sign and the letters a to j for the digits, in a
+/// print document the digits).
+pub fn reference_page_position(pages: &[Page], number: u32, braille: bool) -> Option<usize> {
+    let label: String = if braille {
+        std::iter::once('#').chain(number.to_string().chars().map(|d| if d == '0' { 'j' } else { (d as u8 + 0x30) as char })).collect()
+    } else {
+        number.to_string()
+    };
+    pages.iter().flat_map(|p| &p.print_labels).find(|(l, _)| l.eq_ignore_ascii_case(&label)).map(|(_, place)| *place)
 }
 
 /// The character position at page `page`, line `line`, column `column` (all 1-based): the cell there, else the
@@ -2233,6 +2316,28 @@ mod tests {
         // [ki1]: a new line in a keep block closes it and opens another, so only the last part moves.
         let pages = format(&m("a\nb\n[kps][ki1]c\nd\ne[kpe]"), &Layout::braille(10, 4), None);
         assert_eq!(texts(&pages[0])[..3], ["a", "b", "c"]);
+    }
+
+    #[test]
+    fn goto_exact_and_closest_as_the_original() {
+        let line = |s: &[Option<usize>]| Line { sources: s.to_vec(), ..Line::default() };
+        // Two pages of three lines; page 1 line 2 is blank; page 2 line 1 has a page number cell (no place).
+        let pages = vec![
+            Page { lines: vec![line(&[Some(0), Some(1), Some(2)]), line(&[]), line(&[Some(4), None, Some(6)])], ..Page::default() },
+            Page { lines: vec![line(&[None, None]), line(&[Some(8)]), line(&[])], start: 8, ..Page::default() },
+        ];
+        assert_eq!(exact_position(&pages, 1, 1, 2), Some(1));
+        assert_eq!(exact_position(&pages, 1, 3, 2), None);
+        assert_eq!(exact_position(&pages, 1, 2, 1), None);
+        assert_eq!(exact_position(&pages, 3, 1, 1), None);
+        // A cell with no place: the nearest on the line, left first.
+        assert_eq!(closest_position(&pages, 1, 3, 2, 3), Some((4, (1, 3, 1))));
+        // A blank line: the line before it first.
+        assert_eq!(closest_position(&pages, 1, 2, 1, 3), Some((0, (1, 1, 1))));
+        // A column past the line's end: back along the line.
+        assert_eq!(closest_position(&pages, 2, 2, 9, 3), Some((8, (2, 2, 1))));
+        // A page past the end: no line, no place.
+        assert_eq!(closest_position(&pages, 9, 1, 1, 3), None);
     }
 
     #[test]

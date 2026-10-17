@@ -2241,11 +2241,16 @@ fn change_case() {
 }
 
 /// Edit, Goto: a page, line and column of the laid-out pages, as the status line counts them.
+/// Edit, Goto (dialog 1019), as the original: page, line and column checked in the dialog (not a number, below 1,
+/// above the page count limit, the lines per page or the cells per line); a place with no cell asks 1004 and goes to
+/// the closest one; "Use reference page number" (8) greys out line and column and goes to that print page number.
 fn goto_position() {
-    let Some((pages, pos)) = app::with(|a| {
+    let Some((pages, pos, lines, cells, braille)) = app::with(|a| {
         let i = a.active?;
         let shown = a.docs[i].shown();
-        Some((a.laid_out(i, &shown), a.docs[i].caret()))
+        let pages = a.laid_out(i, &shown);
+        let d = &a.docs[i];
+        Some((pages, d.caret(), d.lines.max(1) as i64, d.cells.max(1) as i64, d.kind == DocKind::Braille))
     }) else {
         return;
     };
@@ -2254,23 +2259,50 @@ fn goto_position() {
     d.set_text(7, &page.to_string());
     d.set_text(10, &line.to_string());
     d.set_text(12, &column.to_string());
+    d.set_checked(8, false);
+    let me = Dlg { id: d.id, dialog: d.dialog, page: d.page };
+    d.on_button(8, move || {
+        let on = me.checked(8);
+        for cid in 9..=12 {
+            me.enable(cid, !on);
+        }
+    });
+    d.check_on_ok(move |d| {
+        const FIELDS: [(i32, &str, &str); 3] = [
+            (7, "You cannot go to pages with numbers less than 1.", "The page number is too great."),
+            (10, "You cannot go to lines with numbers less than 1.", "The line number is too great."),
+            (12, "You cannot go to columns with numbers less than 1.", "The column is too great."),
+        ];
+        let limits = [0x7fff_ffff, lines, cells];
+        FIELDS.iter().zip(limits).find_map(|(&(field, low, high), max)| match d.number(field) {
+            None => Some((field, "The number entered is not valid.".to_string())),
+            Some(n) if n < 1 => Some((field, low.to_string())),
+            Some(n) if n > max => Some((field, high.to_string())),
+            Some(_) => None,
+        })
+    });
     let ok = d.show() == 1;
-    let (page, l, c) = (d.number(7), d.number(10), d.number(12));
+    let (page, l, c, reference) = (d.number(7), d.number(10), d.number(12), d.checked(8));
     d.destroy();
-    if !ok {
+    let (true, Some(page), Some(l), Some(c)) = (ok, page, l, c) else { return };
+    let (page, l, c) = (page as usize, l as usize, c as usize);
+    if reference {
+        match bc_core::format::reference_page_position(&pages, page as u32, braille) {
+            Some(place) => select_range(place as i64, place as i64),
+            None => message(&format!("Unable to go to reference page {page}.")),
+        }
         return;
     }
-    let (Some(page), Some(l), Some(c)) = (page, l, c) else {
-        message("You cannot go to that location in the document.");
-        return;
-    };
-    if page < 1 || l < 1 || c < 1 {
-        message("You cannot go to pages with numbers less than 1.");
+    if let Some(place) = bc_core::format::exact_position(&pages, page, l, c) {
+        select_range(place as i64, place as i64);
         return;
     }
-    match bc_core::format::position_of(&pages, page as usize, l as usize, c as usize) {
-        Some(offset) => select_range(offset as i64, offset as i64),
-        None => message("You cannot go to that location in the document."),
+    if !yes_no("You cannot go to that location in the document.  Would you like to go to the closest location?") {
+        return;
+    }
+    match bc_core::format::closest_position(&pages, page, l, c, lines as usize) {
+        Some((place, _)) => select_range(place as i64, place as i64),
+        None => message("Unable to go to closest character."),
     }
 }
 

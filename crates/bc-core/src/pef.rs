@@ -116,7 +116,7 @@ mod tests {
     use crate::format::Line;
 
     fn page(lines: &[&str]) -> Page {
-        Page { lines: lines.iter().map(|l| Line { text: l.to_string(), sources: vec![None; l.chars().count()], marks: Vec::new() }).collect(), start: 0 }
+        Page { lines: lines.iter().map(|l| Line { text: l.to_string(), sources: vec![None; l.chars().count()], marks: Vec::new() }).collect(), ..Page::default() }
     }
 
     #[test]
