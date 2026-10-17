@@ -49,6 +49,12 @@ pub const OUTPUT_MODE_DOCUMENT: i64 = 3;
 /// At most this many tables are open at once through language switches.
 const MAX_TABLE_DEPTH: usize = 8;
 
+/// The import scan of a file's bytes with a scan table given as its file's bytes (tables/scan): line ends, spaces,
+/// paragraphs and format words read as the table says; each code the scanner gives is written as one byte.
+pub fn import_scan(table: &[u8], file: &[u8]) -> Result<Vec<u8>, EngineError> {
+    scanner::scan_file(&ScanTable::read(table)?, file)
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EngineError {
     /// A file could not be read: its path and the reason.

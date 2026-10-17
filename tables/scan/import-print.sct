@@ -1,0 +1,44 @@
+| engttx.sct 1;1 - scan control tbl, for English .txt->txx conversion
+| Fuller description of items can be found in MODEL.SCT
+| 1;1 1994-9-14 JES, adapted from engtxf.sct 1;2 1990-1-2
+|     1994-11-2 JES: chg ff treat't from err to ignored, to smooth imports
+-ninit 6
+0 |   binmod 0 = normal for print->brl & brl->print (text, scanning)
+1 | eliminate trailing blanks on line (0=no, 1=yes)
+$ | flag char (input) for scan/format controls
+. | fullstop char for 'sentence' mode
+1 |   1=newline treated as space (spacing) (TEX & old TRANSL)
+ | ff is ignored without warning
+P | par insert
+3 | $par (on either) in effect initially
+1 | 1 = rejoin at all line-ending hyphens
+0 | 0 = compress spaces
+2 | number of spaces to expand tabs to (-1 = tabs are errors)(<= 9999)
+0 |   ninmod 0 = normal (word scanning) for prt->brl & brl->prt
+1 |   1 = yes flatten controls, downcase
+2 |   2 = don't flatten case of ordinary words
+0 |   0 = normal cease u.c. (only end of word)
+0 | 0 = `{|}~ DON'T map to @[\]^ when upcasing
+ | (spare)
+ | (spare)
+ | nsnqt - input flag for quoted word (nil = none)
+|028 | nsoqt - output flag for quoted word
+|029 | nsofm - output flag for whole-word format word
+|030 | nsof2 - output flag for 2-char format word
+ | nsocp - capitalization flag output (nil => don't represent caps)
+ | nsotn - cap termination flag output (none)
+ | (spare)
+running
+spacing
+marking
+as-is
+compress
+sentence
+auto-tab
+par
+no-par
+par-skp
+par-ind
+ | (spare)
+ | (spare)
+*** | required table terminator

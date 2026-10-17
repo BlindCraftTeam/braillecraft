@@ -1,11 +1,10 @@
 //! Reading a scan table (.sct): the settings that tell the scanner how to read text before the rules see it.
 //!
-//! The file is text. After the line "-ninit 6" each line is one value: the text before " |" (or the whole line),
-//! with blanks at its end removed. "|NNN" stands for the byte NNN (decimal) and "||" for "|". A line that holds only
-//! a comment (it starts with "|" and no digit follows) gives an empty value. The values come in a fixed order,
-//! read below; the last line is "***".
+//! The file is text. After the line "-ninit 6" each line is one value: the text before a comment ("|" and a
+//! space), with blanks at its end removed. "|NNN" stands for the byte NNN (three decimal digits) and "||" for "|". A
+//! line that holds only a comment gives no value. The values come in a fixed order, read below; the last is "***".
 
-use super::chars::{latin1, lstrip, rstrip, strip};
+use super::chars::{latin1, lstrip};
 use super::EngineError;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -102,52 +101,93 @@ impl Font {
     }
 }
 
-/// "|NNN" is the byte NNN (one to three digits), "||" is "|".
-fn decode(token: &str) -> Vec<i64> {
-    let c: Vec<char> = token.chars().collect();
-    let mut out = Vec::new();
-    let mut i = 0;
-    while i < c.len() {
-        if c[i] == '|' {
-            if c.get(i + 1) == Some(&'|') {
-                out.push('|' as i64);
-                i += 2;
-                continue;
+/// The values after the "-ninit 6" line, read as the reference reads them: "|" and a space (or a line end) starts a
+/// comment to the end of the line; "||" is "|"; "|" and exactly three digits is that byte (another "|" is kept, the
+/// three characters used up); a line that is only a comment gives no value; blanks at the end of a value are taken
+/// off. The file's line ends may be CR LF.
+fn tokens(text: &str) -> Result<Vec<Vec<i64>>, EngineError> {
+    let text: Vec<char> = text.replace("\r\n", "\n").chars().collect();
+    const END: i64 = 0x100;
+    const COMMENT: i64 = 0x101;
+    let mut pos = 0usize;
+    let mut ch = |pos: &mut usize| -> i64 {
+        let Some(&c) = text.get(*pos) else { return END };
+        *pos += 1;
+        if c != '|' {
+            return c as i64;
+        }
+        match text.get(*pos) {
+            Some(' ') => {
+                *pos = text[*pos..].iter().position(|&x| x == '\n').map_or(text.len(), |k| *pos + k);
+                COMMENT
             }
-            let digits: String = c[i + 1..].iter().take(3).take_while(|d| d.is_ascii_digit()).collect();
-            if !digits.is_empty() {
-                out.push(digits.parse::<i64>().unwrap_or(0));
-                i += 1 + digits.len();
-                continue;
+            Some('\n') => {
+                *pos += 1;
+                COMMENT
+            }
+            Some('|') => {
+                *pos += 1;
+                '|' as i64
+            }
+            _ => {
+                let digits: String = text[*pos..].iter().take(3).collect();
+                *pos = (*pos + 3).min(text.len());
+                match digits.parse::<i64>() {
+                    Ok(v) if digits.len() == 3 && digits.chars().all(|d| d.is_ascii_digit()) && v <= 0xff => v,
+                    _ => '|' as i64,
+                }
             }
         }
-        out.push(c[i] as i64);
-        i += 1;
-    }
-    out
-}
-
-fn tokens(text: &str) -> Result<Vec<Vec<i64>>, EngineError> {
-    let text = text.replace("\r\n", "\n").replace('\r', "\n");
-    let lines: Vec<&str> = text.split('\n').collect();
-    let start = lines
-        .iter()
-        .position(|l| strip(l) == "-ninit 6")
-        .ok_or_else(|| EngineError::BadTable("not a scan table (no \"-ninit 6\" line)".into()))?;
-    Ok(lines[start + 1..]
-        .iter()
-        .map(|line| {
-            let mut tok = match line.find(" |") {
-                Some(cut) => &line[..cut],
-                None => line,
+    };
+    let mut token = |pos: &mut usize| -> Option<Vec<i64>> {
+        loop {
+            let mut buf = Vec::new();
+            let c = loop {
+                let c = ch(pos);
+                if c == 10 || c == END || c == COMMENT {
+                    break c;
+                }
+                buf.push(c);
             };
-            let mut after_bar = line.chars().skip(1);
-            if line.starts_with('|') && !after_bar.next().is_some_and(|d| d.is_ascii_digit()) {
-                tok = "";
+            if c == 10 {
+                return Some(buf);
             }
-            decode(rstrip(tok))
-        })
-        .collect())
+            if c == END {
+                return if buf.is_empty() { None } else { Some(buf) };
+            }
+            // A comment: the rest of its line; a line that was only a comment gives no value.
+            let mut end = false;
+            loop {
+                let c = ch(pos);
+                if c == 10 || c == END {
+                    end = c == END;
+                    break;
+                }
+            }
+            if !buf.is_empty() {
+                return Some(buf);
+            }
+            if end {
+                return None;
+            }
+        }
+    };
+    let strip_end = |mut b: Vec<i64>| {
+        while b.last() == Some(&0x20) {
+            b.pop();
+        }
+        b
+    };
+    // The first value is "-ninit 6"; the settings follow it.
+    let head = strip_end(token(&mut pos).unwrap_or_default());
+    if head != "-ninit 6".chars().map(|c| c as i64).collect::<Vec<i64>>() {
+        return Err(EngineError::BadTable("not a scan table (no \"-ninit 6\" line)".into()));
+    }
+    let mut out = Vec::new();
+    while let Some(t) = token(&mut pos) {
+        out.push(strip_end(t));
+    }
+    Ok(out)
 }
 
 impl ScanTable {
@@ -270,9 +310,8 @@ mod tests {
 
     #[test]
     fn values_and_escapes() {
-        assert_eq!(decode("|028x||y|1z"), vec![28, 'x' as i64, '|' as i64, 'y' as i64, 1, 'z' as i64]);
-        let t = tokens("head\n-ninit 6\n0 | binmod\n| a comment\n|028 | flag\n").unwrap();
-        // The line break at the end leaves one empty value after the last line, as the reader sees it.
-        assert_eq!(t, vec![vec!['0' as i64], vec![], vec![28], vec![]]);
+        let t = tokens("| head\r\n-ninit 6\r\n0 | binmod\r\n| a comment\r\n|028 | flag\r\n|| | the flag |\r\nx||y|1z\r\n").unwrap();
+        // A line that is only a comment gives no value; "||" at a line start is "|"; "|1z" keeps the bar.
+        assert_eq!(t, vec![vec!['0' as i64], vec![28], vec!['|' as i64], vec!['x' as i64, '|' as i64, 'y' as i64, '|' as i64]]);
     }
 }

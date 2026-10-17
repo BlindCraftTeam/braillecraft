@@ -16,8 +16,8 @@
 //! The words wait in a ring of 25 that shares one character buffer; the ring is filled to 25 words unless the
 //! buffer has come round again to the next word to write.
 //!
-//! Not built, and refused with an error when a table needs them: computer-braille switching for web and mail
-//! addresses, two-character format words that start with "$".
+//! Not built, and refused with an error when a table needs it: computer-braille switching for web and mail
+//! addresses.
 
 use super::callbacks::StyleTable;
 use super::scan_table::{Font, ScanTable};
@@ -101,13 +101,16 @@ struct Reader {
     was_stop: bool,
     cc: i64,
     la2: i64,
+    /// What a read past the input gives: 0xFF01 for a document's codes, 0xFF7F for the bytes of a file.
+    eof: i64,
 }
 
 impl Reader {
-    fn new(t: &ScanTable, codes: Vec<i64>) -> Reader {
+    fn new(t: &ScanTable, codes: Vec<i64>, eof: i64) -> Reader {
         let mut r = Reader {
             inp: codes,
             ip: 0,
+            eof,
             pend: 0xff00,
             ff_i: 0,
             lines: 0,
@@ -128,14 +131,14 @@ impl Reader {
         r
     }
 
-    /// One input code; 0xFF01 at the end.
+    /// One input code; at the end, the end code (every time it is asked).
     fn byte(&mut self) -> i64 {
         match self.inp.get(self.ip) {
             Some(&c) => {
                 self.ip += 1;
                 c
             }
-            None => 0xff01,
+            None => self.eof,
         }
     }
 
@@ -437,8 +440,10 @@ struct Scanner<'a> {
 }
 
 impl<'a> Scanner<'a> {
-    fn new(t: ScanTable, codes: Vec<i64>, styles: Option<&'a StyleTable>) -> Scanner<'a> {
-        let rd = Reader::new(&t, codes);
+    fn new(t: ScanTable, codes: Vec<i64>, eof: i64, styles: Option<&'a StyleTable>) -> Scanner<'a> {
+        let rd = Reader::new(&t, codes, eof);
+        // Capital signs are written only when words are folded and the table has a capital sign.
+        let caps_enabled = t.fold_words != 2 && t.out_cap != 0;
         let fonts = t.fonts.iter().map(|f| FontState { font: f.clone(), state: 0 }).collect();
         let mut c = [0i64; 9];
         c[0] = t.flag;
@@ -465,7 +470,7 @@ impl<'a> Scanner<'a> {
             flag_seen: false,
             nwncb: false,
             caps: 0,
-            caps_enabled: true,
+            caps_enabled,
             cessation_on,
             queue: Default::default(),
             out: Vec::new(),
@@ -849,6 +854,11 @@ impl<'a> Scanner<'a> {
             if self.pos > 0x755 {
                 self.pos = 0;
             }
+            // A two-character format word whose second character is "$" becomes the flag alone, an ordinary word.
+            if w.kind == 3 && w.chars.get(1) == Some(&0x24) {
+                w.chars = vec![self.c[0]];
+                w.kind = 0;
+            }
             self.ring.push_back(w);
         }
     }
@@ -1075,9 +1085,6 @@ impl<'a> Scanner<'a> {
                 }
             } else {
                 // Format words pass through, folded as the table says.
-                if w.kind == 3 && w.chars.len() > 1 && w.chars[1] == 0x24 {
-                    return Err(EngineError::NotSupported("two-character format words starting with $"));
-                }
                 let lg = w.kind == 2
                     && w.chars.len() > 3
                     && to_lower(w.chars[1]) == 0x6c
@@ -1130,7 +1137,104 @@ impl<'a> Scanner<'a> {
 
 /// The scanner's output for `codes` (code page 437 codes): the codes the rule engine reads, ending with 0x100.
 pub(crate) fn scan(t: &ScanTable, codes: Vec<i64>, styles: Option<&StyleTable>) -> Result<Vec<i64>, EngineError> {
-    let mut s = Scanner::new(t.clone(), codes, styles);
+    let mut s = Scanner::new(t.clone(), codes, 0xff01, styles);
     s.run()?;
     Ok(s.out)
+}
+
+/// The codes the scanner reads from the bytes of a file: a line end (CR, LF, CR LF or LF CR) is one LF; a byte
+/// marked as the first of a two-byte code makes one code with the byte after it (a later first byte starts it
+/// again; after 0x9C, a byte with a one-byte capital gives that capital, any other byte stays 0x9C and the byte);
+/// a first byte at the end of the file is dropped.
+fn file_codes(bytes: &[u8]) -> Vec<i64> {
+    let mut lines = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        let c = bytes[i];
+        i += 1;
+        if c == b'\n' || c == b'\r' {
+            // The other line-end byte right after it belongs to the same line end.
+            if let Some(&d) = bytes.get(i) {
+                if (d == b'\n' || d == b'\r') && d != c {
+                    i += 1;
+                }
+            }
+            lines.push(0x0a);
+        } else {
+            lines.push(i64::from(c));
+        }
+    }
+    let mut out = Vec::with_capacity(lines.len());
+    let mut lead: Option<i64> = None;
+    for c in lines {
+        if super::chars::flags(c) & 0x20 != 0 {
+            lead = Some(c << 8);
+            continue;
+        }
+        match lead.take() {
+            None => out.push(c),
+            Some(0x9c00) => {
+                let upper = super::chars::kind(c).2;
+                out.push(if upper == 0x9c { 0x9c00 | c } else { upper });
+            }
+            Some(l) => out.push(l | c),
+        }
+    }
+    out
+}
+
+/// The import scan of a file: the bytes read through the scanner with `t` (no styles), each code it gives written
+/// as its low byte until the end. The reference uses it on braille and print text files before the import rules.
+pub(crate) fn scan_file(t: &ScanTable, bytes: &[u8]) -> Result<Vec<u8>, EngineError> {
+    if t.binmod != 0 || t.ninmod != 0 || t.spare != 0 || t.icb != 0 {
+        return Err(EngineError::NotSupported("import scan tables other than text mode"));
+    }
+    let mut s = Scanner::new(t.clone(), file_codes(bytes), 0xff7f, None);
+    s.run()?;
+    Ok(s.out.iter().take_while(|&&c| c != EOF_OUT).map(|&c| (c & 0xff) as u8).collect())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn table(name: &str) -> ScanTable {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tables/scan").join(name);
+        ScanTable::read(&std::fs::read(path).unwrap()).unwrap()
+    }
+
+    fn run(name: &str, input: &[u8]) -> Vec<u8> {
+        scan_file(&table(name), input).unwrap()
+    }
+
+    #[test]
+    fn file_codes_join_line_ends_and_two_byte_codes() {
+        assert_eq!(file_codes(b"a\r\nb\n\rc\r\rd"), vec![0x61, 0x0a, 0x62, 0x0a, 0x63, 0x0a, 0x0a, 0x64]);
+        // 0x9C before a letter with a one-byte capital gives that capital; a first byte at the end is dropped.
+        assert_eq!(file_codes(&[0x9c, 0x82, 0xb0, 0x41, 0xb0]), vec![0x90, 0xb041]);
+        assert_eq!(file_codes(&[0x9c, 0x83]), vec![0x9c83]);
+    }
+
+    #[test]
+    fn braille_table_reads_format_words_and_bars() {
+        let t = table("import-braille.sct");
+        // The flag of the braille table is the bar, read from a line that starts with two bars.
+        assert_eq!(t.flag, 0x7c);
+        assert_eq!(run("import-braille.sct", b"|P This is |IND5 a test."), b"\x1dp this is \x1dind5 a test.".to_vec());
+        assert_eq!(run("import-braille.sct", b"A|$B ||C |:D"), b"a|b \x1e|c \x1e:d".to_vec());
+        assert_eq!(run("import-braille.sct", b"ABC\r\rDEF  GHI\tJ"), b"abc \x1dp def ghi j".to_vec());
+    }
+
+    #[test]
+    fn print_table_joins_hyphens_and_reads_dollar_words() {
+        let input = b"$p This is a $ind5 test with $$5 and caf\x82.\r\n\r\n  New para, tab\there.\r\nhyphen-\r\nated |bar|";
+        assert_eq!(
+            run("import-print.sct", input),
+            b"\x1dp This is a \x1dind5 test with $5 and caf\x82. \x1dp New para, tab here. hyphenated |bar|".to_vec()
+        );
+        assert_eq!(run("import-print.sct", b"a--\nb"), b"a-b".to_vec());
+        assert_eq!(run("import-print.sct", b"a- \nb"), b"ab".to_vec());
+        assert_eq!(run("import-print.sct", b"$WB-NO x"), b"\x1dwb-no x".to_vec());
+        assert_eq!(run("import-print.sct", &[0x9c, 0x82]), vec![0x90]);
+    }
 }
