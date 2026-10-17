@@ -6,7 +6,7 @@ IncludeGraphics=0
 LeftMargin=8
 PixelsPerTab=25
 [WindowClasses]
-RICHEDIT50W=MultilineEdit
+BrailleCraftEditor=MultilineEdit
 BrailleCraft_CODESEDIT=Edit
 MDIClient=Dialog
 [OutputModes]

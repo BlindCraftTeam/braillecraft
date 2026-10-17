@@ -169,7 +169,7 @@ Move left one column in a table and speak the entry: %KeyFor (PriorColumnEntry).
 Speak the current table entry: %KeyFor(SayTableEntry).
 @@
 @msgAppTrouble
-You are using JAWS scripts for BrailleCraft dated October 15, 2026.
+You are using JAWS scripts for BrailleCraft dated October 17, 2026.
 1. In BrailleCraft's Global Menu -> Internationalization, the item called UI Automation determines how BrailleCraft communicates with JAWS and other screen readers. Many improvements have been made in BrailleCraft's UI Automation.
 2. To view multiple lines of a BrailleCraft document on a multiline braille display, you need to turn on UI Automation in BrailleCraft's Global -> Internationalization.
 3. If UI Automation is off and Global -> Internationalization has the setting Prefer Unicode Braille Patterns, only Print font works properly in brraille documents.

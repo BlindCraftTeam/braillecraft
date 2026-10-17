@@ -38,15 +38,19 @@
     </Component>
 
     <!-- Everything else in the program folder: the fonts the program loads itself, the tables, templates and
-         embosser models. The JAWS scripts are their own feature. -->
+         embosser models. The JAWS scripts and the NVDA add-on are features of their own. -->
     <ComponentGroup Id="ProgramFiles" Directory="INSTALLFOLDER">
       <Files Include="!(bindpath.dist)\**">
         <Exclude Files="!(bindpath.dist)\braillecraft-desktop.exe" />
         <Exclude Files="!(bindpath.dist)\jaws\**" />
+        <Exclude Files="!(bindpath.dist)\nvda\**" />
       </Files>
     </ComponentGroup>
     <ComponentGroup Id="JawsScripts" Directory="INSTALLFOLDER" Subdirectory="jaws">
       <Files Include="!(bindpath.dist)\jaws\**" />
+    </ComponentGroup>
+    <ComponentGroup Id="NvdaAddon" Directory="INSTALLFOLDER" Subdirectory="nvda">
+      <Files Include="!(bindpath.dist)\nvda\**" />
     </ComponentGroup>
 
     <!-- The document types: .dxp print documents and .dxb braille documents, each with its icon and the verbs the
@@ -90,6 +94,9 @@
       </Feature>
       <Feature Id="Jaws" Title="JAWS Scripts" Description="The BrailleCraft scripts for JAWS; BrailleCraft offers to put them in each JAWS version's settings when it starts." Level="1">
         <ComponentGroupRef Id="JawsScripts" />
+      </Feature>
+      <Feature Id="Nvda" Title="NVDA Add-on" Description="The BrailleCraft add-on for NVDA (the nvda folder); open the .nvda-addon file to install it into NVDA." Level="1">
+        <ComponentGroupRef Id="NvdaAddon" />
       </Feature>
       <Feature Id="Desktop" Title="Desktop Shortcut" Description="A shortcut to BrailleCraft on the desktop." Level="1">
         <ComponentRef Id="DesktopShortcut" />

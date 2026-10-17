@@ -67,7 +67,7 @@ jobs:
           path: code-pages
 
       # The native desktop program (wxWidgets): a folder that runs as it is, with its braille fonts and its
-      # translation tables, its document templates, its embosser models and its JAWS scripts beside it.
+      # translation tables, its document templates, its embosser models, its JAWS scripts and its NVDA add-on beside it.
       - name: Native program
         shell: bash
         run: |
@@ -79,6 +79,8 @@ jobs:
           cp -r templates dist/BrailleCraft/templates
           cp -r embossers dist/BrailleCraft/embossers
           cp -r scripts/jaws dist/BrailleCraft/jaws
+          # The NVDA add-on (scripts/nvda) packed as one .nvda-addon file, its Python compiled on the way.
+          python3 tools/nvda/make_addon.py dist/BrailleCraft/nvda
           cp LICENSE-MIT LICENSE-APACHE NOTICE dist/BrailleCraft/
 
       - uses: actions/upload-artifact@v7

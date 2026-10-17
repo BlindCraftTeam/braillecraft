@@ -49,6 +49,9 @@ listed in cpp/CMakeLists.txt and the header included from cpp/include/wxdragon.h
   wxd_DocEditor_SetSupportUIAutomation is on; on macOS the accessibility text area methods added to the window's view
   by a subclass made at run time, with the value changed and selected text changed notifications.
 - build.rs links uiautomationcore on Windows for it.
+- On Windows the window is created under a class of its own, "BrailleCraftEditor" (wxApp::GetRegisteredClassName and
+  CreateUsingMSWClass), with the control id 0, so screen reader scripts can tell the editing area from every other
+  window by its class, as they do with the reference program's editing window.
 
 The Rust bindings are generated from the header when the crate builds, so no Rust file changed.
 The workspace Cargo.toml uses this copy through [patch.crates-io].

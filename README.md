@@ -181,7 +181,16 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   line each), the caret, the selection and every change: through UI Automation on Windows while Global,
   Internationalization, Support UI Automation is on, as the original program does; through the macOS accessibility
   interface for VoiceOver; through ATK and AT-SPI for Orca on Linux. On Windows a set of JAWS scripts comes with the
-  program, and BrailleCraft offers to install them when it starts.
+  program, and BrailleCraft offers to install them when it starts; the editing window carries its own window class,
+  BrailleCraftEditor, so the scripts tell it from every other window. An NVDA add-on comes with the program too (the
+  `nvda` folder of the Windows download; open the `.nvda-addon` file to install it, or use NVDA's Add-on Store,
+  Install from external source). It gives NVDA what the scripts give JAWS, key for key: Alt+7 the translated line,
+  Alt+8 the style (twice: the table row and column), Alt+9 the location, Alt+0 the document name and status line,
+  Alt+Comma and Alt+Period the line position and length, Alt+End the last word, Alt+Semicolon the review cursor on
+  the translated line, Alt+U, Alt+I, Alt+P and Alt+W the braille document speaking, announcement and echo choices,
+  Alt+C the braille keyboard, Alt with the arrows the table entries; F2, Alt+F3, Control+F8 and Control+H announce
+  their new state; in a braille document typed and read characters are spoken as braille cell names; NVDA+H lists
+  the keys. The choices are also on the BrailleCraft page of NVDA's settings.
 - **Formatted braille import settings.** Global, Formatted Braille Importer: where the braille and print page
   numbers stand on even and odd pages of the file, which pages have a running head or foot, the lines and cells of
   the file's pages, and Read formatted braille without interpretation, which keeps the file's lines and pages as they
@@ -205,7 +214,7 @@ to main runs the Build workflow. Open the repository on GitHub, then **Actions**
 
 | Artifact | What it holds |
 |---|---|
-| `braillecraft-windows-installer` | The Windows installer (.msi): the program, the braille fonts for every program, the JAWS scripts, a desktop shortcut, and the .dxp and .dxb file types with Open, Print and Emboss. |
+| `braillecraft-windows-installer` | The Windows installer (.msi): the program, the braille fonts for every program, the JAWS scripts, the NVDA add-on, a desktop shortcut, and the .dxp and .dxb file types with Open, Print and Emboss. |
 | `braillecraft-macos-installer` | A disk image (.dmg) with BrailleCraft.app, for Apple Silicon Macs. Drag it to Applications. |
 | `braillecraft-linux-packages` | A .deb (Debian, Ubuntu), an .rpm (Fedora and others) and an AppImage that runs without installing. |
 | `braillecraft-desktop-<system>` | The program as a plain folder, for trying it without an installer. |
@@ -251,6 +260,7 @@ step does. The installers are made by the scripts in `packaging` (WiX 5 on Windo
 | `embossers` | The embosser models. |
 | `ui/fonts` | The BrailleCraft Braille and SimBraille screen fonts, one pair per braille encoding. |
 | `scripts/jaws` | The JAWS scripts. |
+| `scripts/nvda` | The NVDA add-on (packed by `tools/nvda/make_addon.py`). |
 | `packaging` | Icons and the installers for Windows, macOS and Linux. |
 | `tools` | The generators for menus, dialogs, fonts, icons, templates, language lists and the web tables. |
 | `vendor/wxdragon-sys` | wxDragon's wxWidgets binding with what BrailleCraft needs added: printing, the drawn editing window with its text for screen readers on each system (UI Automation, the macOS accessibility interface, ATK), the Cursor Locator, and About box texts a screen reader reaches by Tab. The list is in `CHANGES-BrailleCraft.txt`. |

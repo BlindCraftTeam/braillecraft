@@ -16,12 +16,26 @@
 #include "../include/wxdragon.h"
 #include "doc_editor_internal.h"
 
+// The window's Windows class name and its control id. Screen reader scripts tell the editing area apart from every
+// other window by its class (the reference program registers a class of its own for its editing window) and test
+// its control id against 0 (spec 17 section 6); wxWidgets' shared "wxWindow" class and generated ids would hide it
+// among the panels.
+static const long kEditorStyle = wxWANTS_CHARS | wxVSCROLL | wxHSCROLL | wxBORDER_THEME | wxFULL_REPAINT_ON_RESIZE;
+static const wxWindowID kEditorId = 0;
+
 DocEditor::DocEditor(wxWindow* parent, void* data, wxd_DocEditor_KeyFn key, wxd_DocEditor_CharFn chr,
                      wxd_DocEditor_MouseFn mouse, wxd_DocEditor_FocusFn focus, wxd_DocEditor_FreeFn free_data)
-    : wxScrolledCanvas(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,
-                       wxWANTS_CHARS | wxVSCROLL | wxHSCROLL | wxBORDER_THEME | wxFULL_REPAINT_ON_RESIZE),
-      m_data(data), m_key(key), m_char(chr), m_mouse(mouse), m_focus(focus), m_free(free_data)
+    : m_data(data), m_key(key), m_char(chr), m_mouse(mouse), m_focus(focus), m_free(free_data)
 {
+#ifdef __WXMSW__
+    // As wxScrolled<T>::Create does, then the window under a class registered as "BrailleCraftEditor" (with the
+    // redraw styles, since the window repaints on a resize) instead of the shared wxWindow class.
+    m_targetWindow = this;
+    CreateUsingMSWClass(wxApp::GetRegisteredClassName(wxT("BrailleCraftEditor")), parent, kEditorId, wxDefaultPosition,
+                        wxDefaultSize, kEditorStyle);
+#else
+    wxScrolledCanvas::Create(parent, kEditorId, wxDefaultPosition, wxDefaultSize, kEditorStyle);
+#endif
     SetBackgroundStyle(wxBG_STYLE_PAINT);
     SetFont(GetFont());
 #ifndef __WXOSX__
