@@ -80,6 +80,19 @@ pub fn setting<'a>(text: &'a str, key: &str) -> Option<&'a str> {
 
 /// The four table codes of a template's TranslationTables line ("A+B/C+D"): print-to-braille rules and scan table,
 /// braille-to-print rules and scan table, in small letters.
+/// A template's Hyphenation as a document file keeps it: 0 None, 1 Dash, 2 DashAndHyphen, 3 French, 4 French1103.
+/// INFERENCE: a template without the key gives 2, the value every sample document holds (the reference's default
+/// is not traced).
+pub fn hyphenation(text: &str) -> u16 {
+    match setting(text, "Hyphenation").map(str::trim) {
+        Some("None") => 0,
+        Some("Dash") => 1,
+        Some("French") => 3,
+        Some("French1103") => 4,
+        _ => 2,
+    }
+}
+
 pub fn tables(text: &str) -> Option<[String; 4]> {
     let v = setting(text, "TranslationTables")?;
     let (p2b, b2p) = v.split_once('/')?;

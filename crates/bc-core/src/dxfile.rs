@@ -50,6 +50,12 @@ pub struct DxDocument {
     pub styles: Vec<(String, String, String)>,
     /// The index value the file gives each style name (written back as read).
     pub style_index: Vec<u16>,
+    /// The view the document was saved in: the coded view (settings +14), its hyphenation (+16: 0 none, 1 dashes, 2
+    /// dashes and hyphens, 3 French, 4 French 1103) and the view font (+30: 1201 print, 1202 braille, 1203
+    /// SimBraille).
+    pub coded_view: bool,
+    pub hyphenation: u16,
+    pub view_font: u16,
     /// The 224-byte settings block as read, for writing back what BrailleCraft does not use itself.
     pub settings: Vec<u8>,
     /// The name of the document's embosser setup (settings +88); empty for none.
@@ -174,7 +180,7 @@ impl std::fmt::Display for DxError {
             DxError::NotADocument => write!(f, "The file is not a print or braille document (.dxp or .dxb)."),
             DxError::NewerVersion(v) => write!(
                 f,
-                "The document was saved in format version {v}; this version of BrailleCraft opens versions 0 and 1."
+                "The document was saved in format version {v}; this version of BrailleCraft opens versions 0, 1 and 2."
             ),
             DxError::BodyOutOfRange => write!(f, "The document says its text is longer than the file."),
         }
@@ -221,7 +227,7 @@ pub fn read(d: &[u8]) -> Result<DxDocument, DxError> {
         _ => return Err(DxError::NotADocument),
     };
     let version = u16_at(d, 8);
-    if version > 1 {
+    if version > 2 {
         return Err(DxError::NewerVersion(version));
     }
     let s = HEADER;
@@ -260,6 +266,9 @@ pub fn read(d: &[u8]) -> Result<DxDocument, DxError> {
         version,
         page_numbering,
         translated_line: u16_at(d, s + 26) != 0,
+        coded_view: u16_at(d, s + 14) != 0,
+        hyphenation: u16_at(d, s + 16),
+        view_font: u16_at(d, s + 30),
         six_key: u16_at(d, s + 28) != 0,
         tables,
         text,
@@ -394,13 +403,21 @@ pub fn write(doc: &DxDocument) -> Vec<u8> {
     out.extend_from_slice(&SIGNATURE.to_be_bytes());
     out.extend_from_slice(&2u16.to_be_bytes());
     out.extend_from_slice(&(if doc.kind == DocumentKind::Print { 1u16 } else { 0 }).to_be_bytes());
-    out.extend_from_slice(&doc.version.min(1).to_be_bytes());
+    // Version 2 when the document carries the version-2 section (its descriptor at +153: embedded objects or
+    // eBraille data), else the version asked for (0 or 1).
+    let version = if doc.sections.iter().any(|s| s.0 == 153) && doc.version >= 1 { 2 } else { doc.version.min(1) };
+    out.extend_from_slice(&version.to_be_bytes());
     let mut s = if doc.settings.len() == SETTINGS { doc.settings.clone() } else { new_settings() };
     for (i, v) in doc.page_numbering.iter().enumerate() {
         s[2 * i..2 * i + 2].copy_from_slice(&v.to_be_bytes());
     }
     s[18..22].copy_from_slice(&(body.len() as u32).to_be_bytes());
+    s[14..16].copy_from_slice(&u16::from(doc.coded_view).to_be_bytes());
+    s[16..18].copy_from_slice(&doc.hyphenation.to_be_bytes());
     s[26..28].copy_from_slice(&u16::from(doc.translated_line).to_be_bytes());
+    if (1201..=1203).contains(&doc.view_font) {
+        s[30..32].copy_from_slice(&doc.view_font.to_be_bytes());
+    }
     s[28..30].copy_from_slice(&u16::from(doc.six_key).to_be_bytes());
     for (i, t) in doc.tables.iter().enumerate() {
         let mut name = [0u8; 8];
@@ -497,8 +514,12 @@ mod tests {
         d[0] = 0;
         assert_eq!(read(&d), Err(DxError::NotADocument));
         let mut d = sample(0, b"x");
+        d[9] = 3;
+        assert_eq!(read(&d), Err(DxError::NewerVersion(3)));
+        // Version 2 (embedded objects, eBraille data) opens.
+        let mut d = sample(0, b"x");
         d[9] = 2;
-        assert_eq!(read(&d), Err(DxError::NewerVersion(2)));
+        assert_eq!(read(&d).map(|r| r.version), Ok(2));
         let mut d = sample(0, b"xyz");
         d.truncate(d.len() - 1);
         assert_eq!(read(&d), Err(DxError::BodyOutOfRange));
@@ -556,6 +577,9 @@ mod tests {
             text: "\x1cp\x1f,! cat\u{a0}sat [x]".into(),
             styles: vec![("para.".into(), "\x1cp\x1f".into(), String::new()), ("bold".into(), "\x1ccs~b\x1f".into(), "\x1cce~b\x1f".into())],
             style_index: Vec::new(),
+            coded_view: true,
+            hyphenation: 1,
+            view_font: 1203,
             settings: Vec::new(),
             embosser: String::new(),
             sections: Vec::new(),
@@ -568,6 +592,8 @@ mod tests {
         assert_eq!(back.tables, doc.tables);
         assert_eq!(back.page_numbering, doc.page_numbering);
         assert!(back.translated_line && !back.six_key);
+        assert!(back.coded_view);
+        assert_eq!((back.hyphenation, back.view_font), (1, 1203));
         // Styles are stored sorted by name.
         assert_eq!(back.styles[0], ("bold".into(), "\x1ccs~b\x1f".into(), "\x1cce~b\x1f".into()));
         assert_eq!(back.styles[1].0, "para.");

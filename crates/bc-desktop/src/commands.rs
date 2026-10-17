@@ -551,11 +551,19 @@ fn apply_template(key: u64, name: &str) {
     let tables = translation::template_tables(name);
     let styles = translation::template_style_list(name);
     let numbers = translation::template_page_numbers(name);
+    let hyphen = match translation::template_hyphenation(name) {
+        0 => app::Hyphen::None,
+        1 => app::Hyphen::Dashes,
+        3 => app::Hyphen::French,
+        4 => app::Hyphen::French113,
+        _ => app::Hyphen::DashesHyphens,
+    };
     app::with(|a| {
         if let Some(i) = a.index_of(key) {
             if let Some(t) = tables {
                 a.docs[i].tables = t;
             }
+            a.docs[i].hyphen = hyphen;
             a.docs[i].styles = styles;
             a.docs[i].page_numbers = numbers;
             a.docs[i].template = name.to_string();
@@ -662,6 +670,22 @@ fn open_dx_document(path: &Path) -> Option<u64> {
             }
             d.view.translated = doc.translated_line;
             d.view.six_key = braille && doc.six_key;
+            // The view it was saved in: coded or formatted view, view font, hyphenation.
+            d.view.codes = doc.coded_view;
+            d.ed.set_view(doc.coded_view);
+            match doc.view_font {
+                1201 => d.view.font = app::ViewFont::Print,
+                1202 => d.view.font = app::ViewFont::Braille,
+                1203 => d.view.font = app::ViewFont::SimBraille,
+                _ => {}
+            }
+            d.hyphen = match doc.hyphenation {
+                0 => app::Hyphen::None,
+                1 => app::Hyphen::Dashes,
+                3 => app::Hyphen::French,
+                4 => app::Hyphen::French113,
+                _ => app::Hyphen::DashesHyphens,
+            };
             d.page_numbers = doc.page_numbering;
             // A document read from its file is a saved one: its title loses "New".
             app::child_set_title(&d.frame, &d.full_name());
@@ -1087,6 +1111,20 @@ fn write_document(key: u64, path: &Path, version: u16) -> bool {
             text: shown.to_running(),
             style_index: if same { d.file_styles.iter().map(|f| f.1).collect() } else { Vec::new() },
             styles,
+            // The view it is saved in: coded or formatted, its view font, its hyphenation.
+            coded_view: d.view.codes,
+            hyphenation: match d.hyphen {
+                app::Hyphen::None => 0,
+                app::Hyphen::Dashes => 1,
+                app::Hyphen::DashesHyphens => 2,
+                app::Hyphen::French => 3,
+                app::Hyphen::French113 => 4,
+            },
+            view_font: match d.view.font {
+                app::ViewFont::Print => 1201,
+                app::ViewFont::Braille => 1202,
+                app::ViewFont::SimBraille => 1203,
+            },
             settings: d.file_settings.clone(),
             embosser: d.embosser.clone(),
             sections: d.file_sections.clone(),

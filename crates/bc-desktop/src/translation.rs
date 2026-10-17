@@ -129,6 +129,15 @@ pub fn template_tables(name: &str) -> Option<[String; 4]> {
 
 /// A template's page numbering, by its name (the order bc_core::templates::page_numbers gives); the reference
 /// program's default for an unknown template.
+/// A template's Hyphenation (0 None to 4 French 1103); 2 for an unknown template.
+pub fn template_hyphenation(name: &str) -> u16 {
+    with_templates(|t| {
+        let t = t?;
+        Some(templates::hyphenation(&t.text(t.by_name(name)?).ok()?))
+    })
+    .unwrap_or(2)
+}
+
 pub fn template_page_numbers(name: &str) -> [u16; 5] {
     with_templates(|t| {
         let t = t?;
