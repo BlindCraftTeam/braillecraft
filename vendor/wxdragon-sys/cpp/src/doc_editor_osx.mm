@@ -198,6 +198,19 @@ static NSView* ViewOf(DocEditor* e)
     return view;
 }
 
+// The subclass answers -class and -superclass as its base class does. wxWidgets passes an event it does not handle
+// on through [self superclass]; answered by the subclass itself that is wxWidgets' own class, whose handler would
+// call itself without end.
+static Class ClassAsBase(id self, SEL)
+{
+    return class_getSuperclass(object_getClass(self));
+}
+
+static Class SuperclassAsBase(id self, SEL)
+{
+    return class_getSuperclass(class_getSuperclass(object_getClass(self)));
+}
+
 // The subclass of `base` with the accessibility methods, made once per base class.
 static Class SubclassOf(Class base)
 {
@@ -228,6 +241,8 @@ static Class SubclassOf(Class base)
         Method m = class_getInstanceMethod([BCDocEditorAccess class], s);
         if (m) class_addMethod(c, s, method_getImplementation(m), method_getTypeEncoding(m));
     }
+    class_addMethod(c, @selector(class), (IMP)ClassAsBase, "#@:");
+    class_addMethod(c, @selector(superclass), (IMP)SuperclassAsBase, "#@:");
     objc_registerClassPair(c);
     return c;
 }
