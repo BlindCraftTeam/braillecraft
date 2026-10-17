@@ -135,6 +135,53 @@ pub struct Page {
     /// The print page numbers ([lea]) met on this page, as laid out, with the document place of each (Edit, Goto by
     /// reference page).
     pub print_labels: Vec<(String, usize)>,
+    /// The page's own number (its counter and prefix letter), as File Print and File Emboss match typed page
+    /// numbers against it. Roman numbering ([pntr]) is not laid out yet, so it is never roman.
+    pub number: crate::range::PageNumber,
+}
+
+/// The font attribute of each character position of the document (bit 1 bold, 2 italic, 4 underline): set by
+/// [fts~b], [fts~i] and [fts~u] and cleared by the [fte~] with the same letter (spec 19 section 2). INFERENCE: a
+/// bare [fte~] clears all three; a bare [fts~] sets none. File Print draws each run of one attribute in that style.
+pub fn text_attributes(doc: &Shown) -> Vec<u8> {
+    let chars: Vec<char> = doc.text.chars().collect();
+    let mut out = vec![0u8; chars.len()];
+    let mut attr = 0u8;
+    let mut spans = doc.codes.iter().peekable();
+    let mut i = 0;
+    while i < chars.len() {
+        if let Some(&&(start, end)) = spans.peek().filter(|s| s.0 == i) {
+            spans.next();
+            let end = end.min(chars.len());
+            let code: String = chars[(start + 1).min(end)..end.saturating_sub(1).max(start + 1).min(end)].iter().collect();
+            let bit = |rest: &str| match rest.chars().next() {
+                Some('b') => 1,
+                Some('i') => 2,
+                Some('u') => 4,
+                _ => 0,
+            };
+            if let Some(rest) = code.strip_prefix("fts~") {
+                attr |= bit(rest);
+            } else if let Some(rest) = code.strip_prefix("fte~") {
+                let b = bit(rest);
+                attr = if b == 0 { 0 } else { attr & !b };
+            }
+            for a in &mut out[start..end] {
+                *a = attr;
+            }
+            i = end;
+            continue;
+        }
+        out[i] = attr;
+        i += 1;
+    }
+    out
+}
+
+/// Whether two pages carry the same page number (number, letter and kind): File Print and File Emboss then offer no
+/// page-number range.
+pub fn numbers_repeat(pages: &[Page]) -> bool {
+    pages.iter().enumerate().any(|(k, p)| pages[..k].iter().any(|q| q.number == p.number))
 }
 
 /// A piece of the document: a character with its position (in characters), a space, or a code.
@@ -859,7 +906,8 @@ impl Formatter {
         let start = self.page_start.take().unwrap_or(self.last_start);
         self.last_start = start;
         let print_labels = std::mem::take(&mut self.labels);
-        self.pages.push(Page { lines, start, print_labels });
+        let number = crate::range::PageNumber { number: self.counter as u32, letter: self.prefix, roman: false };
+        self.pages.push(Page { lines, start, print_labels, number });
         // The next page: its counter, and the number settings changed on this one.
         self.counter = self.next_counter.take().unwrap_or(self.counter + 1);
         if let Some((odd, even)) = self.next_numbers.take() {

@@ -120,7 +120,11 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   text in a choice of code pages (the encoding or code page chosen in the Save As dialog's own Encoding box; each
   Windows code page written and read by Windows' own table, on every system), coded braille, refreshable braille (.lbf), LaTeX, and the older document format.
 - **Printing.** Print documents and braille (with interline print) through the system printer. In File, Print and
-  File, Emboss, Selection lays the selected text out as a document of its own and prints or embosses all of its pages.
+  File, Emboss, Selection lays the selected text out as a document of its own and prints or embosses all of its pages;
+  a page-number range (p5, iv, 3-, -5) is matched against the pages' own numbers, nearest first with a question when
+  a number had to be adjusted, and is not offered when two pages carry the same number. Bold, italic and underlined
+  passages ([fts~b], [fts~i], [fts~u]) print in those styles; Interline Print starts from the document's embosser
+  layout; a document whose printer the computer no longer has prints with the global printer after saying so.
 - **Embossing.** Embosser setups for 139 embosser models, including Index and Enabling Technologies, with page ranges and
   copies, to a printer queue, a serial port or a file. Embossers on an FTDI USB connection (the EBrailler Cosmo) are
   listed and embossed to through FTDI's own driver library where it is installed. TranSend SE printers get their ink

@@ -1724,10 +1724,12 @@ fn chosen_pages(d: &Dlg, radios: [i32; 5], fields: (i32, i32), pages: &[bc_core:
             }
             return Some(((0..part.len()).map(Some).collect(), Some(part)));
         }
-        // Page n is the n-th laid-out page both for the page numbers and for the page sequence numbers: the
-        // formatter numbers pages from 1 in order.
-        3 => parse_range(&d.text(fields.0), count),
-        _ => parse_range(&d.text(fields.1), count),
+        // Page numbers are matched against the pages' own numbers; sequence numbers count the pages in order.
+        3 => {
+            let numbers: Vec<_> = pages.iter().map(|p| p.number).collect();
+            parse_range(&d.text(fields.0), count, Some(&numbers))
+        }
+        _ => parse_range(&d.text(fields.1), count, None),
     };
     match range {
         (Range::Malformed, ..) => {
@@ -1761,11 +1763,11 @@ fn print() {
 /// File, Print; with `skip` (a number of copies), the dialog is skipped and every page printed, as the command
 /// line's /print and /simulated do (spec 26 section 26.5.3).
 pub fn print_with(skip: Option<u32>) {
-    use crate::dlg::Value;
-    let Some((i, key, braille, caret, (from, to))) = app::with(|a| {
+    let Some((i, key, braille, caret, (from, to), interline_before)) = app::with(|a| {
         a.active.map(|i| {
             let d = &a.docs[i];
-            (i, d.key, d.kind == DocKind::Braille, d.caret() as i64, { let (f, t) = d.selection(); (f as i64, t as i64) })
+            // Interline Print starts from the document's embosser layout (spec 24); the choice is the job's only.
+            (i, d.key, d.kind == DocKind::Braille, d.caret() as i64, { let (f, t) = d.selection(); (f as i64, t as i64) }, d.layout.interline != 0)
         })
     }) else {
         return;
@@ -1774,19 +1776,14 @@ pub fn print_with(skip: Option<u32>) {
         let shown = a.docs[i].shown();
         a.laid_out(i, &shown)
     });
-    let interline_before = app::with(|a| {
-        a.memory.get(1040, "print").and_then(|v| v.iter().find_map(|(c, val)| match (c, val) {
-            (17, Value::Flag(b)) => Some(*b),
-            _ => None,
-        }))
-    })
-    .unwrap_or(false);
     let (copies, chosen, interline) = match skip {
         Some(copies) => (copies, (0..pages.len()).map(Some).collect(), braille && interline_before),
         None => {
             let d = open_dialog(1040, None);
             d.set_text(7, "1");
             wire_page_range(&d, PRINT_RANGE, (15, 16));
+            // No page-number range when two pages carry the same page number.
+            d.enable(12, !bc_core::format::numbers_repeat(&pages));
             // On a braille document the page-number choice reads "Braille page number(s)": the reference copies control 13's
             // text into control 12 (spec 24, 2a); control 13 itself is not used.
             if braille {
@@ -1810,9 +1807,6 @@ pub fn print_with(skip: Option<u32>) {
                 break (copies, chosen, braille && d.checked(17));
             };
             d.destroy();
-            if braille {
-                app::with(|a| a.memory.put(1040, "print", vec![(17, Value::Flag(interline))]));
-            }
             (copies, chosen, interline)
         }
     };
@@ -1848,7 +1842,12 @@ pub fn print_with(skip: Option<u32>) {
         } else {
             Vec::new()
         };
-        let setup = doc.printer.clone().unwrap_or_else(|| a.settings.printer.clone());
+        // The document's printer when the system still has it, else message 2696 and the global printer (spec 24).
+        let (setup, fallback) = match doc.printer.clone() {
+            Some(s) if crate::print::printer_valid(key, &s) => (s, false),
+            Some(_) => (a.settings.printer.clone(), true),
+            None => (a.settings.printer.clone(), false),
+        };
         let job = crate::print::Job {
             title: doc.name.clone(),
             pages: pages_rc,
@@ -1860,10 +1859,14 @@ pub fn print_with(skip: Option<u32>) {
             chars: doc.cells.max(1) as usize,
             line_numbers,
             margins: setup.margins,
+            attributes: bc_core::format::text_attributes(&doc.shown()),
         };
-        (job, setup)
+        (job, setup, fallback)
     });
-    let (job, setup) = job;
+    let (job, setup, fallback) = job;
+    if fallback {
+        message("This document's printer settings are not valid for this computer.  This may mean that the document was created on a computer with a different printer.  Using global settings instead.");
+    }
     let outcome = crate::print::run(key, &setup, job, copies);
     #[cfg(debug_assertions)]
     eprintln!("print: {outcome:?}");
@@ -1937,6 +1940,8 @@ pub fn emboss_with(skip: Option<u32>) {
             let d = open_dialog(if transend { 1038 } else { 1039 }, None);
             d.set_text(7, "1");
             wire_page_range(&d, EMBOSS_RANGE, (14, 15));
+            // No page-number range when two pages carry the same page number.
+            d.enable(12, !bc_core::format::numbers_repeat(&pages));
             d.set_text(23, &setup.shown_name());
             d.set_text(25, &emb::form_name(&layout.form));
             if transend {

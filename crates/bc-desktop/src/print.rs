@@ -116,6 +116,14 @@ fn print_data(key: u64, setup: &PrinterSetup) -> PrintData {
     d
 }
 
+/// Whether the print data of `setup` for document `key` is good for this computer: the reference asks its document
+/// print data the same before printing and falls back to the global settings with message 2696 when it is not. (On
+/// Windows that finds a printer the computer no longer has; GTK's print data has no such check.)
+pub fn printer_valid(key: u64, setup: &PrinterSetup) -> bool {
+    let data = print_data(key, setup);
+    unsafe { ffi::wxd_PrintData_IsOk(data.0) }
+}
+
 /// Printer Setup's Printer... button: the system's printer dialog, to choose the printer and its own settings.
 /// Returns the chosen print data, and `setup` takes its printer, paper and orientation; None when cancelled.
 pub fn choose_printer(key: u64, setup: &mut PrinterSetup) -> Option<PrintData> {
@@ -170,6 +178,9 @@ pub struct Job {
     pub chars: usize,
     pub line_numbers: bool,
     pub margins: [i32; 4],
+    /// The font attribute of each document position (bc_core::format::text_attributes): bit 1 bold, 2 italic, 4
+    /// underline; a line is drawn in runs of one attribute, each in that font style (spec 24 3c).
+    pub attributes: Vec<u8>,
 }
 
 /// The page geometry and fonts found for a job on its first page.
@@ -263,7 +274,8 @@ fn draw_page<D: DeviceContext>(job: &Job, fit_found: &mut Option<Fit>, dc: &D, g
     }
     let Some(f) = fit_found.as_ref() else { return };
     let Some(Some(page)) = job.pages.get(n - 1) else { return };
-    let text_font = crate::app::font(&job.face, f.size);
+    // The text font in each attribute style met (bold, italic, underline), built once.
+    let mut text_fonts: HashMap<u8, Option<Font>> = HashMap::new();
     let number_font = crate::app::font(&job.print_face, f.size);
     let interline_font = crate::app::font(&job.print_face, 9);
     // Line numbers: one column at the left edge, the text moved right by the width of "25" and a half, and one
@@ -281,10 +293,24 @@ fn draw_page<D: DeviceContext>(job: &Job, fit_found: &mut Option<Fit>, dc: &D, g
             dc.draw_text(&number, right_numbers, y);
         }
         if !line.text.trim().is_empty() {
-            if let Some(font) = &text_font {
-                dc.set_font(font);
+            // The line in runs of one font attribute, each drawn in its style where the one before ended (spec 24 3c).
+            let text: Vec<char> = line.text.trim_end().chars().collect();
+            let attr_of = |k: usize| line.sources.get(k).copied().flatten().and_then(|s| job.attributes.get(s).copied()).unwrap_or(0);
+            let (mut x, mut k) = (text_x, 0);
+            while k < text.len() {
+                let attr = attr_of(k);
+                let mut e = k + 1;
+                while e < text.len() && attr_of(e) == attr {
+                    e += 1;
+                }
+                let run: String = text[k..e].iter().collect();
+                if let Some(font) = text_fonts.entry(attr).or_insert_with(|| crate::app::styled_font(&job.face, f.size, attr)) {
+                    dc.set_font(font);
+                }
+                dc.draw_text(&run, x, y);
+                x += dc.get_text_extent(&run).0;
+                k = e;
             }
-            dc.draw_text(line.text.trim_end(), text_x, y);
         }
         if let Some(Some(print)) = job.interline.get(n - 1).and_then(|l| l.get(i)) {
             if let Some(font) = &interline_font {

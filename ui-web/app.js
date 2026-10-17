@@ -1594,7 +1594,8 @@ async function chosenPages(d, radios, fields, braille, caret, from, to) {
       return { pages: [...Array(n).keys()], text: part };
     }
     case 3:
-      range = JSON.parse(core.parse_range(d.text(fields[0]), count));
+      // Page numbers are matched against the pages' own numbers; sequence numbers count the pages in order.
+      range = JSON.parse(core.parse_page_numbers(d.text(fields[0]), editor.value, doc.cells, doc.lines, braille));
       break;
     default:
       range = JSON.parse(core.parse_range(d.text(fields[1]), count));
@@ -1645,7 +1646,10 @@ async function print() {
       // 13's text into control 12 (spec 24, 2a); control 13 itself is not used.
       if (braille) d.get(12).closest("label").lastChild.textContent = d.get(13).closest("label").textContent;
       d.hide(13);
-      d.setChecked(17, braille && store.get("print.interline") === "1");
+      // No page-number range when two pages carry the same page number; Interline Print starts from the
+      // document's embosser layout and is the job's choice only (spec 24).
+      d.enable(12, !core.page_numbers_repeat(editor.value, doc.cells, doc.lines, braille));
+      d.setChecked(17, braille && doc.layout.interline !== 0);
       d.enable(17, braille);
     },
     async onOk(d) {
@@ -1658,7 +1662,6 @@ async function print() {
     },
   });
   if (result !== "ok") return;
-  if (braille) store.set("print.interline", job.interline ? "1" : "0");
   const pages = JSON.parse(core.page_lines(job.text ?? editor.value, doc.cells, doc.lines, braille, Int32Array.from(job.pages)));
   const back = job.interline ? await documentEngine(true) : null;
   const area = $("print-area");
@@ -1814,6 +1817,7 @@ async function emboss() {
     setup(d) {
       d.setText(7, "1");
       wirePageRange(d, EMBOSS_RANGE, [14, 15]);
+      d.enable(12, !core.page_numbers_repeat(editor.value, doc.cells, doc.lines, braille));
       d.setText(23, shownName(setup));
       d.setText(25, core.formName(doc.layout.form));
     },

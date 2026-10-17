@@ -1385,12 +1385,30 @@ pub fn page_count(text: &str, cells: u32, lines: u32, braille: bool) -> usize {
     laid_out(text, cells, lines, braille).len()
 }
 
+/// Whether two of a document's pages carry the same page number (File Print and File Emboss then offer no
+/// page-number range).
+#[wasm_bindgen]
+pub fn page_numbers_repeat(text: &str, cells: u32, lines: u32, braille: bool) -> bool {
+    bc_core::format::numbers_repeat(&laid_out(text, cells, lines, braille))
+}
+
 /// A page range as the Print and Emboss dialogs take it ("1-7,b,9"), for a document of `page_count` pages, as JSON:
 /// {"kind": "pages" | "malformed" | "empty" | "none", "pages": [index or -1 for a blank page], "missing", "repeated"}.
 #[wasm_bindgen]
 pub fn parse_range(text: &str, page_count: usize) -> String {
+    range_json(bc_core::range::parse_range(text, page_count, None))
+}
+
+/// A page range of page numbers (Print or Braille page numbers), matched against the pages' own numbers of
+/// `document` laid out `cells` by `lines`; JSON as parse_range.
+#[wasm_bindgen]
+pub fn parse_page_numbers(text: &str, document: &str, cells: u32, lines: u32, braille: bool) -> String {
+    let numbers: Vec<_> = laid_out(document, cells, lines, braille).iter().map(|p| p.number).collect();
+    range_json(bc_core::range::parse_range(text, numbers.len(), Some(&numbers)))
+}
+
+fn range_json((range, missing, repeated): (bc_core::range::Range, bool, bool)) -> String {
     use bc_core::range::Range;
-    let (range, missing, repeated) = bc_core::range::parse_range(text, page_count);
     let (kind, pages) = match range {
         Range::Pages(p) => ("pages", p.iter().map(|x| x.map_or(-1, |n| n as i64)).collect()),
         Range::Malformed => ("malformed", Vec::new()),

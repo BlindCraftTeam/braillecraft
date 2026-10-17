@@ -423,6 +423,18 @@ pub fn font(face: &str, size: i32) -> Option<Font> {
     Font::builder().with_face_name(face).with_point_size(size).with_family(FontFamily::Modern).build()
 }
 
+/// The font with the attribute bits of a text run: 1 bold, 2 italic, 4 underline.
+pub fn styled_font(face: &str, size: i32, attr: u8) -> Option<Font> {
+    Font::builder()
+        .with_face_name(face)
+        .with_point_size(size)
+        .with_family(FontFamily::Modern)
+        .with_weight(if attr & 1 != 0 { FontWeight::Bold } else { FontWeight::Normal })
+        .with_style(if attr & 2 != 0 { FontStyle::Italic } else { FontStyle::Normal })
+        .with_underline(attr & 4 != 0)
+        .build()
+}
+
 impl App {
     pub fn doc(&self) -> Option<&Doc> {
         self.active.and_then(|i| self.docs.get(i))
