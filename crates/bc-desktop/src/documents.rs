@@ -106,10 +106,18 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
         embosser: crate::embosser::default_setup().unwrap_or_default(),
         layout: crate::embosser::default_layout().0,
         file_sections: Vec::new(),
+        formatted: None,
     };
     app::with(|a| {
         child_set_title(&doc.frame, &doc.full_name());
         a.docs.push(doc);
+        // With View, Codes off (the Global, Default Views setting) the document opens in the formatted view
+        // (spec 27 2a).
+        if !view.codes {
+            let i = a.docs.len() - 1;
+            a.set_view_codes(i, false);
+            a.docs[i].select_doc(0, 0);
+        }
     });
     child_maximize(&child);
     child.show(true);
@@ -191,6 +199,12 @@ fn wire(key: u64, child: &MDIChildFrame, text: &TextCtrl) {
     text.on_text_updated(move |_| {
         app::try_with(|a| {
             if let Some(i) = a.index_of(key) {
+                // In the formatted view the area's text is the laid-out lines: what was typed or pasted into them is
+                // put in the document at the place it shows, and the lines are shown again (formatted_typed).
+                if a.docs[i].formatted.is_some() {
+                    formatted_typed(a, i);
+                    return;
+                }
                 // The codes follow the edit; a code that lost a bracket goes as a whole, as codes do in the
                 // reference program, once this change has been handled.
                 let before = a.docs[i].last_value.chars().count();
@@ -228,9 +242,20 @@ fn wire(key: u64, child: &MDIChildFrame, text: &TextCtrl) {
                 let Some(i) = a.index_of(key) else { return };
                 // Copy and cut keep the selection with its codes, so pasting it brings them back.
                 let code = k.get_key_code().unwrap_or(0);
+                if let Some(f) = a.docs[i].formatted.as_mut() {
+                    f.echo = None;
+                }
+                if a.docs[i].formatted.is_some() && formatted_key(a, i, code, k.control_down(), k.alt_down() || k.meta_down()) {
+                    let caret = a.docs[i].text.get_insertion_point();
+                    if let Some(f) = a.docs[i].formatted.as_mut() {
+                        f.echo = Some(caret);
+                    }
+                    consumed = true;
+                    return;
+                }
                 if k.control_down() && (code == 'C' as i32 || code == 'X' as i32 || code == 'c' as i32 || code == 'x' as i32) {
-                    let (from, to) = a.docs[i].text.get_selection();
-                    let part = a.docs[i].shown().slice(from.max(0) as usize, to.max(0) as usize);
+                    let (from, to) = a.docs[i].selection();
+                    let part = a.docs[i].shown().slice(from, to);
                     a.remember(part);
                 }
                 let d = &mut a.docs[i];
@@ -241,6 +266,10 @@ fn wire(key: u64, child: &MDIChildFrame, text: &TextCtrl) {
                     let d = &mut a.docs[i];
                     d.six_down.insert(dot);
                     d.chord |= 1 << dot;
+                    let caret = d.text.get_insertion_point();
+                    if let Some(f) = d.formatted.as_mut() {
+                        f.echo = Some(caret);
+                    }
                     consumed = true;
                 }
             });
@@ -270,7 +299,16 @@ fn wire(key: u64, child: &MDIChildFrame, text: &TextCtrl) {
                 }
             });
             if let Some(c) = insert {
-                t.write_text(&c.to_string());
+                let mut done = false;
+                app::try_with(|a| {
+                    if let Some(i) = a.index_of(key).filter(|&i| a.docs[i].formatted.is_some()) {
+                        type_in(a, i, &Shown::plain(&c.to_string()));
+                        done = true;
+                    }
+                });
+                if !done {
+                    t.write_text(&c.to_string());
+                }
             }
             k.event.skip(true);
             caret_moved(key);
@@ -330,6 +368,154 @@ fn caret_moved(key: u64) {
             a.update_status();
         }
     });
+}
+
+/// Puts `s` in place of the selection of document `i`, which shows the formatted view.
+pub fn type_in(a: &mut app::App, i: usize, s: &Shown) {
+    let (from, to) = a.docs[i].selection();
+    a.edit_formatted(i, from, to, s);
+    if s.codes.is_empty() && s.text.chars().count() == 1 {
+        a.margin_bell(i);
+    }
+}
+
+/// A key pressed in the formatted view that edits the document (spec 27 5a): Backspace and Delete (a code next to
+/// the caret, which the view does not show, goes as a whole; with Control, a word), Enter (the New Line shortcut
+/// code), and the clipboard, undo and redo keys. True when the key was used.
+pub fn formatted_key(a: &mut app::App, i: usize, code: i32, control: bool, alt: bool) -> bool {
+    const BACK: i32 = 8;
+    const ENTER: i32 = 13;
+    const NUMPAD_ENTER: i32 = 370;
+    const DELETE: i32 = 127;
+    const NUMPAD_DELETE: i32 = 385;
+    if alt {
+        return false;
+    }
+    let model = a.docs[i].shown();
+    let chars: Vec<char> = model.text.chars().collect();
+    let (from, to) = a.docs[i].selection();
+    match code {
+        BACK | DELETE | NUMPAD_DELETE if from != to => a.edit_formatted(i, from, to, &Shown::default()),
+        BACK => {
+            let start = if control {
+                word_start(&chars, from)
+            } else if let Some(c) = model.codes.iter().find(|c| c.1 == from) {
+                c.0
+            } else if from > 0 && model.is_own_break(from - 1) {
+                model.codes.iter().find(|c| c.1 == from - 1).map_or(from - 1, |c| c.0)
+            } else {
+                from.saturating_sub(1)
+            };
+            if start < from {
+                a.edit_formatted(i, start, from, &Shown::default());
+            }
+        }
+        DELETE | NUMPAD_DELETE => {
+            let end = if control {
+                word_end(&chars, from)
+            } else if let Some(c) = model.codes.iter().find(|c| c.0 == from) {
+                if model.is_own_break(c.1) { c.1 + 1 } else { c.1 }
+            } else {
+                (from + 1).min(chars.len())
+            };
+            if end > from {
+                a.edit_formatted(i, from, end, &Shown::default());
+            }
+        }
+        ENTER | NUMPAD_ENTER if !control => {
+            let code = Shown::marked(&a.settings.shortcuts.new_line);
+            type_in(a, i, &code);
+        }
+        _ => return false,
+    }
+    true
+}
+
+/// Edit, Undo, Redo, Cut, Copy and Paste in the formatted view, on the document (their keys reach them through
+/// the Edit menu). True when done.
+pub fn formatted_command(a: &mut app::App, i: usize, id: i32) -> bool {
+    let model = a.docs[i].shown();
+    let (from, to) = a.docs[i].selection();
+    match id {
+        1203 | 1204 => {
+            let part = model.slice(from, to);
+            Clipboard::get().set_text(&part.text);
+            a.remember(part);
+            if id == 1203 && from != to {
+                a.edit_formatted(i, from, to, &Shown::default());
+            }
+        }
+        1205 => {
+            let Some(text) = Clipboard::get().get_text() else { return true };
+            let s = a.known.iter().find(|k| k.text == text).cloned().unwrap_or_else(|| Shown::plain(&text));
+            a.edit_formatted(i, from, to, &s);
+        }
+        1206 if from != to => a.edit_formatted(i, from, to, &Shown::default()),
+        1201 | 1202 => {
+            a.undo_formatted(i, id == 1202);
+        }
+        _ => return false,
+    }
+    true
+}
+
+/// The editing area of document `i`, in the formatted view, no longer holds the lines it was given: the stretch
+/// that changed (characters typed or pasted, replacing what was selected) is made in the document at the places the
+/// lines show (spec 27 5a and 5c), and the lines are shown again. The area inserts typed characters itself on every
+/// system, so they are taken from it here rather than from the key events.
+fn formatted_typed(a: &mut app::App, i: usize) {
+    let now = a.docs[i].text.get_value();
+    let d = &mut a.docs[i];
+    let Some(f) = d.formatted.as_mut() else { return };
+    if now == f.view.text {
+        return;
+    }
+    // The control carried out a key the program had already carried out: its change is put back.
+    if let Some(caret) = f.echo.take() {
+        let text = f.view.text.clone();
+        let t = d.text;
+        t.set_value(&text);
+        t.set_insertion_point(caret);
+        wxdragon::call_after(Box::new(move || t.set_insertion_point(caret)));
+        return;
+    }
+    let Some(f) = d.formatted.as_ref() else { return };
+    let old: Vec<char> = f.view.text.chars().collect();
+    let new: Vec<char> = now.chars().collect();
+    let p = old.iter().zip(&new).take_while(|(x, y)| x == y).count();
+    let s = old.iter().rev().zip(new.iter().rev()).take(old.len().min(new.len()) - p).take_while(|(x, y)| x == y).count();
+    let (old_end, new_end) = (old.len() - s, new.len() - s);
+    let put: String = new[p..new_end].iter().collect();
+    let from = f.view.to_document(&f.pages, p);
+    let to = if old_end > p { f.view.to_document(&f.pages, old_end).max(from) } else { from };
+    a.edit_formatted(i, from, to, &Shown::plain(&put));
+    if old_end == p && put.chars().count() == 1 {
+        a.margin_bell(i);
+    }
+}
+
+/// The start of the word before character `at` (spaces before it included), for Control+Backspace.
+fn word_start(chars: &[char], at: usize) -> usize {
+    let mut p = at.min(chars.len());
+    while p > 0 && chars[p - 1].is_whitespace() {
+        p -= 1;
+    }
+    while p > 0 && !chars[p - 1].is_whitespace() {
+        p -= 1;
+    }
+    p
+}
+
+/// The end of the word at character `at` (the spaces after it included), for Control+Delete.
+fn word_end(chars: &[char], at: usize) -> usize {
+    let mut p = at;
+    while p < chars.len() && !chars[p].is_whitespace() {
+        p += 1;
+    }
+    while p < chars.len() && chars[p].is_whitespace() {
+        p += 1;
+    }
+    p
 }
 
 fn six_key_dot(set: &str, key_code: Option<i32>) -> Option<usize> {

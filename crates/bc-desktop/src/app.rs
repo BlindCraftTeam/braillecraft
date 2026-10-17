@@ -126,22 +126,95 @@ pub struct Doc {
     /// The optional sections of the document file it was read from that BrailleCraft does not use itself, written
     /// back as they were (their descriptor's place, kind and bytes).
     pub file_sections: Vec<(usize, u16, Vec<u8>)>,
+    /// The formatted view (re/spec/27-formatted-view.md), while the document shows it.
+    pub formatted: Option<Formatted>,
+}
+
+/// A document in the formatted view: the editing area shows its laid-out page lines, so the document's own text is
+/// kept here; edits are made to it and the lines are shown again (spec 27 sections 3 and 5).
+pub struct Formatted {
+    pub model: Shown,
+    pub pages: std::rc::Rc<Vec<bc_core::format::Page>>,
+    pub view: bc_core::fview::View,
+    /// The lines shown are out of date (the text was set from outside an edit).
+    pub stale: bool,
+    /// Document states to go back to (Edit, Undo) and forward to (Edit, Redo), each with its caret.
+    pub undo: Vec<(Shown, usize)>,
+    pub redo: Vec<(Shown, usize)>,
+    /// A key the program has just carried out itself (Backspace, Delete, Enter, the clipboard and undo keys), with
+    /// the caret it left: on systems whose text control then carries the key out as well, that change is put back.
+    pub echo: Option<i64>,
 }
 
 impl Doc {
-    /// The document as the editor shows it: its text and which runs are codes.
+    /// The document: its text and which runs are codes.
     pub fn shown(&self) -> Shown {
-        Shown { text: self.text.get_value(), codes: self.codes.clone(), inner: self.inner.clone() }
+        match &self.formatted {
+            Some(f) => f.model.clone(),
+            None => Shown { text: self.text.get_value(), codes: self.codes.clone(), inner: self.inner.clone() },
+        }
     }
 
-    /// Puts `shown` in the editing area, codes and all.
+    /// Puts `shown` in the document, codes and all: in the editing area, or in the formatted view's text, whose
+    /// lines are then shown again (App::refresh_formatted).
     pub fn set_shown(&mut self, shown: &Shown) {
         // The codes are set first: the change handler then finds nothing changed.
         self.codes = shown.codes.clone();
         self.inner = shown.inner.clone();
         self.last_value = shown.text.clone();
         self.taken.clear();
-        self.text.set_value(&shown.text);
+        match &mut self.formatted {
+            Some(f) => {
+                f.model = shown.clone();
+                f.stale = true;
+            }
+            None => self.text.set_value(&shown.text),
+        }
+    }
+
+    /// The caret's place in the document (in the formatted view, the place its cell came from, spec 27 5c).
+    pub fn caret(&self) -> usize {
+        let at = self.text.get_insertion_point().max(0) as usize;
+        match &self.formatted {
+            Some(f) => f.view.to_document(&f.pages, at),
+            None => at,
+        }
+    }
+
+    /// The selection's start and end in the document.
+    pub fn selection(&self) -> (usize, usize) {
+        let (from, to) = self.text.get_selection();
+        let (from, to) = (from.max(0) as usize, to.max(0) as usize);
+        match &self.formatted {
+            Some(f) if from != to => {
+                let (a, b) = (f.view.to_document(&f.pages, from), f.view.to_document(&f.pages, to));
+                (a.min(b), a.max(b))
+            }
+            Some(f) => {
+                let p = f.view.to_document(&f.pages, from);
+                (p, p)
+            }
+            None => (from, to),
+        }
+    }
+
+    /// Where document place `pos` stands in the editing area.
+    pub fn view_pos(&self, pos: usize) -> i64 {
+        match &self.formatted {
+            Some(f) => f.view.to_view(&f.pages, pos) as i64,
+            None => pos as i64,
+        }
+    }
+
+    /// Selects document places `from` to `to` (the caret at `to` when they are equal) and shows them.
+    pub fn select_doc(&self, from: usize, to: usize) {
+        let (a, b) = (self.view_pos(from), self.view_pos(to));
+        if a == b {
+            self.text.set_insertion_point(a);
+        } else {
+            self.text.set_selection(a, b);
+        }
+        self.text.show_position(a);
     }
 
     /// The window name: "Untitled Print Document 1"; "name -- New Braille Document" for a translated or opened
@@ -489,6 +562,9 @@ impl App {
         m.check(1307, v.six_key);
         m.check(1309, v.codes);
         m.check(1310, v.translated);
+        // Edit, Goto and View, Full-Page are used only in the formatted view (spec 27 2d).
+        m.enable(1215, !v.codes);
+        m.enable(1301, !v.codes);
         m.check(
             match hyphen {
                 Hyphen::None => 2901,
@@ -539,8 +615,16 @@ impl App {
     /// then its translated line.
     pub fn update_status(&mut self) {
         let Some(i) = self.active else { return };
+        // The formatted lines are shown again when the text was set from outside an edit, or when what the
+        // document is laid out by (page size, numbering, styles) changed.
+        if let Some(model) = self.docs[i].formatted.as_ref().map(|f| f.model.clone()) {
+            let pages = self.laid_out(i, &model);
+            if self.docs[i].formatted.as_ref().is_some_and(|f| f.stale || !std::rc::Rc::ptr_eq(&f.pages, &pages)) {
+                self.refresh_formatted(i, None);
+            }
+        }
         let shown = self.docs[i].shown();
-        let pos = self.docs[i].text.get_insertion_point();
+        let pos = self.docs[i].caret() as i64;
         // Page, line and column of the caret on the laid-out pages (spec 19 section 4): the ordinal page, the line on
         // that page and the cell on that line.
         let location = (!self.docs[i].view.codes)
@@ -572,7 +656,7 @@ impl App {
             return;
         }
         let shown = self.docs[i].shown();
-        let pos = self.docs[i].text.get_insertion_point().max(0) as usize;
+        let pos = self.docs[i].caret();
         let (_, _, column) = bc_core::format::locate(&self.laid_out(i, &shown), pos);
         if column as i64 == i64::from(self.docs[i].cells) - bell {
             crate::bell::ring();
@@ -642,6 +726,11 @@ impl App {
     /// what is left of codes the edit broke, to be removed (last first).
     pub fn sync_codes(&mut self, i: usize) -> Vec<(usize, usize)> {
         let d = &mut self.docs[i];
+        // In the formatted view the editing area holds the laid-out lines, not the document; edits are made to the
+        // document itself (App::edit_formatted).
+        if d.formatted.is_some() {
+            return Vec::new();
+        }
         let text = d.text.get_value();
         if text == d.last_value {
             return Vec::new();
@@ -702,6 +791,109 @@ impl App {
         let pages = std::rc::Rc::new(bc_core::format::format(value, &layout, Some(&styles)));
         self.docs[i].pages = Some((key, pages.clone()));
         pages
+    }
+
+    /// Shows document `i`'s formatted lines again from its text (laid out again when the text changed), with the
+    /// caret at document place `caret` (where it stood, when None).
+    pub fn refresh_formatted(&mut self, i: usize, caret: Option<usize>) {
+        let Some(model) = self.docs[i].formatted.as_ref().map(|f| f.model.clone()) else { return };
+        let caret = caret.unwrap_or_else(|| self.docs[i].caret());
+        let pages = self.laid_out(i, &model);
+        let view = bc_core::fview::View::new(&pages);
+        let d = &mut self.docs[i];
+        let Some(f) = d.formatted.as_mut() else { return };
+        let changed = f.view.text != view.text || f.view.lines.is_empty();
+        f.pages = pages;
+        f.view = view;
+        f.stale = false;
+        if changed {
+            let text = f.view.text.clone();
+            d.text.set_value(&text);
+        }
+        d.select_doc(caret, caret);
+    }
+
+    /// Edits document `i` in the formatted view: document places `from` to `to` become `put`, a code the range
+    /// cuts into going as a whole (spec 27 5a); the lines are then shown again with the caret after `put`.
+    pub fn edit_formatted(&mut self, i: usize, from: usize, to: usize, put: &Shown) {
+        let caret = self.docs[i].caret();
+        let Some(f) = self.docs[i].formatted.as_mut() else { return };
+        let len = f.model.text.chars().count();
+        let (mut from, mut to) = (from.min(len), to.min(len));
+        for &(s, e) in &f.model.codes {
+            if s < from && e > from {
+                from = s;
+            }
+            if s < to && e > to {
+                to = e;
+            }
+        }
+        let removed = f.model.slice(from, to);
+        let mut model = f.model.slice(0, from);
+        model.push(put);
+        model.push(&f.model.slice(to, len));
+        f.undo.push((std::mem::replace(&mut f.model, model.clone()), caret));
+        f.redo.clear();
+        let d = &mut self.docs[i];
+        d.codes = model.codes.clone();
+        d.inner = model.inner.clone();
+        d.last_value = model.text;
+        d.dirty = true;
+        d.last_line_key.clear();
+        self.remember(removed);
+        self.refresh_formatted(i, Some(from + put.text.chars().count()));
+        if self.active == Some(i) {
+            self.update_status();
+        }
+    }
+
+    /// Edit, Undo (or Redo with `redo`) in the formatted view: the document as it was before the last edit (or
+    /// after the last one undone). False when there is none.
+    pub fn undo_formatted(&mut self, i: usize, redo: bool) -> bool {
+        let caret = self.docs[i].caret();
+        let Some(f) = self.docs[i].formatted.as_mut() else { return false };
+        let Some((model, at)) = (if redo { f.redo.pop() } else { f.undo.pop() }) else { return false };
+        let current = (std::mem::replace(&mut f.model, model.clone()), caret);
+        if redo { f.undo.push(current) } else { f.redo.push(current) }
+        let d = &mut self.docs[i];
+        d.codes = model.codes.clone();
+        d.inner = model.inner.clone();
+        d.last_value = model.text;
+        d.dirty = true;
+        d.last_line_key.clear();
+        self.refresh_formatted(i, Some(at));
+        self.update_status();
+        true
+    }
+
+    /// View, Codes for document `i` (spec 27 2c): the coded view shows the document's text with its codes in the
+    /// editing area; the formatted view shows its laid-out lines. The caret keeps its place in the document.
+    pub fn set_view_codes(&mut self, i: usize, codes: bool) {
+        let caret = self.docs[i].caret();
+        let d = &mut self.docs[i];
+        d.view.codes = codes;
+        if codes {
+            if let Some(f) = d.formatted.take() {
+                d.codes = f.model.codes.clone();
+                d.inner = f.model.inner.clone();
+                d.last_value = f.model.text.clone();
+                d.text.set_value(&f.model.text);
+                d.select_doc(caret, caret);
+            }
+        } else if d.formatted.is_none() {
+            let model = d.shown();
+            d.formatted = Some(Formatted {
+                model,
+                pages: std::rc::Rc::new(Vec::new()),
+                view: bc_core::fview::View::default(),
+                stale: true,
+                undo: Vec::new(),
+                redo: Vec::new(),
+                echo: None,
+            });
+            self.refresh_formatted(i, Some(caret));
+        }
+        self.docs[i].last_line_key.clear();
     }
 
     pub fn mark_dirty(&mut self) {

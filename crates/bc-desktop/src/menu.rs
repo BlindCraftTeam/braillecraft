@@ -82,6 +82,13 @@ impl Menus {
         }
     }
 
+    /// Makes an item usable or greyed (command id).
+    pub fn enable(&self, command: i32, on: bool) {
+        if let Some(item) = self.items.get(&menu_id(command)) {
+            item.enable(on);
+        }
+    }
+
     pub fn is_checked(&self, command: i32) -> bool {
         self.items.get(&menu_id(command)).is_some_and(|i| i.is_checked())
     }

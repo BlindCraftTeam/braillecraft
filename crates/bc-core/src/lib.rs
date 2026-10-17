@@ -14,6 +14,7 @@ pub mod emboss_setup;
 pub mod embossers;
 pub mod engine;
 pub mod format;
+pub mod fview;
 pub mod ink;
 pub mod lbf;
 pub mod menu_codes;

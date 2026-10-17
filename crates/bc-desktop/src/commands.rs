@@ -144,6 +144,16 @@ fn insert_text(text: &str) {
 
 /// Puts `s` (text and codes) in place of the selection, its codes known as codes; the caret goes after it.
 fn insert_shown(s: &Shown) {
+    // In the formatted view the document itself takes it, at the caret's place in it.
+    let formatted = app::with(|a| {
+        let i = a.active.filter(|&i| a.docs[i].formatted.is_some())?;
+        documents::type_in(a, i, s);
+        Some(a.docs[i].text)
+    });
+    if let Some(t) = formatted {
+        t.set_focus();
+        return;
+    }
     if let Some(t) = active_text() {
         let (from, to) = t.get_selection();
         put_at(t, from, to, s);
@@ -174,6 +184,19 @@ fn put_at(t: TextCtrl, from: i64, to: i64, s: &Shown) {
 /// Puts `before` at the start of the selection and `after` at its end (codes, as a pair); the selection itself is
 /// left as it is.
 fn wrap_selection(before: &Shown, after: &Shown) {
+    let formatted = app::with(|a| {
+        let i = a.active.filter(|&i| a.docs[i].formatted.is_some())?;
+        let (from, to) = a.docs[i].selection();
+        a.edit_formatted(i, to, to, after);
+        a.edit_formatted(i, from, from, before);
+        let caret = to + before.text.chars().count();
+        a.docs[i].select_doc(caret, caret);
+        Some(a.docs[i].text)
+    });
+    if let Some(t) = formatted {
+        t.set_focus();
+        return;
+    }
     if let Some(t) = active_text() {
         let (from, to) = t.get_selection();
         put_at(t, to, to, after);
@@ -184,13 +207,15 @@ fn wrap_selection(before: &Shown, after: &Shown) {
     }
 }
 
+/// Selects document places `from` to `to` in the active document.
 fn select_range(from: i64, to: i64) {
-    if let Some(t) = active_text() {
-        t.set_selection(from, to);
-        t.show_position(from);
-        t.set_focus();
-    }
-    app::with(|a| a.update_status());
+    app::with(|a| {
+        if let Some(d) = a.doc() {
+            d.select_doc(from.max(0) as usize, to.max(0) as usize);
+            d.text.set_focus();
+        }
+        a.update_status();
+    });
 }
 
 fn insert_code(id: i32) {
@@ -264,7 +289,13 @@ pub fn run(id: i32, checked: bool) {
         1305 => set_font(ViewFont::SimBraille),
         1307 => six_key(checked),
         1309 => {
-            set_view(|v| v.codes = checked);
+            // View, Codes (Alt+F3): the coded view or the formatted view (spec 27 2b and 2c).
+            app::with(|a| {
+                if let Some(i) = a.active {
+                    a.set_view_codes(i, checked);
+                }
+                a.apply_view();
+            });
             // The Cursor Locator after a switch of view, when Global, View Preferences asks for it.
             if app::with(|a| a.settings.view_prefs.locator_on_view_switch) {
                 if let Some(key) = app::with(|a| a.doc().map(|d| d.key)) {
@@ -1244,7 +1275,7 @@ pub fn print_with(skip: Option<u32>) {
     let Some((i, key, braille, caret, (from, to))) = app::with(|a| {
         a.active.map(|i| {
             let d = &a.docs[i];
-            (i, d.key, d.kind == DocKind::Braille, d.text.get_insertion_point(), d.text.get_selection())
+            (i, d.key, d.kind == DocKind::Braille, d.caret() as i64, { let (f, t) = d.selection(); (f as i64, t as i64) })
         })
     }) else {
         return;
@@ -1363,7 +1394,7 @@ pub fn emboss_with(skip: Option<u32>) {
     let Some((i, name, setup_name, layout, cells, lines, caret, selection)) = app::with(|a| {
         a.active.map(|i| {
             let d = &a.docs[i];
-            (i, d.name.clone(), d.embosser.clone(), d.layout.clone(), d.cells, d.lines, d.text.get_insertion_point(), d.text.get_selection())
+            (i, d.name.clone(), d.embosser.clone(), d.layout.clone(), d.cells, d.lines, d.caret() as i64, { let (f, t) = d.selection(); (f as i64, t as i64) })
         })
     }) else {
         return;
@@ -1701,6 +1732,21 @@ pub fn translate_active() -> Result<u64, String> {
 // ------------------------------------------------------------------ Edit
 
 fn edit_standard(id: i32) {
+    // In the formatted view these act on the document (Select All excepted, which selects in the editing area). A
+    // text control that also carries out the key afterwards has its change put back (Formatted::echo).
+    let formatted = app::with(|a| {
+        let i = a.active.filter(|&i| a.docs[i].formatted.is_some() && id != 1207)?;
+        documents::formatted_command(a, i, id);
+        let caret = a.docs[i].text.get_insertion_point();
+        if let Some(f) = a.docs[i].formatted.as_mut() {
+            f.echo = Some(caret);
+        }
+        Some(a.docs[i].text)
+    });
+    if let Some(t) = formatted {
+        t.set_focus();
+        return;
+    }
     // The native text control carries out undo, redo and the clipboard commands itself. Copy and cut keep the
     // selection with its codes, so pasting it brings them back.
     if let Some(t) = active_text() {
@@ -1731,17 +1777,31 @@ fn toggle_highlight() {
     });
 }
 
+/// Replaces document places `from` to `to` of the active document with plain `text`: in the formatted view in the
+/// document itself, else in the editing area.
+fn replace_plain(from: usize, to: usize, text: &str) {
+    let coded = app::with(|a| {
+        let i = a.active?;
+        if a.docs[i].formatted.is_some() {
+            a.edit_formatted(i, from, to, &Shown::plain(text));
+            None
+        } else {
+            Some(a.docs[i].text)
+        }
+    });
+    if let Some(t) = coded {
+        t.replace(from as i64, to as i64, text);
+    }
+}
+
 fn change_case() {
-    let Some(t) = active_text() else { return };
-    let (from, to) = t.get_selection();
-    if from == to {
+    let Some(((from_c, to_c), doc)) = app::with(|a| a.doc().map(|d| (d.selection(), d.shown()))) else { return };
+    if from_c == to_c {
         return;
     }
-    let text = t.get_string_selection();
+    let text: String = doc.text.chars().skip(from_c).take(to_c - from_c).collect();
     let upper = text != text.to_uppercase();
     // The text between the codes changes case, piece by piece; the codes are left as they are.
-    let Some(doc) = app::with(|a| a.doc().map(|d| d.shown())) else { return };
-    let (from_c, to_c) = (from.max(0) as usize, to.max(0) as usize);
     let mut pieces: Vec<(usize, usize)> = Vec::new();
     let mut at = from_c;
     for &(s, e) in doc.codes.iter().filter(|c| c.1 > from_c && c.0 < to_c) {
@@ -1757,10 +1817,10 @@ fn change_case() {
         let part: String = doc.text.chars().skip(s).take(e - s).collect();
         let changed = if upper { part.to_uppercase() } else { part.to_lowercase() };
         if changed != part && changed.chars().count() == part.chars().count() {
-            t.replace(s as i64, e as i64, &changed);
+            replace_plain(s, e, &changed);
         }
     }
-    t.set_selection(from, to);
+    select_range(from_c as i64, to_c as i64);
 }
 
 /// Edit, Goto: a page, line and column of the laid-out pages, as the status line counts them.
@@ -1768,11 +1828,11 @@ fn goto_position() {
     let Some((pages, pos)) = app::with(|a| {
         let i = a.active?;
         let shown = a.docs[i].shown();
-        Some((a.laid_out(i, &shown), a.docs[i].text.get_insertion_point()))
+        Some((a.laid_out(i, &shown), a.docs[i].caret()))
     }) else {
         return;
     };
-    let (page, line, column) = bc_core::format::locate(&pages, pos.max(0) as usize);
+    let (page, line, column) = bc_core::format::locate(&pages, pos);
     let d = open_dialog(1019, None);
     d.set_text(7, &page.to_string());
     d.set_text(10, &line.to_string());
@@ -1823,8 +1883,16 @@ fn read_find(d: &Dlg, replace: bool) -> FindSpec {
     }
 }
 
+/// The active document's text and its selection, as document places.
+fn doc_and_selection() -> Option<(String, i64, i64)> {
+    app::with(|a| a.doc().map(|d| {
+        let (f, t) = d.selection();
+        (d.shown().text, f as i64, t as i64)
+    }))
+}
+
 fn find(again: bool) {
-    let Some(t) = active_text() else { return };
+    let Some((value, sel_from, sel_to)) = doc_and_selection() else { return };
     let mut spec = app::with(|a| a.last_find.clone());
     if !again || spec.is_none() {
         let d = open_dialog(1020, None);
@@ -1837,7 +1905,7 @@ fn find(again: bool) {
                 d.set_checked(10, s.whole_words);
             }
             None => {
-                let sel = t.get_string_selection();
+                let sel: String = value.chars().skip(sel_from as usize).take((sel_to - sel_from) as usize).collect();
                 if !sel.is_empty() {
                     d.set_text(7, &sel);
                 }
@@ -1857,8 +1925,6 @@ fn find(again: bool) {
         spec = Some(s);
     }
     let spec = spec.expect("find spec");
-    let value = t.get_value();
-    let (sel_from, sel_to) = t.get_selection();
     let from = if spec.backward { sel_from } else { sel_to };
     let len = value.chars().count() as i64;
     let mut found = find_next(&spec, &value, from, spec.backward);
@@ -1882,7 +1948,7 @@ fn find(again: bool) {
 }
 
 fn replace() {
-    let Some(t) = active_text() else { return };
+    let Some((_, sel_from, sel_to)) = doc_and_selection() else { return };
     let last = app::with(|a| a.last_find.clone());
     let d = open_dialog(1021, None);
     d.set_radio(&[14, 15, 16], 0);
@@ -1904,11 +1970,10 @@ fn replace() {
     app::with(|a| a.last_find = Some(spec.clone()));
     let mut count = 0;
     let mut all = false;
-    let (sel_from, sel_to) = t.get_selection();
     let mut pos = if spec.backward { sel_from } else { sel_to };
     let find_len = spec.find.chars().count() as i64;
     let repl_len = spec.replace_with.chars().count() as i64;
-    while let Some(i) = find_next(&spec, &t.get_value(), pos, spec.backward) {
+    while let Some(i) = doc_and_selection().and_then(|(v, _, _)| find_next(&spec, &v, pos, spec.backward)) {
         select_range(i, i + find_len);
         let answer = if all {
             5
@@ -1926,7 +1991,7 @@ fn replace() {
                 if answer == 7 {
                     all = true;
                 }
-                t.replace(i, i + find_len, &spec.replace_with);
+                replace_plain(i as usize, (i + find_len) as usize, &spec.replace_with);
                 count += 1;
                 pos = if spec.backward { i } else { i + repl_len };
             }
@@ -2011,12 +2076,11 @@ fn apply_last_style() {
 }
 
 fn join_lines() {
-    let Some(t) = active_text() else { return };
-    let value = t.get_value();
-    let pos = app::char_to_byte(&value, t.get_insertion_point());
+    let Some((value, caret)) = app::with(|a| a.doc().map(|d| (d.shown().text, d.caret()))) else { return };
+    let pos = app::char_to_byte(&value, caret as i64);
     if let Some(nl) = value[pos..].find('\n') {
-        let at = app::byte_to_char(&value, pos + nl);
-        t.replace(at, at + 1, " ");
+        let at = app::byte_to_char(&value, pos + nl) as usize;
+        replace_plain(at, at + 1, " ");
     }
 }
 
