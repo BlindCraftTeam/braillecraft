@@ -72,7 +72,14 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   heads and page numbers become styles and codes, and its characters go through the character map tables) (an Orbit file's line ends become line codes): formatted braille is read page by page, with the page numbers in its corners taken
   as page numbering, running heads and feet, print page changes, indented, centred and as-is lines turned back into
   codes; then format words ($p, |IND5 and the like), line ends, hyphens at line ends and spaces are read as the import
-  scan tables say, and the import rule scripts finish the codes, tables and Nemeth passages. The web build opens files
+  scan tables say, and the import rule scripts finish the codes, tables and Nemeth passages. Word documents (.docx)
+  are imported the way the original program imports them: the document's paragraphs, runs, styles, lists, tables,
+  footnotes, endnotes, hyperlinks, page breaks and fields go through the Word style map the template names
+  (default, Australian, BANA, French, Russian or UK basic, shipped as data) and the Word import rule scripts, with
+  the Global, Word Importer settings (Courier as computer braille, hard page breaks, skipped lines, print page
+  breaks, braille fonts, embedded codes, bold, italics, underline and language switches ignored) and the Global,
+  Import Options settings (hyperlinks as text, URLs, both or hyperlink codes, duplicates removed, URLs tagged as
+  computer notation, spaces around signs of comparison, spaces around dashes, unknown characters). The web build opens files
   the same way, through the same import dialog and import steps, with its settings kept in the browser.
 - **Translated line.** Under the document, the braille (or the print) of the line you are on, updated as you write.
 - **View preferences.** A margin bell a chosen number of cells before the end of a braille line, which codes the

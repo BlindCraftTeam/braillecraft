@@ -1,0 +1,984 @@
+| Alphabetic entity references to UTF-8
+| The net effect of this table is that all recognized entrefs EXCEPT
+| for {&amp; &lt; &gt;} have been converted to direct UTF-8.
+| ---
+| 1;1 2003-4-18 J E Sullivan
+| 1;2 2003-4-22 JES: Switch to complete DocBook set from "Oasis"
+| ---
+&aacute;~á~ | small a, acute accent
+&Aacute;~Á~ | capital A, acute accent
+&acirc;~â~ | small a, circumflex accent
+&Acirc;~Â~ | capital A, circumflex accent
+&agrave;~à~ | small a, grave accent
+&Agrave;~À~ | capital A, grave accent
+&aring;~å~ | small a, ring
+&Aring;~Å~ | capital A, ring
+&atilde;~ã~ | small a, tilde
+&Atilde;~Ã~ | capital A, tilde
+&auml;~ä~ | small a, dieresis or umlaut mark
+&Auml;~Ä~ | capital A, dieresis or umlaut mark
+&aelig;~æ~ | small ae diphthong (ligature)
+&AElig;~Æ~ | capital AE diphthong (ligature)
+&ccedil;~ç~ | small c, cedilla
+&Ccedil;~Ç~ | capital C, cedilla
+&eth;~ð~ | small eth, Icelandic
+&ETH;~Ð~ | capital Eth, Icelandic
+&eacute;~é~ | small e, acute accent
+&Eacute;~É~ | capital E, acute accent
+&ecirc;~ê~ | small e, circumflex accent
+&Ecirc;~Ê~ | capital E, circumflex accent
+&egrave;~è~ | small e, grave accent
+&Egrave;~È~ | capital E, grave accent
+&euml;~ë~ | small e, dieresis or umlaut mark
+&Euml;~Ë~ | capital E, dieresis or umlaut mark
+&iacute;~í~ | small i, acute accent
+&Iacute;~Í~ | capital I, acute accent
+&icirc;~î~ | small i, circumflex accent
+&Icirc;~Î~ | capital I, circumflex accent
+&igrave;~ì~ | small i, grave accent
+&Igrave;~Ì~ | capital I, grave accent
+&iuml;~ï~ | small i, dieresis or umlaut mark
+&Iuml;~Ï~ | capital I, dieresis or umlaut mark
+&ntilde;~ñ~ | small n, tilde
+&Ntilde;~Ñ~ | capital N, tilde
+&oacute;~ó~ | small o, acute accent
+&Oacute;~Ó~ | capital O, acute accent
+&ocirc;~ô~ | small o, circumflex accent
+&Ocirc;~Ô~ | capital O, circumflex accent
+&ograve;~ò~ | small o, grave accent
+&Ograve;~Ò~ | capital O, grave accent
+&oslash;~ø~ | small o, slash
+&Oslash;~Ø~ | capital O, slash
+&otilde;~õ~ | small o, tilde
+&Otilde;~Õ~ | capital O, tilde
+&ouml;~ö~ | small o, dieresis or umlaut mark
+&Ouml;~Ö~ | capital O, dieresis or umlaut mark
+&szlig;~ß~ | small sharp s, German (sz ligature)
+&thorn;~þ~ | small thorn, Icelandic
+&THORN;~Þ~ | capital THORN, Icelandic
+&uacute;~ú~ | small u, acute accent
+&Uacute;~Ú~ | capital U, acute accent
+&ucirc;~û~ | small u, circumflex accent
+&Ucirc;~Û~ | capital U, circumflex accent
+&ugrave;~ù~ | small u, grave accent
+&Ugrave;~Ù~ | capital U, grave accent
+&uuml;~ü~ | small u, dieresis or umlaut mark
+&Uuml;~Ü~ | capital U, dieresis or umlaut mark
+&yacute;~ý~ | small y, acute accent
+&Yacute;~Ý~ | capital Y, acute accent
+&yuml;~ÿ~ | small y, dieresis or umlaut mark
+&abreve;~ă~ | small a, breve
+&Abreve;~Ă~ | capital A, breve
+&amacr;~ā~ | small a, macron
+&Amacr;~Ā~ | capital A, macron
+&aogon;~ą~ | small a, ogonek
+&Aogon;~Ą~ | capital A, ogonek
+&cacute;~ć~ | small c, acute accent
+&Cacute;~Ć~ | capital C, acute accent
+&ccaron;~č~ | small c, caron
+&Ccaron;~Č~ | capital C, caron
+&ccirc;~ĉ~ | small c, circumflex accent
+&Ccirc;~Ĉ~ | capital C, circumflex accent
+&cdot;~ċ~ | small c, dot above
+&Cdot;~Ċ~ | capital C, dot above
+&dcaron;~ď~ | small d, caron
+&Dcaron;~Ď~ | capital D, caron
+&dstrok;~đ~ | small d, stroke
+&Dstrok;~Đ~ | capital D, stroke
+&ecaron;~ě~ | small e, caron
+&Ecaron;~Ě~ | capital E, caron
+&edot;~ė~ | small e, dot above
+&Edot;~Ė~ | capital E, dot above
+&emacr;~ē~ | small e, macron
+&Emacr;~Ē~ | capital E, macron
+&eogon;~ę~ | small e, ogonek
+&Eogon;~Ę~ | capital E, ogonek
+&gacute;~ǵ~ | small g, acute accent
+&gbreve;~ğ~ | small g, breve
+&Gbreve;~Ğ~ | capital G, breve
+&Gcedil;~Ģ~ | capital G, cedilla
+&gcirc;~ĝ~ | small g, circumflex accent
+&Gcirc;~Ĝ~ | capital G, circumflex accent
+&gdot;~ġ~ | small g, dot above
+&Gdot;~Ġ~ | capital G, dot above
+&hcirc;~ĥ~ | small h, circumflex accent
+&Hcirc;~Ĥ~ | capital H, circumflex accent
+&hstrok;~ħ~ | small h, stroke
+&Hstrok;~Ħ~ | capital H, stroke
+&Idot;~İ~ | capital I, dot above
+&Imacr;~Ī~ | capital I, macron
+&imacr;~ī~ | small i, macron
+&ijlig;~ĳ~ | small ij ligature
+&IJlig;~Ĳ~ | capital IJ ligature
+&inodot;~ı~ | small i, no dot
+&iogon;~į~ | small i, ogonek
+&Iogon;~Į~ | capital I, ogonek
+&itilde;~ĩ~ | small i, tilde
+&Itilde;~Ĩ~ | capital I, tilde
+&jcirc;~ĵ~ | small j, circumflex accent
+&Jcirc;~Ĵ~ | capital J, circumflex accent
+&kcedil;~ķ~ | small k, cedilla
+&Kcedil;~Ķ~ | capital K, cedilla
+&kgreen;~ĸ~ | small k, Greenlandic
+&lacute;~ĺ~ | small l, acute accent
+&Lacute;~Ĺ~ | capital L, acute accent
+&lcaron;~ľ~ | small l, caron
+&Lcaron;~Ľ~ | capital L, caron
+&lcedil;~ļ~ | small l, cedilla
+&Lcedil;~Ļ~ | capital L, cedilla
+&lmidot;~ŀ~ | small l, middle dot
+&Lmidot;~Ŀ~ | capital L, middle dot
+&lstrok;~ł~ | small l, stroke
+&Lstrok;~Ł~ | capital L, stroke
+&nacute;~ń~ | small n, acute accent
+&Nacute;~Ń~ | capital N, acute accent
+&eng;~ŋ~ | small eng, Lapp
+&ENG;~Ŋ~ | capital ENG, Lapp
+&napos;~ŉ~ | small n, apostrophe
+&ncaron;~ň~ | small n, caron
+&Ncaron;~Ň~ | capital N, caron
+&ncedil;~ņ~ | small n, cedilla
+&Ncedil;~Ņ~ | capital N, cedilla
+&odblac;~ő~ | small o, double acute accent
+&Odblac;~Ő~ | capital O, double acute accent
+&Omacr;~Ō~ | capital O, macron
+&omacr;~ō~ | small o, macron
+&oelig;~œ~ | small oe ligature
+&OElig;~Œ~ | capital OE ligature
+&racute;~ŕ~ | small r, acute accent
+&Racute;~Ŕ~ | capital R, acute accent
+&rcaron;~ř~ | small r, caron
+&Rcaron;~Ř~ | capital R, caron
+&rcedil;~ŗ~ | small r, cedilla
+&Rcedil;~Ŗ~ | capital R, cedilla
+&sacute;~ś~ | small s, acute accent
+&Sacute;~Ś~ | capital S, acute accent
+&scaron;~š~ | small s, caron
+&Scaron;~Š~ | capital S, caron
+&scedil;~ş~ | small s, cedilla
+&Scedil;~Ş~ | capital S, cedilla
+&scirc;~ŝ~ | small s, circumflex accent
+&Scirc;~Ŝ~ | capital S, circumflex accent
+&tcaron;~ť~ | small t, caron
+&Tcaron;~Ť~ | capital T, caron
+&tcedil;~ţ~ | small t, cedilla
+&Tcedil;~Ţ~ | capital T, cedilla
+&tstrok;~ŧ~ | small t, stroke
+&Tstrok;~Ŧ~ | capital T, stroke
+&ubreve;~ŭ~ | small u, breve
+&Ubreve;~Ŭ~ | capital U, breve
+&udblac;~ű~ | small u, double acute accent
+&Udblac;~Ű~ | capital U, double acute accent
+&umacr;~ū~ | small u, macron
+&Umacr;~Ū~ | capital U, macron
+&uogon;~ų~ | small u, ogonek
+&Uogon;~Ų~ | capital U, ogonek
+&uring;~ů~ | small u, ring
+&Uring;~Ů~ | capital U, ring
+&utilde;~ũ~ | small u, tilde
+&Utilde;~Ũ~ | capital U, tilde
+&wcirc;~ŵ~ | small w, circumflex accent
+&Wcirc;~Ŵ~ | capital W, circumflex accent
+&ycirc;~ŷ~ | small y, circumflex accent
+&Ycirc;~Ŷ~ | capital Y, circumflex accent
+&Yuml;~Ÿ~ | capital Y, dieresis or umlaut mark
+&zacute;~ź~ | small z, acute accent
+&Zacute;~Ź~ | capital Z, acute accent
+&zcaron;~ž~ | small z, caron
+&Zcaron;~Ž~ | capital Z, caron
+&zdot;~ż~ | small z, dot above
+&Zdot;~Ż~ | capital Z, dot above
+&agr;~α~ | small alpha, Greek
+&Agr;~Α~ | capital Alpha, Greek
+&bgr;~β~ | small beta, Greek
+&Bgr;~Β~ | capital Beta, Greek
+&ggr;~γ~ | small gamma, Greek
+&Ggr;~Γ~ | capital Gamma, Greek
+&dgr;~δ~ | small delta, Greek
+&Dgr;~Δ~ | capital Delta, Greek
+&egr;~ε~ | small epsilon, Greek
+&Egr;~Ε~ | capital Epsilon, Greek
+&zgr;~ζ~ | small zeta, Greek
+&Zgr;~Ζ~ | capital Zeta, Greek
+&eegr;~η~ | small eta, Greek
+&EEgr;~Η~ | capital Eta, Greek
+&thgr;~θ~ | small theta, Greek
+&THgr;~Θ~ | capital Theta, Greek
+&igr;~ι~ | small iota, Greek
+&Igr;~Ι~ | capital Iota, Greek
+&kgr;~κ~ | small kappa, Greek
+&Kgr;~Κ~ | capital Kappa, Greek
+&lgr;~λ~ | small lambda, Greek
+&Lgr;~Λ~ | capital Lambda, Greek
+&mgr;~μ~ | small mu, Greek
+&Mgr;~Μ~ | capital Mu, Greek
+&ngr;~ν~ | small nu, Greek
+&Ngr;~Ν~ | capital Nu, Greek
+&xgr;~ξ~ | small xi, Greek
+&Xgr;~Ξ~ | capital Xi, Greek
+&ogr;~ο~ | small omicron, Greek
+&Ogr;~Ο~ | capital Omicron, Greek
+&pgr;~π~ | small pi, Greek
+&Pgr;~Π~ | capital Pi, Greek
+&rgr;~ρ~ | small rho, Greek
+&Rgr;~Ρ~ | capital Rho, Greek
+&sgr;~σ~ | small sigma, Greek
+&Sgr;~Σ~ | capital Sigma, Greek
+&sfgr;~ς~ | final small sigma, Greek
+&tgr;~τ~ | small tau, Greek
+&Tgr;~Τ~ | capital Tau, Greek
+&ugr;~υ~ | small upsilon, Greek
+&Ugr;~Υ~ | capital Upsilon, Greek
+&phgr;~φ~ | small phi, Greek
+&PHgr;~Φ~ | capital Phi, Greek
+&khgr;~χ~ | small chi, Greek
+&KHgr;~Χ~ | capital Chi, Greek
+&psgr;~ψ~ | small psi, Greek
+&PSgr;~Ψ~ | capital Psi, Greek
+&ohgr;~ω~ | small omega, Greek
+&OHgr;~Ω~ | capital Omega, Greek
+&aacgr;~ά~ | small alpha, accent, Greek
+&Aacgr;~Ά~ | capital Alpha, accent, Greek
+&eacgr;~έ~ | small epsilon, accent, Greek
+&Eacgr;~Έ~ | capital Epsilon, accent, Greek
+&eeacgr;~ή~ | small eta, accent, Greek
+&EEacgr;~Ή~ | capital Eta, accent, Greek
+&idigr;~ϊ~ | small iota, dieresis, Greek
+&Idigr;~Ϊ~ | capital Iota, dieresis, Greek
+&iacgr;~ί~ | small iota, accent, Greek
+&Iacgr;~Ί~ | capital Iota, accent, Greek
+&idiagr;~ΐ~ | small iota, dieresis, accent, Greek
+&oacgr;~ό~ | small omicron, accent, Greek
+&Oacgr;~Ό~ | capital Omicron, accent, Greek
+&udigr;~ϋ~ | small upsilon, dieresis, Greek
+&Udigr;~Ϋ~ | capital Upsilon, dieresis, Greek
+&uacgr;~ύ~ | small upsilon, accent, Greek
+&Uacgr;~Ύ~ | capital Upsilon, accent, Greek
+&udiagr;~ΰ~ | small upsilon, dieresis, accent, Greek
+&ohacgr;~ώ~ | small omega, accent, Greek
+&OHacgr;~Ώ~ | capital Omega, accent, Greek
+&acy;~а~ | small a, Cyrillic
+&Acy;~А~ | capital A, Cyrillic
+&bcy;~б~ | small be, Cyrillic
+&Bcy;~Б~ | capital BE, Cyrillic
+&vcy;~в~ | small ve, Cyrillic
+&Vcy;~В~ | capital VE, Cyrillic
+&gcy;~г~ | small ghe, Cyrillic
+&Gcy;~Г~ | capital GHE, Cyrillic
+&dcy;~д~ | small de, Cyrillic
+&Dcy;~Д~ | capital DE, Cyrillic
+&iecy;~е~ | small ie, Cyrillic
+&IEcy;~Е~ | capital IE, Cyrillic
+&iocy;~ё~ | small io, Russian
+&IOcy;~Ё~ | capital IO, Russian
+&zhcy;~ж~ | small zhe, Cyrillic
+&ZHcy;~Ж~ | capital ZHE, Cyrillic
+&zcy;~з~ | small ze, Cyrillic
+&Zcy;~З~ | capital ZE, Cyrillic
+&icy;~и~ | small i, Cyrillic
+&Icy;~И~ | capital I, Cyrillic
+&jcy;~й~ | small short i, Cyrillic
+&Jcy;~Й~ | capital short I, Cyrillic
+&kcy;~к~ | small ka, Cyrillic
+&Kcy;~К~ | capital KA, Cyrillic
+&lcy;~л~ | small el, Cyrillic
+&Lcy;~Л~ | capital EL, Cyrillic
+&mcy;~м~ | small em, Cyrillic
+&Mcy;~М~ | capital EM, Cyrillic
+&ncy;~н~ | small en, Cyrillic
+&Ncy;~Н~ | capital EN, Cyrillic
+&ocy;~о~ | small o, Cyrillic
+&Ocy;~О~ | capital O, Cyrillic
+&pcy;~п~ | small pe, Cyrillic
+&Pcy;~П~ | capital PE, Cyrillic
+&rcy;~р~ | small er, Cyrillic
+&Rcy;~Р~ | capital ER, Cyrillic
+&scy;~с~ | small es, Cyrillic
+&Scy;~С~ | capital ES, Cyrillic
+&tcy;~т~ | small te, Cyrillic
+&Tcy;~Т~ | capital TE, Cyrillic
+&ucy;~у~ | small u, Cyrillic
+&Ucy;~У~ | capital U, Cyrillic
+&fcy;~ф~ | small ef, Cyrillic
+&Fcy;~Ф~ | capital EF, Cyrillic
+&khcy;~х~ | small ha, Cyrillic
+&KHcy;~Х~ | capital HA, Cyrillic
+&tscy;~ц~ | small tse, Cyrillic
+&TScy;~Ц~ | capital TSE, Cyrillic
+&chcy;~ч~ | small che, Cyrillic
+&CHcy;~Ч~ | capital CHE, Cyrillic
+&shcy;~ш~ | small sha, Cyrillic
+&SHcy;~Ш~ | capital SHA, Cyrillic
+&shchcy;~щ~ | small shcha, Cyrillic
+&SHCHcy;~Щ~ | capital SHCHA, Cyrillic
+&hardcy;~ъ~ | small hard sign, Cyrillic
+&HARDcy;~Ъ~ | capital HARD sign, Cyrillic
+&ycy;~ы~ | small yeru, Cyrillic
+&Ycy;~Ы~ | capital YERU, Cyrillic
+&softcy;~ь~ | small soft sign, Cyrillic
+&SOFTcy;~Ь~ | capital SOFT sign, Cyrillic
+&ecy;~э~ | small e, Cyrillic
+&Ecy;~Э~ | capital E, Cyrillic
+&yucy;~ю~ | small yu, Cyrillic
+&YUcy;~Ю~ | capital YU, Cyrillic
+&yacy;~я~ | small ya, Cyrillic
+&YAcy;~Я~ | capital YA, Cyrillic
+&numero;~№~ | numero sign
+&djcy;~ђ~ | small dje, Serbian
+&DJcy;~Ђ~ | capital DJE, Serbian
+&gjcy;~ѓ~ | small gje, Macedonian
+&GJcy;~Ѓ~ | capital GJE Macedonian
+&jukcy;~є~ | small je, Ukrainian
+&Jukcy;~Є~ | capital JE, Ukrainian
+&dscy;~ѕ~ | small dse, Macedonian
+&DScy;~Ѕ~ | capital DSE, Macedonian
+&iukcy;~і~ | small i, Ukrainian
+&Iukcy;~І~ | capital I, Ukrainian
+&yicy;~ї~ | small yi, Ukrainian
+&YIcy;~Ї~ | capital YI, Ukrainian
+&jsercy;~ј~ | small je, Serbian
+&Jsercy;~Ј~ | capital JE, Serbian
+&ljcy;~љ~ | small lje, Serbian
+&LJcy;~Љ~ | capital LJE, Serbian
+&njcy;~њ~ | small nje, Serbian
+&NJcy;~Њ~ | capital NJE, Serbian
+&tshcy;~ћ~ | small tshe, Serbian
+&TSHcy;~Ћ~ | capital TSHE, Serbian
+&kjcy;~ќ~ | small kje Macedonian
+&KJcy;~Ќ~ | capital KJE, Macedonian
+&ubrcy;~ў~ | small u, Byelorussian
+&Ubrcy;~Ў~ | capital U, Byelorussian
+&dzcy;~џ~ | small dze, Serbian
+&DZcy;~Џ~ | capital dze, Serbian
+&half;~½~ | fraction one-half
+&frac12;~½~ | fraction one-half
+&frac14;~¼~ | fraction one-quarter
+&frac34;~¾~ | fraction three-quarters
+&frac18;~⅛~ | fraction one-eighth
+&frac38;~⅜~ | fraction three-eighths
+&frac58;~⅝~ | fraction five-eighths
+&frac78;~⅞~ | fraction seven-eighths
+&sup1;~¹~ | superscript one
+&sup2;~²~ | superscript two
+&sup3;~³~ | superscript three
+&plus;~+~ | plus sign [Binary operator]
+&plusmn;~±~ | plus-or-minus sign [Binary operator]
+| &lt;~&lt;~ | less-than sign [Relation]
+&equals;~=~ | equals sign [Relation]
+| &gt;~&gt;~ | greater-than sign [Relation]
+&divide;~÷~ | divide sign [Binary operator]
+&times;~×~ | multiply sign [Binary operator]
+&curren;~¤~ | general currency sign
+&pound;~£~ | pound sign
+&dollar;~$~ | dollar sign
+&cent;~¢~ | cent sign
+&yen;~¥~ | yen sign
+&num;~#~ | number sign
+&percnt;~%~ | percent sign
+| &amp;~&amp;~ | ampersand
+&ast;~*~ | asterisk [Binary operator]
+&commat;~@~ | commercial at
+&lsqb;~[~ | left square bracket [Opening delimiter]
+&bsol;~\~ | reverse solidus
+&rsqb;~]~ | right square bracket [Closing delimiter]
+&lcub;~{~ | left curly bracket [Opening delimiter]
+&horbar;~―~ | horizontal bar
+&verbar;~||~ | vertical bar
+&rcub;~}~ | right curly bracket [Closing delimiter]
+&micro;~µ~ | micro sign
+&ohm;~Ω~ | ohm sign
+&deg;~°~ | degree sign
+&ordm;~º~ | ordinal indicator, masculine
+&ordf;~ª~ | ordinal indicator, feminine
+&sect;~§~ | section sign
+&para;~¶~ | pilcrow (paragraph sign)
+&middot;~·~ | middle dot [Binary operator]
+&larr;~←~ | leftward arrow [Relation (arrow)]
+&rarr;~→~ | rightward arrow [Relation (arrow)]
+&uarr;~↑~ | upward arrow [Relation (arrow)]
+&darr;~↓~ | downward arrow [Relation (arrow)]
+&copy;~©~ | copyright sign
+&reg;~®~ | registered sign
+&trade;~™~ | trade mark sign
+&brvbar;~¦~ | broken (vertical) bar
+&not;~¬~ | not sign
+&excl;~!~ | exclamation mark
+&iexcl;~¡~ | inverted exclamation mark
+| &quot;~"~ | quotation mark
+&apos;~'~ | apostrophe
+&lpar;~(~ | left parenthesis [Opening delimiter]
+&rpar;~)~ | right parenthesis [Closing delimiter]
+&comma;~,~ | comma [Punctuation]
+&lowbar;~_~ | low line
+&hyphen;~-~ | hyphen
+&period;~.~ | full stop, period
+&sol;~/~ | solidus
+&colon;~:~ | colon [Punctuation]
+&semi;~;~ | semicolon [Punctuation]
+&quest;~?~ | question mark
+&iquest;~¿~ | inverted question mark
+&laquo;~«~ | angle quotation mark, left
+&raquo;~»~ | angle quotation mark, right
+&lsquo;~‘~ | single quotation mark, left
+&rsquo;~’~ | single quotation mark, right
+&ldquo;~“~ | double quotation mark, left
+&rdquo;~”~ | double quotation mark, right
+&nbsp;~ ~ | no break (required) space
+&shy;~­~ | soft hyphen
+&acute;~´~ | acute accent
+&breve;~˘~ | breve
+&caron;~ˇ~ | caron
+&cedil;~¸~ | cedilla
+&circ;~^~ | circumflex accent
+&dblac;~˝~ | double acute accent
+&die;~¨~ | dieresis
+&dot;~˙~ | dot above
+&grave;~`~ | grave accent
+&macr;~¯~ | macron
+&ogon;~˛~ | ogonek
+&ring;~˚~ | ring
+&tilde;~˜~ | tilde
+&uml;~¨~ | umlaut mark
+&emsp;~ ~ | em space
+&ensp;~ ~ | en space (1
+&emsp13;~ ~ | 1space
+&emsp14;~ ~ | 1space
+&numsp;~ ~ | digit space (width of a number)
+&puncsp;~ ~ | punctuation space (width of comma)
+&thinsp;~ ~ | thin space (1
+&hairsp;~ ~ | hair space
+&mdash;~—~ | em dash
+&ndash;~–~ | en dash
+&dash;~‐~ | hyphen (true graphic)
+&blank;~␣~ | significant blank symbol
+&hellip;~…~ | ellipsis (horizontal)
+&nldr;~‥~ | double baseline dot (en leader)
+&frac13;~⅓~ | fraction one-third
+&frac23;~⅔~ | fraction two-thirds
+&frac15;~⅕~ | fraction one-fifth
+&frac25;~⅖~ | fraction two-fifths
+&frac35;~⅗~ | fraction three-fifths
+&frac45;~⅘~ | fraction four-fifths
+&frac16;~⅙~ | fraction one-sixth
+&frac56;~⅚~ | fraction five-sixths
+&incare;~℅~ | in-care-of symbol
+&block;~█~ | full block
+&uhblk;~▀~ | upper half block
+&lhblk;~▄~ | lower half block
+&blk14;~░~ | 25% shaded block
+&blk12;~▒~ | 50% shaded block
+&blk34;~▓~ | 75% shaded block
+&marker;~▮~ | histogram marker
+&cir;~○~ | circle, open [Binary operator]
+&squ;~□~ | square, open
+&rect;~▭~ | rectangle, open
+&utri;~▵~ | up triangle, open
+&dtri;~▿~ | down triangle, open
+&star;~⋆~ | star, open
+&bull;~•~ | round bullet, filled [Binary operator]
+&squf;~▪~ | sq bullet, filled
+&utrif;~▴~ | up tri, filled
+&dtrif;~▾~ | dn tri, filled
+&ltrif;~◂~ | l tri, filled [Relation]
+&rtrif;~▸~ | r tri, filled [Relation]
+&clubs;~♣~ | club suit symbol
+&diams;~♦~ | diamond suit symbol
+&hearts;~♡~ | heart suit symbol
+&spades;~♠~ | spades suit symbol
+&malt;~✠~ | maltese cross
+&dagger;~†~ | dagger [Binary operator]
+&Dagger;~‡~ | double dagger [Binary operator]
+&check;~✓~ | tick, check mark
+&cross;~✗~ | ballot cross
+&sharp;~♯~ | musical sharp
+&flat;~♭~ | musical flat
+&male;~♂~ | male symbol
+&female;~♀~ | female symbol
+&phone;~☎~ | telephone symbol
+&telrec;~⌕~ | telephone recorder symbol
+&copysr;~℗~ | sound recording copyright sign
+&caret;~⁁~ | caret (insertion mark)
+&lsquor;~‚~ | rising single quote, left (low)
+&ldquor;~„~ | rising dbl quote, left (low)
+&fflig;~ﬀ~ | small ff ligature
+&filig;~ﬁ~ | small fi ligature
+&fjlig;~�~ | small fj ligature
+&ffilig;~ﬃ~ | small ffi ligature
+&ffllig;~ﬄ~ | small ffl ligature
+&fllig;~ﬂ~ | small fl ligature
+&mldr;~…~ | em leader
+&rdquor;~”~ | rising dbl quote, right (high)
+&rsquor;~’~ | rising single quote, right (high)
+&vellip;~⋮~ | vertical ellipsis
+&hybull;~⁃~ | rectangle, filled (hyphen bullet)
+&loz;~◊~ | - lozenge or total mark
+&lozf;~✦~ | - lozenge, filled
+&ltri;~◃~ | l triangle, open [Binary operator]
+&rtri;~▹~ | r triangle, open [Binary operator]
+&starf;~★~ | - star, filled
+&natur;~♮~ | - music natural
+&rx;~℞~ | pharmaceutical prescription (Rx)
+&sext;~✶~ | sextile (6-pointed star)
+&target;~⌖~ | register mark or target
+&dlcrop;~⌍~ | downward left crop mark
+&drcrop;~⌌~ | downward right crop mark
+&ulcrop;~⌏~ | upward left crop mark
+&urcrop;~⌎~ | upward right crop mark
+&boxh;~─~ | horizontal line
+&boxv;~│~ | vertical line
+&boxur;~└~ | upper right quadrant
+&boxul;~┘~ | upper left quadrant
+&boxdl;~┐~ | lower left quadrant
+&boxdr;~┌~ | lower right quadrant
+&boxvr;~├~ | upper and lower right quadrants
+&boxhu;~┴~ | upper left and right quadrants
+&boxvl;~┤~ | upper and lower left quadrants
+&boxhd;~┬~ | lower left and right quadrants
+&boxvh;~┼~ | all four quadrants
+&boxvR;~╞~ | upper and lower right quadrants
+&boxhU;~╨~ | upper left and right quadrants
+&boxvL;~╡~ | upper and lower left quadrants
+&boxhD;~╥~ | lower left and right quadrants
+&boxvH;~╪~ | all four quadrants
+&boxH;~═~ | horizontal line
+&boxV;~║~ | vertical line
+&boxUR;~╚~ | upper right quadrant
+&boxUL;~╝~ | upper left quadrant
+&boxDL;~╗~ | lower left quadrant
+&boxDR;~╔~ | lower right quadrant
+&boxVR;~╠~ | upper and lower right quadrants
+&boxHU;~╩~ | upper left and right quadrants
+&boxVL;~╣~ | upper and lower left quadrants
+&boxHD;~╦~ | lower left and right quadrants
+&boxVH;~╬~ | all four quadrants
+&boxVr;~╟~ | upper and lower right quadrants
+&boxHu;~╧~ | upper left and right quadrants
+&boxVl;~╢~ | upper and lower left quadrants
+&boxHd;~╤~ | lower left and right quadrants
+&boxVh;~╫~ | all four quadrants
+&boxuR;~╘~ | upper right quadrant
+&boxUl;~╜~ | upper left quadrant
+&boxdL;~╕~ | lower left quadrant
+&boxDr;~╓~ | lower right quadrant
+&boxUr;~╙~ | upper right quadrant
+&boxuL;~╛~ | upper left quadrant
+&boxDl;~╖~ | lower left quadrant
+&boxdR;~╒~ | lower right quadrant
+&aleph;~ℵ~ | aleph, Hebrew
+&and;~∧~ | logical and [Binary operator]
+&ang90;~∟~ | right (90 degree) angle
+&angsph;~∢~ | angle-spherical
+&ap;~≈~ | approximate [Relation]
+&becaus;~∵~ | because [Relation]
+&bottom;~⊥~ | perpendicular [Binary operator]
+&cap;~∩~ | intersection [Binary operator]
+&cong;~≅~ | congruent with [Relation]
+&conint;~∮~ | contour integral operator [Large operator]
+&cup;~∪~ | union or logical sum [Binary operator]
+&equiv;~≡~ | identical with [Relation]
+&exist;~∃~ | at least one exists
+&forall;~∀~ | for all
+&fnof;~ƒ~ | function of (italic small f)
+&ge;~≥~ | greater-than-or-equal [Relation]
+&iff;~⇔~ | if and only if
+&infin;~∞~ | infinity
+&int;~∫~ | integral operator [Large operator]
+&isin;~∈~ | set membership [Relation]
+&lang;~〈~ | left angle bracket [Opening delimiter]
+&lArr;~⇐~ | is implied by [Relation (arrow)]
+&le;~≤~ | less-than-or-equal [Relation]
+&minus;~−~ | minus sign [Binary operator]
+&mnplus;~∓~ | minus-or-plus sign [Binary operator]
+&nabla;~∇~ | del, Hamilton operator
+&ne;~≠~ | not equal [Relation]
+&ni;~∋~ | contains [Relation]
+&or;~∨~ | logical or [Binary operator]
+&par;~∥~ | parallel [Relation]
+&part;~∂~ | partial differential
+&permil;~‰~ | per thousand
+&perp;~⊥~ | perpendicular [Relation]
+&prime;~′~ | prime or minute
+&Prime;~″~ | double prime or second
+&prop;~∝~ | is proportional to [Relation]
+&radic;~√~ | radical
+&rang;~〉~ | right angle bracket [Closing delimiter]
+&rArr;~⇒~ | implies [Relation (arrow)]
+&sim;~∼~ | similar [Relation]
+&sime;~≃~ | similar, equals [Relation]
+&square;~□~ | square [Binary operator]
+&sub;~⊂~ | subset or is implied by [Relation]
+&sube;~⊆~ | subset, equals [Relation]
+&sup;~⊃~ | superset or implies [Relation]
+&supe;~⊇~ | superset, equals [Relation]
+&there4;~∴~ | therefore [Relation]
+&Verbar;~‖~ | dbl vertical bar
+&angst;~Å~ | Angstrom =capital A, ring
+&bernou;~ℬ~ | Bernoulli function (script capital B)
+&compfn;~∘~ | composite function (small circle) [Binary operator]
+&Dot;~¨~ | dieresis or umlaut mark
+&DotDot;~⃜~ | four dots above
+&hamilt;~ℋ~ | Hamiltonian (script capital H)
+&lagran;~ℒ~ | Lagrangian (script capital L)
+&lowast;~∗~ | low asterisk
+&notin;~∉~ | negated set membership [Relation (negated)]
+&order;~ℴ~ | order of (script small o)
+&phmmat;~ℳ~ | physics M-matrix (script capital M)
+&tdot;~⃛~ | three dots above
+&tprime;~‴~ | triple prime
+&wedgeq;~≙~ | corresponds to (wedge, equals) [Relation]
+&alpha;~α~ | small alpha, Greek
+&beta;~β~ | small beta, Greek
+&gamma;~γ~ | small gamma, Greek
+&Gamma;~Γ~ | capital Gamma, Greek
+&gammad;~Ϝ~ | !nbsp;
+&delta;~δ~ | small delta, Greek
+&Delta;~Δ~ | capital Delta, Greek
+&epsi;~ε~ | small epsilon, Greek
+&epsiv;~ɛ~ | !nbsp;
+&epsis;~ε~ | !nbsp;
+&zeta;~ζ~ | small zeta, Greek
+&eta;~η~ | small eta, Greek
+&thetas;~θ~ | straight theta
+&Theta;~Θ~ | capital Theta, Greek
+&thetav;~ϑ~ | - curly or open theta
+&iota;~ι~ | small iota, Greek
+&kappa;~κ~ | small kappa, Greek
+&kappav;~ϰ~ | !nbsp;
+&lambda;~λ~ | small lambda, Greek
+&Lambda;~Λ~ | capital Lambda, Greek
+&mu;~μ~ | small mu, Greek
+&nu;~ν~ | small nu, Greek
+&xi;~ξ~ | small xi, Greek
+&Xi;~Ξ~ | capital Xi, Greek
+&pi;~π~ | small pi, Greek
+&piv;~ϖ~ | !nbsp;
+&Pi;~Π~ | capital Pi, Greek
+&rho;~ρ~ | small rho, Greek
+&rhov;~ϱ~ | !nbsp;
+&sigma;~σ~ | small sigma, Greek
+&Sigma;~Σ~ | capital Sigma, Greek
+&sigmav;~ς~ | !nbsp;
+&tau;~τ~ | small tau, Greek
+&upsi;~υ~ | small upsilon, Greek
+&Upsi;~ϒ~ | capital Upsilon, Greek
+&phis;~φ~ | - straight phi
+&Phi;~Φ~ | capital Phi, Greek
+&phiv;~ϕ~ | - curly or open phi
+&chi;~χ~ | small chi, Greek
+&psi;~ψ~ | small psi, Greek
+&Psi;~Ψ~ | capital Psi, Greek
+&omega;~ω~ | small omega, Greek
+&Omega;~Ω~ | capital Omega, Greek
+&b.alpha;~α~ | small alpha, Greek
+&b.beta;~β~ | small beta, Greek
+&b.gamma;~γ~ | small gamma, Greek
+&b.Gamma;~Γ~ | capital Gamma, Greek
+&b.gammad;~Ϝ~ | !nbsp;
+&b.delta;~δ~ | small delta, Greek
+&b.Delta;~Δ~ | capital Delta, Greek
+&b.epsi;~ε~ | small epsilon, Greek
+&b.epsiv;~ɛ~ | !nbsp;
+&b.epsis;~ε~ | !nbsp;
+&b.zeta;~ζ~ | small zeta, Greek
+&b.eta;~η~ | small eta, Greek
+&b.thetas;~θ~ | straight theta
+&b.Theta;~Θ~ | capital Theta, Greek
+&b.thetav;~ϑ~ | - curly or open theta
+&b.iota;~ι~ | small iota, Greek
+&b.kappa;~κ~ | small kappa, Greek
+&b.kappav;~ϰ~ | !nbsp;
+&b.lambda;~λ~ | small lambda, Greek
+&b.Lambda;~Λ~ | capital Lambda, Greek
+&b.mu;~μ~ | small mu, Greek
+&b.nu;~ν~ | small nu, Greek
+&b.xi;~ξ~ | small xi, Greek
+&b.Xi;~Ξ~ | capital Xi, Greek
+&b.pi;~π~ | small pi, Greek
+&b.Pi;~Π~ | capital Pi, Greek
+&b.piv;~ϖ~ | !nbsp;
+&b.rho;~ρ~ | small rho, Greek
+&b.rhov;~ϱ~ | !nbsp;
+&b.sigma;~σ~ | small sigma, Greek
+&b.Sigma;~Σ~ | capital Sigma, Greek
+&b.sigmav;~ς~ | !nbsp;
+&b.tau;~τ~ | small tau, Greek
+&b.upsi;~υ~ | small upsilon, Greek
+&b.Upsi;~ϒ~ | capital Upsilon, Greek
+&b.phis;~φ~ | - straight phi
+&b.Phi;~Φ~ | capital Phi, Greek
+&b.phiv;~ϕ~ | - curly or open phi
+&b.chi;~χ~ | small chi, Greek
+&b.psi;~ψ~ | small psi, Greek
+&b.Psi;~Ψ~ | capital Psi, Greek
+&b.omega;~ω~ | small omega, Greek
+&b.Omega;~Ω~ | capital Omega, Greek
+&ang;~∠~ | - angle
+&angmsd;~∡~ | - angle-measured
+&beth;~ℶ~ | - beth, Hebrew
+&bprime;~‵~ | - reverse prime
+&comp;~∁~ | - complement sign
+&daleth;~ℸ~ | - daleth, Hebrew
+&ell;~ℓ~ | - cursive small l
+&empty;~∅~ | small o, slash
+&gimel;~ℷ~ | - gimel, Hebrew
+&image;~ℑ~ | - imaginary
+&inodot;~ı~ | small i, no dot
+&jnodot;~�~ | - small j, no dot
+&nexist;~∄~ | - negated exists
+&oS;~Ⓢ~ | - capital S in circle
+&planck;~ħ~ | - Planck's over 2pi
+&real;~ℜ~ | - real
+&sbsol;~﹨~ | - short reverse solidus
+&vprime;~′~ | - prime, variant
+&weierp;~℘~ | - Weierstrass p
+&amalg;~∁~ | amalgamation or coproduct [Binary operator]
+&Barwed;~⊼~ | log and, dbl bar [Binary operator]
+&barwed;~⊼~ | logical and, bar above [Binary operator]
+&Cap;~⋒~ | dbl intersection [Binary operator]
+&Cup;~⋓~ | dbl union [Binary operator]
+&cuvee;~⋎~ | curly logical or [Binary operator]
+&cuwed;~⋏~ | curly logical and [Binary operator]
+&diam;~⋄~ | open diamond [Binary operator]
+&divonx;~⋇~ | division on times [Binary operator]
+&intcal;~⊺~ | intercal [Binary operator]
+&lthree;~⋋~ | !nbsp; [Binary operator]
+&ltimes;~⋉~ | times sign, left closed [Binary operator]
+&minusb;~⊟~ | minus sign in box [Binary operator]
+&oast;~⊛~ | asterisk in circle [Binary operator]
+&ocir;~⊚~ | open dot in circle [Binary operator]
+&odash;~⊝~ | hyphen in circle [Binary operator]
+&odot;~⊙~ | middle dot in circle [Binary operator]
+&ominus;~⊖~ | minus sign in circle [Binary operator]
+&oplus;~⊕~ | plus sign in circle [Binary operator]
+&osol;~⊘~ | solidus in circle [Binary operator]
+&otimes;~⊗~ | multiply sign in circle [Binary operator]
+&plusb;~⊞~ | plus sign in box [Binary operator]
+&plusdo;~∔~ | plus sign, dot above [Binary operator]
+&rthree;~⋌~ | !nbsp; [Binary operator]
+&rtimes;~⋊~ | times sign, right closed [Binary operator]
+&sdot;~⋅~ | small middle dot [Binary operator]
+&sdotb;~⊡~ | small dot in box [Binary operator]
+&setmn;~∖~ | reverse solidus [Binary operator]
+&sqcap;~⊓~ | square intersection [Binary operator]
+&sqcup;~⊔~ | square union [Binary operator]
+&ssetmn;~∖~ | sm reverse solidus [Binary operator]
+&sstarf;~⋆~ | small star, filled [Binary operator]
+&timesb;~⊠~ | multiply sign in box [Binary operator]
+&top;~⊤~ | inverted perpendicular [Binary operator]
+&uplus;~⊎~ | plus sign in union [Binary operator]
+&wreath;~≀~ | wreath product [Binary operator]
+&xcirc;~◯~ | large circle [Binary operator]
+&xdtri;~▽~ | big dn tri, open [Binary operator]
+&xutri;~△~ | big up tri, open [Binary operator]
+&coprod;~∐~ | coproduct operator [Large operator]
+&prod;~∏~ | product operator [Large operator]
+&sum;~∑~ | summation operator [Large operator]
+&ape;~≊~ | approximate, equals [Relation]
+&asymp;~≍~ | asymptotically equal to [Relation]
+&bcong;~≌~ | reverse congruent [Relation]
+&bepsi;~∍~ | such that [Relation]
+&bowtie;~⋈~ | !nbsp; [Relation]
+&bsim;~∽~ | reverse similar [Relation]
+&bsime;~⋍~ | reverse similar, eq [Relation]
+&bump;~≎~ | bumpy equals [Relation]
+&bumpe;~≏~ | bumpy equals, equals [Relation]
+&cire;~≗~ | circle, equals [Relation]
+&colone;~≔~ | colon, equals [Relation]
+&cuepr;~⋞~ | curly eq, precedes [Relation]
+&cuesc;~⋟~ | curly eq, succeeds [Relation]
+&cupre;~≼~ | curly precedes, eq [Relation]
+&dashv;~⊣~ | dash, vertical [Relation]
+&ecir;~≖~ | circle on equals sign [Relation]
+&ecolon;~≕~ | equals, colon [Relation]
+&eDot;~≑~ | eq, even dots [Relation]
+&esdot;~≐~ | equals, single dot above [Relation]
+&efDot;~≒~ | eq, falling dots [Relation]
+&egs;~⋝~ | equal-or-gtr, slanted [Relation]
+&els;~⋜~ | eq-or-less, slanted [Relation]
+&erDot;~≓~ | eq, rising dots [Relation]
+&fork;~⋔~ | pitchfork [Relation]
+&frown;~⌢~ | down curve [Relation]
+&gap;~≳~ | greater, approximate [Relation]
+&gsdot;~⋗~ | greater than, single dot [Relation]
+&gE;~≧~ | greater, double equals [Relation]
+&gel;~⋛~ | greater, equals, less [Relation]
+&gEl;~⋛~ | gt, dbl equals, less [Relation]
+&ges;~≥~ | gt-or-equal, slanted [Relation]
+&Gg;~⋙~ | triple gtr-than [Relation]
+&gl;~≷~ | greater, less [Relation]
+&gsim;~≳~ | greater, similar [Relation]
+&Gt;~≫~ | dbl greater-than sign [Relation]
+&lap;~≲~ | less, approximate [Relation]
+&ldot;~⋖~ | less than, with dot [Relation]
+&lE;~≦~ | less, double equals [Relation]
+&lEg;~⋚~ | less, dbl eq, greater [Relation]
+&leg;~⋚~ | less, eq, greater [Relation]
+&les;~≤~ | less-than-or-eq, slant [Relation]
+&lg;~≶~ | less, greater [Relation]
+&Ll;~⋘~ | triple less-than [Relation]
+&lsim;~≲~ | less, similar [Relation]
+&Lt;~≪~ | double less-than sign [Relation]
+&ltrie;~⊴~ | left triangle, eq [Relation]
+&mid;~∣~ | !nbsp; [Relation]
+&models;~⊧~ | !nbsp; [Relation]
+&pr;~≺~ | precedes [Relation]
+&prap;~≾~ | precedes, approximate [Relation]
+&pre;~≼~ | precedes, equals [Relation]
+&prsim;~≾~ | precedes, similar [Relation]
+&rtrie;~⊵~ | right tri, eq [Relation]
+&samalg;~∐~ | small amalg [Relation]
+&sc;~≻~ | succeeds [Relation]
+&scap;~≿~ | succeeds, approximate [Relation]
+&sccue;~≽~ | succeeds, curly eq [Relation]
+&sce;~≽~ | succeeds, equals [Relation]
+&scsim;~≿~ | succeeds, similar [Relation]
+&sfrown;~⌢~ | small down curve [Relation]
+&smid;~�~ | !nbsp;
+&smile;~⌣~ | up curve [Relation]
+&spar;~∥~ | short parallel [Relation]
+&sqsub;~⊏~ | square subset [Relation]
+&sqsube;~⊑~ | square subset, equals [Relation]
+&sqsup;~⊐~ | square superset [Relation]
+&sqsupe;~⊒~ | square superset, eq [Relation]
+&ssmile;~⌣~ | small up curve [Relation]
+&Sub;~⋐~ | double subset [Relation]
+&subE;~⊆~ | subset, dbl equals [Relation]
+&Sup;~⋑~ | dbl superset [Relation]
+&supE;~⊇~ | superset, dbl equals [Relation]
+&thkap;~≈~ | thick approximate [Relation]
+&thksim;~∼~ | thick similar [Relation]
+&trie;~≜~ | triangle, equals [Relation]
+&twixt;~≬~ | between [Relation]
+&vdash;~⊢~ | vertical, dash [Relation]
+&Vdash;~⊩~ | dbl vertical, dash [Relation]
+&vDash;~⊨~ | vertical, dbl dash [Relation]
+&veebar;~⊻~ | logical or, bar below [Relation]
+&vltri;~⊲~ | l tri, open, var [Relation]
+&vprop;~∝~ | proportional, variant [Relation]
+&vrtri;~⊳~ | r tri, open, var [Relation]
+&Vvdash;~⊪~ | triple vertical, dash [Relation]
+&gnap;~�~ | greater, not approximate
+&gne;~≩~ | greater, not equals [Relation (negated)]
+&gnE;~≩~ | greater, not dbl equals [Relation (negated)]
+&gnsim;~⋧~ | greater, not similar [Relation (negated)]
+&gvnE;~≩~ | gt, vert, not dbl eq [Relation (negated)]
+&lnap;~�~ | less, not approximate
+&lnE;~≨~ | less, not double equals [Relation (negated)]
+&lne;~≨~ | less, not equals [Relation (negated)]
+&lnsim;~⋦~ | less, not similar [Relation (negated)]
+&lvnE;~≨~ | less, vert, not dbl eq [Relation (negated)]
+&nap;~≉~ | not approximate [Relation (negated)]
+&ncong;~≇~ | not congruent with [Relation (negated)]
+&nequiv;~≢~ | not identical with [Relation (negated)]
+&ngE;~≱~ | not greater, dbl equals [Relation (negated)]
+&nge;~≱~ | not greater-than-or-equal [Relation (negated)]
+&nges;~≱~ | not gt-or-eq, slanted [Relation (negated)]
+&ngt;~≯~ | not greater-than [Relation (negated)]
+&nle;~≰~ | not less-than-or-equal [Relation (negated)]
+&nlE;~≰~ | not less, dbl equals [Relation (negated)]
+&nles;~≰~ | not less-or-eq, slant [Relation (negated)]
+&nlt;~≮~ | not less-than [Relation (negated)]
+&nltri;~⋪~ | not left triangle [Relation (negated)]
+&nltrie;~⋬~ | not l tri, eq [Relation (negated)]
+&nmid;~∤~ | !nbsp;
+&npar;~∦~ | not parallel [Relation (negated)]
+&npr;~⊀~ | not precedes [Relation (negated)]
+&npre;~⋠~ | not precedes, equals [Relation (negated)]
+&nrtri;~⋫~ | not rt triangle [Relation (negated)]
+&nrtrie;~⋭~ | not r tri, eq [Relation (negated)]
+&nsc;~⊁~ | not succeeds [Relation (negated)]
+&nsce;~⋡~ | not succeeds, equals [Relation (negated)]
+&nsim;~≁~ | not similar [Relation (negated)]
+&nsime;~≄~ | not similar, equals [Relation (negated)]
+&nsmid;~�~ | !nbsp;
+&nspar;~∦~ | not short par [Relation (negated)]
+&nsub;~⊄~ | not subset [Relation (negated)]
+&nsube;~⊈~ | not subset, equals [Relation (negated)]
+&nsubE;~⊈~ | not subset, dbl eq [Relation (negated)]
+&nsup;~⊅~ | not superset [Relation (negated)]
+&nsupE;~⊉~ | not superset, dbl eq [Relation (negated)]
+&nsupe;~⊉~ | not superset, equals [Relation (negated)]
+&nvdash;~⊬~ | not vertical, dash [Relation (negated)]
+&nvDash;~⊭~ | not vertical, dbl dash [Relation (negated)]
+&nVDash;~⊯~ | not dbl vert, dbl dash [Relation (negated)]
+&nVdash;~⊮~ | not dbl vertical, dash [Relation (negated)]
+&prnap;~⋨~ | precedes, not approx [Relation (negated)]
+&prnE;~�~ | precedes, not dbl eq
+&prnsim;~⋨~ | precedes, not similar [Relation (negated)]
+&scnap;~⋩~ | succeeds, not approx [Relation (negated)]
+&scnE;~�~ | succeeds, not dbl eq
+&scnsim;~⋩~ | succeeds, not similar [Relation (negated)]
+&subne;~⊊~ | subset, not equals [Relation (negated)]
+&subnE;~⊊~ | subset, not dbl eq [Relation (negated)]
+&supne;~⊋~ | superset, not equals [Relation (negated)]
+&supnE;~⊋~ | superset, not dbl eq [Relation (negated)]
+&vsubnE;~�~ | subset not dbl eq, var
+&vsubne;~⊊~ | subset, not eq, var [Relation (negated)]
+&vsupne;~⊋~ | superset, not eq, var [Relation (negated)]
+&vsupnE;~⊋~ | super not dbl eq, var [Relation (negated)]
+&cularr;~↶~ | left curved arrow [Relation (arrow)]
+&curarr;~↷~ | rt curved arrow [Relation (arrow)]
+&dArr;~⇓~ | down dbl arrow [Relation (arrow)]
+&darr2;~⇊~ | two down arrows [Relation (arrow)]
+&dharl;~⇃~ | dn harpoon-left [Relation (arrow)]
+&dharr;~⇂~ | down harpoon-rt [Relation (arrow)]
+&lAarr;~⇚~ | left triple arrow [Relation (arrow)]
+&Larr;~↞~ | !nbsp; [Relation (arrow)]
+&larr2;~⇇~ | two left arrows [Relation (arrow)]
+&larrhk;~↩~ | left arrow-hooked [Relation (arrow)]
+&larrlp;~↫~ | left arrow-looped [Relation (arrow)]
+&larrtl;~↢~ | left arrow-tailed [Relation (arrow)]
+&lhard;~↽~ | l harpoon-down [Relation (arrow)]
+&lharu;~↼~ | left harpoon-up [Relation (arrow)]
+&hArr;~⇔~ | l!amp;r dbl arrow [Relation (arrow)]
+&harr;~↔~ | l!amp;r arrow [Relation (arrow)]
+&lrarr2;~⇆~ | l arr over r arr [Relation (arrow)]
+&rlarr2;~⇄~ | r arr over l arr [Relation (arrow)]
+&harrw;~↭~ | l!amp;r arr-wavy [Relation (arrow)]
+&rlhar2;~⇌~ | r harp over l [Relation (arrow)]
+&lrhar2;~⇋~ | l harp over r [Relation (arrow)]
+&lsh;~↰~ | !nbsp; [Relation (arrow)]
+&map;~↦~ | !nbsp; [Relation (arrow)]
+&mumap;~⊸~ | !nbsp; [Relation (arrow)]
+&nearr;~↗~ | NE pointing arrow [Relation (arrow)]
+&nlArr;~⇍~ | not implied by [Relation (arrow)]
+&nlarr;~↚~ | not left arrow [Relation (arrow)]
+&nhArr;~⇎~ | not l!amp;r dbl arr [Relation (arrow)]
+&nharr;~↮~ | not l!amp;r arrow [Relation (arrow)]
+&nrarr;~↛~ | not right arrow [Relation (arrow)]
+&nrArr;~⇏~ | not implies [Relation (arrow)]
+&nwarr;~↖~ | NW pointing arrow [Relation (arrow)]
+&olarr;~↺~ | l arr in circle [Relation (arrow)]
+&orarr;~↻~ | r arr in circle [Relation (arrow)]
+&rAarr;~⇛~ | right triple arrow [Relation (arrow)]
+&Rarr;~↠~ | !nbsp; [Relation (arrow)]
+&rarr2;~⇉~ | two rt arrows [Relation (arrow)]
+&rarrhk;~↪~ | rt arrow-hooked [Relation (arrow)]
+&rarrlp;~↬~ | rt arrow-looped [Relation (arrow)]
+&rarrtl;~↣~ | rt arrow-tailed [Relation (arrow)]
+&rarrw;~⇝~ | rt arrow-wavy [Relation (arrow)]
+&rhard;~⇁~ | rt harpoon-down [Relation (arrow)]
+&rharu;~⇀~ | rt harpoon-up [Relation (arrow)]
+&rsh;~↱~ | !nbsp; [Relation (arrow)]
+&drarr;~↘~ | downward rt arrow [Relation (arrow)]
+&dlarr;~↙~ | downward l arrow [Relation (arrow)]
+&uArr;~⇑~ | up dbl arrow [Relation (arrow)]
+&uarr2;~⇈~ | two up arrows [Relation (arrow)]
+&vArr;~⇕~ | up!amp;down dbl arrow [Relation (arrow)]
+&varr;~↕~ | up!amp;down arrow [Relation (arrow)]
+&uharl;~↿~ | up harpoon-left [Relation (arrow)]
+&uharr;~↾~ | up harp-r [Relation (arrow)]
+&xlArr;~⇐~ | long l dbl arrow [Relation (arrow)]
+&xhArr;~↔~ | long l!amp;r dbl arr [Relation (arrow)]
+&xharr;~↔~ | long l!amp;r arr [Relation (arrow)]
+&xrArr;~⇒~ | long rt dbl arr [Relation (arrow)]
+&rceil;~⌉~ | right ceiling [Closing delimiter]
+&rfloor;~⌋~ | right floor [Closing delimiter]
+&rpargt;~�~ | right paren, gt
+&urcorn;~⌝~ | upper right corner [Closing delimiter]
+&drcorn;~⌟~ | downward right corner [Closing delimiter]
+&lceil;~⌈~ | left ceiling [Opening delimiter]
+&lfloor;~⌊~ | left floor [Opening delimiter]
+&lpargt;~�~ | left parenthesis, gt
+&ulcorn;~⌜~ | upper left corner [Opening delimiter]
+&dlcorn;~⌞~ | downward left corner [Opening delimiter]

@@ -1,0 +1,356 @@
+| Non-emphasis tags to the program's codes
+| This should be run last, after character and apostrophe treatment.
+| 1;1 1995-2-7 JES - adapted from admtxt.sbt 1;3 1993-5-28/31
+|     1995-2-22 JES - accept dollar processing codes
+|     1995-3-10 JES - change = to ~ for "rest is arbitrary"
+| 1;2 1995-4-28 JES - eliminate remaining spaces around tags
+|     1995-5-23 JES - upd comment [vers#] only
+| 2;1 1995-9-29 JES - changes for import into templates with LINEAR styles
+| 2;2 1995-12-28 JES - specifically treat h1-h6, not any h...;
+|     include HTML "title" so not misprocessed as ti, & other HTML;
+|     rename ipp to ref.pg.no
+|     1995-12-29 JES - (temporarily?) issue hl1 i.s.o. hl code for list items
+| 2;3 1996-6-4 PJS: change to use |258 as line ending (new scrub convention)
+| 2;4 1998-9-23 JES: foll'g chg in sgmspc.sbt, use |010 i.s.o. |258 for eol;
+|     make some exceptions to general space deletion around tags (a, code)
+| 2;5 2000-4-11 JES: add <acronym> to codes keeping some surrounding spaces
+| 2;6 2000-5-26 JES: (per input from PS & DH): add line to handle processing
+|     instruction preceded by space, which was being missed
+| 2;7 2003-4-11 JES: change <it>, <b> and <other> treatment to use [fts~...]
+|     (were formerly turned into underscore treatment in prior ewoc step)
+|     2003-4-23 JES: like daitxx 1;3 2003-4-22, include only
+|     "pro tem" exceptions to UTF-8 to DUSCI conversion
+| 2;8 2003-9-9 JES: fix comments that were being treated as element names;
+|     remove "meta" tags
+| 2;9 2006-5-25 PJS: Improved handling of embedded script, style defs,
+|     font defs, <div> tags, link tags.
+|     2006-11-30 MPG: Added mapping of bc-ns to support bc: codes
+|     from XML imports
+|     2007-3-2 MPG: Add mapping for above when preceded by space
+| 2007-3-6 MPG: Convert _ to ~ in state 9 since libxslt can't write a ~
+|     2007-9-7 MPG: Add special codes for href links
+| 2007-9-11 MPG: Convert <bc:tab/> to [>] code
+| 2007-12-28 MPG: Remove <![if]> and <![endif]>, and convert &quot;
+| 2;10 2009-9-4 PJS: Update handling of Registered, Copyright, and Trade
+|      Mark symbols
+| 2;11 2010-12-17/jes: Add certain inline tags whose names are to be preserved
+|      and where any surrounding spaces are also to be preserved (see dated entries)
+| 3;1  2010-12-20/jes: Allow for the possibility that "native" the program commands in TXX
+|      form, including [es~...] and [ee~...] as well as [<] and [>] commands, may
+|      already be present in the input, and if so should be copied through
+|      without interpretation.  (Earlier xmlproc may do this in the program as of date.)
+| 3;2  2011-05-11/jes: Add special treatment for "welsh" style similar to that for
+|      french, spanish etc. (see updates 2010-12-17)
+| 3;3  2013-04-21/jes: Cease mapping en- and em-dash to double hyphen (--)
+|      (leave as UTF-8 for later mapping, e.g. in unimap.txt)
+| 3;4  2014-08-21/pjs: added cleanup of xmlns:bc and xmlns:bcml in state 9
+| 3;5  2015-01-21/jes: remove "pro tem" mapping of specific opening/closing
+|      single and double quote marks to ` and " respectively, as these are
+|      now being handled by separate, later logic and ` in particular is
+|      problematic when an apostrophe, as in the word "don't", has been
+|      imported as U+2019 (right single quote)
+| ---
+| states: 1 = normal text
+|   2 = inside inkprint page (<ipp no=...>) tag
+|   3 = inside general (or unrecognized) begin-tag
+|   4 = inside general (or unrecognized) end-tag
+|   5 = inside processing code
+|   6 = inside general begin-tag for linear style
+|   7 = inside general end-tag for linear style
+|   8 = like 4, but where foll'g space IS to be kept
+|   9 = inside <bc:.../>
+|  10 = inside |028 ... |031 (native txx) the program command (added 2010-12-20)
+|   -1 = in <!-- ... --> (ignored comment)
+|   -2 = in < ... > (certain ignored tags)
+|   -3 = inside processing code to be discarded
+|   -4 = in comment to be ignored, but with pending space
+| ---
+| SGML comments:
+<!--~~1~-1~ | beginning of comment to be ignored
+ <!--~~1~-4~ | beginning of comment to be ignored, with pending space
+<~~-1~ | don't treat mentions of tags when in state -1; discard & proceed
+>~~-1~
+<~~-4~ | same in state -4
+>~~-4~
+-->~~-1~1~ | end of comment with no pending space
+--> ~ ~-4~1~ | end of comment - ensure at least 1 space, but not 2
+-->~ ~-4~1~ | end of comment - ensure at least 1 space
+ <!doctype>~~1~ | doctype can be discarded
+<!doctype>~~1~
+| MS Office directives
+<![if>~~1~
+<![endif]>~~1~
+| Processing codes for the program
+ <?$~ ~1~5~
+<?$~~1~5~
+ <bc-ns><tab/~>~1~9~
+ <bc-ns><~~1~9~
+<bc-ns><tab/~>~1~9~
+<bc-ns><~~1~9~
+`>~~5~1~
+`?>~~5~1~ | required XML form
+| Remove unwanted/vestigial xmlns attributes; likely added by combineruns
+ xmlns:bc="https://blindcraft.dev/braillecraft"~~~9~9~
+ xmlns:bc='https://blindcraft.dev/braillecraft'~~~9~9~
+ xmlns:bcml="https://blindcraft.dev/braillecraft/ml"~~~9~9~
+ xmlns:bcml='https://blindcraft.dev/braillecraft/ml'~~~9~9~
+_~|~~9~9~
+/>~~9~1~ | required XML form
+>~~9~1~
+| Processing codes & meta tags to be discarded
+ <?~~1~-3~
+<?~~1~-3~
+?>~~-3~1~ | required XML form
+>~~-3~1~ | allowed SGML form?
+ <meta~~1~-3~
+<meta~~1~-3~
+| Tags treated generally (most standard ICADD-22 & also unrecognized):
+| Begin tags
+<~es|~~1~3~
+ <~es|~~1~3~ | del any space before a begin-tag
+<ipp~es|~ref.pg.no~1~3~ | an ICADD code to be renamed
+ <ipp~es|~ref.pg.no~1~3~
+<listing~es|~listing~1~3~ | an HTML code longer than "list"
+ <listing~es|~listing~1~3~
+<a ~es|~a~1~3~ | an HTML code where preceding space s/b preserved
+ <a ~ es|~a~1~3~
+<a>~es|~a~1~
+ <a>~ es|~a~1~
+<a> ~es|~a~1~
+ <a> ~ es|~a~1~
+<acronym ~es|~acronym~1~3~ | an HTML code where preceding space s/b preserved
+ <acronym ~ es|~acronym~1~3~
+<acronym>~es|~acronym~1~
+ <acronym>~ es|~acronym~1~
+<acronym> ~es|~acronym~1~
+ <acronym> ~ es|~acronym~1~
+<code~es|~compinline~1~3~ | an HTML code t/b changed & preceding space kept
+ <code~ es|~compinline~1~3~
+> ~~3~1~ | del any space after a begin-tag
+>~~3~1~
+ ~-~3~ | turn spaces (bfr "variables" into hyphens)
+| End tags
+</~ee|~~1~4~
+ </~ee|~~1~4~ | del any space before an end-tag
+</ipp~ee|~ref.pg.no~1~4~
+ </ipp~ee|~ref.pg.no~1~4~
+</listing~ee|~listing~1~4~
+ </listing~ee|~listing~1~4~
+</a ~ee|~a~1~8~ | an HTML code where foll'g space s/b preserved
+ </a ~ ee|~a~1~8~
+</a>~ee|~a~1~
+ </a>~ee|~a~1~
+</a> ~ee|~a ~1~
+ </a> ~ee|~a ~1~
+</acronym ~ee|~acronym~1~8~ | an HTML code where foll'g space s/b preserved
+ </acronym ~ ee|~acronym~1~8~
+</acronym>~ee|~acronym~1~
+ </acronym>~ee|~acronym~1~
+</acronym> ~ee|~acronym ~1~
+ </acronym> ~ee|~acronym ~1~
+</code~ee|~compinline~1~8~ | an HTML code t/b changed & foll'g space kept
+ </code~ee|~compinline~1~8~
+> ~~4~1~ | usually, del any space after an end-tag
+>~~4~1~
+ ~-~4~ | turn spaces (bfr "variables" into hyphens)
+> ~ ~8~1~ | but keep any space after these end-tags
+>~~8~1~
+ ~-~8~ | turn spaces (bfr "variables" into hyphens)
+| Inline tags whose names are preserved as usual and where any surrounding spaces
+|   are also to be preserved
+ <braille>~ es|~braille~1~ | 2010-12-17  
+ <comp>~ es|~comp~1~ | 2010-12-17  
+ <computer>~ es|~computer~1~ | 2010-12-17  
+ <email>~ es|~email~1~ | 2010-12-17  
+ <english>~ es|~english~1~ | 2010-12-17  
+ <flother>~ es|~flother~1~ | 2010-12-17  
+ <french>~ es|~french~1~ | 2010-12-17  
+ <german>~ es|~german~1~ | 2010-12-17  
+ <grade1>~ es|~grade1~1~ | 2010-12-17  
+ <i>~ es|~i~1~ | 2010-12-17  
+ <print-page>~ es|~print-page~1~ | 2010-12-17  
+ <spanish>~ es|~spanish~1~ | 2010-12-17  
+ <sub>~ es|~sub~1~ | 2010-12-17  
+ <sup>~ es|~sup~1~ | 2010-12-17  
+ <web>~ es|~web~1~ | 2010-12-17  
+ <welsh>~ es|~welsh~1~ | 2011-05-11  
+</braille> ~ee|~braille ~1~ | 2010-12-17  
+</comp> ~ee|~comp ~1~ | 2010-12-17  
+</computer> ~ee|~computer ~1~ | 2010-12-17  
+</email> ~ee|~email ~1~ | 2010-12-17  
+</english> ~ee|~english ~1~ | 2010-12-17  
+</flother> ~ee|~flother ~1~ | 2010-12-17  
+</french> ~ee|~french ~1~ | 2010-12-17  
+</german> ~ee|~german ~1~ | 2010-12-17  
+</grade1> ~ee|~grade1 ~1~ | 2010-12-17  
+</i> ~ee|~i ~1~ | 2010-12-17  
+</print-page> ~ee|~print-page ~1~ | 2010-12-17  
+</spanish> ~ee|~spanish ~1~ | 2010-12-17  
+</sub> ~ee|~sub ~1~ | 2010-12-17  
+</sup> ~ee|~sup ~1~ | 2010-12-17  
+</web> ~ee|~web ~1~ | 2010-12-17  
+</welsh> ~ee|~welsh ~1~ | 2011-05-11  
+| Specific ICADD tags to be processed as linear styles
+| Begin tags
+<au~es|~tp.author~1~6~
+ <au~es|~tp.author~1~6~
+<fn~es|~note~1~6~
+ <fn~es|~note~1~6~
+<h1~es|~h1~1~6~
+ <h1~es|~h1~1~6~
+<h2~es|~h2~1~6~
+ <h2~es|~h2~1~6~
+<h3~es|~h3~1~6~
+ <h3~es|~h3~1~6~
+<h4~es|~h4~1~6~
+ <h4~es|~h4~1~6~
+<h5~es|~h5~1~6~
+ <h5~es|~h5~1~6~
+<h6~es|~h6~1~6~
+ <h6~es|~h6~1~6~
+<list~es|~list~1~6~
+ <list~es|~list~1~6~
+<note~es|~note~1~6~
+ <note~es|~note~1~6~
+<para~es|~para~1~6~
+ <para~es|~para~1~6~
+<ti~es|~tp.title~1~6~
+ <ti~es|~tp.title~1~6~
+| Specific HTML tags longer than ICADD ones, or to be recognized anyway
+<title~es|~tp.title~1~6~
+ <title~es|~tp.title~1~6~
+<ul~es|~list~1~6~
+ <ul~es|~list~1~6~
+> ~.~6~1~ | del any space after a begin-tag
+>~.~6~1~
+ ~-~6~ | turn spaces (bfr "variables" into hyphens)
+| End tags
+</au~ee|~tp.author~1~7~
+ </au~ee|~tp.author~1~7~
+</fn~ee|~note~1~7~
+ </fn~ee|~note~1~7~
+</h1~ee|~h1~1~7~
+ </h1~ee|~h1~1~7~
+</h2~ee|~h2~1~7~
+ </h2~ee|~h2~1~7~
+</h3~ee|~h3~1~7~
+ </h3~ee|~h3~1~7~
+</h4~ee|~h4~1~7~
+ </h4~ee|~h4~1~7~
+</h5~ee|~h5~1~7~
+ </h5~ee|~h5~1~7~
+</h6~ee|~h6~1~7~
+ </h6~ee|~h6~1~7~
+</list~ee|~list~1~7~
+ </list~ee|~list~1~7~
+</note~ee|~note~1~7~
+ </note~ee|~note~1~7~
+</para~ee|~para~1~7~
+ </para~ee|~para~1~7~
+</ti~ee|~tp.title~1~7~
+ </ti~ee|~tp.title~1~7~
+</title~ee|~tp.title~1~7~
+ </title~ee|~tp.title~1~7~
+</ul~ee|~list~1~7~
+ </ul~ee|~list~1~7~
+> ~.~7~1~ | del any space after an end-tag
+>~.~7~1~
+ ~-~7~ | turn spaces (bfr "variables" into hyphens)
+| Specific ICADD tags to be ignored
+<anchor~~1~-2~ | ignore <anchor id=...
+ <anchor~~1~-2~ | ignore <anchor id=...
+<xref~~1~-2~ | ignore <xref idref=...
+ <xref~~1~-2~ | ignore <xref idref=...
+<font~~1~-2~ | ignore <font ...
+ <font~~1~-2~ | ignore <font ...
+<link~~1~-2~ | ignore <link rel=...
+ <link~~1~-2~ | ignore <link rel=...
+<div~~1~-2~ | ignore <div ...
+ <div~~1~-2~ | ignore <div ...
+</div>~ ~1~1~ | space at </div>
+ </div>~ ~1~1~ | space at </div>
+</div> ~ ~1~1~ | space at </div>
+>~~-2~1~ | end of state 2 (variable tag ignored)
+<style~~1~-4~ | ignore <style type=...
+ <style~~1~-4~ | ignore <style type=...
+</style>~~-4~1~ | end of state -4 (style definition ignored)
+<script~~1~-5~ | ignore <script language=...
+ <script~~1~-5~ | ignore <script language=...
+</script>~~-5~1~ | end of state -4 (script ignored)
+| Processing of specific ICADD-22 tags (not to be treated generally)
+| au author - linear
+<b>~fts|~b~1~
+ <b>~ fts|~b~1~
+</b>~fte|~b~1~
+ </b>~fte|~b ~1~
+| book - general (no actual style necessarily defined)
+| box - general
+| bq block quote - general (may not be defined)
+| fig figure description - general (may not be defined)
+| fn footnote - linear
+| hN (n = 1 ... 6) - linear
+<ipp no=~ es|~ref.pg.no~1~2~ | for ipp "variable" type
+ <ipp no=~ es|~ref.pg.no~1~2~
+>~ee|~ref.pg.no~2~1~ | end of ipp tag
+> ~ee|~ref.pg.no~2~1~
+| <ipp> x </ipp> type - general (but renamed -- see above)
+<it>~fts|~i~1~
+ <it>~ fts|~i~1~
+</it>~fte|~i~1~
+ </it>~fte|~i ~1~
+| lang "language" - general (but will have to change to specific language)
+| lhead list header - general
+| list - linear
+<litem>~hl1~1~
+ <litem>~hl1~1~
+</litem>~l~1~
+ </litem>~l~1~
+<litem> ~hl1~1~
+ <litem> ~hl1~1~
+</litem> ~l~1~
+ </litem> ~l~1~
+<li>~hl1~1~ | HTML equivalent
+ <li>~hl1~1~
+</li>~l~1~
+ </li>~l~1~
+<li> ~hl1~1~
+ <li> ~hl1~1~
+</li> ~l~1~
+ </li> ~l~1~
+| lit literal - general (but will have to specifically examine for meaning)
+| note - linear
+<other>~fts|~u~1~
+ <other>~ fts|~u~1~
+</other>~fte|~u~1~
+ </other>~fte|~u ~1~
+<bc:url>~|016~1~1~
+</bc:url>~~1~
+<bc:linkedtext>~|016~1~1~
+</bc:linkedtext>~|016~1~1~
+| para - linear
+| pp print page reference - general (but may need to fill in)
+| term - general
+| ti title - linear
+| following to preserve hard returns (presumably within lit tags)
+|010~<~
+| remaining are all any-state rules:
+| "Pro tem" exceptions to general UTF-8 to DUSCI conversion in ut8dus:
+| pro tem, map specific opening/closing single quotes to `
+| ‘~|236|072~ | left single quote 
+| ‘~`~ | rule removed 2015-01-21
+| ’~|236|073~ | right single quote
+| ’~`~ | rule removed 2015-01-21
+| pro tem, map specific opening/closing double quotes to "
+| “~|236|076~ | left double quote
+| “~"~ | rule removed 2015-01-21
+| ”~|236|077~ | right double quote
+| ”~"~ | rule removed 2015-01-21
+| Conversion of three canonical entrefs:
+&amp;~&~
+&gt;~>~
+&lt;~<~
+&quot;~"~
+| Sensing beginning of native txx command (in any state):
+|028~|028~~10~(~ | to state 10 & push current state
+| state 10 - copy all, reverting to prior state after |031:
+|031~|031~10~~)~

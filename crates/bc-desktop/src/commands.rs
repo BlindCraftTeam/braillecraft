@@ -1087,11 +1087,62 @@ fn read_import(bytes: &[u8], choice: &ImportChoice) -> Option<Shown> {
             }
             Some(Shown::from_running(&bc_core::internal::decode(&imported.text)))
         }
+        // A Word document goes through the Word recipe with the Global Word Importer and Import Options settings and
+        // the style map the chosen template names.
+        FileKind::Docx => {
+            let files = match translation::import_files() {
+                Ok(f) => f,
+                Err(e) => {
+                    message(&e);
+                    return None;
+                }
+            };
+            let template = choice.template.clone().unwrap_or_else(translation::default_template);
+            let map = translation::word_map_of_template(&template);
+            let recipe = Recipe::Docx(word_options(), map, settings_store::load_unknown_characters());
+            let imported = bc_core::import_chain::run(bytes, &recipe, &files);
+            if !imported.errors.is_empty() {
+                message(&imported.errors.join("\n"));
+            }
+            Some(Shown::from_running(&bc_core::internal::decode(&imported.text)))
+        }
         _ => {
             message(&format!("BrailleCraft cannot import {kind_name} files yet."));
             None
         }
     }
+}
+
+/// The Word importer's settings from the Global Word Importer (1036) and Import Options (1037) dialogs as they were
+/// last kept, the original's defaults where a dialog was never confirmed.
+fn word_options() -> bc_core::word::Options {
+    use crate::dlg::Value;
+    let mut o = bc_core::word::Options::default();
+    let (w, i) = app::with(|a| (a.memory.get(1036, "").cloned(), a.memory.get(1037, "").cloned()));
+    let flag = |v: &Option<Vec<(i32, Value)>>, id: i32, d: bool| match v.as_ref().and_then(|v| v.iter().find(|(c, _)| *c == id)) {
+        Some((_, Value::Flag(f))) => *f,
+        _ => d,
+    };
+    let choice = |v: &Option<Vec<(i32, Value)>>, id: i32, d: u32| match v.as_ref().and_then(|v| v.iter().find(|(c, _)| *c == id)) {
+        Some((_, Value::Choice(Some(n)))) => *n,
+        _ => d,
+    };
+    o.cbc = flag(&w, 6, o.cbc);
+    o.hard_pages = flag(&w, 7, o.hard_pages);
+    o.skipped_lines = flag(&w, 8, o.skipped_lines);
+    o.print_pages = bc_core::word::PrintPages::from_choice(choice(&w, 10, 0) as usize);
+    o.braille_fonts = flag(&w, 11, o.braille_fonts);
+    o.codes = flag(&w, 12, o.codes);
+    o.ignore_bold = flag(&w, 14, o.ignore_bold);
+    o.ignore_italics = flag(&w, 15, o.ignore_italics);
+    o.ignore_underline = flag(&w, 16, o.ignore_underline);
+    o.ignore_lang = flag(&w, 17, o.ignore_lang);
+    o.hyperlinks = choice(&i, 7, o.hyperlinks as u32).min(3) as u8;
+    o.remove_duplicates = flag(&i, 8, o.remove_duplicates);
+    o.auto_tag_cbc = flag(&i, 19, o.auto_tag_cbc);
+    o.add_spaces = flag(&i, 20, o.add_spaces);
+    o.remove_dash_spaces = flag(&i, 21, o.remove_dash_spaces);
+    o
 }
 
 /// The file's braille characters in North American braille ASCII, as the formatted braille import's first step reads

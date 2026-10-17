@@ -120,6 +120,20 @@ impl bc_core::import_chain::Files for ImportFiles {
             .map(|n| std::fs::read(self.0.join("unimap").join(n)).map(|b| (n.to_string(), b)).map_err(|e| format!("{n}: {e}")))
             .collect()
     }
+    fn word_map(&self, name: &str) -> Result<String, String> {
+        std::fs::read(self.0.join("word-styles").join(format!("{name}.map"))).map(|b| String::from_utf8_lossy(&b).into_owned()).map_err(|e| format!("{name}.map: {e}"))
+    }
+}
+
+/// The Word style map a template names: its "word:mws" pseudo-style's text, as a program data file name.
+pub fn word_map_of_template(name: &str) -> String {
+    let text = TEMPLATES.with(|t| {
+        let t = t.borrow();
+        let t = t.as_ref()?;
+        t.text(t.by_name(name)?).ok()
+    });
+    let named = text.and_then(|t| templates::styles(&t).lookup(b"word:mws", 0)).map(|b| String::from_utf8_lossy(&b).into_owned()).unwrap_or_default();
+    bc_core::word::map_file_name(&named)
 }
 
 /// Reads the table index and the list of table sets by language from `folder`; translation reports an error until

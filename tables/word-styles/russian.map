@@ -1,0 +1,454 @@
+# Stylesheet mappings for Microsoft Word
+
+BuiltIn "Body Text"
+{
+  MappedName = "para."
+}
+
+BuiltIn "Footer"
+{
+  MappedName = "para."
+}
+
+BuiltIn "Header"
+{
+  MappedName = "para."
+}
+
+BuiltIn "Heading 1"
+{
+  MappedName = "h3."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+BuiltIn "Heading 2"
+{
+  MappedName = "h4."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Heading 3"
+{
+  MappedName = "h5."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Heading 4"
+{
+  MappedName = "h6."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Heading 5"
+{
+  MappedName = "h7."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Heading 6"
+{
+  MappedName = "h8."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Heading 7"
+{
+  MappedName = "h9."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Heading 8"
+{
+  MappedName = "h10."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Heading 9"
+{
+  MappedName = "h10."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Index Heading"
+{
+  MappedName = "h2."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Index 1"
+{
+  MappedName = "outline."
+  Level      = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Index 2"
+{
+  MappedName = "outline."
+  Level      = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Index 3"
+{
+  MappedName = "outline."
+  Level      = 3
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Index 4"
+{
+  MappedName = "outline."
+  Level      = 4
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Index 5"
+{
+  MappedName = "outline."
+  Level      = 5
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Index 6"
+{
+  MappedName = "outline."
+  Level      = 6
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Index 7"
+{
+  MappedName = "outline."
+  Level      = 7
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Index 8"
+{
+  MappedName = "outline."
+  Level      = 8
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Index 9"
+{
+  MappedName = "outline."
+  Level      = 9
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "List"
+{
+  MappedName = "rlist."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "List 2"
+{
+  MappedName = "rlist."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "List 3"
+{
+  MappedName = "rlist."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "List 4"
+{
+  MappedName = "rlist."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "List 5"
+{
+  MappedName = "rlist."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "List Bullet"
+{
+  MappedName = "rlist."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "List Bullet 2"
+{
+  MappedName = "rlist."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "List Bullet 3"
+{
+  MappedName = "rlist."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "List Bullet 4"
+{
+  MappedName = "rlist."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "List Bullet 5"
+{
+  MappedName = "rlist."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "List Number"
+{
+  MappedName = "rlist."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "List Number 2"
+{
+  MappedName = "rlist."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "List Number 3"
+{
+  MappedName = "rlist."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "List Number 4"
+{
+  MappedName = "rlist."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "List Number 5"
+{
+  MappedName = "rlist."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "List Paragraph"
+{
+  MappedName = "rlist."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  AggregationStyle = MultiLevel
+}
+
+BuiltIn "Normal"
+{
+  MappedName = "para."
+}
+
+BuiltIn "Normal (Web)"
+{
+  MappedName = "para."
+}
+
+BuiltIn "Normal Indent"
+{
+  MappedName = "para."
+}
+
+BuiltIn "TOC 1"
+{
+  MappedName = "list."
+  Level      = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "TOC 2"
+{
+  MappedName = "list."
+  Level      = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "TOC 3"
+{
+  MappedName = "list."
+  Level      = 3
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "TOC 4"
+{
+  MappedName = "list."
+  Level      = 4
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "TOC 5"
+{
+  MappedName = "list."
+  Level      = 5
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "TOC 6"
+{
+  MappedName = "list."
+  Level      = 6
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "TOC 7"
+{
+  MappedName = "list."
+  Level      = 7
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "TOC 8"
+{
+  MappedName = "list."
+  Level      = 8
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "TOC 9"
+{
+  MappedName = "list."
+  Level      = 9
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Title"
+{
+  MappedName = "h1."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Subtitle"
+{
+  MappedName = "h2."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Default Paragraph Font"
+{
+  MappedName = "none"
+}
+
+BuiltIn "Hyperlink"
+{
+  IgnoreEmphases=InDef
+  DisableInToc = Yes
+}
+
+BuiltIn "Footnote Reference"
+{
+  IgnoreSuperscript = Yes
+}
+
+BuiltIn "Footnote Text"
+{
+  MappedName = "note."
+}
+
+BuiltIn "Endnote Text"
+{
+  MappedName = "note."
+}
+
+BuiltIn "Caption"
+{
+  MappedName = "caption."
+}
+
+AltText
+{
+  MappedName = "note."
+}
+
+User "French"
+{
+  MappedName = "french"
+}
+
+User "German"
+{
+  MappedName = "german"
+}
+
+User "Italian"
+{
+  MappedName = "italian"
+}
+
+User "Latin"
+{
+  MappedName = "latin"
+}
+
+User "Spanish"
+{
+  MappedName = "spanish"
+}
+
+User "Welsh"
+{
+  MappedName = "welsh"
+}

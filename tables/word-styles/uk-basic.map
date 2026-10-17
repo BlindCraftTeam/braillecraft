@@ -1,0 +1,1261 @@
+# Stylesheet mappings for Microsoft Word (Revised by Peter Sullivan, 11/13/18)
+
+User "Acronym"
+{
+  MappedName = "acronym"
+}
+
+BuiltIn "HTML Acronym"
+{
+  MappedName = "acronym"
+}
+ 
+AltText
+{
+  MappedName = "TranscriberNote"
+}
+
+User "Attribution"
+{
+  MappedName = "attribution."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  AggregationStyle = Paragraphs
+}
+
+BuiltIn "Body Text"
+{
+  MappedName = "para."
+}
+
+BuiltIn "Body Text 2"
+{
+  MappedName = "para."
+}
+
+BuiltIn "Body Text 3"
+{
+  MappedName = "para."
+}
+
+BuiltIn "Body Text First Indent"
+{
+  MappedName = "para."
+}
+
+BuiltIn "Body Text First Indent 2"
+{
+  MappedName = "para."
+}
+
+BuiltIn "Book Title"
+{
+  MappedName = "centered."
+}
+
+User "BoxBegin"
+{
+  MappedName = "BoxBegin."
+}
+
+User "BoxDouble"
+{
+  MappedName = "BoxDouble."
+}
+
+User "BoxEnd"
+{
+  MappedName = "BoxEnd."
+  IgnoreContents = Always
+}
+
+User "brlinline"
+{
+  MappedName = "BrlInline"
+}
+
+BuiltIn "Caption"
+{
+  MappedName = "para."
+}
+
+User "Cartoon"
+{
+  MappedName = "para."
+}
+
+User "CBC-Display"
+{
+  MappedName = "CompDisplay."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreEmphases=InDef
+}
+
+User "CBC-Display 1"
+{
+  MappedName = "CompDisplay."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreEmphases=InDef
+}
+
+User "CBC-Display 2"
+{
+  MappedName = "CompDisplay."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreEmphases=InDef
+}
+
+User "CBC-Display 3"
+{
+  MappedName = "CompDisplay."
+  Level = 3
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreEmphases=InDef
+}
+
+User "CBC-Display 4"
+{
+  MappedName = "CompDisplay."
+  Level = 4
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreEmphases=InDef
+}
+
+User "CBC-Display 5"
+{
+  MappedName = "CompDisplay."
+  Level = 5
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreEmphases=InDef
+}
+
+User "CBC-Display 6"
+{
+  MappedName = "CompDisplay."
+  Level = 6
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreEmphases=InDef
+}
+
+User "CBC-Inline"
+{
+  MappedName = "CompInline"
+  IgnoreEmphases=InDef
+}
+
+User "Centered"
+{
+  MappedName = "centered."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "CenteredFullLine"
+{
+  MappedName = "CenteredFullLine."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "CenteredWithGuideDots"
+{
+  MappedName = "centered."
+}
+
+User "Centered&GuideDots"
+{
+  MappedName = "centered."
+}
+
+User "CrossReference"
+{
+  MappedName = "para."
+}
+
+User "Directions"
+{
+  MappedName = "para."
+}
+
+User "DirectionsNemeth"
+{
+  MappedName = "para."
+}
+
+User "EndnoteEmbed"
+{
+  MappedName = "EndnoteEmbed"
+}
+
+User "ExactTranslation"
+{
+  MappedName = "BrlInline"
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Exercise"
+{
+  MappedName = "list."
+  Level = 1
+}
+
+User "Exercise1"
+{
+  MappedName = "list."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Exercise2"
+{
+  MappedName = "list."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Exercise3"
+{
+  MappedName = "list."
+  Level = 3
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Exercise4"
+{
+  MappedName = "list."
+  Level = 4
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Exercise5"
+{
+  MappedName = "list."
+  Level = 5
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Exercise6"
+{
+  MappedName = "list."
+  Level = 6
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Ex2Nemeth1"
+{
+  MappedName = "list."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = Never
+}
+
+User "Ex2Nemeth2"
+{
+  MappedName = "list."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Footer"
+{
+  Ignore = Always
+}
+
+User "Footnote"
+{
+  MappedName = "footnote."
+}
+
+User "FootnoteEmbed"
+{
+  MappedName = "FootnoteEmbed"
+}
+
+User "French"
+{
+  MappedName = "French"
+}
+
+User "German"
+{
+  MappedName = "German"
+}
+
+User "Glossary"
+{
+  MappedName = "glossary."
+}
+
+User "Glossary1"
+{
+  MappedName = "glossary."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Glossary2"
+{
+  MappedName = "glossary."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Glossary3"
+{
+  MappedName = "glossary."
+  Level = 3
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Glossary4"
+{
+  MappedName = "glossary."
+  Level = 4
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "GuideDots"
+{
+  MappedName = "GuideDots"
+}
+
+User "Guide Word"
+{
+  MappedName = "RunningHead"
+}
+
+BuiltIn "Header"
+{
+  Ignore = Always
+}
+
+BuiltIn "Heading 1"
+{
+  MappedName = "h1."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Heading 2"
+{
+  MappedName = "h2."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Heading 3"
+{
+  MappedName = "h3."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Heading 4"
+{
+  MappedName = "h4."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Heading 5"
+{
+  MappedName = "H5."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Heading 6"
+{
+  MappedName = "h6."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Heading 7"
+{
+  MappedName = "h7."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Heading 8"
+{
+  MappedName = "h8."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Heading 9"
+{
+  MappedName = "h9."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Hyperlink"
+{
+  MappedName = "CompInline"
+  IgnoreEmphases=InDef
+  DisableInToc = Yes
+}
+
+User "Index"
+{
+  MappedName = "index."
+}
+
+BuiltIn "Index 1"
+{
+  MappedName = "index."
+  Level      = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Index 2"
+{
+  MappedName = "index."
+  Level      = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName  
+}
+
+BuiltIn "Index 3"
+{
+  MappedName = "index."
+  Level      = 3
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Index 4"
+{
+  MappedName = "index."
+  Level      = 4
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Index 5"
+{
+  MappedName = "index."
+  Level      = 5
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "Index 6"
+{
+  MappedName = "index."
+  Level      = 6
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "IPA"
+{
+  MappedName = "IPA"
+}
+
+User "Italian"
+{
+  MappedName = "Italian"
+}
+
+User "Latin"
+{
+  MappedName = "Latin"
+}
+
+User "LinearMath"
+{
+  MappedName = "BrlInline"
+}
+
+User "LineNums"
+{
+  MappedName = "LineNums"
+}
+
+User "LitBold"
+{
+  MappedName = "bold"
+}
+
+User "Literary"
+{
+  MappedName = "para."
+}
+
+User "LitItalics"
+{
+  MappedName = "italic"
+}
+
+User "LeftFlush"
+{
+  MappedName = "LeftFlush."
+}
+
+BuiltIn "List"
+{
+  MappedName = "List."
+  Level      = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  AggregationStyle = MultiLevel
+}
+
+User "List1"
+{
+  MappedName = "List."
+  Level      = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "List2"
+{
+  MappedName = "List."
+  Level      = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "List3"
+{
+  MappedName = "List."
+  Level      = 3
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "List4"
+{
+  MappedName = "List."
+  Level      = 4
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "List5"
+{
+  MappedName = "List."
+  Level      = 5
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "List6"
+{
+  MappedName = "List."
+  Level      = 6
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "List 2"
+{
+  MappedName = "List."
+  Level      = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "List 3"
+{
+  MappedName = "List."
+  Level      = 3
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "List 4"
+{
+  MappedName = "List."
+  Level      = 4
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "List 5"
+{
+  MappedName = "List."
+  Level      = 5
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+BuiltIn "List Bullet"
+{
+  MappedName = "list."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "List Bullet 2"
+{
+  MappedName = "list."
+  Level = 3
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "List Bullet 3"
+{
+  MappedName = "list."
+  Level = 4
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "List Bullet 4"
+{
+  MappedName = "list."
+  Level = 5
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "List Bullet 5"
+{
+  MappedName = "list."
+  Level = 6
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "List Continue"
+{
+  MappedName = "list."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "List Continue 2"
+{
+  MappedName = "list."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "List Continue 3"
+{
+  MappedName = "list."
+  Level = 3
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "List Continue 4"
+{
+  MappedName = "list."
+  Level = 4
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "List Continue 5"
+{
+  MappedName = "list."
+  Level = 5
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "List Paragraph"
+{
+  MappedName = "list."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  AggregationStyle = MultiLevel
+}
+
+User "MainBody"
+{
+  MappedName = "MainBody."
+  IgnoreContents = Always
+}
+
+User "math"
+{
+  MappedName = "math"
+}
+
+User "math-TextInMath"
+{
+  MappedName = "math-TextInMath"
+}
+
+User "None"
+{
+  MappedName = "para."
+}
+
+BuiltIn "Normal"
+{
+  MappedName = "para."
+}
+
+BuiltIn "Normal (web)"
+{
+  MappedName = "para."
+}
+
+BuiltIn "Normal Indent"
+{
+  MappedName = "para."
+}
+
+User "NoteRef"
+{
+  MappedName = "BrlInline"
+}
+
+User "NoteSeparationLine"
+{
+  MappedName = "dot-2-line."
+  IgnoreContents = Always
+}
+
+User "OneWordBridge"
+{
+  MappedName = "math-TextInMath"
+}
+
+BuiltIn "Plain Text"
+{
+  MappedName = "para."
+}
+
+# Poem styles are deprecated
+# To use them, the transcriber must count the maximum hierarchy level
+# of each poem within Word and choose a *set* of styles to use
+# accordingly. We still support them for imports of older documents,
+# but recommend Poetry styles instead, and place these on the toolbar/ribbon.
+User "Poem1"
+{
+  MappedName = "poem."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Poem2a"
+{
+  MappedName = "poem."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Poem2b"
+{
+  MappedName = "poem."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Poem3a"
+{
+  MappedName = "poem."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Poem3b"
+{
+  MappedName = "poem."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Poem3c"
+{
+  MappedName = "poem."
+  Level = 3
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Poem4a"
+{
+  MappedName = "poem."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Poem4b"
+{
+  MappedName = "poem."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Poem4c"
+{
+  MappedName = "poem."
+  Level = 3
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Poem4d"
+{
+  MappedName = "poem."
+  Level = 4
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Poem5a"
+{
+  MappedName = "poem."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Poem5b"
+{
+  MappedName = "poem."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Poem5c"
+{
+  MappedName = "poem."
+  Level = 3
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Poem5d"
+{
+  MappedName = "poem."
+  Level = 4
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Poem5e"
+{
+  MappedName = "poem."
+  Level = 5
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Poem6a"
+{
+  MappedName = "poem."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Poem6b"
+{
+  MappedName = "poem."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Poem6c"
+{
+  MappedName = "poem."
+  Level = 3
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Poem6d"
+{
+  MappedName = "poem."
+  Level = 4
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Poem6e"
+{
+  MappedName = "poem."
+  Level = 5
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Poem6f"
+{
+  MappedName = "poem."
+  Level = 6
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+# Poetry styles are recommended instead of deprecated Poem styles (see above).
+User "Poetry1"
+{
+  MappedName = "poem."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Poetry2"
+{
+  MappedName = "poem."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Poetry3"
+{
+  MappedName = "poem."
+  Level = 3
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Poetry4"
+{
+  MappedName = "poem."
+  Level = 4
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Poetry5"
+{
+  MappedName = "poem."
+  Level = 5
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Poetry6"
+{
+  MappedName = "poem."
+  Level = 6
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Portuguese"
+{
+  MappedName = "Portuguese"
+}
+
+User "PrelimPageNumber"
+{
+  MappedName = "RefPageNumber"
+  IgnoreContents = Always
+}
+
+User "ProsePlay"
+{
+  MappedName = "para."
+}
+
+User "ProseStage"
+{
+  MappedName = "para."
+}
+
+BuiltIn "Quote"
+{
+  MappedName = "quote."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Quote"
+{
+  MappedName = "quote."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "RefPageNumber"
+{
+  MappedName = "RefPageNumber"
+}
+
+User "RefPageNumberEmbed"
+{
+  MappedName = "RefPageNumber"
+}
+
+User "RefPageNemeth"
+{
+  MappedName = "RefPageNumber"
+}
+
+User "RefPageNemethEmbed"
+{
+  MappedName = "RefPageNumber"
+}
+
+User "RightFlush"
+{
+  MappedName = "RightFlush."
+}
+
+User "RunningHead"
+{
+  MappedName = "RunningHead"
+}
+
+User "Spanish"
+{
+  MappedName = "Spanish"
+}
+
+User "Stairstep1"
+{
+  MappedName = "list."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Stairstep2"
+{
+  MappedName = "list."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Stairstep3"
+{
+  MappedName = "list."
+  Level = 3
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Stairstep4"
+{
+  MappedName = "list."
+  Level = 4
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Stairstep5"
+{
+  MappedName = "list."
+  Level = 5
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Stairstep6"
+{
+  MappedName = "list."
+  Level = 6
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "TechnicalNotation"
+{
+  MappedName = "math"
+}
+
+User "TG-Key"
+{
+  MappedName = "para."
+}
+
+User "TN-Embed"
+{
+  MappedName = "TranscriberNote"
+}
+
+User "TN-Nemeth"
+{
+  MappedName = "TranscriberNote"
+}
+
+User "TranscriberGeneratedPageNumber"
+{
+  MappedName = "RefPageNumber"
+  IgnoreContents = Always
+}
+
+User "TranscriberNote"
+{
+  MappedName = "TranscriberNote"
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "TOC"
+{
+  MappedName = "contents."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "TOC 1"
+{
+  MappedName = "contents."
+  Level      = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "TOC 2"
+{
+  MappedName = "contents."
+  Level      = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "TOC 3"
+{
+  MappedName = "contents."
+  Level      = 3
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "TOC 4"
+{
+  MappedName = "contents."
+  Level      = 4
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "TOC 5"
+{
+  MappedName = "contents."
+  Level      = 5
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+BuiltIn "TOC 6"
+{
+  MappedName = "contents."
+  Level      = 6
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "Uncontracted"
+{
+  MappedName = "uncontracted"
+}
+
+User "VersePlay1"
+{
+  MappedName = "poem."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "VersePlay2"
+{
+  MappedName = "poem."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+}
+
+User "VerseStage"
+{
+  MappedName = "poem."
+}
+
+BuiltIn "Default Paragraph Font"
+{
+  MappedName = "none"
+}
+
+BuiltIn "Footnote Reference"
+{
+  IgnoreSuperscript = Yes
+  MappedNameInNote = "NoteRef"
+}
+
+BuiltIn "Endnote Reference"
+{
+  IgnoreSuperscript = Yes
+  MappedNameInNote = "NoteRef"
+}
+
+BuiltIn "Footnote Text"
+{
+  MappedName = "FootnoteEmbed"
+}
+
+BuiltIn "Endnote Text"
+{
+  MappedName = "EndnoteEmbed"
+}
+
+BuiltIn "List Paragraph"
+{
+  MappedName = "List."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  AggregationStyle = MultiLevel
+}
+
+BuiltIn "Intense Quote"
+{
+  MappedName = "quote."
+}
+
+BuiltIn "No Spacing"
+{
+  MappedName = "para."
+}
+
+User "Balloon Text"
+{
+  MappedName = "para."
+}
+
+User "welsh"
+{
+  MappedName = "welsh"
+}

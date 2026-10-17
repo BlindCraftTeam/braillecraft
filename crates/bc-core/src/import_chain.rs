@@ -29,6 +29,10 @@ pub trait Files {
     fn rule_script(&self, name: &str) -> Result<RuleScript, String>;
     /// The character map tables (tables/unimap, the names in `UNIMAP_TABLES`) with their bytes.
     fn unimap_tables(&self) -> Result<Vec<(String, Vec<u8>)>, String>;
+    /// A Word style map in its text form (tables/word-styles/<name>.map, the names in `WORD_MAPS`).
+    fn word_map(&self, name: &str) -> Result<String, String> {
+        Err(format!("word-styles/{name}.map was not found."))
+    }
 }
 
 /// Which recipe a file is imported with.
@@ -43,6 +47,9 @@ pub enum Recipe {
     /// Formatted text, with the Unknown Characters setting as for coded text.
     FormattedText(u8),
     Orbit,
+    /// A Word document (.docx): the Word importer's settings, the Word style map's file name (`word::map_file_name`
+    /// of the template's "word:mws" text) and the Unknown Characters setting.
+    Docx(crate::word::Options, String, u8),
 }
 
 /// The chain's result: the internal text, the steps that failed (each with its reason) and what the formatted
@@ -71,6 +78,28 @@ pub const RULE_SCRIPTS: [&str; 7] = [
     "nemeth-in-ueb-2.rules",
     "orbit-lines.rules",
 ];
+/// The Word recipe's rule scripts, in its order (the character map and the character steps come between them).
+pub const WORD_RULE_SCRIPTS: [&str; 17] = [
+    "word-tags.rules",
+    "word-entities.rules",
+    "word-chars.rules",
+    "word-elements.rules",
+    "word-emphasis.rules",
+    "word-codes.rules",
+    "word-han-chars.rules",
+    "word-kana.rules",
+    "word-quotes.rules",
+    "word-publisher-pages.rules",
+    "word-user-codes.rules",
+    "word-math-spacing.rules",
+    "word-math-spacing-2.rules",
+    "word-functions.rules",
+    "word-dashes.rules",
+    "word-tables.rules",
+    "word-control-chars.rules",
+];
+/// The Word style maps shipped as data (tables/word-styles), by their program names.
+pub const WORD_MAPS: [&str; 6] = ["default", "australian", "bana", "french", "russian", "uk-basic"];
 
 /// Runs the recipe over the file's bytes.
 pub fn run(bytes: &[u8], recipe: &Recipe, files: &dyn Files) -> Imported {
@@ -129,6 +158,10 @@ pub fn run(bytes: &[u8], recipe: &Recipe, files: &dyn Files) -> Imported {
             out.text = text;
             return out;
         }
+        Recipe::Docx(opt, map, unknown) => {
+            docx(&text, opt, map, *unknown, files, &mut out);
+            return out;
+        }
     }
     script("ninit-codes.rules", &mut text, &mut out.errors);
     // Tables to outlines is optional in the recipes: it runs when it is there. The optional maths step that follows
@@ -147,6 +180,83 @@ pub fn run(bytes: &[u8], recipe: &Recipe, files: &dyn Files) -> Imported {
     }
     out.text = text;
     out
+}
+
+/// The Word recipe (spec 28 section 3 and 15): the package through the stylesheet's rules, the page-break fix, the
+/// run combining, the control-character step and the tag processor (`word::import`), then the style map's scrub
+/// rules, the tag, entity, character, element, emphasis and code scripts, the character map, the Han and kana
+/// scripts, the character step with its apostrophe override (U+0027 to U+02BC) and the quotes script, the
+/// publishers' page script when print pages are the publishers', the user codes script when codes are allowed,
+/// the hyperlinks step, the math spacing scripts when spaces are added, the function spacing script, the dashes
+/// script when dash spaces are removed, the tables script, and spaces normalised once.
+fn docx(bytes: &[u8], opt: &crate::word::Options, map: &str, unknown: u8, files: &dyn Files, out: &mut Imported) {
+    let script = |name: &str, text: &mut Vec<u8>, errors: &mut Vec<String>| match files.rule_script(name) {
+        Ok(mut s) => match s.run(text) {
+            Ok(t) => *text = t,
+            Err(e) => errors.push(format!("{name}: {e}")),
+        },
+        Err(e) => errors.push(format!("{name}: {e}")),
+    };
+    let map_text = match files.word_map(map) {
+        Ok(t) => t,
+        Err(e) => {
+            out.errors.push(e);
+            String::new()
+        }
+    };
+    let processed = match crate::word::import(bytes, &map_text, opt) {
+        Ok(p) => p,
+        Err(e) => {
+            out.errors.push(e);
+            return;
+        }
+    };
+    let mut text = processed.text.into_bytes();
+    if !processed.scrub_rules.is_empty() {
+        match RuleScript::from_bytes(processed.scrub_rules.as_bytes(), None) {
+            Ok(mut s) => match s.run(&text) {
+                Ok(t) => text = t,
+                Err(e) => out.errors.push(format!("style map rules: {e}")),
+            },
+            Err(e) => out.errors.push(format!("style map rules: {e}")),
+        }
+    }
+    for name in ["word-tags.rules", "word-entities.rules", "word-chars.rules", "word-elements.rules", "word-emphasis.rules", "word-codes.rules"] {
+        script(name, &mut text, &mut out.errors);
+    }
+    match files.unimap_tables() {
+        Ok(tables) => {
+            let refs: Vec<(&str, &[u8])> = tables.iter().map(|(n, b)| (n.as_str(), b.as_slice())).collect();
+            text = crate::unimap::UniMap::read(&refs).map(&text, -1, unknown);
+        }
+        Err(e) => out.errors.push(format!("unimap: {e}")),
+    }
+    script("word-han-chars.rules", &mut text, &mut out.errors);
+    script("word-kana.rules", &mut text, &mut out.errors);
+    // utf8dusci(U+02BC,U+2018,U+2019): the apostrophe override only, the quotes classed by their neighbours.
+    let unicode = String::from_utf8_lossy(&text).into_owned();
+    let unicode = crate::word::quote_forms(&unicode, Some('\u{2bc}'), None, None);
+    text = coded_text_bytes(unicode.as_bytes(), "UTF-8", unknown);
+    script("word-quotes.rules", &mut text, &mut out.errors);
+    if opt.print_pages == crate::word::PrintPages::Publishers {
+        script("word-publisher-pages.rules", &mut text, &mut out.errors);
+    }
+    if opt.codes {
+        script("word-user-codes.rules", &mut text, &mut out.errors);
+    }
+    text = crate::word::hyperlinks(&text, opt.hyperlinks, opt.remove_duplicates, if opt.auto_tag_cbc { 1 } else { 0 });
+    if opt.add_spaces {
+        script("word-math-spacing.rules", &mut text, &mut out.errors);
+        script("word-math-spacing-2.rules", &mut text, &mut out.errors);
+    }
+    script("word-functions.rules", &mut text, &mut out.errors);
+    if opt.remove_dash_spaces {
+        script("word-dashes.rules", &mut text, &mut out.errors);
+    }
+    // The tables script is optional in the recipe and is shipped, so it runs.
+    script("word-tables.rules", &mut text, &mut out.errors);
+    script("normalize-spaces.rules", &mut text, &mut out.errors);
+    out.text = text;
 }
 
 /// The Nemeth-in-UEB scripts: the first, the text reversed, the second on the reversed text, reversed back. In the
@@ -251,6 +361,33 @@ mod tests {
                 .map(|n| std::fs::read(tables().join("unimap").join(n)).map(|b| (n.to_string(), b)).map_err(|e| e.to_string()))
                 .collect()
         }
+        fn word_map(&self, name: &str) -> Result<String, String> {
+            std::fs::read(tables().join("word-styles").join(format!("{name}.map"))).map(|b| String::from_utf8_lossy(&b).into_owned()).map_err(|e| e.to_string())
+        }
+    }
+
+    /// Every sample Word document (BC_DOCX_SAMPLES) goes through the whole recipe with the default map and every
+    /// shipped map loads; the result holds text and style codes and no step fails.
+    #[test]
+    fn the_sample_word_documents_import() {
+        for m in WORD_MAPS {
+            assert!(Shipped.word_map(m).is_ok(), "{m}");
+            crate::word::StyleMap::from_text(&Shipped.word_map(m).unwrap()).unwrap_or_else(|e| panic!("{m}: {e}"));
+        }
+        let Ok(dir) = std::env::var("BC_DOCX_SAMPLES") else { return };
+        let mut count = 0;
+        for entry in std::fs::read_dir(&dir).unwrap() {
+            let path = entry.unwrap().path();
+            if path.extension().and_then(|e| e.to_str()) != Some("docx") {
+                continue;
+            }
+            let bytes = std::fs::read(&path).unwrap();
+            let got = run(&bytes, &Recipe::Docx(crate::word::Options::default(), "default".into(), 0), &Shipped);
+            assert!(got.errors.is_empty(), "{}: {:?}", path.display(), got.errors);
+            assert!(got.text.contains(&0x1c) && got.text.iter().any(|b| b.is_ascii_alphabetic()), "{}: {:?}", path.display(), String::from_utf8_lossy(&got.text[..got.text.len().min(200)]));
+            count += 1;
+        }
+        assert!(count > 0, "no sample Word documents in {dir}");
     }
 
     #[test]

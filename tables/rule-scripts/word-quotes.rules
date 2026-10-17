@@ -1,0 +1,1793 @@
+| Smart quotes and apostrophes regularised
+|   set "forcers" to normal unambiguous chars
+|   Note both input and output are DUSCI
+| 1;1  2014-10-29/J E Sullivan
+| 1;2  2015-11-10/jes: refine logic towards defaults with only conservative
+|      exceptions (ex0001)
+| 2;1  2016-06-14/15/jes: Complete revision - base decision on local context only
+|      (no longer on whether or not there's an unclosed single quote) -- rather
+|      on whether there are alphanumerics somewhere to left and/or immediately
+|      to right
+| 2;2  2016-06-16/jes: make
+|      quıØ -> qu'
+|      a rule also in state 2 (for lorsqu')(ex0009)
+| 2;3  2017-05-05/jes: when the first ' in 'n' or 'N' is forced to apostrophe (in
+|      state 1 only), treat the second as apostrophe also if ambiguous;
+|      accommodate
+|        D+b279 D%|178|121 D:≤y U+0149 Latin small letter n preceded by apostrophe
+|      by converting to ordinary 'n sequence -- and also treat any following '
+|      as apostrophe
+| 2;4  2026-09-25/cln: added a rule to fix badly constructed [idle~lfs] codes.
+| States:
+|   1 no alphanumerics since last space or spacing formatting code
+|   2 after alphanumerics since last space or spacing code
+|   3 after prefix enroute to state 1
+|   4 after prefix enroute to state 2
+|   5 in format/translation code passing through to |031 or space (preserving state)
+| extra rule added by cln to fix a problem with badly constructed [idle~lfs] codes.
+|028idle |~3lfs|031~|028idle|~lfs|031~
+| Global rules (for controls, most of which force state 1)
+|000~|000~~1~ |  0 NUL control
+|001~|001~~1~ |  1 SOH control
+|002~|002~~1~ |  2 STX control
+|003~|003~~1~ |  3 ETX control
+|004~|004~~1~ |  4 EOT control
+|005~|005~~1~ |  5 ENQ control
+|006~|006~~1~ |  6 ACK control
+|007~|007~~1~ |  7 BEL control
+|008~|008~~1~ |  8 BS  control
+|009~|009~~1~ |  9 HT  control
+|010~|010~~1~ |  a LF  control
+|011~|011~~1~ |  b VT  control
+|012~|012~~1~ |  c FF  control
+|013~|013~~1~ |  d CR  control
+|014~|014~~1~ |  e SO  control
+|015~|015~~1~ |  f SI  control
+|016~|016~~1~ | 10 DLE control
+|017~|017~~1~ | 11 DC1 control
+|018~|018~~1~ | 12 DC2 control
+|019~|019~~1~ | 13 DC3 control
+|020~|020~~1~ | 14 DC4 control
+|021~|021~~1~ | 15 NAK control
+|022~|022~~1~ | 16 SYN control
+|023~|023~~1~ | 17 ETB control
+|024~|024~~1~ | 18 CAN control
+|025~|025~~1~ | 19 EM  control
+|026~|026~~1~ | 1a SUB control
+|027~|027~~1~ | 1b ESC control
+| "null" controls (generate neither space nor text):
+|028/|031~|028/|031~ |  {universal "null command" (like //)}{preserve state}
+|028:|031~|028:|031~ |  {}{preserve state}
+|028;|031~|028;|031~ |  {}{preserve state}
+|028ab|031~|028ab|031~ |  {fr: "abr|130g|130"=$g2}{preserve state}
+|028ace~|028ace~~5~(~ |  {attribute color end}
+|028acs~|028acs~~5~(~ |  {attribute color start}
+|028ahy~|028ahy~~5~(~ | {automatic hyphenation level}
+|028ale~|028ale~~5~(~ |  {attribute highlight end}
+|028als~|028als~~5~(~ |  {attribute highlight start}
+|028amhh~|028amhh~~5~(~ | {always in math/tech not'n, hyphens are hyphens}
+|028amsp~|028amsp~~5~(~ | {always in math/tech not'n, added spacing level}
+|028atx|031~|028atx|031~ |  {ASCII is all text (= no traditional &, /, % codes){preserve state}
+|028bline|031~|028bline|031~ |  {baseline indicator (for Nemeth) (null here in UEB)}{preserve state}
+|028bsfe|031~|028bsfe|031~ |  {British special function end (null here in UEB)}{preserve state}
+|028bsfs|031~|028bsfs|031~ |  {British special function start (null here in UEB)}{preserve state}
+|028byw~|028byw~~5~(~ |  {set type of current word for hyphenation purposes}
+|028cap-invert|031~|028cap-invert|031~ |  {invert caps sense in CBC}{preserve state}
+|028cap-normal|031~|028cap-normal|031~ |  {back to normal caps sense in CBC}{preserve state}
+|028caplv~|028caplv~~5~(~ |  {set capitalization level in certain langs, e.g. Danish}
+|028cbn|031~|028cbn|031~ |  {"CBC" - to computer braille, no indic'r}{preserve state}
+|028cs|031~|028cs|031~ |  {use countable spaces (in CBC only)}{preserve state}
+|028cs-off|031~|028cs-off|031~ |  {don't use countable spaces (in CBC only)}{preserve state}
+|028ctb|031~|028ctb|031~ |  {}{preserve state}
+|028cz|031~|028cz|031~ |  {to computer "grade 0" braille}{preserve state}
+|028enclis|031~|028enclis|031~ |  {enclosed-list (needed for Nemeth only)}{preserve state}
+|028eng|031~|028eng|031~ |  {English-language (e.g. in Swahili tables)}{preserve state}
+|028eqvn|031~|028eqvn|031~ |  {equivalent-to-number (for Nemeth)}{preserve state}
+|028etb|031~|028etb|031~ |  {sp: Establecer TaB ($stb): *o}{preserve state}
+|028fl-lifg|031~|028fl-lifg|031~ | {preserve state}
+|028fl-none|031~|028fl-none|031~ | {When grade 1 is still base lang}{preserve state}
+|028fl-span|031~|028fl-span|031~ | {preserve state}
+|028folds~|028folds~~5~(~ | {set number of fold lines for letter format}
+|028ftb~|028ftb~~5~(~ |  {fr: fixer tableaux=$stb}
+|028fte~|028fte~~5~(~ |  {font/typeform end}
+|028ftlv~|028ftlv~~5~(~ |  {set font/typeform level in certain langs (see also caplv)}
+|028fts~|028fts~~5~(~ |  {font/typeform start}
+|028g~|028g~~5~(~ |  {grade switches (g1, g2 &c.)}
+|028i|031~|028i|031~ |  {temp'y(1-wd) gr 1 w/o "integ'l" sign-AOE 37;approx.=$w1}{preserve state}
+|028idle~|028idle~~5~(~ |  {does nothing for trans or fmt -- e.g. for pass-throughs}
+|028ifbrl|031~|028ifbrl|031~ |  {bypass this (& exec next) if braille only}{preserve state}
+|028ifprt|031~|028ifprt|031~ |  {bypass next if print only}{preserve state}
+|028in|031~|028in|031~ |  {"integral"=$g1}{preserve state}
+|028iq|031~|028iq|031~ |  {"informatique"}{preserve state}
+|028led|031~|028led|031~ |  {discontinue ref. pg. no.}{preserve state}
+|028lnb~|028lnb~~5~(~ |  {switch basic translation table}
+|028lng~|028lng~~5~(~ |  {switch language within table}
+|028lps|031~|028lps|031~ |  {line position save}{preserve state}
+|028ole|031~|028ole|031~ |  {omit letter/g1 indicator end}{preserve state}
+|028ols|031~|028ols|031~ |  {omit letter/g1 indicator start}{preserve state}
+|028one|031~|028one|031~ |  {omit numeric indicator end}{preserve state}
+|028ons|031~|028ons|031~ |  {omit numeric indicator start}{preserve state}
+|028ope|031~|028ope|031~ |  {omit punctuation indicator end}{preserve state}
+|028ops|031~|028ops|031~ |  {omit punctuation indicator start}{preserve state}
+|028pnta|031~|028pnta|031~ |  {}{preserve state}
+|028pntr|031~|028pntr|031~ |  {}{preserve state}
+|028pv|031~|028pv|031~ |  {}{preserve state}
+|028remw|031~|028remw|031~ |  {remark (or remove) word}{preserve state}
+|028rmn|031~|028rmn|031~ |  {Roman numeral}{preserve state}
+|028rtb|031~|028rtb|031~ |  {sp: Remover TaB ($ctb): *o}{preserve state}
+|028script~|028script~~5~(~ |  {script selection code (for brl to prt)}
+|028sibrl|031~|028sibrl|031~ |  {fr, sp: si braille=$ifbrl}{preserve state}
+|028siimp|031~|028siimp|031~ |  {fr, sp: si imprim|130s, impres'ion=if printed=$ifprt}{preserve state}
+|028stb~|028stb~~5~(~ |  {}
+|028sv~|028sv~~5~(~ |  {set value codes generally}
+|028swa|031~|028swa|031~ |  {Swahili language}{preserve state}
+|028tce|031~|028tce|031~ |  {technical context (general) end}{preserve state}
+|028tcs|031~|028tcs|031~ |  {technical context (general) start}{preserve state}
+|028tx|031~|028tx|031~ |  {"text" - back to literary mode}{preserve state}
+|028txn|031~|028txn|031~ |  {"text" - back to literary mode, no indic'r}{preserve state}
+|028u|031~|028u|031~ |  {uncontracted (single symbol)}{preserve state}
+|028ucl~|028ucl~~5~(~ |  {use character literally}
+|028uoq~|028uoq~~5~(~ |  {use outer quote}
+|028utp~|028utp~~5~(~ |  {use transcriber preference for grade of math passages)
+|028x~|028x~~5~(~ |  {like idle, does nothing for trans or fmt -- e.g. for pass-throughs}
+|028xcs|031~|028xcs|031~ |  {cancel capitalized word sequence}{preserve state}
+|028ypr~|028ypr~~5~(~ |  {essentially = idle, for style property declarations}
+|028z~|028z~~5~(~ |  {like idle, does nothing for trans or fmt -- e.g. for pass-throughs}
+| codes generating text (generally non-alphabetic, hence preserving state)
+|028bar|031~|028bar|031~ |  {general bar-over, placed after item}
+|028be|031~|028be|031~ |  {subscript position end}
+|028big|031~|028big|031~ |  {flags large parentheses, etc.}
+|028bolim|031~|028bolim|031~ |  {"lim" with bar over (limsup, upper limit)}
+|028bqtbi|031~|028bqtbi|031~ |  {table information inquiry (for calling pgm, not user files)}
+|028bs|031~|028bs|031~ |  {subscript position start}
+|028bulim|031~|028bulim|031~ |  {"lim" with bar under (liminf, lower limit)}
+|028cb|031~|028cb|031~ |  {"CBC" - to computer braille}
+|028cb-~|028cb-~~5~(~ |  {CBC - misc. specific indicators}
+|028cbi|031~|028cbi|031~ |  {to CBC with indic'r}
+|028e|031~|028e|031~ |  {bgn expression to be modified by os/e or us/e}
+|028ecane|031~|028ecane|031~ |  {cancellation end}
+|028ecans|031~|028ecans|031~ |  {cancellation start}
+|028eclose|031~|028eclose|031~ |  {general grouping end}
+|028evb|031~|028evb|031~ |  {extended vertical bar}
+|028fe~|028fe~~5~(~ |  {fraction end (numbered level)}
+|028fls~|028fls~~5~(~ |  {fraction line - slanted (numbered level)}
+|028fl~|028fl~~5~(~ |  {fraction line (numbered level)}
+|028fs~|028fs~~5~(~ |  {fraction start (numbered level)}
+|028ii|031~|028ii|031~ |  {temp'y(1-wd) gr 1 w/"integ'l" sign-AOE 12;approx.=$w1}
+|028ixrtd|031~|028ixrtd|031~ |  {index/root delimiter (between the two)}
+|028ixrte~|028ixrte~~5~(~ |  {indexed (general) root end (numbered level)}
+|028ixrts~|028ixrts~~5~(~ |  {indexed (general) root start (numbered level)}
+|028nr|031~|028nr|031~ |  {new row or line indicated only, eg. binomial/Christoffel/lin. poetry}
+|028oe|031~|028oe|031~ |  {superscript directly over end}
+|028os|031~|028os|031~ |  {superscript directly over start}
+|028pe|031~|028pe|031~ |  {superscript position end}
+|028ps|031~|028ps|031~ |  {superscript position start}
+|028q~|028q~~5~(~ |  {}
+|028sqrte~|028sqrte~~5~(~ |  {square root end (numbered level)}
+|028sqrts~|028sqrts~~5~(~ |  {square root start (numbered level)}
+|028te|031~|028te|031~ |  {technical notation end}
+|028tne|031~|028tne|031~ |  {transcriber's note end}
+|028tns|031~|028tns|031~ |  {transcriber's note start}
+|028ts|031~|028ts|031~ |  {technical notation start}
+|028txi|031~|028txi|031~ |  {"text" - exit CBC w/indic'r}
+|028uce|031~|028uce|031~ |  {"uppercase end"}
+|028ucs|031~|028ucs|031~ |  {"uppercase start"}
+|028ue|031~|028ue|031~ |  {subscript directly under end}
+|028ui|031~|028ui|031~ |  {uncontracted (single symbol) with indicator}
+|028us|031~|028us|031~ |  {subscript directly under start}
+| other codes (generally formatting, implying space)
+|028~|028~~1~ | 1c FS  control
+|029~|029~ | 1d assisted hyphen ("null") - preserve state
+|030~|030~~1~ | 1e RS  control hard space
+|031~|031~~1~ | 1f US  control (end of code implying space)
+|032~|032~~1~ | 20     control (space)
+| Rules for state 1 (no alphanumeric since last space/formatting code)
+|033~|033~1~1~ | 21 !   root
+|034~|034~1~1~ | 22 "   root
+|035~|035~1~1~ | 23 #   root
+|036~|036~1~1~ | 24 $   root
+|037~|037~1~1~ | 25 %   root
+|038~|038~1~1~ | 26 &   root
+|039~|039~1~1~ | 27 '   root
+|040~|040~1~1~ | 28 (   root
+|041~|041~1~1~ | 29 )   root
+|042~|042~1~1~ | 2a *   root
+|043~|043~1~1~ | 2b +   root
+|044~|044~1~1~ | 2c ,   root
+|045~|045~1~1~ | 2d -   root
+|046~|046~1~1~ | 2e .   root
+|047~|047~1~1~ | 2f /   root
+|048~|048~1~2~ | 30 0   root
+|049~|049~1~2~ | 31 1   root
+|050~|050~1~2~ | 32 2   root
+|051~|051~1~2~ | 33 3   root
+|052~|052~1~2~ | 34 4   root
+|053~|053~1~2~ | 35 5   root
+|054~|054~1~2~ | 36 6   root
+|055~|055~1~2~ | 37 7   root
+|056~|056~1~2~ | 38 8   root
+|057~|057~1~2~ | 39 9   root
+|058~|058~1~1~ | 3a :   root
+|059~|059~1~1~ | 3b ;   root
+|060~|060~1~1~ | 3c <   root
+|061~|061~1~1~ | 3d =   root
+|062~|062~1~1~ | 3e >   root
+|063~|063~1~1~ | 3f ?   root
+|064~|064~1~1~ | 40 @   root
+|065~|065~1~2~ | 41 A   root
+|066~|066~1~2~ | 42 B   root
+|067~|067~1~2~ | 43 C   root
+|068~|068~1~2~ | 44 D   root
+|069~|069~1~2~ | 45 E   root
+|070~|070~1~2~ | 46 F   root
+|071~|071~1~2~ | 47 G   root
+|072~|072~1~2~ | 48 H   root
+|073~|073~1~2~ | 49 I   root
+|074~|074~1~2~ | 4a J   root
+|075~|075~1~2~ | 4b K   root
+|076~|076~1~2~ | 4c L   root
+|077~|077~1~2~ | 4d M   root
+|078~|078~1~2~ | 4e N   root
+|079~|079~1~2~ | 4f O   root
+|080~|080~1~2~ | 50 P   root
+|081~|081~1~2~ | 51 Q   root
+|082~|082~1~2~ | 52 R   root
+|083~|083~1~2~ | 53 S   root
+|084~|084~1~2~ | 54 T   root
+|085~|085~1~2~ | 55 U   root
+|086~|086~1~2~ | 56 V   root
+|087~|087~1~2~ | 57 W   root
+|088~|088~1~2~ | 58 X   root
+|089~|089~1~2~ | 59 Y   root
+|090~|090~1~2~ | 5a Z   root
+|091~|091~1~1~ | 5b [   root
+|092~|092~1~1~ | 5c \   root
+|093~|093~1~1~ | 5d ]   root
+|094~|094~1~1~ | 5e ^   root
+|095~|095~1~1~ | 5f _   root
+|096~|096~1~1~ | 60 `   root
+|097~|097~1~2~ | 61 a   root
+|098~|098~1~2~ | 62 b   root
+|099~|099~1~2~ | 63 c   root
+|100~|100~1~2~ | 64 d   root
+|101~|101~1~2~ | 65 e   root
+|102~|102~1~2~ | 66 f   root
+|103~|103~1~2~ | 67 g   root
+|104~|104~1~2~ | 68 h   root
+|105~|105~1~2~ | 69 i   root
+|106~|106~1~2~ | 6a j   root
+|107~|107~1~2~ | 6b k   root
+|108~|108~1~2~ | 6c l   root
+|109~|109~1~2~ | 6d m   root
+|110~|110~1~2~ | 6e n   root
+|111~|111~1~2~ | 6f o   root
+|112~|112~1~2~ | 70 p   root
+|113~|113~1~2~ | 71 q   root
+|114~|114~1~2~ | 72 r   root
+|115~|115~1~2~ | 73 s   root
+|116~|116~1~2~ | 74 t   root
+|117~|117~1~2~ | 75 u   root
+|118~|118~1~2~ | 76 v   root
+|119~|119~1~2~ | 77 w   root
+|120~|120~1~2~ | 78 x   root
+|121~|121~1~2~ | 79 y   root
+|122~|122~1~2~ | 7a z   root
+|123~|123~1~1~ | 7b {   root
+|124~|124~1~1~ | 7c |   root
+|125~|125~1~1~ | 7d }   root
+|126~|126~1~1~ | 7e ~   root
+|127~|127~1~1~ | 7f    root
+|128~|128~1~2~ | 80 Ä   root
+|129~|129~1~2~ | 81 Å   root
+|130~|130~1~2~ | 82 Ç   root
+|131~|131~1~2~ | 83 É   root
+|132~|132~1~2~ | 84 Ñ   root
+|133~|133~1~2~ | 85 Ö   root
+|134~|134~1~2~ | 86 Ü   root
+|135~|135~1~2~ | 87 á   root
+|136~|136~1~2~ | 88 à   root
+|137~|137~1~2~ | 89 â   root
+|138~|138~1~2~ | 8a ä   root
+|139~|139~1~2~ | 8b ã   root
+|140~|140~1~2~ | 8c å   root
+|141~|141~1~2~ | 8d ç   root
+|142~|142~1~2~ | 8e é   root
+|143~|143~1~2~ | 8f è   root
+|144~|144~1~2~ | 90 ê   root
+|145~|145~1~2~ | 91 ë   root
+|146~|146~1~2~ | 92 í   root
+|147~|147~1~2~ | 93 ì   root
+|148~|148~1~2~ | 94 î   root
+|149~|149~1~2~ | 95 ï   root
+|150~|150~1~2~ | 96 ñ   root
+|151~|151~1~2~ | 97 ó   root
+|152~|152~1~2~ | 98 ò   root
+|153~|153~1~2~ | 99 ô   root
+|154~|154~1~2~ | 9a ö   root
+|155~|155~1~1~ | 9b õ   root
+|156~|156~1~4~ | 9c ú   prefix (capitals)
+|157~|157~1~1~ | 9d ù   root
+|158~|158~1~1~ | 9e û   root
+|159~|159~1~2~ | 9f ü   root
+|160~|160~1~2~ | a0 †   root
+|161~|161~1~2~ | a1 °   root
+|162~|162~1~2~ | a2 ¢   root
+|163~|163~1~2~ | a3 £   root
+|164~|164~1~2~ | a4 §   root
+|165~|165~1~2~ | a5 •   root
+|166~|166~1~2~ | a6 ¶   root
+|167~|167~1~2~ | a7 ß   root
+|168~|168~1~1~ | a8 ®   root
+|169~|169~1~1~ | a9 ©   root
+|170~|170~1~1~ | aa ™   root
+|171~|171~1~1~ | ab ´   root
+|172~|172~1~1~ | ac ¨   root
+|173~|173~1~1~ | ad ≠   root
+|174~|174~1~1~ | ae Æ   root
+|175~|175~1~1~ | af Ø   root
+|176~|176~1~3~ | b0 ∞   prefix braille chars
+|177~|177~1~3~ | b1 ±   prefix braille chars
+|178y|245|175~'n'~1~2~ | U+0149 Latin small letter n preceded by apostrophe 2017-05-05
+|178y~'n~1~2~ | U+0149 Latin small letter n preceded by apostrophe 2017-05-05
+|178~|178~1~4~ | b2 ≤   prefix exc. U+0178: European Latin (incl. Polish)
+|179~|179~1~4~ | b3 ≥   prefix exc. U+0192: Extended Latin
+|180~|180~1~4~ | b4 ¥   prefix  Extended Latin (cont.), IPA
+|181ln|245|175~'n'~1~2~ | special rule for 'n' when first is forced 2017-05-05
+|181lN|245|175~'N'~1~2~ | special rule for 'n' when first is forced 2017-05-05
+|181l~'~1~2~ | U+02bc (D+b56c) Modifier letter apostrophe -> D+27 unambiguous apostrophe (forcer)
+|181~|181~1~4~ | b5 µ   prefix  IPA (cont.), Spacing mods.
+|182~|182~1~4~ | b6 ∂   prefix Cyrillic
+|183~|183~1~4~ | b7 ∑   prefix Cyrillic
+|184~|184~1~4~ | b8 ∏   prefix Latin Extended Additional
+|185~|185~1~4~ | b9 π   prefix Latin Extended Additional
+|186~|186~1~4~ | ba ∫   prefix Tagalog, Khmer, &c.
+|187~|187~1~4~ | bb ª   prefix Tagalog, Khmer, &c.
+|188~|188~1~4~ | bc º   prefix Ethiopic
+|189~|189~1~4~ | bd Ω   prefix Ethiopic
+|190~|190~1~4~ | be æ   prefix Ethiopic, etc.
+|191~|191~1~4~ | bf ø   prefix Ethiopic, etc.
+|192~|192~1~4~ | c0 ¿   prefix Devanagari
+|193~|193~1~4~ | c1 ¡   prefix Bengali
+|194~|194~1~4~ | c2 ¬   prefix Gurmukhi
+|195~|195~1~4~ | c3 √   prefix Gujarati
+|196~|196~1~4~ | c4 ƒ   prefix Oriya
+|197~|197~1~4~ | c5 ≈   prefix Tamil
+|198~|198~1~4~ | c6 ∆   prefix Telugu
+|199~|199~1~4~ | c7 «   prefix Kannada
+|200~|200~1~4~ | c8 »   prefix Malayalam
+|201~|201~1~4~ | c9 …   prefix Sinhala
+|202~|202~1~4~ | ca     prefix Thai
+|203~|203~1~4~ | cb À   prefix Lao
+|204~|204~1~4~ | cc Ã   prefix Tibetan
+|205~|205~1~4~ | cd Õ   prefix Tibetan
+|206~|206~1~4~ | ce Œ   prefix Myanmar (Burmese)
+|207~|207~1~4~ | cf œ   prefix Georgian
+|208~|208~1~4~ | d0 –   prefix Phonetic Extensions
+|209~|209~1~4~ | d1 —   prefix Phonetic Extensions Supplement
+|210~|210~1~4~ | d2 “   prefix Syriac, Arabic with modifiers
+|211~|211~1~4~ | d3 ”   prefix Thaana, Nko
+|212~|212~1~4~ | d4 ‘   prefix {unassigned}
+|213~|213~1~4~ | d5 ’   prefix {unassigned}
+|214~|214~1~4~ | d6 ÷   prefix {unassigned}
+|215~|215~1~4~ | d7 ◊   prefix {unassigned}
+|216|139~|236H~1~1~ | U+275b (D+d88b) Heavy single turned comma quotation mark ornament -> D+ec48 unambiguous left single quote (forcer)
+|216|140~|236I~1~1~ | U+275c (D+d88c) Heavy single comma quotation mark ornament -> D+ec49 unambiguous right single quote (forcer)
+|216~|216~1~3~ | d8 ÿ   prefix Dingbats, Miscellaneous Mathematical Symbols - 
+|217~|217~1~3~ | d9 Ÿ   prefix Dingbats, Miscellaneous Mathematical Symbols - 
+|218~|218~1~3~ | da ⁄   prefix Supplemental Arrows - B, Miscellaneous Mathemat
+|219~|219~1~3~ | db €   prefix Supplemental Arrows - B, Miscellaneous Mathemat
+|220~|220~1~3~ | dc ‹   prefix Supplemental Mathematical Operators
+|221~|221~1~3~ | dd ›   prefix Supplemental Mathematical Operators
+|222~|222~1~3~ | de ﬁ   prefix Form and Chart Components
+|223~|223~1~3~ | df ﬂ   prefix Blocks, Geometric shapes
+|224~|224~1~4~ | e0 ‡   prefix Arabic
+|225~|225~1~4~ | e1 ·   prefix Arabic
+|226~|226~1~4~ | e2 ‚   prefix Greek
+|227~|227~1~4~ | e3 „   prefix General Diacritics, Greek
+|228~|228~1~4~ | e4 ‰   prefix Armenian
+|229~|229~1~4~ | e5 Â   prefix Armenian, Hebrew
+|230~|230~1~4~ | e6 Ê   prefix Hangul Jamo (Korean)
+|231~|231~1~4~ | e7 Á   prefix Hangul Jamo (Korean)
+|232~|232~1~4~ | e8 Ë   prefix CJK Symbols & Punct., Hiragana (Japanese)
+|233~|233~1~4~ | e9 È   prefix Hiragana/Katakana (Japanese)
+|234~|234~1~4~ | ea Í   prefix Bopomofo, Hangul Compatibility Jamo
+|235~|235~1~4~ | eb Î   prefix Hangul Compat. (cont.), Kanbun, Bopomofo Ext.
+|236~|236~1~3~ | ec Ï   prefix General Punctuation, Sub/Superscripts
+|237~|237~1~3~ | ed Ì   prefix Sub/Supersc'ts, Currency, Diacritics
+|238~|238~1~4~ | ee Ó   prefix Letterlike Symbols, Number Forms
+|239~|239~1~3~ | ef Ô   prefix Number Forms, Arrows
+|240~|240~1~3~ | f0    prefix Mathematical Operators 1
+|241~|241~1~3~ | f1 Ò   prefix Mathematical Operators 2
+|242~|242~1~3~ | f2 Ú   prefix Miscellaneous Technical
+|243~|243~1~4~ | f3 Û   prefix (reserved)
+|244~|244~1~4~ | f4 Ù   prefix {unassigned}
+| Rules for D+f5ad ambiguous apostrophe/left-/right-single-quote in state 1:
+|   when followed by numeric -> ' (unambiguous apostrophe)
+|245|173|048~'|048~1~2~ | 30 0   root
+|245|173|049~'|049~1~2~ | 31 1   root
+|245|173|050~'|050~1~2~ | 32 2   root
+|245|173|051~'|051~1~2~ | 33 3   root
+|245|173|052~'|052~1~2~ | 34 4   root
+|245|173|053~'|053~1~2~ | 35 5   root
+|245|173|054~'|054~1~2~ | 36 6   root
+|245|173|055~'|055~1~2~ | 37 7   root
+|245|173|056~'|056~1~2~ | 38 8   root
+|245|173|057~'|057~1~2~ | 39 9   root
+|  otherwise (not followed by numeric) ->  D+ec48 unambiguous left single quote (|236H)
+|245|173~|236H~1~1~
+| Rules for D+f5ae ambiguous apostrophe/left-single-quote (with letters on right only) in state 1:
+|245|174ammer~'ammer~1~2~
+|245|174Ammer~'Ammer~1~2~
+|245|174AMMER~'AMMER~1~2~
+|245|174e ~'e ~1~1~
+|245|174em dash|245|175~|236Hem dash|236I~1~2~
+|245|174em ~'em ~1~1~ | short for "them"
+|245|174em,~'em,~1~2~
+|245|174em;~'em;~1~2~
+|245|174em:~'em:~1~2~
+|245|174em.~'em.~1~2~
+|245|174em)~'em)~1~2~
+|245|174em]~'em]~1~2~
+|245|174em}~'em}~1~2~
+|245|174er ~'er ~1~1~ | short for "her"
+|245|174er,~'er,~1~2~
+|245|174er;~'er;~1~2~
+|245|174er:~'er:~1~2~
+|245|174er.~'er.~1~2~
+|245|174er)~'er)~1~2~
+|245|174er]~'er]~1~2~
+|245|174er}~'er}~1~2~
+|245|174fraid~'fraid~1~2~
+|245|174Fraid~'Fraid~1~2~ | as in "'Fraidy cat!"
+|245|174FRAID~'FRAID~1~2~
+|245|174igh~'igh~1~2~
+|245|174im ~'im ~1~1~ | short for "him"
+|245|174im,~'im,~1~2~
+|245|174im;~'im;~1~2~
+|245|174im:~'im:~1~2~
+|245|174im.~'im.~1~2~
+|245|174im)~'im)~1~2~
+|245|174im]~'im]~1~2~
+|245|174im}~'im}~1~2~
+|245|174n ~'n ~1~1~ | as in Braille 'n Speak, peaches 'n cream...
+|245|174N ~'N ~1~1~
+|245|174nuff~'nuff~1~2~
+|245|174Nuff~'Nuff~1~2~
+|245|174NUFF~'NUFF~1~2~
+|245|174s ~'s ~1~1~
+|245|174S ~'S ~1~1~
+|245|174t ~'t ~1~1~
+|245|174T ~'T ~1~1~
+|245|174tis ~'tis ~1~1~
+|245|174Tis ~'Tis ~1~1~
+|245|174TIS ~'TIS ~1~1~
+|245|174tisn~'tisn~1~2~
+|245|174Tisn~'Tisn~1~2~
+|245|174TISN~'TISN~1~2~
+|245|174twas~'twas~1~2~
+|245|174Twas~'Twas~1~2~
+|245|174TWAS~'TWAS~1~2~
+|245|174twill ~'twill ~1~1~
+|245|174Twill ~'Twill ~1~1~
+|245|174TWILL ~'TWILL ~1~1~
+|245|174twon|245|173~'twon'~1~2~ | twon't
+|245|174Twon|245|173~'Twon'~1~2~
+|245|174TWON|245|173~'TWON'~1~2~
+|245|174urdle~'urdle~1~2~
+|245|174Urdle~'Urdle~1~2~
+|245|174URDLE~'URDLE~1~2~
+|245|174urt ~'urt ~1~1~
+|245|174~|236H~1~1~ | (default) -> D+ec48 unambiguous left single quote
+| Rules for D+f5af ambiguous apostrophe/right-single-quote (with letters on left only) in state 1:
+comin|245|175~comin'~1~2~ | coming
+Comin|245|175~Comin'~1~2~ | Coming
+COMIN|245|175~COMIN' ~1~2~ | COMING
+groanin|245|175~groanin'~1~2~ | groaning
+Groanin|245|175~Groanin'~1~2~ | Groaning
+GROANIN|245|175~GROANIN' ~1~2~ | GROANING
+goin|245|175~goin'~1~2~ | going
+Goin|245|175~Goin'~1~2~ | Going
+GOIN|245|175~GOIN'~1~2~ | GOING
+havin|245|175~havin'~1~2~ | having
+Havin|245|175~Havin'~1~2~ | Having
+HAVIN|245|175~HAVIN'~1~2~ | HAVING
+moanin|245|175~moanin'~1~2~ | moaning
+Moanin|245|175~Moanin'~1~2~ | Moaning
+MOANIN|245|175~MOANIN' ~1~2~ | MOANING
+mornin|245|175~mornin'~1~2~ | morning
+Mornin|245|175~Mornin'~1~2~ | Morning
+MORNIN|245|175~MORNIN' ~1~2~ | MORNING
+roamin|245|175~roamin'~1~2~ | roaming
+Roamin|245|175~Roamin'~1~2~ | Roaming
+ROAMIN|245|175~ROAMIN' ~1~2~ | ROAMING
+nothin|245|175~nothin'~1~2~ | nothing
+Nothin|245|175~Nothin'~1~2~ | Nothing
+NOTHIN|245|175~NOTHIN' ~1~2~ | NOTHING
+qu|245|175~qu'~1~2~ | For French qu', lorsqu' etc.
+QU|245|175~QU'~1~2~ | For French QU', LORSQU' etc.
+Qu|245|175~Qu'~1~2~ | For French QU', LORSQU' etc.
+somethin|245|175~somethin'~1~2~ | something
+Somethin|245|175~Somethin'~1~2~ | Something
+SOMETHIN|245|175~SOMETHIN' ~1~2~ | SOMETHING
+|245|175~|236I~1~1~ | (default) -> D+ec49 unambiguous right single quote (anomalous in state 1)
+|245~|245~1~4~ | f5 ı   prefix Latin-1
+|246~|246~1~1~ | f6 ˆ   root
+|247~|247~1~1~ | f7 ˜   root
+|248~|248~1~1~ | f8 ¯   root
+|249~|249~1~1~ | f9 ˘   root
+|250~|250~1~4~ | fa ˙   prefix {unassigned}
+|251~|251~1~4~ | fb ˚   prefix {unassigned}
+|252~|252~1~4~ | fc ¸   prefix {unassigned}
+|253~|253~1~4~ | fd ˝   prefix {unassigned}
+|254~|254~1~4~ | fe ˛   prefix {unassigned}
+|255~|255~1~3~ | ff ˇ   prefix misc. controls, special representations
+| Rules for state 2 (alphanumeric[s] since last space/formatting code)
+|033~|033~2~2~ | 21 !   root
+|034~|034~2~2~ | 22 "   root
+|035~|035~2~2~ | 23 #   root
+|036~|036~2~2~ | 24 $   root
+|037~|037~2~2~ | 25 %   root
+|038~|038~2~2~ | 26 &   root
+|039~|039~2~2~ | 27 '   root
+|040~|040~2~2~ | 28 (   root
+|041~|041~2~2~ | 29 )   root
+|042~|042~2~2~ | 2a *   root
+|043~|043~2~2~ | 2b +   root
+|044~|044~2~2~ | 2c ,   root
+|045~|045~2~2~ | 2d -   root
+|046~|046~2~2~ | 2e .   root
+|047~|047~2~2~ | 2f /   root
+|048~|048~2~2~ | 30 0   root
+|049~|049~2~2~ | 31 1   root
+|050~|050~2~2~ | 32 2   root
+|051~|051~2~2~ | 33 3   root
+|052~|052~2~2~ | 34 4   root
+|053~|053~2~2~ | 35 5   root
+|054~|054~2~2~ | 36 6   root
+|055~|055~2~2~ | 37 7   root
+|056~|056~2~2~ | 38 8   root
+|057~|057~2~2~ | 39 9   root
+|058~|058~2~2~ | 3a :   root
+|059~|059~2~2~ | 3b ;   root
+|060~|060~2~2~ | 3c <   root
+|061~|061~2~2~ | 3d =   root
+|062~|062~2~2~ | 3e >   root
+|063~|063~2~2~ | 3f ?   root
+|064~|064~2~2~ | 40 @   root
+|065~|065~2~2~ | 41 A   root
+|066~|066~2~2~ | 42 B   root
+|067~|067~2~2~ | 43 C   root
+|068~|068~2~2~ | 44 D   root
+|069~|069~2~2~ | 45 E   root
+|070~|070~2~2~ | 46 F   root
+|071~|071~2~2~ | 47 G   root
+|072~|072~2~2~ | 48 H   root
+|073~|073~2~2~ | 49 I   root
+|074~|074~2~2~ | 4a J   root
+|075~|075~2~2~ | 4b K   root
+|076~|076~2~2~ | 4c L   root
+|077~|077~2~2~ | 4d M   root
+|078~|078~2~2~ | 4e N   root
+|079~|079~2~2~ | 4f O   root
+|080~|080~2~2~ | 50 P   root
+QU|245|175~QU'~2~2~ | For French QU', LORSQU' etc.
+|081~|081~2~2~ | 51 Q   root
+|082~|082~2~2~ | 52 R   root
+|083~|083~2~2~ | 53 S   root
+|084~|084~2~2~ | 54 T   root
+|085~|085~2~2~ | 55 U   root
+|086~|086~2~2~ | 56 V   root
+|087~|087~2~2~ | 57 W   root
+|088~|088~2~2~ | 58 X   root
+|089~|089~2~2~ | 59 Y   root
+|090~|090~2~2~ | 5a Z   root
+|091~|091~2~2~ | 5b [   root
+|092~|092~2~2~ | 5c \   root
+|093~|093~2~2~ | 5d ]   root
+|094~|094~2~2~ | 5e ^   root
+|095~|095~2~2~ | 5f _   root
+|096~|096~2~2~ | 60 `   root
+|097~|097~2~2~ | 61 a   root
+|098~|098~2~2~ | 62 b   root
+|099~|099~2~2~ | 63 c   root
+|100~|100~2~2~ | 64 d   root
+|101~|101~2~2~ | 65 e   root
+|102~|102~2~2~ | 66 f   root
+|103~|103~2~2~ | 67 g   root
+|104~|104~2~2~ | 68 h   root
+|105~|105~2~2~ | 69 i   root
+|106~|106~2~2~ | 6a j   root
+|107~|107~2~2~ | 6b k   root
+|108~|108~2~2~ | 6c l   root
+|109~|109~2~2~ | 6d m   root
+|110~|110~2~2~ | 6e n   root
+|111~|111~2~2~ | 6f o   root
+|112~|112~2~2~ | 70 p   root
+qu|245|175~qu'~2~2~ | For French qu', lorsqu' etc.
+|113~|113~2~2~ | 71 q   root
+|114~|114~2~2~ | 72 r   root
+|115~|115~2~2~ | 73 s   root
+|116~|116~2~2~ | 74 t   root
+|117~|117~2~2~ | 75 u   root
+|118~|118~2~2~ | 76 v   root
+|119~|119~2~2~ | 77 w   root
+|120~|120~2~2~ | 78 x   root
+|121~|121~2~2~ | 79 y   root
+|122~|122~2~2~ | 7a z   root
+|123~|123~2~2~ | 7b {   root
+|124~|124~2~2~ | 7c |   root
+|125~|125~2~2~ | 7d }   root
+|126~|126~2~2~ | 7e ~   root
+|127~|127~2~2~ | 7f    root
+|128~|128~2~2~ | 80 Ä   root
+|129~|129~2~2~ | 81 Å   root
+|130~|130~2~2~ | 82 Ç   root
+|131~|131~2~2~ | 83 É   root
+|132~|132~2~2~ | 84 Ñ   root
+|133~|133~2~2~ | 85 Ö   root
+|134~|134~2~2~ | 86 Ü   root
+|135~|135~2~2~ | 87 á   root
+|136~|136~2~2~ | 88 à   root
+|137~|137~2~2~ | 89 â   root
+|138~|138~2~2~ | 8a ä   root
+|139~|139~2~2~ | 8b ã   root
+|140~|140~2~2~ | 8c å   root
+|141~|141~2~2~ | 8d ç   root
+|142~|142~2~2~ | 8e é   root
+|143~|143~2~2~ | 8f è   root
+|144~|144~2~2~ | 90 ê   root
+|145~|145~2~2~ | 91 ë   root
+|146~|146~2~2~ | 92 í   root
+|147~|147~2~2~ | 93 ì   root
+|148~|148~2~2~ | 94 î   root
+|149~|149~2~2~ | 95 ï   root
+|150~|150~2~2~ | 96 ñ   root
+|151~|151~2~2~ | 97 ó   root
+|152~|152~2~2~ | 98 ò   root
+|153~|153~2~2~ | 99 ô   root
+|154~|154~2~2~ | 9a ö   root
+|155~|155~2~2~ | 9b õ   root
+|156~|156~2~4~ | 9c ú   prefix (capitals)
+|157~|157~2~2~ | 9d ù   root
+|158~|158~2~2~ | 9e û   root
+|159~|159~2~2~ | 9f ü   root
+|160~|160~2~2~ | a0 †   root
+|161~|161~2~2~ | a1 °   root
+|162~|162~2~2~ | a2 ¢   root
+|163~|163~2~2~ | a3 £   root
+|164~|164~2~2~ | a4 §   root
+|165~|165~2~2~ | a5 •   root
+|166~|166~2~2~ | a6 ¶   root
+|167~|167~2~2~ | a7 ß   root
+|168~|168~2~2~ | a8 ®   root
+|169~|169~2~2~ | a9 ©   root
+|170~|170~2~2~ | aa ™   root
+|171~|171~2~2~ | ab ´   root
+|172~|172~2~2~ | ac ¨   root
+|173~|173~2~2~ | ad ≠   root
+|174~|174~2~2~ | ae Æ   root
+|175~|175~2~2~ | af Ø   root
+|176~|176~2~4~ | b0 ∞   prefix braille chars
+|177~|177~2~4~ | b1 ±   prefix braille chars
+|178y~'n~2~2~ | U+0149 Latin small letter n preceded by apostrophe 2017-05-05
+|178~|178~2~4~ | b2 ≤   prefix exc. U+0178: European Latin (incl. Polish)
+|179~|179~2~4~ | b3 ≥   prefix exc. U+0192: Extended Latin
+|180~|180~2~4~ | b4 ¥   prefix  Extended Latin (cont.), IPA
+|181l~'~2~2~ | U+02bc (D+b56c) Modifier letter apostrophe -> D+27 unambiguous apostrophe (forcer)
+|181~|181~2~4~ | b5 µ   prefix  IPA (cont.), Spacing mods.
+|182~|182~2~4~ | b6 ∂   prefix Cyrillic
+|183~|183~2~4~ | b7 ∑   prefix Cyrillic
+|184~|184~2~4~ | b8 ∏   prefix Latin Extended Additional
+|185~|185~2~4~ | b9 π   prefix Latin Extended Additional
+|186~|186~2~4~ | ba ∫   prefix Tagalog, Khmer, &c.
+|187~|187~2~4~ | bb ª   prefix Tagalog, Khmer, &c.
+|188~|188~2~4~ | bc º   prefix Ethiopic
+|189~|189~2~4~ | bd Ω   prefix Ethiopic
+|190~|190~2~4~ | be æ   prefix Ethiopic, etc.
+|191~|191~2~4~ | bf ø   prefix Ethiopic, etc.
+|192~|192~2~4~ | c0 ¿   prefix Devanagari
+|193~|193~2~4~ | c1 ¡   prefix Bengali
+|194~|194~2~4~ | c2 ¬   prefix Gurmukhi
+|195~|195~2~4~ | c3 √   prefix Gujarati
+|196~|196~2~4~ | c4 ƒ   prefix Oriya
+|197~|197~2~4~ | c5 ≈   prefix Tamil
+|198~|198~2~4~ | c6 ∆   prefix Telugu
+|199~|199~2~4~ | c7 «   prefix Kannada
+|200~|200~2~4~ | c8 »   prefix Malayalam
+|201~|201~2~4~ | c9 …   prefix Sinhala
+|202~|202~2~4~ | ca     prefix Thai
+|203~|203~2~4~ | cb À   prefix Lao
+|204~|204~2~4~ | cc Ã   prefix Tibetan
+|205~|205~2~4~ | cd Õ   prefix Tibetan
+|206~|206~2~4~ | ce Œ   prefix Myanmar (Burmese)
+|207~|207~2~4~ | cf œ   prefix Georgian
+|208~|208~2~4~ | d0 –   prefix Phonetic Extensions
+|209~|209~2~4~ | d1 —   prefix Phonetic Extensions Supplement
+|210~|210~2~4~ | d2 “   prefix Syriac, Arabic with modifiers
+|211~|211~2~4~ | d3 ”   prefix Thaana, Nko
+|212~|212~2~4~ | d4 ‘   prefix {unassigned}
+|213~|213~2~4~ | d5 ’   prefix {unassigned}
+|214~|214~2~4~ | d6 ÷   prefix {unassigned}
+|215~|215~2~4~ | d7 ◊   prefix {unassigned}
+|216|139~|236H~2~2~ | U+275b (D+d88b) Heavy single turned comma quotation mark ornament -> D+ec48 unambiguous left single quote (forcer)
+|216|140~|236I~2~2~ | U+275c (D+d88c) Heavy single comma quotation mark ornament -> D+ec49 unambiguous right single quote (forcer)
+|216~|216~2~4~ | d8 ÿ   prefix Dingbats, Miscellaneous Mathematical Symbols - 
+|217~|217~2~4~ | d9 Ÿ   prefix Dingbats, Miscellaneous Mathematical Symbols - 
+|218~|218~2~4~ | da ⁄   prefix Supplemental Arrows - B, Miscellaneous Mathemat
+|219~|219~2~4~ | db €   prefix Supplemental Arrows - B, Miscellaneous Mathemat
+|220~|220~2~4~ | dc ‹   prefix Supplemental Mathematical Operators
+|221~|221~2~4~ | dd ›   prefix Supplemental Mathematical Operators
+|222~|222~2~4~ | de ﬁ   prefix Form and Chart Components
+|223~|223~2~4~ | df ﬂ   prefix Blocks, Geometric shapes
+|224~|224~2~4~ | e0 ‡   prefix Arabic
+|225~|225~2~4~ | e1 ·   prefix Arabic
+|226~|226~2~4~ | e2 ‚   prefix Greek
+|227~|227~2~4~ | e3 „   prefix General Diacritics, Greek
+|228~|228~2~4~ | e4 ‰   prefix Armenian
+|229~|229~2~4~ | e5 Â   prefix Armenian, Hebrew
+|230~|230~2~4~ | e6 Ê   prefix Hangul Jamo (Korean)
+|231~|231~2~4~ | e7 Á   prefix Hangul Jamo (Korean)
+|232~|232~2~4~ | e8 Ë   prefix CJK Symbols & Punct., Hiragana (Japanese)
+|233~|233~2~4~ | e9 È   prefix Hiragana/Katakana (Japanese)
+|234~|234~2~4~ | ea Í   prefix Bopomofo, Hangul Compatibility Jamo
+|235~|235~2~4~ | eb Î   prefix Hangul Compat. (cont.), Kanbun, Bopomofo Ext.
+|236~|236~2~4~ | ec Ï   prefix General Punctuation, Sub/Superscripts
+|237~|237~2~4~ | ed Ì   prefix Sub/Supersc'ts, Currency, Diacritics
+|238~|238~2~4~ | ee Ó   prefix Letterlike Symbols, Number Forms
+|239~|239~2~4~ | ef Ô   prefix Number Forms, Arrows
+|240~|240~2~4~ | f0    prefix Mathematical Operators 1
+|241~|241~2~4~ | f1 Ò   prefix Mathematical Operators 2
+|242~|242~2~4~ | f2 Ú   prefix Miscellaneous Technical
+|243~|243~2~4~ | f3 Û   prefix (reserved)
+|244~|244~2~4~ | f4 Ù   prefix {unassigned}
+| Rules for D+f5ad ambiguous apostrophe/left-/right-single-quote in state 2:
+|   when followed by numeric -> ' (unambiguous apostrophe)
+|245|173|048~'|048~2~2~ | 30 0   root
+|245|173|049~'|049~2~2~ | 31 1   root
+|245|173|050~'|050~2~2~ | 32 2   root
+|245|173|051~'|051~2~2~ | 33 3   root
+|245|173|052~'|052~2~2~ | 34 4   root
+|245|173|053~'|053~2~2~ | 35 5   root
+|245|173|054~'|054~2~2~ | 36 6   root
+|245|173|055~'|055~2~2~ | 37 7   root
+|245|173|056~'|056~2~2~ | 38 8   root
+|245|173|057~'|057~2~2~ | 39 9   root
+|   when followed by alpha (not numeric) -> ' (unambiguous apostrophe)
+|245|173|065~'|065~2~2~ | 41 A   root
+|245|173|066~'|066~2~2~ | 42 B   root
+|245|173|067~'|067~2~2~ | 43 C   root
+|245|173|068~'|068~2~2~ | 44 D   root
+|245|173|069~'|069~2~2~ | 45 E   root
+|245|173|070~'|070~2~2~ | 46 F   root
+|245|173|071~'|071~2~2~ | 47 G   root
+|245|173|072~'|072~2~2~ | 48 H   root
+|245|173|073~'|073~2~2~ | 49 I   root
+|245|173|074~'|074~2~2~ | 4a J   root
+|245|173|075~'|075~2~2~ | 4b K   root
+|245|173|076~'|076~2~2~ | 4c L   root
+|245|173|077~'|077~2~2~ | 4d M   root
+|245|173|078~'|078~2~2~ | 4e N   root
+|245|173|079~'|079~2~2~ | 4f O   root
+|245|173|080~'|080~2~2~ | 50 P   root
+|245|173|081~'|081~2~2~ | 51 Q   root
+|245|173|082~'|082~2~2~ | 52 R   root
+|245|173|083~'|083~2~2~ | 53 S   root
+|245|173|084~'|084~2~2~ | 54 T   root
+|245|173|085~'|085~2~2~ | 55 U   root
+|245|173|086~'|086~2~2~ | 56 V   root
+|245|173|087~'|087~2~2~ | 57 W   root
+|245|173|088~'|088~2~2~ | 58 X   root
+|245|173|089~'|089~2~2~ | 59 Y   root
+|245|173|090~'|090~2~2~ | 5a Z   root
+|245|173|097~'|097~2~2~ | 61 a   root
+|245|173|098~'|098~2~2~ | 62 b   root
+|245|173|099~'|099~2~2~ | 63 c   root
+|245|173|100~'|100~2~2~ | 64 d   root
+|245|173|101~'|101~2~2~ | 65 e   root
+|245|173|102~'|102~2~2~ | 66 f   root
+|245|173|103~'|103~2~2~ | 67 g   root
+|245|173|104~'|104~2~2~ | 68 h   root
+|245|173|105~'|105~2~2~ | 69 i   root
+|245|173|106~'|106~2~2~ | 6a j   root
+|245|173|107~'|107~2~2~ | 6b k   root
+|245|173|108~'|108~2~2~ | 6c l   root
+|245|173|109~'|109~2~2~ | 6d m   root
+|245|173|110~'|110~2~2~ | 6e n   root
+|245|173|111~'|111~2~2~ | 6f o   root
+|245|173|112~'|112~2~2~ | 70 p   root
+|245|173|113~'|113~2~2~ | 71 q   root
+|245|173|114~'|114~2~2~ | 72 r   root
+|245|173|115~'|115~2~2~ | 73 s   root
+|245|173|116~'|116~2~2~ | 74 t   root
+|245|173|117~'|117~2~2~ | 75 u   root
+|245|173|118~'|118~2~2~ | 76 v   root
+|245|173|119~'|119~2~2~ | 77 w   root
+|245|173|120~'|120~2~2~ | 78 x   root
+|245|173|121~'|121~2~2~ | 79 y   root
+|245|173|122~'|122~2~2~ | 7a z   root
+|245|173|128~'|128~2~2~ | 80 Ä   root
+|245|173|129~'|129~2~2~ | 81 Å   root
+|245|173|130~'|130~2~2~ | 82 Ç   root
+|245|173|131~'|131~2~2~ | 83 É   root
+|245|173|132~'|132~2~2~ | 84 Ñ   root
+|245|173|133~'|133~2~2~ | 85 Ö   root
+|245|173|134~'|134~2~2~ | 86 Ü   root
+|245|173|135~'|135~2~2~ | 87 á   root
+|245|173|136~'|136~2~2~ | 88 à   root
+|245|173|137~'|137~2~2~ | 89 â   root
+|245|173|138~'|138~2~2~ | 8a ä   root
+|245|173|139~'|139~2~2~ | 8b ã   root
+|245|173|140~'|140~2~2~ | 8c å   root
+|245|173|141~'|141~2~2~ | 8d ç   root
+|245|173|142~'|142~2~2~ | 8e é   root
+|245|173|143~'|143~2~2~ | 8f è   root
+|245|173|144~'|144~2~2~ | 90 ê   root
+|245|173|145~'|145~2~2~ | 91 ë   root
+|245|173|146~'|146~2~2~ | 92 í   root
+|245|173|147~'|147~2~2~ | 93 ì   root
+|245|173|148~'|148~2~2~ | 94 î   root
+|245|173|149~'|149~2~2~ | 95 ï   root
+|245|173|150~'|150~2~2~ | 96 ñ   root
+|245|173|151~'|151~2~2~ | 97 ó   root
+|245|173|152~'|152~2~2~ | 98 ò   root
+|245|173|153~'|153~2~2~ | 99 ô   root
+|245|173|154~'|154~2~2~ | 9a ö   root
+|245|173|156~'|156~2~4~ | 9c ú   prefix (capitals)
+|245|173|159~'|159~2~2~ | 9f ü   root
+|245|173|160~'|160~2~2~ | a0 †   root
+|245|173|161~'|161~2~2~ | a1 °   root
+|245|173|162~'|162~2~2~ | a2 ¢   root
+|245|173|163~'|163~2~2~ | a3 £   root
+|245|173|164~'|164~2~2~ | a4 §   root
+|245|173|165~'|165~2~2~ | a5 •   root
+|245|173|166~'|166~2~2~ | a6 ¶   root
+|245|173|167~'|167~2~2~ | a7 ß   root
+|245|173|178~'|178~2~4~ | b2 ≤   prefix exc. U+0178: European Latin (incl. Polish)
+|245|173|179~'|179~2~4~ | b3 ≥   prefix exc. U+0192: Extended Latin
+|245|173|180~'|180~2~4~ | b4 ¥   prefix  Extended Latin (cont.), IPA
+|245|173|181l~''~2~2~ | U+02bc (D+b56c) Modifier letter apostrophe -> D+27 unambiguous apostrophe (forcer)
+|245|173|181~'|181~2~4~ | b5 µ   prefix  IPA (cont.), Spacing mods.
+|245|173|182~'|182~2~4~ | b6 ∂   prefix Cyrillic
+|245|173|183~'|183~2~4~ | b7 ∑   prefix Cyrillic
+|245|173|184~'|184~2~4~ | b8 ∏   prefix Latin Extended Additional
+|245|173|185~'|185~2~4~ | b9 π   prefix Latin Extended Additional
+|245|173|186~'|186~2~4~ | ba ∫   prefix Tagalog, Khmer, &c.
+|245|173|187~'|187~2~4~ | bb ª   prefix Tagalog, Khmer, &c.
+|245|173|188~'|188~2~4~ | bc º   prefix Ethiopic
+|245|173|189~'|189~2~4~ | bd Ω   prefix Ethiopic
+|245|173|190~'|190~2~4~ | be æ   prefix Ethiopic, etc.
+|245|173|191~'|191~2~4~ | bf ø   prefix Ethiopic, etc.
+|245|173|192~'|192~2~4~ | c0 ¿   prefix Devanagari
+|245|173|193~'|193~2~4~ | c1 ¡   prefix Bengali
+|245|173|194~'|194~2~4~ | c2 ¬   prefix Gurmukhi
+|245|173|195~'|195~2~4~ | c3 √   prefix Gujarati
+|245|173|196~'|196~2~4~ | c4 ƒ   prefix Oriya
+|245|173|197~'|197~2~4~ | c5 ≈   prefix Tamil
+|245|173|198~'|198~2~4~ | c6 ∆   prefix Telugu
+|245|173|199~'|199~2~4~ | c7 «   prefix Kannada
+|245|173|200~'|200~2~4~ | c8 »   prefix Malayalam
+|245|173|201~'|201~2~4~ | c9 …   prefix Sinhala
+|245|173|202~'|202~2~4~ | ca     prefix Thai
+|245|173|203~'|203~2~4~ | cb À   prefix Lao
+|245|173|204~'|204~2~4~ | cc Ã   prefix Tibetan
+|245|173|205~'|205~2~4~ | cd Õ   prefix Tibetan
+|245|173|206~'|206~2~4~ | ce Œ   prefix Myanmar (Burmese)
+|245|173|207~'|207~2~4~ | cf œ   prefix Georgian
+|245|173|208~'|208~2~4~ | d0 –   prefix Phonetic Extensions
+|245|173|209~'|209~2~4~ | d1 —   prefix Phonetic Extensions Supplement
+|245|173|210~'|210~2~4~ | d2 “   prefix Syriac, Arabic with modifiers
+|245|173|211~'|211~2~4~ | d3 ”   prefix Thaana, Nko
+|245|173|212~'|212~2~4~ | d4 ‘   prefix {unassigned}
+|245|173|213~'|213~2~4~ | d5 ’   prefix {unassigned}
+|245|173|214~'|214~2~4~ | d6 ÷   prefix {unassigned}
+|245|173|215~'|215~2~4~ | d7 ◊   prefix {unassigned}
+|245|173|224~'|224~2~4~ | e0 ‡   prefix Arabic
+|245|173|225~'|225~2~4~ | e1 ·   prefix Arabic
+|245|173|226~'|226~2~4~ | e2 ‚   prefix Greek
+|245|173|227~'|227~2~4~ | e3 „   prefix General Diacritics, Greek
+|245|173|228~'|228~2~4~ | e4 ‰   prefix Armenian
+|245|173|229~'|229~2~4~ | e5 Â   prefix Armenian, Hebrew
+|245|173|230~'|230~2~4~ | e6 Ê   prefix Hangul Jamo (Korean)
+|245|173|231~'|231~2~4~ | e7 Á   prefix Hangul Jamo (Korean)
+|245|173|232~'|232~2~4~ | e8 Ë   prefix CJK Symbols & Punct., Hiragana (Japanese)
+|245|173|233~'|233~2~4~ | e9 È   prefix Hiragana/Katakana (Japanese)
+|245|173|234~'|234~2~4~ | ea Í   prefix Bopomofo, Hangul Compatibility Jamo
+|245|173|235~'|235~2~4~ | eb Î   prefix Hangul Compat. (cont.), Kanbun, Bopomofo Ext.
+|245|173|238~'|238~2~4~ | ee Ó   prefix Letterlike Symbols, Number Forms
+|245|173|243~'|243~2~4~ | f3 Û   prefix (reserved)
+|245|173|244~'|244~2~4~ | f4 Ù   prefix {unassigned}
+|245|173|245|173~'|236I~2~2~ | f5 ı   prefix Latin-1 (-> apostrophe, right qt)
+|245|173|245|174~''~2~2~ | f5 ı   prefix Latin-1 (-> apostrophe, apostrophe)
+|245|173|245|175~'|236I~2~2~ | f5 ı   prefix Latin-1 (-> apostrophe, right qt)
+|245|173|245~'|245~2~4~ | f5 ı   prefix Latin-1
+|245|173|250~'|250~2~4~ | fa ˙   prefix {unassigned}
+|245|173|251~'|251~2~4~ | fb ˚   prefix {unassigned}
+|245|173|252~'|252~2~4~ | fc ¸   prefix {unassigned}
+|245|173|253~'|253~2~4~ | fd ˝   prefix {unassigned}
+|245|173|254~'|254~2~4~ | fe ˛   prefix {unassigned}
+|  otherwise (not followed by alphanumeric) ->  D+ec49 unambiguous right single quote (|236I)
+|245|173~|236I~2~2~ | 
+| Rule for D+f5ae ambiguous apostrophe/left-single-quote (with letters on right only) in state 2:
+|245|174~'~2~2~ | -> unambiguous apostrophe
+| Rules for D+f5af ambiguous apostrophe/right-single-quote (with letters on left only) in state 2:
+|   when followed by numeric -> ' (unambiguous apostrophe)
+|245|175|048~'|048~2~2~ | 30 0   root
+|245|175|049~'|049~2~2~ | 31 1   root
+|245|175|050~'|050~2~2~ | 32 2   root
+|245|175|051~'|051~2~2~ | 33 3   root
+|245|175|052~'|052~2~2~ | 34 4   root
+|245|175|053~'|053~2~2~ | 35 5   root
+|245|175|054~'|054~2~2~ | 36 6   root
+|245|175|055~'|055~2~2~ | 37 7   root
+|245|175|056~'|056~2~2~ | 38 8   root
+|245|175|057~'|057~2~2~ | 39 9   root
+|   when followed by alpha (not numeric) -> ' (unambiguous apostrophe)
+|245|175|065~'|065~2~2~ | 41 A   root
+|245|175|066~'|066~2~2~ | 42 B   root
+|245|175|067~'|067~2~2~ | 43 C   root
+|245|175|068~'|068~2~2~ | 44 D   root
+|245|175|069~'|069~2~2~ | 45 E   root
+|245|175|070~'|070~2~2~ | 46 F   root
+|245|175|071~'|071~2~2~ | 47 G   root
+|245|175|072~'|072~2~2~ | 48 H   root
+|245|175|073~'|073~2~2~ | 49 I   root
+|245|175|074~'|074~2~2~ | 4a J   root
+|245|175|075~'|075~2~2~ | 4b K   root
+|245|175|076~'|076~2~2~ | 4c L   root
+|245|175|077~'|077~2~2~ | 4d M   root
+|245|175|078~'|078~2~2~ | 4e N   root
+|245|175|079~'|079~2~2~ | 4f O   root
+|245|175|080~'|080~2~2~ | 50 P   root
+|245|175|081~'|081~2~2~ | 51 Q   root
+|245|175|082~'|082~2~2~ | 52 R   root
+|245|175|083~'|083~2~2~ | 53 S   root
+|245|175|084~'|084~2~2~ | 54 T   root
+|245|175|085~'|085~2~2~ | 55 U   root
+|245|175|086~'|086~2~2~ | 56 V   root
+|245|175|087~'|087~2~2~ | 57 W   root
+|245|175|088~'|088~2~2~ | 58 X   root
+|245|175|089~'|089~2~2~ | 59 Y   root
+|245|175|090~'|090~2~2~ | 5a Z   root
+|245|175|097~'|097~2~2~ | 61 a   root
+|245|175|098~'|098~2~2~ | 62 b   root
+|245|175|099~'|099~2~2~ | 63 c   root
+|245|175|100~'|100~2~2~ | 64 d   root
+|245|175|101~'|101~2~2~ | 65 e   root
+|245|175|102~'|102~2~2~ | 66 f   root
+|245|175|103~'|103~2~2~ | 67 g   root
+|245|175|104~'|104~2~2~ | 68 h   root
+|245|175|105~'|105~2~2~ | 69 i   root
+|245|175|106~'|106~2~2~ | 6a j   root
+|245|175|107~'|107~2~2~ | 6b k   root
+|245|175|108~'|108~2~2~ | 6c l   root
+|245|175|109~'|109~2~2~ | 6d m   root
+|245|175|110~'|110~2~2~ | 6e n   root
+|245|175|111~'|111~2~2~ | 6f o   root
+|245|175|112~'|112~2~2~ | 70 p   root
+|245|175|113~'|113~2~2~ | 71 q   root
+|245|175|114~'|114~2~2~ | 72 r   root
+|245|175|115~'|115~2~2~ | 73 s   root
+|245|175|116~'|116~2~2~ | 74 t   root
+|245|175|117~'|117~2~2~ | 75 u   root
+|245|175|118~'|118~2~2~ | 76 v   root
+|245|175|119~'|119~2~2~ | 77 w   root
+|245|175|120~'|120~2~2~ | 78 x   root
+|245|175|121~'|121~2~2~ | 79 y   root
+|245|175|122~'|122~2~2~ | 7a z   root
+|245|175|128~'|128~2~2~ | 80 Ä   root
+|245|175|129~'|129~2~2~ | 81 Å   root
+|245|175|130~'|130~2~2~ | 82 Ç   root
+|245|175|131~'|131~2~2~ | 83 É   root
+|245|175|132~'|132~2~2~ | 84 Ñ   root
+|245|175|133~'|133~2~2~ | 85 Ö   root
+|245|175|134~'|134~2~2~ | 86 Ü   root
+|245|175|135~'|135~2~2~ | 87 á   root
+|245|175|136~'|136~2~2~ | 88 à   root
+|245|175|137~'|137~2~2~ | 89 â   root
+|245|175|138~'|138~2~2~ | 8a ä   root
+|245|175|139~'|139~2~2~ | 8b ã   root
+|245|175|140~'|140~2~2~ | 8c å   root
+|245|175|141~'|141~2~2~ | 8d ç   root
+|245|175|142~'|142~2~2~ | 8e é   root
+|245|175|143~'|143~2~2~ | 8f è   root
+|245|175|144~'|144~2~2~ | 90 ê   root
+|245|175|145~'|145~2~2~ | 91 ë   root
+|245|175|146~'|146~2~2~ | 92 í   root
+|245|175|147~'|147~2~2~ | 93 ì   root
+|245|175|148~'|148~2~2~ | 94 î   root
+|245|175|149~'|149~2~2~ | 95 ï   root
+|245|175|150~'|150~2~2~ | 96 ñ   root
+|245|175|151~'|151~2~2~ | 97 ó   root
+|245|175|152~'|152~2~2~ | 98 ò   root
+|245|175|153~'|153~2~2~ | 99 ô   root
+|245|175|154~'|154~2~2~ | 9a ö   root
+|245|175|156~'|156~2~4~ | 9c ú   prefix (capitals)
+|245|175|159~'|159~2~2~ | 9f ü   root
+|245|175|160~'|160~2~2~ | a0 †   root
+|245|175|161~'|161~2~2~ | a1 °   root
+|245|175|162~'|162~2~2~ | a2 ¢   root
+|245|175|163~'|163~2~2~ | a3 £   root
+|245|175|164~'|164~2~2~ | a4 §   root
+|245|175|165~'|165~2~2~ | a5 •   root
+|245|175|166~'|166~2~2~ | a6 ¶   root
+|245|175|167~'|167~2~2~ | a7 ß   root
+|245|175|178~'|178~2~4~ | b2 ≤   prefix exc. U+0178: European Latin (incl. Polish)
+|245|175|179~'|179~2~4~ | b3 ≥   prefix exc. U+0192: Extended Latin
+|245|175|180~'|180~2~4~ | b4 ¥   prefix  Extended Latin (cont.), IPA
+|245|175|181l~''~2~2~ | U+02bc (D+b56c) Modifier letter apostrophe -> D+27 unambiguous apostrophe (forcer)
+|245|175|181~'|181~2~4~ | b5 µ   prefix  IPA (cont.), Spacing mods.
+|245|175|182~'|182~2~4~ | b6 ∂   prefix Cyrillic
+|245|175|183~'|183~2~4~ | b7 ∑   prefix Cyrillic
+|245|175|184~'|184~2~4~ | b8 ∏   prefix Latin Extended Additional
+|245|175|185~'|185~2~4~ | b9 π   prefix Latin Extended Additional
+|245|175|186~'|186~2~4~ | ba ∫   prefix Tagalog, Khmer, &c.
+|245|175|187~'|187~2~4~ | bb ª   prefix Tagalog, Khmer, &c.
+|245|175|188~'|188~2~4~ | bc º   prefix Ethiopic
+|245|175|189~'|189~2~4~ | bd Ω   prefix Ethiopic
+|245|175|190~'|190~2~4~ | be æ   prefix Ethiopic, etc.
+|245|175|191~'|191~2~4~ | bf ø   prefix Ethiopic, etc.
+|245|175|192~'|192~2~4~ | c0 ¿   prefix Devanagari
+|245|175|193~'|193~2~4~ | c1 ¡   prefix Bengali
+|245|175|194~'|194~2~4~ | c2 ¬   prefix Gurmukhi
+|245|175|195~'|195~2~4~ | c3 √   prefix Gujarati
+|245|175|196~'|196~2~4~ | c4 ƒ   prefix Oriya
+|245|175|197~'|197~2~4~ | c5 ≈   prefix Tamil
+|245|175|198~'|198~2~4~ | c6 ∆   prefix Telugu
+|245|175|199~'|199~2~4~ | c7 «   prefix Kannada
+|245|175|200~'|200~2~4~ | c8 »   prefix Malayalam
+|245|175|201~'|201~2~4~ | c9 …   prefix Sinhala
+|245|175|202~'|202~2~4~ | ca     prefix Thai
+|245|175|203~'|203~2~4~ | cb À   prefix Lao
+|245|175|204~'|204~2~4~ | cc Ã   prefix Tibetan
+|245|175|205~'|205~2~4~ | cd Õ   prefix Tibetan
+|245|175|206~'|206~2~4~ | ce Œ   prefix Myanmar (Burmese)
+|245|175|207~'|207~2~4~ | cf œ   prefix Georgian
+|245|175|208~'|208~2~4~ | d0 –   prefix Phonetic Extensions
+|245|175|209~'|209~2~4~ | d1 —   prefix Phonetic Extensions Supplement
+|245|175|210~'|210~2~4~ | d2 “   prefix Syriac, Arabic with modifiers
+|245|175|211~'|211~2~4~ | d3 ”   prefix Thaana, Nko
+|245|175|212~'|212~2~4~ | d4 ‘   prefix {unassigned}
+|245|175|213~'|213~2~4~ | d5 ’   prefix {unassigned}
+|245|175|214~'|214~2~4~ | d6 ÷   prefix {unassigned}
+|245|175|215~'|215~2~4~ | d7 ◊   prefix {unassigned}
+|245|175|224~'|224~2~4~ | e0 ‡   prefix Arabic
+|245|175|225~'|225~2~4~ | e1 ·   prefix Arabic
+|245|175|226~'|226~2~4~ | e2 ‚   prefix Greek
+|245|175|227~'|227~2~4~ | e3 „   prefix General Diacritics, Greek
+|245|175|228~'|228~2~4~ | e4 ‰   prefix Armenian
+|245|175|229~'|229~2~4~ | e5 Â   prefix Armenian, Hebrew
+|245|175|230~'|230~2~4~ | e6 Ê   prefix Hangul Jamo (Korean)
+|245|175|231~'|231~2~4~ | e7 Á   prefix Hangul Jamo (Korean)
+|245|175|232~'|232~2~4~ | e8 Ë   prefix CJK Symbols & Punct., Hiragana (Japanese)
+|245|175|233~'|233~2~4~ | e9 È   prefix Hiragana/Katakana (Japanese)
+|245|175|234~'|234~2~4~ | ea Í   prefix Bopomofo, Hangul Compatibility Jamo
+|245|175|235~'|235~2~4~ | eb Î   prefix Hangul Compat. (cont.), Kanbun, Bopomofo Ext.
+|245|175|238~'|238~2~4~ | ee Ó   prefix Letterlike Symbols, Number Forms
+|245|175|243~'|243~2~4~ | f3 Û   prefix (reserved)
+|245|175|244~'|244~2~4~ | f4 Ù   prefix {unassigned}
+|245|175|245|173~''~2~2~ | f5 ı   prefix Latin-1 (-> apostrophe, apostrophe)
+|245|175|245|174~''~2~2~ | f5 ı   prefix Latin-1 (-> apostrophe, apostrophe)
+|245|175|245|175~'|236I~2~2~ | f5 ı   prefix Latin-1 (-> apostrophe, right qt)
+|245|175|245~'|245~2~4~ | f5 ı   prefix Latin-1
+|245|175|250~'|250~2~4~ | fa ˙   prefix {unassigned}
+|245|175|251~'|251~2~4~ | fb ˚   prefix {unassigned}
+|245|175|252~'|252~2~4~ | fc ¸   prefix {unassigned}
+|245|175|253~'|253~2~4~ | fd ˝   prefix {unassigned}
+|245|175|254~'|254~2~4~ | fe ˛   prefix {unassigned}
+|  otherwise (not followed by alphanumeric) ->  D+ec49 unambiguous right single quote (|236I)
+|245|175~|236I~2~2~ | -> D+ec49 unambiguous right single quote
+|245~|245~2~4~ | f5 ı   prefix Latin-1
+|246~|246~2~2~ | f6 ˆ   root
+|247~|247~2~2~ | f7 ˜   root
+|248~|248~2~2~ | f8 ¯   root
+|249~|249~2~2~ | f9 ˘   root
+|250~|250~2~4~ | fa ˙   prefix {unassigned}
+|251~|251~2~4~ | fb ˚   prefix {unassigned}
+|252~|252~2~4~ | fc ¸   prefix {unassigned}
+|253~|253~2~4~ | fd ˝   prefix {unassigned}
+|254~|254~2~4~ | fe ˛   prefix {unassigned}
+|255~|255~2~4~ | ff ˇ   prefix misc. controls, special representations
+| Rules for state 3 (after prefix enroute to state 1)
+|033~|033~3~1~ | 21 !   root
+|034~|034~3~1~ | 22 "   root
+|035~|035~3~1~ | 23 #   root
+|036~|036~3~1~ | 24 $   root
+|037~|037~3~1~ | 25 %   root
+|038~|038~3~1~ | 26 &   root
+|039~|039~3~1~ | 27 '   root
+|040~|040~3~1~ | 28 (   root
+|041~|041~3~1~ | 29 )   root
+|042~|042~3~1~ | 2a *   root
+|043~|043~3~1~ | 2b +   root
+|044~|044~3~1~ | 2c ,   root
+|045~|045~3~1~ | 2d -   root
+|046~|046~3~1~ | 2e .   root
+|047~|047~3~1~ | 2f /   root
+|048~|048~3~1~ | 30 0   root
+|049~|049~3~1~ | 31 1   root
+|050~|050~3~1~ | 32 2   root
+|051~|051~3~1~ | 33 3   root
+|052~|052~3~1~ | 34 4   root
+|053~|053~3~1~ | 35 5   root
+|054~|054~3~1~ | 36 6   root
+|055~|055~3~1~ | 37 7   root
+|056~|056~3~1~ | 38 8   root
+|057~|057~3~1~ | 39 9   root
+|058~|058~3~1~ | 3a :   root
+|059~|059~3~1~ | 3b ;   root
+|060~|060~3~1~ | 3c <   root
+|061~|061~3~1~ | 3d =   root
+|062~|062~3~1~ | 3e >   root
+|063~|063~3~1~ | 3f ?   root
+|064~|064~3~1~ | 40 @   root
+|065~|065~3~1~ | 41 A   root
+|066~|066~3~1~ | 42 B   root
+|067~|067~3~1~ | 43 C   root
+|068~|068~3~1~ | 44 D   root
+|069~|069~3~1~ | 45 E   root
+|070~|070~3~1~ | 46 F   root
+|071~|071~3~1~ | 47 G   root
+|072~|072~3~1~ | 48 H   root
+|073~|073~3~1~ | 49 I   root
+|074~|074~3~1~ | 4a J   root
+|075~|075~3~1~ | 4b K   root
+|076~|076~3~1~ | 4c L   root
+|077~|077~3~1~ | 4d M   root
+|078~|078~3~1~ | 4e N   root
+|079~|079~3~1~ | 4f O   root
+|080~|080~3~1~ | 50 P   root
+|081~|081~3~1~ | 51 Q   root
+|082~|082~3~1~ | 52 R   root
+|083~|083~3~1~ | 53 S   root
+|084~|084~3~1~ | 54 T   root
+|085~|085~3~1~ | 55 U   root
+|086~|086~3~1~ | 56 V   root
+|087~|087~3~1~ | 57 W   root
+|088~|088~3~1~ | 58 X   root
+|089~|089~3~1~ | 59 Y   root
+|090~|090~3~1~ | 5a Z   root
+|091~|091~3~1~ | 5b [   root
+|092~|092~3~1~ | 5c \   root
+|093~|093~3~1~ | 5d ]   root
+|094~|094~3~1~ | 5e ^   root
+|095~|095~3~1~ | 5f _   root
+|096~|096~3~1~ | 60 `   root
+|097~|097~3~1~ | 61 a   root
+|098~|098~3~1~ | 62 b   root
+|099~|099~3~1~ | 63 c   root
+|100~|100~3~1~ | 64 d   root
+|101~|101~3~1~ | 65 e   root
+|102~|102~3~1~ | 66 f   root
+|103~|103~3~1~ | 67 g   root
+|104~|104~3~1~ | 68 h   root
+|105~|105~3~1~ | 69 i   root
+|106~|106~3~1~ | 6a j   root
+|107~|107~3~1~ | 6b k   root
+|108~|108~3~1~ | 6c l   root
+|109~|109~3~1~ | 6d m   root
+|110~|110~3~1~ | 6e n   root
+|111~|111~3~1~ | 6f o   root
+|112~|112~3~1~ | 70 p   root
+|113~|113~3~1~ | 71 q   root
+|114~|114~3~1~ | 72 r   root
+|115~|115~3~1~ | 73 s   root
+|116~|116~3~1~ | 74 t   root
+|117~|117~3~1~ | 75 u   root
+|118~|118~3~1~ | 76 v   root
+|119~|119~3~1~ | 77 w   root
+|120~|120~3~1~ | 78 x   root
+|121~|121~3~1~ | 79 y   root
+|122~|122~3~1~ | 7a z   root
+|123~|123~3~1~ | 7b {   root
+|124~|124~3~1~ | 7c |   root
+|125~|125~3~1~ | 7d }   root
+|126~|126~3~1~ | 7e ~   root
+|127~|127~3~1~ | 7f    root
+|128~|128~3~1~ | 80 Ä   root
+|129~|129~3~1~ | 81 Å   root
+|130~|130~3~1~ | 82 Ç   root
+|131~|131~3~1~ | 83 É   root
+|132~|132~3~1~ | 84 Ñ   root
+|133~|133~3~1~ | 85 Ö   root
+|134~|134~3~1~ | 86 Ü   root
+|135~|135~3~1~ | 87 á   root
+|136~|136~3~1~ | 88 à   root
+|137~|137~3~1~ | 89 â   root
+|138~|138~3~1~ | 8a ä   root
+|139~|139~3~1~ | 8b ã   root
+|140~|140~3~1~ | 8c å   root
+|141~|141~3~1~ | 8d ç   root
+|142~|142~3~1~ | 8e é   root
+|143~|143~3~1~ | 8f è   root
+|144~|144~3~1~ | 90 ê   root
+|145~|145~3~1~ | 91 ë   root
+|146~|146~3~1~ | 92 í   root
+|147~|147~3~1~ | 93 ì   root
+|148~|148~3~1~ | 94 î   root
+|149~|149~3~1~ | 95 ï   root
+|150~|150~3~1~ | 96 ñ   root
+|151~|151~3~1~ | 97 ó   root
+|152~|152~3~1~ | 98 ò   root
+|153~|153~3~1~ | 99 ô   root
+|154~|154~3~1~ | 9a ö   root
+|155~|155~3~1~ | 9b õ   root
+|156~|156~3~3~ | 9c ú   prefix (capitals)
+|157~|157~3~1~ | 9d ù   root
+|158~|158~3~1~ | 9e û   root
+|159~|159~3~1~ | 9f ü   root
+|160~|160~3~1~ | a0 †   root
+|161~|161~3~1~ | a1 °   root
+|162~|162~3~1~ | a2 ¢   root
+|163~|163~3~1~ | a3 £   root
+|164~|164~3~1~ | a4 §   root
+|165~|165~3~1~ | a5 •   root
+|166~|166~3~1~ | a6 ¶   root
+|167~|167~3~1~ | a7 ß   root
+|168~|168~3~1~ | a8 ®   root
+|169~|169~3~1~ | a9 ©   root
+|170~|170~3~1~ | aa ™   root
+|171~|171~3~1~ | ab ´   root
+|172~|172~3~1~ | ac ¨   root
+|173~|173~3~1~ | ad ≠   root
+|174~|174~3~1~ | ae Æ   root
+|175~|175~3~1~ | af Ø   root
+|176~|176~3~3~ | b0 ∞   prefix braille chars
+|177~|177~3~3~ | b1 ±   prefix braille chars
+|178~|178~3~3~ | b2 ≤   prefix exc. U+0178: European Latin (incl. Polish)
+|179~|179~3~3~ | b3 ≥   prefix exc. U+0192: Extended Latin
+|180~|180~3~3~ | b4 ¥   prefix  Extended Latin (cont.), IPA
+|181~|181~3~3~ | b5 µ   prefix  IPA (cont.), Spacing mods.
+|182~|182~3~3~ | b6 ∂   prefix Cyrillic
+|183~|183~3~3~ | b7 ∑   prefix Cyrillic
+|184~|184~3~3~ | b8 ∏   prefix Latin Extended Additional
+|185~|185~3~3~ | b9 π   prefix Latin Extended Additional
+|186~|186~3~3~ | ba ∫   prefix Tagalog, Khmer, &c.
+|187~|187~3~3~ | bb ª   prefix Tagalog, Khmer, &c.
+|188~|188~3~3~ | bc º   prefix Ethiopic
+|189~|189~3~3~ | bd Ω   prefix Ethiopic
+|190~|190~3~3~ | be æ   prefix Ethiopic, etc.
+|191~|191~3~3~ | bf ø   prefix Ethiopic, etc.
+|192~|192~3~3~ | c0 ¿   prefix Devanagari
+|193~|193~3~3~ | c1 ¡   prefix Bengali
+|194~|194~3~3~ | c2 ¬   prefix Gurmukhi
+|195~|195~3~3~ | c3 √   prefix Gujarati
+|196~|196~3~3~ | c4 ƒ   prefix Oriya
+|197~|197~3~3~ | c5 ≈   prefix Tamil
+|198~|198~3~3~ | c6 ∆   prefix Telugu
+|199~|199~3~3~ | c7 «   prefix Kannada
+|200~|200~3~3~ | c8 »   prefix Malayalam
+|201~|201~3~3~ | c9 …   prefix Sinhala
+|202~|202~3~3~ | ca     prefix Thai
+|203~|203~3~3~ | cb À   prefix Lao
+|204~|204~3~3~ | cc Ã   prefix Tibetan
+|205~|205~3~3~ | cd Õ   prefix Tibetan
+|206~|206~3~3~ | ce Œ   prefix Myanmar (Burmese)
+|207~|207~3~3~ | cf œ   prefix Georgian
+|208~|208~3~3~ | d0 –   prefix Phonetic Extensions
+|209~|209~3~3~ | d1 —   prefix Phonetic Extensions Supplement
+|210~|210~3~3~ | d2 “   prefix Syriac, Arabic with modifiers
+|211~|211~3~3~ | d3 ”   prefix Thaana, Nko
+|212~|212~3~3~ | d4 ‘   prefix {unassigned}
+|213~|213~3~3~ | d5 ’   prefix {unassigned}
+|214~|214~3~3~ | d6 ÷   prefix {unassigned}
+|215~|215~3~3~ | d7 ◊   prefix {unassigned}
+|216~|216~3~3~ | d8 ÿ   prefix Dingbats, Miscellaneous Mathematical Symbols - 
+|217~|217~3~3~ | d9 Ÿ   prefix Dingbats, Miscellaneous Mathematical Symbols - 
+|218~|218~3~3~ | da ⁄   prefix Supplemental Arrows - B, Miscellaneous Mathemat
+|219~|219~3~3~ | db €   prefix Supplemental Arrows - B, Miscellaneous Mathemat
+|220~|220~3~3~ | dc ‹   prefix Supplemental Mathematical Operators
+|221~|221~3~3~ | dd ›   prefix Supplemental Mathematical Operators
+|222~|222~3~3~ | de ﬁ   prefix Form and Chart Components
+|223~|223~3~3~ | df ﬂ   prefix Blocks, Geometric shapes
+|224~|224~3~3~ | e0 ‡   prefix Arabic
+|225~|225~3~3~ | e1 ·   prefix Arabic
+|226~|226~3~3~ | e2 ‚   prefix Greek
+|227~|227~3~3~ | e3 „   prefix General Diacritics, Greek
+|228~|228~3~3~ | e4 ‰   prefix Armenian
+|229~|229~3~3~ | e5 Â   prefix Armenian, Hebrew
+|230~|230~3~3~ | e6 Ê   prefix Hangul Jamo (Korean)
+|231~|231~3~3~ | e7 Á   prefix Hangul Jamo (Korean)
+|232~|232~3~3~ | e8 Ë   prefix CJK Symbols & Punct., Hiragana (Japanese)
+|233~|233~3~3~ | e9 È   prefix Hiragana/Katakana (Japanese)
+|234~|234~3~3~ | ea Í   prefix Bopomofo, Hangul Compatibility Jamo
+|235~|235~3~3~ | eb Î   prefix Hangul Compat. (cont.), Kanbun, Bopomofo Ext.
+|236~|236~3~3~ | ec Ï   prefix General Punctuation, Sub/Superscripts
+|237~|237~3~3~ | ed Ì   prefix Sub/Supersc'ts, Currency, Diacritics
+|238~|238~3~3~ | ee Ó   prefix Letterlike Symbols, Number Forms
+|239~|239~3~3~ | ef Ô   prefix Number Forms, Arrows
+|240~|240~3~3~ | f0    prefix Mathematical Operators 1
+|241~|241~3~3~ | f1 Ò   prefix Mathematical Operators 2
+|242~|242~3~3~ | f2 Ú   prefix Miscellaneous Technical
+|243~|243~3~3~ | f3 Û   prefix (reserved)
+|244~|244~3~3~ | f4 Ù   prefix {unassigned}
+|245~|245~3~3~ | f5 ı   prefix Latin-1
+|246~|246~3~1~ | f6 ˆ   root
+|247~|247~3~1~ | f7 ˜   root
+|248~|248~3~1~ | f8 ¯   root
+|249~|249~3~1~ | f9 ˘   root
+|250~|250~3~3~ | fa ˙   prefix {unassigned}
+|251~|251~3~3~ | fb ˚   prefix {unassigned}
+|252~|252~3~3~ | fc ¸   prefix {unassigned}
+|253~|253~3~3~ | fd ˝   prefix {unassigned}
+|254~|254~3~3~ | fe ˛   prefix {unassigned}
+|255~|255~3~3~ | ff ˇ   prefix misc. controls, special representations
+| Rules for state 4 (after prefix enroute to state 2)
+|033~|033~4~2~ | 21 !   root
+|034~|034~4~2~ | 22 "   root
+|035~|035~4~2~ | 23 #   root
+|036~|036~4~2~ | 24 $   root
+|037~|037~4~2~ | 25 %   root
+|038~|038~4~2~ | 26 &   root
+|039~|039~4~2~ | 27 '   root
+|040~|040~4~2~ | 28 (   root
+|041~|041~4~2~ | 29 )   root
+|042~|042~4~2~ | 2a *   root
+|043~|043~4~2~ | 2b +   root
+|044~|044~4~2~ | 2c ,   root
+|045~|045~4~2~ | 2d -   root
+|046~|046~4~2~ | 2e .   root
+|047~|047~4~2~ | 2f /   root
+|048~|048~4~2~ | 30 0   root
+|049~|049~4~2~ | 31 1   root
+|050~|050~4~2~ | 32 2   root
+|051~|051~4~2~ | 33 3   root
+|052~|052~4~2~ | 34 4   root
+|053~|053~4~2~ | 35 5   root
+|054~|054~4~2~ | 36 6   root
+|055~|055~4~2~ | 37 7   root
+|056~|056~4~2~ | 38 8   root
+|057~|057~4~2~ | 39 9   root
+|058~|058~4~2~ | 3a :   root
+|059~|059~4~2~ | 3b ;   root
+|060~|060~4~2~ | 3c <   root
+|061~|061~4~2~ | 3d =   root
+|062~|062~4~2~ | 3e >   root
+|063~|063~4~2~ | 3f ?   root
+|064~|064~4~2~ | 40 @   root
+|065~|065~4~2~ | 41 A   root
+|066~|066~4~2~ | 42 B   root
+|067~|067~4~2~ | 43 C   root
+|068~|068~4~2~ | 44 D   root
+|069~|069~4~2~ | 45 E   root
+|070~|070~4~2~ | 46 F   root
+|071~|071~4~2~ | 47 G   root
+|072~|072~4~2~ | 48 H   root
+|073~|073~4~2~ | 49 I   root
+|074~|074~4~2~ | 4a J   root
+|075~|075~4~2~ | 4b K   root
+|076~|076~4~2~ | 4c L   root
+|077~|077~4~2~ | 4d M   root
+|078~|078~4~2~ | 4e N   root
+|079~|079~4~2~ | 4f O   root
+|080~|080~4~2~ | 50 P   root
+|081~|081~4~2~ | 51 Q   root
+|082~|082~4~2~ | 52 R   root
+|083~|083~4~2~ | 53 S   root
+|084~|084~4~2~ | 54 T   root
+|085~|085~4~2~ | 55 U   root
+|086~|086~4~2~ | 56 V   root
+|087~|087~4~2~ | 57 W   root
+|088~|088~4~2~ | 58 X   root
+|089~|089~4~2~ | 59 Y   root
+|090~|090~4~2~ | 5a Z   root
+|091~|091~4~2~ | 5b [   root
+|092~|092~4~2~ | 5c \   root
+|093~|093~4~2~ | 5d ]   root
+|094~|094~4~2~ | 5e ^   root
+|095~|095~4~2~ | 5f _   root
+|096~|096~4~2~ | 60 `   root
+|097~|097~4~2~ | 61 a   root
+|098~|098~4~2~ | 62 b   root
+|099~|099~4~2~ | 63 c   root
+|100~|100~4~2~ | 64 d   root
+|101~|101~4~2~ | 65 e   root
+|102~|102~4~2~ | 66 f   root
+|103~|103~4~2~ | 67 g   root
+|104~|104~4~2~ | 68 h   root
+|105~|105~4~2~ | 69 i   root
+|106~|106~4~2~ | 6a j   root
+|107~|107~4~2~ | 6b k   root
+|108~|108~4~2~ | 6c l   root
+|109~|109~4~2~ | 6d m   root
+|110~|110~4~2~ | 6e n   root
+|111~|111~4~2~ | 6f o   root
+|112~|112~4~2~ | 70 p   root
+|113~|113~4~2~ | 71 q   root
+|114~|114~4~2~ | 72 r   root
+|115~|115~4~2~ | 73 s   root
+|116~|116~4~2~ | 74 t   root
+|117~|117~4~2~ | 75 u   root
+|118~|118~4~2~ | 76 v   root
+|119~|119~4~2~ | 77 w   root
+|120~|120~4~2~ | 78 x   root
+|121~|121~4~2~ | 79 y   root
+|122~|122~4~2~ | 7a z   root
+|123~|123~4~2~ | 7b {   root
+|124~|124~4~2~ | 7c |   root
+|125~|125~4~2~ | 7d }   root
+|126~|126~4~2~ | 7e ~   root
+|127~|127~4~2~ | 7f    root
+|128~|128~4~2~ | 80 Ä   root
+|129~|129~4~2~ | 81 Å   root
+|130~|130~4~2~ | 82 Ç   root
+|131~|131~4~2~ | 83 É   root
+|132~|132~4~2~ | 84 Ñ   root
+|133~|133~4~2~ | 85 Ö   root
+|134~|134~4~2~ | 86 Ü   root
+|135~|135~4~2~ | 87 á   root
+|136~|136~4~2~ | 88 à   root
+|137~|137~4~2~ | 89 â   root
+|138~|138~4~2~ | 8a ä   root
+|139~|139~4~2~ | 8b ã   root
+|140~|140~4~2~ | 8c å   root
+|141~|141~4~2~ | 8d ç   root
+|142~|142~4~2~ | 8e é   root
+|143~|143~4~2~ | 8f è   root
+|144~|144~4~2~ | 90 ê   root
+|145~|145~4~2~ | 91 ë   root
+|146~|146~4~2~ | 92 í   root
+|147~|147~4~2~ | 93 ì   root
+|148~|148~4~2~ | 94 î   root
+|149~|149~4~2~ | 95 ï   root
+|150~|150~4~2~ | 96 ñ   root
+|151~|151~4~2~ | 97 ó   root
+|152~|152~4~2~ | 98 ò   root
+|153~|153~4~2~ | 99 ô   root
+|154~|154~4~2~ | 9a ö   root
+|155~|155~4~2~ | 9b õ   root
+|156~|156~4~4~ | 9c ú   prefix (capitals)
+|157~|157~4~2~ | 9d ù   root
+|158~|158~4~2~ | 9e û   root
+|159~|159~4~2~ | 9f ü   root
+|160~|160~4~2~ | a0 †   root
+|161~|161~4~2~ | a1 °   root
+|162~|162~4~2~ | a2 ¢   root
+|163~|163~4~2~ | a3 £   root
+|164~|164~4~2~ | a4 §   root
+|165~|165~4~2~ | a5 •   root
+|166~|166~4~2~ | a6 ¶   root
+|167~|167~4~2~ | a7 ß   root
+|168~|168~4~2~ | a8 ®   root
+|169~|169~4~2~ | a9 ©   root
+|170~|170~4~2~ | aa ™   root
+|171~|171~4~2~ | ab ´   root
+|172~|172~4~2~ | ac ¨   root
+|173~|173~4~2~ | ad ≠   root
+|174~|174~4~2~ | ae Æ   root
+|175~|175~4~2~ | af Ø   root
+|176~|176~4~4~ | b0 ∞   prefix braille chars
+|177~|177~4~4~ | b1 ±   prefix braille chars
+|178~|178~4~4~ | b2 ≤   prefix exc. U+0178: European Latin (incl. Polish)
+|179~|179~4~4~ | b3 ≥   prefix exc. U+0192: Extended Latin
+|180~|180~4~4~ | b4 ¥   prefix  Extended Latin (cont.), IPA
+|181~|181~4~4~ | b5 µ   prefix  IPA (cont.), Spacing mods.
+|182~|182~4~4~ | b6 ∂   prefix Cyrillic
+|183~|183~4~4~ | b7 ∑   prefix Cyrillic
+|184~|184~4~4~ | b8 ∏   prefix Latin Extended Additional
+|185~|185~4~4~ | b9 π   prefix Latin Extended Additional
+|186~|186~4~4~ | ba ∫   prefix Tagalog, Khmer, &c.
+|187~|187~4~4~ | bb ª   prefix Tagalog, Khmer, &c.
+|188~|188~4~4~ | bc º   prefix Ethiopic
+|189~|189~4~4~ | bd Ω   prefix Ethiopic
+|190~|190~4~4~ | be æ   prefix Ethiopic, etc.
+|191~|191~4~4~ | bf ø   prefix Ethiopic, etc.
+|192~|192~4~4~ | c0 ¿   prefix Devanagari
+|193~|193~4~4~ | c1 ¡   prefix Bengali
+|194~|194~4~4~ | c2 ¬   prefix Gurmukhi
+|195~|195~4~4~ | c3 √   prefix Gujarati
+|196~|196~4~4~ | c4 ƒ   prefix Oriya
+|197~|197~4~4~ | c5 ≈   prefix Tamil
+|198~|198~4~4~ | c6 ∆   prefix Telugu
+|199~|199~4~4~ | c7 «   prefix Kannada
+|200~|200~4~4~ | c8 »   prefix Malayalam
+|201~|201~4~4~ | c9 …   prefix Sinhala
+|202~|202~4~4~ | ca     prefix Thai
+|203~|203~4~4~ | cb À   prefix Lao
+|204~|204~4~4~ | cc Ã   prefix Tibetan
+|205~|205~4~4~ | cd Õ   prefix Tibetan
+|206~|206~4~4~ | ce Œ   prefix Myanmar (Burmese)
+|207~|207~4~4~ | cf œ   prefix Georgian
+|208~|208~4~4~ | d0 –   prefix Phonetic Extensions
+|209~|209~4~4~ | d1 —   prefix Phonetic Extensions Supplement
+|210~|210~4~4~ | d2 “   prefix Syriac, Arabic with modifiers
+|211~|211~4~4~ | d3 ”   prefix Thaana, Nko
+|212~|212~4~4~ | d4 ‘   prefix {unassigned}
+|213~|213~4~4~ | d5 ’   prefix {unassigned}
+|214~|214~4~4~ | d6 ÷   prefix {unassigned}
+|215~|215~4~4~ | d7 ◊   prefix {unassigned}
+|216~|216~4~4~ | d8 ÿ   prefix Dingbats, Miscellaneous Mathematical Symbols - 
+|217~|217~4~4~ | d9 Ÿ   prefix Dingbats, Miscellaneous Mathematical Symbols - 
+|218~|218~4~4~ | da ⁄   prefix Supplemental Arrows - B, Miscellaneous Mathemat
+|219~|219~4~4~ | db €   prefix Supplemental Arrows - B, Miscellaneous Mathemat
+|220~|220~4~4~ | dc ‹   prefix Supplemental Mathematical Operators
+|221~|221~4~4~ | dd ›   prefix Supplemental Mathematical Operators
+|222~|222~4~4~ | de ﬁ   prefix Form and Chart Components
+|223~|223~4~4~ | df ﬂ   prefix Blocks, Geometric shapes
+|224~|224~4~4~ | e0 ‡   prefix Arabic
+|225~|225~4~4~ | e1 ·   prefix Arabic
+|226~|226~4~4~ | e2 ‚   prefix Greek
+|227~|227~4~4~ | e3 „   prefix General Diacritics, Greek
+|228~|228~4~4~ | e4 ‰   prefix Armenian
+|229~|229~4~4~ | e5 Â   prefix Armenian, Hebrew
+|230~|230~4~4~ | e6 Ê   prefix Hangul Jamo (Korean)
+|231~|231~4~4~ | e7 Á   prefix Hangul Jamo (Korean)
+|232~|232~4~4~ | e8 Ë   prefix CJK Symbols & Punct., Hiragana (Japanese)
+|233~|233~4~4~ | e9 È   prefix Hiragana/Katakana (Japanese)
+|234~|234~4~4~ | ea Í   prefix Bopomofo, Hangul Compatibility Jamo
+|235~|235~4~4~ | eb Î   prefix Hangul Compat. (cont.), Kanbun, Bopomofo Ext.
+|236~|236~4~4~ | ec Ï   prefix General Punctuation, Sub/Superscripts
+|237~|237~4~4~ | ed Ì   prefix Sub/Supersc'ts, Currency, Diacritics
+|238~|238~4~4~ | ee Ó   prefix Letterlike Symbols, Number Forms
+|239~|239~4~4~ | ef Ô   prefix Number Forms, Arrows
+|240~|240~4~4~ | f0    prefix Mathematical Operators 1
+|241~|241~4~4~ | f1 Ò   prefix Mathematical Operators 2
+|242~|242~4~4~ | f2 Ú   prefix Miscellaneous Technical
+|243~|243~4~4~ | f3 Û   prefix (reserved)
+|244~|244~4~4~ | f4 Ù   prefix {unassigned}
+|245~|245~4~4~ | f5 ı   prefix Latin-1
+|246~|246~4~2~ | f6 ˆ   root
+|247~|247~4~2~ | f7 ˜   root
+|248~|248~4~2~ | f8 ¯   root
+|249~|249~4~2~ | f9 ˘   root
+|250~|250~4~4~ | fa ˙   prefix {unassigned}
+|251~|251~4~4~ | fb ˚   prefix {unassigned}
+|252~|252~4~4~ | fc ¸   prefix {unassigned}
+|253~|253~4~4~ | fd ˝   prefix {unassigned}
+|254~|254~4~4~ | fe ˛   prefix {unassigned}
+|255~|255~4~4~ | ff ˇ   prefix misc. controls, special representations
+| Rules for state 5 (flushing remainder of translation/format code until |031 or space)
+|000~|000~5~
+|001~|001~5~
+|002~|002~5~
+|003~|003~5~
+|004~|004~5~
+|005~|005~5~
+|006~|006~5~
+|007~|007~5~
+|008~|008~5~
+|009~|009~5~
+|010~|010~5~
+|011~|011~5~
+|012~|012~5~
+|013~|013~5~
+|014~|014~5~
+|015~|015~5~
+|016~|016~5~
+|017~|017~5~
+|018~|018~5~
+|019~|019~5~
+|020~|020~5~
+|021~|021~5~
+|022~|022~5~
+|023~|023~5~
+|024~|024~5~
+|025~|025~5~
+|026~|026~5~
+|027~|027~5~
+|029~|029~5~
+|030~|030~5~
+|031~|031~5~~)~ | end of code
+|032~|032~5~~)~ | space
+|033~|033~5~
+|034~|034~5~
+|035~|035~5~
+|036~|036~5~
+|037~|037~5~
+|038~|038~5~
+|039~|039~5~
+|040~|040~5~
+|041~|041~5~
+|042~|042~5~
+|043~|043~5~
+|044~|044~5~
+|045~|045~5~
+|046~|046~5~
+|047~|047~5~
+|048~|048~5~
+|049~|049~5~
+|050~|050~5~
+|051~|051~5~
+|052~|052~5~
+|053~|053~5~
+|054~|054~5~
+|055~|055~5~
+|056~|056~5~
+|057~|057~5~
+|058~|058~5~
+|059~|059~5~
+|060~|060~5~
+|061~|061~5~
+|062~|062~5~
+|063~|063~5~
+|064~|064~5~
+|065~|065~5~
+|066~|066~5~
+|067~|067~5~
+|068~|068~5~
+|069~|069~5~
+|070~|070~5~
+|071~|071~5~
+|072~|072~5~
+|073~|073~5~
+|074~|074~5~
+|075~|075~5~
+|076~|076~5~
+|077~|077~5~
+|078~|078~5~
+|079~|079~5~
+|080~|080~5~
+|081~|081~5~
+|082~|082~5~
+|083~|083~5~
+|084~|084~5~
+|085~|085~5~
+|086~|086~5~
+|087~|087~5~
+|088~|088~5~
+|089~|089~5~
+|090~|090~5~
+|091~|091~5~
+|092~|092~5~
+|093~|093~5~
+|094~|094~5~
+|095~|095~5~
+|096~|096~5~
+|097~|097~5~
+|098~|098~5~
+|099~|099~5~
+|100~|100~5~
+|101~|101~5~
+|102~|102~5~
+|103~|103~5~
+|104~|104~5~
+|105~|105~5~
+|106~|106~5~
+|107~|107~5~
+|108~|108~5~
+|109~|109~5~
+|110~|110~5~
+|111~|111~5~
+|112~|112~5~
+|113~|113~5~
+|114~|114~5~
+|115~|115~5~
+|116~|116~5~
+|117~|117~5~
+|118~|118~5~
+|119~|119~5~
+|120~|120~5~
+|121~|121~5~
+|122~|122~5~
+|123~|123~5~
+|124~|124~5~
+|125~|125~5~
+|126~|126~5~
+|127~|127~5~
+|128~|128~5~
+|129~|129~5~
+|130~|130~5~
+|131~|131~5~
+|132~|132~5~
+|133~|133~5~
+|134~|134~5~
+|135~|135~5~
+|136~|136~5~
+|137~|137~5~
+|138~|138~5~
+|139~|139~5~
+|140~|140~5~
+|141~|141~5~
+|142~|142~5~
+|143~|143~5~
+|144~|144~5~
+|145~|145~5~
+|146~|146~5~
+|147~|147~5~
+|148~|148~5~
+|149~|149~5~
+|150~|150~5~
+|151~|151~5~
+|152~|152~5~
+|153~|153~5~
+|154~|154~5~
+|155~|155~5~
+|156~|156~5~
+|157~|157~5~
+|158~|158~5~
+|159~|159~5~
+|160~|160~5~
+|161~|161~5~
+|162~|162~5~
+|163~|163~5~
+|164~|164~5~
+|165~|165~5~
+|166~|166~5~
+|167~|167~5~
+|168~|168~5~
+|169~|169~5~
+|170~|170~5~
+|171~|171~5~
+|172~|172~5~
+|173~|173~5~
+|174~|174~5~
+|175~|175~5~
+|176~|176~5~
+|177~|177~5~
+|178~|178~5~
+|179~|179~5~
+|180~|180~5~
+|181~|181~5~
+|182~|182~5~
+|183~|183~5~
+|184~|184~5~
+|185~|185~5~
+|186~|186~5~
+|187~|187~5~
+|188~|188~5~
+|189~|189~5~
+|190~|190~5~
+|191~|191~5~
+|192~|192~5~
+|193~|193~5~
+|194~|194~5~
+|195~|195~5~
+|196~|196~5~
+|197~|197~5~
+|198~|198~5~
+|199~|199~5~
+|200~|200~5~
+|201~|201~5~
+|202~|202~5~
+|203~|203~5~
+|204~|204~5~
+|205~|205~5~
+|206~|206~5~
+|207~|207~5~
+|208~|208~5~
+|209~|209~5~
+|210~|210~5~
+|211~|211~5~
+|212~|212~5~
+|213~|213~5~
+|214~|214~5~
+|215~|215~5~
+|216~|216~5~
+|217~|217~5~
+|218~|218~5~
+|219~|219~5~
+|220~|220~5~
+|221~|221~5~
+|222~|222~5~
+|223~|223~5~
+|224~|224~5~
+|225~|225~5~
+|226~|226~5~
+|227~|227~5~
+|228~|228~5~
+|229~|229~5~
+|230~|230~5~
+|231~|231~5~
+|232~|232~5~
+|233~|233~5~
+|234~|234~5~
+|235~|235~5~
+|236~|236~5~
+|237~|237~5~
+|238~|238~5~
+|239~|239~5~
+|240~|240~5~
+|241~|241~5~
+|242~|242~5~
+|243~|243~5~
+|244~|244~5~
+|245~|245~5~
+|246~|246~5~
+|247~|247~5~
+|248~|248~5~
+|249~|249~5~
+|250~|250~5~
+|251~|251~5~
+|252~|252~5~
+|253~|253~5~
+|254~|254~5~
+|255~|255~5~

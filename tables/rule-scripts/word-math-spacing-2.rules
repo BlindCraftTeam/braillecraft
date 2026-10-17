@@ -1,0 +1,29 @@
+| Spaces around signs of comparison, second pass
+| To clean up after use of amspco.sbt,
+| deleting the [big] codes left by amspco.sbt and deleting the following space
+| when the [big] code comes after [ts], [l], or [<].
+| Copyright 2015 the vendor Systems, Inc.  All rights reserved.
+| 1;1  2015-01-12
+| 1;2  2015-12-06/jes: clean up cases where space is added next to a [ts]
+|      or [te] (including the "embedded" variants thereof with idle codes)
+|      and there was a space on the other side already
+ |028ts|031|028big|031 ~ |028ts|031~
+ |028ts|031|028idle|~ete|031|028big|031 ~ |028ts|031|028idle|~ete|031~
+|028big|031 |028te|031 ~|028te|031 ~
+|028big|031 |028idle|~ets|031|028te|031 ~|028idle|~ets|031|028te|031 ~
+|028l|031|028big|031 ~|028l|031~
+|028<|031|028big|031 ~|028<|031~
+|028big|031 |028l|031~|028l|031~
+|028big|031 |028<|031~|028<|031~
+| following is the same as above but with "hard" spaces
+|030|028ts|031|028big|031 ~|030|028ts|031~
+|030|028ts|031|028idle|~ete|031|028big|031 ~|030|028ts|031|028idle|~ete|031~
+|028big|031 |028te|031|030~|028te|031|030~
+|028big|031 |028idle|~ets|031|028te|031|030~|028idle|~ets|031|028te|031|030~
+|028l|031|028big|031 ~|028l|031~
+|028<|031|028big|031 ~|028<|031~
+|028big|031 |028l|031~|028l|031~
+|028big|031 |028<|031~|028<|031~
+| remove 'big' flag from other added spaces
+|028big|031 ~ ~
+

@@ -1,0 +1,87 @@
+| Element names in small letters, namespace prefixes separated
+| The net effect of this table is that the case
+| of all element names following "<" have been downcased and any elements
+| of the form <xy:element have been transformed to <xy-ns><element.
+| ---
+| 1;1 2003-4-23 J E Sullivan, from daielc 1;1 2003-4-18
+| 2;1 2010-12-20/jes: Allow for the possibility that "native" the program commands in TXX
+|     form, including [es~...] and [ee~...] as well as [<] and [>] commands, may
+|     already be present in the input, and if so should be copied through
+|     without interpretation.  (Earlier xmlproc may do this in the program as of date.)
+| ---
+| States:
+|   1 = in general text
+|   4 = within a nonprocessing tag after "<" & before space
+|   5 = within a nonprocessing tag after "</" & before space
+|  10 = inside |028 ... |031 (native txx) the program command (added 2010-12-20)
+| ---
+| Rules for state 1:
+<?~<?~1~ | copy processing instruction ignoring "<"
+</~</~1~5~ | sense beginning of end-tag
+<~<~1~4~ | otherwise sense beginning of tag
+| Rules for state 4:
+>~>~4~1~
+A~a~4~
+B~b~4~
+C~c~4~
+D~d~4~
+E~e~4~
+F~f~4~
+G~g~4~
+H~h~4~
+I~i~4~
+J~j~4~
+K~k~4~
+L~l~4~
+M~m~4~
+N~n~4~
+O~o~4~
+P~p~4~
+Q~q~4~
+R~r~4~
+S~s~4~
+T~t~4~
+U~u~4~
+V~v~4~
+W~w~4~
+X~x~4~
+Y~y~4~
+Z~z~4~
+ ~ ~4~1~
+:~-ns><~4~ | unlikely outside XML?
+| Rules for state 5:
+>~>~5~1~
+A~a~5~
+B~b~5~
+C~c~5~
+D~d~5~
+E~e~5~
+F~f~5~
+G~g~5~
+H~h~5~
+I~i~5~
+J~j~5~
+K~k~5~
+L~l~5~
+M~m~5~
+N~n~5~
+O~o~5~
+P~p~5~
+Q~q~5~
+R~r~5~
+S~s~5~
+T~t~5~
+U~u~5~
+V~v~5~
+W~w~5~
+X~x~5~
+Y~y~5~
+Z~z~5~
+ ~ ~5~1~
+:~-ns></~5~
+| General any-state (default) rules
+&nbsp~ ~ | no break (required) space - frequently entered w/o ";" in old HTML
+| Sensing beginning of native txx command (in any state):
+|028~|028~~10~(~ | to state 10 & push current state
+| state 10 - copy all, reverting to prior state after |031:
+|031~|031~10~~)~

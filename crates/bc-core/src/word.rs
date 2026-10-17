@@ -11,15 +11,26 @@ use crate::docx::{self, Element, Node, Part};
 
 /// How hard page breaks are read: as the document's own pages, as the print pages of a scanned book, or from the
 /// publisher's own page-break marks.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum PrintPages {
+    /// Hard page breaks ignored (the Print Page Breaks list's first choice).
+    Ignore,
     Internal,
     Scanned,
     Publishers,
 }
 
+impl PrintPages {
+    /// The Print Page Breaks list's choices in order: Ignore, Mark from Word document, Treat hard page breaks as
+    /// print page breaks, Use publishers' reference page tags.
+    pub fn from_choice(n: usize) -> PrintPages {
+        [PrintPages::Ignore, PrintPages::Internal, PrintPages::Scanned, PrintPages::Publishers][n.min(3)]
+    }
+}
+
 /// The Word importer's settings, with the original's defaults (its Global, Word Importer values).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
 pub struct Options {
     /// Text in a braille or SimBraille font is braille (brlinline); text in a Courier font is computer braille.
     pub braille_fonts: bool,
@@ -41,6 +52,11 @@ pub struct Options {
     pub hyperlinks: u8,
     pub remove_duplicates: bool,
     pub auto_tag_cbc: bool,
+    /// Codes typed in the Word document are read as codes (Allow embedded codes).
+    pub codes: bool,
+    /// Global, Import Options: spaces around math signs of comparison; spaces around dashes removed.
+    pub add_spaces: bool,
+    pub remove_dash_spaces: bool,
 }
 
 impl Default for Options {
@@ -62,8 +78,213 @@ impl Default for Options {
             hyperlinks: 2,
             remove_duplicates: false,
             auto_tag_cbc: false,
+            codes: false,
+            add_spaces: false,
+            remove_dash_spaces: false,
         }
     }
+}
+
+/// The program data file of a template's Word style map name (the "word:mws" pseudo-style's text; the original's
+/// file names are kept as data under the program's own names).
+pub fn map_file_name(name: &str) -> String {
+    match name.trim().to_lowercase().as_str() {
+        "aussie" | "australian" => "australian".into(),
+        "bana" => "bana".into(),
+        "francais" | "french" => "french".into(),
+        "rus" | "russian" => "russian".into(),
+        "ukbasic" | "uk-basic" => "uk-basic".into(),
+        // The original's own map (named after the program), an empty name and any name with no map shipped.
+        _ => "default".into(),
+    }
+}
+
+/// The control characters step (the recipe's control-character script, run on the stylesheet's output before the
+/// tag processor): in every text node, a tab or a line feed becomes a space and every other character below a
+/// space is dropped.
+fn strip_controls(e: &mut Element) {
+    for c in &mut e.children {
+        match c {
+            Node::Text(t) => {
+                if t.chars().any(|ch| (ch as u32) < 0x20) {
+                    *t = t.chars().filter_map(|ch| match ch as u32 { 9 | 10 => Some(' '), 0..=31 => None, _ => Some(ch) }).collect();
+                }
+            }
+            Node::Element(child) => strip_controls(child),
+            Node::Pi(_) => {}
+        }
+    }
+}
+
+/// The hyperlinks step (spec 28 section 10): a link arrives as 0x10 URL 0x10 TEXT 0x10; `action` 0 writes the URL,
+/// 1 the text, 2 the text then " (URL)" unless `remove_duplicates` and the text equals the URL, 3 the link codes
+/// rps:h and rpe:h around the text; an internal link (URL starting "#") under any action but 3 writes the text
+/// only. With `tag_mode` 1 or 2, URLs and e-mail addresses in plain text are wrapped in computer braille codes
+/// (mode 1: cbi and wb-cb before, txi and wb after; mode 2: the compinline style).
+pub fn hyperlinks(text: &[u8], action: u8, remove_duplicates: bool, tag_mode: u8) -> Vec<u8> {
+    let mut out = Vec::with_capacity(text.len());
+    let mut i = 0;
+    let mut plain_start = 0;
+    let flush_plain = |out: &mut Vec<u8>, plain: &[u8]| {
+        if tag_mode == 0 {
+            out.extend_from_slice(plain);
+        } else {
+            auto_tag(plain, tag_mode, out);
+        }
+    };
+    while i < text.len() {
+        if text[i] == 0x10 {
+            flush_plain(&mut out, &text[plain_start..i]);
+            let rest = &text[i + 1..];
+            let Some(u) = rest.iter().position(|&b| b == 0x10) else {
+                out.extend_from_slice(&text[i..]);
+                plain_start = text.len();
+                break;
+            };
+            let url = &rest[..u];
+            let after = &rest[u + 1..];
+            let Some(t) = after.iter().position(|&b| b == 0x10) else {
+                out.extend_from_slice(&text[i..]);
+                plain_start = text.len();
+                break;
+            };
+            let link_text = &after[..t];
+            let internal = url.first() == Some(&b'#');
+            match action {
+                3 => {
+                    out.extend_from_slice(b"\x1crps:h~");
+                    out.extend_from_slice(url);
+                    out.push(0x1f);
+                    out.extend_from_slice(link_text);
+                    out.extend_from_slice(b"\x1crpe:h\x1f");
+                }
+                _ if internal => out.extend_from_slice(link_text),
+                0 => out.extend_from_slice(url),
+                1 => out.extend_from_slice(link_text),
+                _ => {
+                    out.extend_from_slice(link_text);
+                    if !(remove_duplicates && same_link(link_text, url)) {
+                        out.extend_from_slice(b" (");
+                        out.extend_from_slice(url);
+                        out.push(b')');
+                    }
+                }
+            }
+            i += 1 + u + 1 + t + 1;
+            plain_start = i;
+        } else {
+            i += 1;
+        }
+    }
+    if plain_start < text.len() {
+        flush_plain(&mut out, &text[plain_start..]);
+    }
+    out
+}
+
+/// Whether a link's text equals its URL, as the original compares them: the text's codes skipped, upper-cased, and
+/// equal when the text runs out and the URL has no further letter or digit.
+fn same_link(text: &[u8], url: &[u8]) -> bool {
+    let mut t = 0;
+    let mut u = 0;
+    loop {
+        while t < text.len() && text[t] == 0x1c {
+            t = text[t..].iter().position(|&b| b == 0x1f).map_or(text.len(), |p| t + p + 1);
+        }
+        if t >= text.len() {
+            return !url[u..].iter().any(|b| b.is_ascii_alphanumeric());
+        }
+        if u >= url.len() || text[t].to_ascii_uppercase() != url[u].to_ascii_uppercase() {
+            return false;
+        }
+        t += 1;
+        u += 1;
+    }
+}
+
+/// URLs ("http://", "https://", "mailto") and e-mail addresses in plain text wrapped in the computer braille codes
+/// of `mode`.
+fn auto_tag(plain: &[u8], mode: u8, out: &mut Vec<u8>) {
+    let (open, close): (&[u8], &[u8]) = if mode == 1 { (b"\x1ccbi\x1f\x1cwb-cb\x1f", b"\x1ctxi\x1f\x1cwb\x1f") } else { (b"\x1ces~compinline\x1f", b"\x1cee~compinline\x1f") };
+    let is_url_char = |b: u8| !b.is_ascii_whitespace() && b != 0x1c && b != 0x1f;
+    let is_mail_char = |b: u8| b.is_ascii_alphanumeric() || b == b'-' || b == b'.' || b == b'_';
+    let mut i = 0;
+    let mut copied = 0;
+    while i < plain.len() {
+        if plain[i] == 0x1c {
+            i = plain[i..].iter().position(|&b| b == 0x1f).map_or(plain.len(), |p| i + p + 1);
+            continue;
+        }
+        let rest = &plain[i..];
+        let prefix = [&b"http://"[..], b"https://", b"mailto"].iter().find(|p| rest.len() >= p.len() && rest[..p.len()].eq_ignore_ascii_case(p)).map(|p| p.len());
+        if let Some(_) = prefix {
+            let end = i + rest.iter().position(|&b| !is_url_char(b)).unwrap_or(rest.len());
+            out.extend_from_slice(&plain[copied..i]);
+            out.extend_from_slice(open);
+            out.extend_from_slice(&plain[i..end]);
+            out.extend_from_slice(close);
+            copied = end;
+            i = end;
+            continue;
+        }
+        if plain[i] == b'@' && i > 0 && is_mail_char(plain[i - 1]) && i + 1 < plain.len() && is_mail_char(plain[i + 1]) {
+            let mut start = i;
+            while start > copied && is_mail_char(plain[start - 1]) {
+                start -= 1;
+            }
+            let mut end = i + 1;
+            while end < plain.len() && is_mail_char(plain[end]) {
+                end += 1;
+            }
+            out.extend_from_slice(&plain[copied..start]);
+            out.extend_from_slice(open);
+            out.extend_from_slice(&plain[start..end]);
+            out.extend_from_slice(close);
+            copied = end;
+            i = end;
+            continue;
+        }
+        i += 1;
+    }
+    out.extend_from_slice(&plain[copied..]);
+}
+
+/// The apostrophe and quote forms of the character step (spec 28 section 11, step 3, run when the quotes script
+/// follows): U+0027, U+2018 and U+2019 each take an override when one is given; otherwise the character is classed
+/// by its neighbours (a letter or digit before only: U+2019; after only: U+2018, or U+02BC when it was U+2019;
+/// both or neither: U+0027).
+pub fn quote_forms(text: &str, apostrophe: Option<char>, left: Option<char>, right: Option<char>) -> String {
+    let chars: Vec<char> = text.chars().collect();
+    let mut out = String::with_capacity(text.len());
+    for (k, &c) in chars.iter().enumerate() {
+        let replaced = match c {
+            '\u{27}' => apostrophe,
+            '\u{2018}' => left,
+            '\u{2019}' => right,
+            _ => {
+                out.push(c);
+                continue;
+            }
+        };
+        if let Some(r) = replaced {
+            out.push(r);
+            continue;
+        }
+        let before = k > 0 && chars[k - 1].is_alphanumeric();
+        let after = chars.get(k + 1).is_some_and(|n| n.is_alphanumeric());
+        out.push(match (before, after) {
+            (true, false) => '\u{2019}',
+            (false, true) => {
+                if c == '\u{2019}' {
+                    '\u{2bc}'
+                } else {
+                    '\u{2018}'
+                }
+            }
+            _ => '\u{27}',
+        });
+    }
+    out
 }
 
 // ------------------------------------------------------------------ the package's parts
@@ -1080,7 +1301,8 @@ impl StyleMap {
         }
         let mut lines = text.lines().map(|l| l.split('#').next().unwrap_or("").trim()).filter(|l| !l.is_empty()).peekable();
         while let Some(line) = lines.next() {
-            let (kind, rest) = line.split_once(' ').ok_or_else(|| format!("style map: {line}"))?;
+            // An AltText block has no name.
+            let (kind, rest) = line.split_once(' ').unwrap_or((line, ""));
             if !matches!(kind, "BuiltIn" | "User" | "AltText") {
                 return Err(format!("style map: unknown block {kind}"));
             }
@@ -1773,7 +1995,8 @@ pub fn import(bytes: &[u8], map_text: &str, opt: &Options) -> Result<Processed, 
         Some(m) => m,
         None => StyleMap::from_text(map_text)?,
     };
-    let tree = transform(&pkg, opt);
+    let mut tree = transform(&pkg, opt);
+    strip_controls(&mut tree);
     let numbering = Numbering::new(pkg.numbering.as_ref());
     let mut p = Processor {
         map: &map,

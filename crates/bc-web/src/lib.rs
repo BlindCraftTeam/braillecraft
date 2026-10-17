@@ -99,7 +99,25 @@ thread_local! {
 pub fn import_file_names() -> Vec<String> {
     let scan = bc_core::import_chain::SCAN_TABLES.iter().map(|n| format!("scan/{n}"));
     let maps = bc_core::import_chain::UNIMAP_TABLES.iter().map(|n| format!("unimap/{n}"));
-    scan.chain(bc_core::import_chain::RULE_SCRIPTS.iter().map(|n| format!("rule-scripts/{n}"))).chain(maps).collect()
+    let word = bc_core::import_chain::WORD_RULE_SCRIPTS.iter().map(|n| format!("rule-scripts/{n}"));
+    let styles = bc_core::import_chain::WORD_MAPS.iter().map(|n| format!("word-styles/{n}.map"));
+    scan.chain(bc_core::import_chain::RULE_SCRIPTS.iter().map(|n| format!("rule-scripts/{n}"))).chain(maps).chain(word).chain(styles).collect()
+}
+
+/// The Word style map a template text names (its "word:mws" pseudo-style), as a program data file name.
+#[wasm_bindgen]
+pub fn word_map_name(template_text: &str) -> String {
+    let named = bc_core::templates::styles(template_text).lookup(b"word:mws", 0).map(|b| String::from_utf8_lossy(&b).into_owned()).unwrap_or_default();
+    bc_core::word::map_file_name(&named)
+}
+
+/// A Word document through the Word recipe (spec 28): the Word importer's settings as JSON of
+/// bc_core::word::Options, the style map's program name and the Unknown Characters setting.
+#[wasm_bindgen]
+pub fn import_docx(bytes: &[u8], options: &str, map: &str, unknown: u8) -> Result<Imported, JsError> {
+    let opt: bc_core::word::Options = serde_json::from_str(options).map_err(error)?;
+    let got = bc_core::import_chain::run(bytes, &bc_core::import_chain::Recipe::Docx(opt, map.to_string(), unknown), &Fetched);
+    Ok(Imported { running: bc_core::internal::decode(&got.text), errors: got.errors.join("\n"), long_page: false, wide_line: false })
 }
 
 /// A file the import chains read (a name from `import_file_names`, without its folder) and its bytes.
@@ -121,6 +139,9 @@ impl bc_core::import_chain::Files for Fetched {
     }
     fn unimap_tables(&self) -> Result<Vec<(String, Vec<u8>)>, String> {
         bc_core::import_chain::UNIMAP_TABLES.iter().map(|n| self.scan_table(n).map(|b| (n.to_string(), b))).collect()
+    }
+    fn word_map(&self, name: &str) -> Result<String, String> {
+        self.scan_table(&format!("{name}.map")).map(|b| String::from_utf8_lossy(&b).into_owned())
     }
 }
 

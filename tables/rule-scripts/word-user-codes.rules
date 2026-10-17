@@ -1,0 +1,14 @@
+| Codes typed by the user in the Word document
+| 1;1 2006-4-10 MPG - original version
+| 1;2 2020-10-16 PJS - add fix for BANA template listed table codes
+
+| Fix for problem in BANA template listed table code through 2019
+[[*htbs;r:0:0:b:n:l*]]~|028htbs;r:1:1:b:n:l|031~1~1~
+
+| Ordinary logic
+[[*~|028~1~2~
+*]]~|031~2~1~
+
+| Reset state if we obviously can't still be in a code
+|028~|031|028~2~1~
+|032~|031|032~2~1~

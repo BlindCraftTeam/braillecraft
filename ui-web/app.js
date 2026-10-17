@@ -2277,6 +2277,21 @@ async function readImport(bytes, choice) {
       return null;
     }
   }
+  // A Word document goes through the Word recipe with the Global Word Importer and Import Options settings and the
+  // style map the chosen template names.
+  if (choice.kind === "Docx") {
+    let imported;
+    try {
+      await importFiles();
+      const map = core.word_map_name(await templateTextNamed(template));
+      imported = core.import_docx(bytes, JSON.stringify(wordOptions()), map, unknownCharacters());
+    } catch (err) {
+      statusLine.textContent = String(err.message ?? err);
+      return null;
+    }
+    if (imported.errors) await message(imported.errors);
+    return { braille: false, running: imported.running, template };
+  }
   if (CHAIN_KINDS.includes(choice.kind)) {
     let imported;
     try {
@@ -2294,13 +2309,68 @@ async function readImport(bytes, choice) {
   return null;
 }
 
-// A file through the import chain of its kind, the chain's tables fetched once.
+// The files the import chains read, fetched once.
 let importFilesLoaded = false;
-async function importChain(bytes, choice) {
+async function importFiles() {
   if (!importFilesLoaded) {
     for (const name of core.import_file_names()) core.import_add_file(name, await fetchBytes(`tables/${name}`));
     importFilesLoaded = true;
   }
+}
+
+// The text of the template named (an import dialog choice), else the File, New default template's text.
+async function templateTextNamed(name) {
+  if (!name) return templateText();
+  try {
+    const index = await (await fetch("templates/index.tsv")).text();
+    const row = index.split("\n").map((l) => l.split("\t")).find((c) => (c[2] ?? "").trim() === name);
+    return row ? await (await fetch(`templates/${row[1]}.template`)).text() : templateText();
+  } catch {
+    return templateText();
+  }
+}
+
+// The Word importer's settings as the Global Word Importer (1036) and Import Options (1037) dialogs last kept them
+// (showDialog memory), the original's defaults where a dialog was never confirmed; the JSON shape of the core's
+// Word options.
+function wordOptions() {
+  const kept = (rid) => {
+    try {
+      return new Map(JSON.parse(store.get(`dialog.${rid}.`) ?? "[]"));
+    } catch {
+      return new Map();
+    }
+  };
+  const w = kept(1036);
+  const i = kept(1037);
+  const flag = (m, id, d) => (typeof m.get(id) === "boolean" ? m.get(id) : d);
+  const PAGES = ["Ignore", "Internal", "Scanned", "Publishers"];
+  const pageItems = ["Ignore", "Mark from Word document", "Treat hard page breaks as print page breaks", "Use publishers' <ipp no=#> reference page tags"];
+  const linkItems = ["Text Only", "URLs Only", "Both Text and URLs", "Structured Hyperlinks"];
+  const pages = Math.max(0, pageItems.indexOf(w.get(10)));
+  const links = linkItems.indexOf(i.get(7));
+  return {
+    braille_fonts: flag(w, 11, false),
+    cbc: flag(w, 6, false),
+    ignore_bold: flag(w, 14, false),
+    ignore_italics: flag(w, 15, false),
+    ignore_underline: flag(w, 16, false),
+    ignore_lang: flag(w, 17, false),
+    hard_pages: flag(w, 7, false),
+    skipped_lines: flag(w, 8, false),
+    print_pages: PAGES[pages],
+    hyperlinks: links >= 0 ? links : 2,
+    remove_duplicates: flag(i, 8, false),
+    auto_tag_cbc: flag(i, 19, false),
+    codes: flag(w, 12, false),
+    add_spaces: flag(i, 20, false),
+    remove_dash_spaces: flag(i, 21, false),
+  };
+}
+
+// A file through the import chain of its kind, the chain's tables fetched once.
+async function importChain(bytes, choice) {
+  await importFiles();
   const s = braideSettings();
   const input = choice.kind === "FormattedBraille" ? await northAmerican(bytes, choice.encoding) : bytes;
   const braide = [s.oddMain, s.evenMain, s.oddReference, s.evenReference, s.header, s.footer, s.lines, s.cells, s.preserve ? 1 : 0];

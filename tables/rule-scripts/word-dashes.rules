@@ -1,0 +1,19 @@
+| Dash handling
+| This is to recognize certain patterns as informal representations of
+| em dash (U+2014), and remove ordinary spaces surrounding such dashes
+| 1;1 2014-10-27 J E Sullivan
+| single (ordinary) hyphen - only when surrounded by ordinary spaces
+ - ~|236D~
+| single hyphen (U+2010 Hyphen) - only when surrounded by ordinary spaces
+ |236@ ~|236D~
+| single "hard" hyphen (U+2011 Non-breaking hyphen) - only when surrounded by ordinary spaces
+ |236A ~|236D~
+| single figure dash (U+2012 Figure dash) - only when surrounded by ordinary spaces
+ |236B ~|236D~
+| single en dash (U+2013 En dash) - only when surrounded by ordinary spaces
+ |236C ~|236D~
+| double (ordinary) hyphen - in any context; remove ordinary spaces if surrounding
+ -- ~|236D~
+--~|236D~
+| em dash - remove ordinary spaces if surrounding
+ |236D ~|236D~

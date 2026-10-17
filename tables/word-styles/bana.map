@@ -1,0 +1,2568 @@
+# Stylesheet mappings for Microsoft Word (Last revised by Susan Christensen, 9/10/26)
+
+User "1-1"
+{
+  MappedName = "1-1."
+  IgnoreCentering = true
+}
+
+User "1-2"
+{
+  MappedName = "1-2."
+  IgnoreCentering = true
+}
+
+User "1-3"
+{
+  MappedName = "1-3."
+  IgnoreCentering = true
+}
+
+User "1-5"
+{
+  MappedName = "1-5."
+  IgnoreCentering = true
+}
+
+User "1-6"
+{
+  MappedName = "1-6."
+  IgnoreCentering = true
+}
+
+User "1-7"
+{
+  MappedName = "1-7."
+  IgnoreCentering = true
+}
+
+User "1-9"
+{
+  MappedName = "1-9."
+  IgnoreCentering = true
+}
+
+User "3-1"
+{
+  MappedName = "3-1."
+  IgnoreCentering = true
+}
+
+User "3-3"
+{
+  MappedName = "3-3."
+  IgnoreCentering = true
+}
+
+User "3-5"
+{
+  MappedName = "3-5."
+  IgnoreCentering = true
+}
+
+User "3-7"
+{
+  MappedName = "3-7."
+  IgnoreCentering = true
+}
+
+User "3-9"
+{
+  MappedName = "3-9."
+  IgnoreCentering = true
+}
+
+User "4-6"
+{
+  MappedName = "4-6."
+  IgnoreCentering = true
+}
+
+User "5-3"
+{
+  MappedName = "5-3."
+  IgnoreCentering = true
+}
+
+User "5-5"
+{
+  MappedName = "5-5."
+  IgnoreCentering = true
+}
+
+User "5-7"
+{
+  MappedName = "5-7."
+  IgnoreCentering = true
+}
+
+User "5-9"
+{
+  MappedName = "5-9."
+  IgnoreCentering = true
+}
+
+User "7-5"
+{
+  MappedName = "7-5."
+  IgnoreCentering = true
+}
+
+User "7-7"
+{
+  MappedName = "7-7."
+  IgnoreCentering = true
+}
+
+User "7-9"
+{
+  MappedName = "7-9."
+  IgnoreCentering = true
+}
+
+User "7-11"
+{
+  MappedName = "7-11."
+  IgnoreCentering = true
+}
+
+User "9-7"
+{
+  MappedName = "9-7."
+  IgnoreCentering = true
+}
+
+User "9-9"
+{
+  MappedName = "9-9."
+  IgnoreCentering = true
+}
+
+User "9-11"
+{
+  MappedName = "9-11."
+  IgnoreCentering = true
+}
+
+User "9-13"
+{
+  MappedName = "9-13."
+  IgnoreCentering = true
+}
+
+User "11-9"
+{
+  MappedName = "11-9."
+  IgnoreCentering = true
+}
+
+User "11-11"
+{
+  MappedName = "11-11."
+  IgnoreCentering = true
+}
+
+User "11-13"
+{
+  MappedName = "11-13."
+  IgnoreCentering = true
+}
+
+User "11-15"
+{
+  MappedName = "11-15."
+  IgnoreCentering = true
+}
+
+User "13-11"
+{
+  MappedName = "13-11."
+  IgnoreCentering = true
+}
+
+User "13-13"
+{
+  MappedName = "13-13."
+  IgnoreCentering = true
+}
+
+User "13-15"
+{
+  MappedName = "13-15."
+  IgnoreCentering = true
+}
+
+User "13-17"
+{
+  MappedName = "13-17."
+  IgnoreCentering = true
+}
+
+User "Acronym"
+{
+  MappedName = "acronym"
+  IgnoreCentering = true
+}
+
+BuiltIn "HTML Acronym"
+{
+  MappedName = "acronym"
+  IgnoreCentering = true
+}
+ 
+AltText
+{
+  MappedName = "TranscriberNote."
+  IgnoreCentering = true
+}
+
+User "AlphabeticDivision"
+{
+  MappedName = "AlphabeticDivision."
+  IgnoreCentering = true
+}
+
+User "Attribution"
+{
+  MappedName = "Attribution."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  AggregationStyle = Paragraphs
+  IgnoreCentering = true
+}
+
+BuiltIn "Body Text"
+{
+  MappedName = "B-BodyText."
+  IgnoreCentering = true
+}
+
+User "BoxBegin"
+{
+  MappedName = "BB-BoxBegin."
+  IgnoreContents = Always
+  IgnoreCentering = true
+}
+
+User "BoxDouble"
+{
+  MappedName = "BD-BoxDouble."
+  IgnoreContents = Always
+  IgnoreCentering = true
+}
+
+User "BoxEnd"
+{
+  MappedName = "BE-BoxEnd."
+  IgnoreContents = Always
+  IgnoreCentering = true
+}
+
+User "BoxBottomText"
+{
+  MappedName = "BoxBottomText."
+  IgnoreCentering = true
+}
+
+User "BoxTopText"
+{
+  MappedName = "BoxTopText."
+  IgnoreCentering = true
+}
+
+User "brlinline"
+{
+  MappedName = "brlinline"
+  IgnoreCentering = true
+}
+
+BuiltIn "Caption"
+{
+  MappedName = "C-Caption."
+  IgnoreCentering = true
+}
+
+User "Cartoon"
+{
+  MappedName = "CT-Cartoon."
+  IgnoreCentering = true
+}
+
+User "CBC-Display"
+{
+  MappedName = "CD-CBCDisplay."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreEmphases=InDef
+  IgnoreCentering = true
+}
+
+User "CBC-Display 1"
+{
+  MappedName = "CD-CBCDisplay."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreEmphases=InDef
+  IgnoreCentering = true
+}
+
+User "CBC-Display 2"
+{
+  MappedName = "CD-CBCDisplay."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreEmphases=InDef
+  IgnoreCentering = true
+}
+
+User "CBC-Display 3"
+{
+  MappedName = "CD-CBCDisplay."
+  Level = 3
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreEmphases=InDef
+  IgnoreCentering = true
+}
+
+User "CBC-Display 4"
+{
+  MappedName = "CD-CBCDisplay."
+  Level = 4
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreEmphases=InDef
+  IgnoreCentering = true
+}
+
+User "CBC-Display 5"
+{
+  MappedName = "CD-CBCDisplay."
+  Level = 5
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreEmphases=InDef
+  IgnoreCentering = true
+}
+
+User "CBC-Display 6"
+{
+  MappedName = "CD-CBCDisplay."
+  Level = 6
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreEmphases=InDef
+  IgnoreCentering = true
+}
+
+User "CBC-Inline"
+{
+  MappedName = "CI-CBCInline"
+  IgnoreEmphases=InDef
+  IgnoreCentering = true
+}
+
+User "Centered"
+{
+  MappedName = "Centered."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "CenteredFullLine"
+{
+  MappedName = "CF-CenteredFullLine."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "CenteredWithGuideDots"
+{
+  MappedName = "CG-CenteredWithGuideDots."
+  IgnoreCentering = true
+}
+
+User "Centered&GuideDots"
+{
+  MappedName = "CG-CenteredWithGuideDots."
+  IgnoreCentering = true
+}
+
+User "CrossReference"
+{
+  MappedName = "CR-CrossReference."
+  IgnoreCentering = true
+}
+
+User "Directions"
+{
+  MappedName = "Directions."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  AggregationStyle = Paragraphs
+  IgnoreCentering = true
+}
+
+User "DirectionsNemeth"
+{
+  MappedName = "DirectionsNemeth."
+  IgnoreCentering = true
+}
+
+User "EndnoteEmbed"
+{
+  MappedName = "EndnoteEmbed"
+  IgnoreCentering = true
+}
+
+User "ExactTranslation"
+{
+  MappedName = "ExactTranslation"
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Exercise"
+{
+  MappedName = "E-Exercise."
+  Level = 1
+  IgnoreCentering = true
+}
+
+User "Exercise1"
+{
+  MappedName = "E-Exercise."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Exercise2"
+{
+  MappedName = "E-Exercise."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Exercise3"
+{
+  MappedName = "E-Exercise."
+  Level = 3
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Exercise4"
+{
+  MappedName = "E-Exercise."
+  Level = 4
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Exercise5"
+{
+  MappedName = "E-Exercise."
+  Level = 5
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Exercise6"
+{
+  MappedName = "E-Exercise."
+  Level = 6
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Ex2Nemeth1"
+{
+  MappedName = "E-ExerciseNemeth."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = Never
+  IgnoreCentering = true
+}
+
+User "Ex2Nemeth2"
+{
+  MappedName = "E-ExerciseNemeth."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+BuiltIn "Footer"
+{
+  Ignore = Always
+  IgnoreCentering = true
+}
+
+User "Footnote"
+{
+  MappedName = "Footnote."
+  IgnoreCentering = true
+}
+
+User "FootnoteEmbed"
+{
+  MappedName = "FootnoteEmbed"
+  IgnoreCentering = true
+}
+
+User "French"
+{
+  MappedName = "french"
+  IgnoreCentering = true
+}
+
+User "German"
+{
+  MappedName = "german"
+  IgnoreCentering = true
+}
+
+User "Glossary"
+{
+  MappedName = "G-Glossary."
+  IgnoreCentering = true
+}
+
+User "Glossary1"
+{
+  MappedName = "G-Glossary."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Glossary2"
+{
+  MappedName = "G-Glossary."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Glossary3"
+{
+  MappedName = "G-Glossary."
+  Level = 3
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Glossary4"
+{
+  MappedName = "G-Glossary."
+  Level = 4
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "GuideDots"
+{
+  MappedName = "GuideDots"
+  IgnoreCentering = true
+}
+
+User "Guide Word"
+{
+  MappedName = "GW-GuideWord"
+  IgnoreCentering = true
+}
+
+BuiltIn "Header"
+{
+  Ignore = Always
+  IgnoreCentering = true
+}
+
+BuiltIn "Heading 1"
+{
+  MappedName = "H1-HeadingCentered."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+BuiltIn "Heading 2"
+{
+  MappedName = "H2-HeadingCell5."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+BuiltIn "Heading 3"
+{
+  MappedName = "H3-HeadingCell7."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+BuiltIn "Heading 4"
+{
+  MappedName = "H3-HeadingCell7."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+BuiltIn "Heading 5"
+{
+  MappedName = "H3-HeadingCell7."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+BuiltIn "Heading 6"
+{
+  MappedName = "H3-HeadingCell7."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+BuiltIn "Heading 7"
+{
+  MappedName = "H3-HeadingCell7."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+BuiltIn "Heading 8"
+{
+  MappedName = "H3-HeadingCell7."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+BuiltIn "Heading 9"
+{
+  MappedName = "H3-HeadingCell7."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+BuiltIn "Hyperlink"
+{
+  MappedName = "Hyperlink"
+  IgnoreEmphases=InDef
+  DisableInToc = Yes
+  IgnoreCentering = true
+}
+
+User "Index"
+{
+  MappedName = "I1-Index."
+  IgnoreCentering = true
+}
+
+BuiltIn "Index 1"
+{
+  MappedName = "I1-Index."
+  Level      = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+BuiltIn "Index 2"
+{
+  MappedName = "I1-Index."
+  Level      = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName  
+  IgnoreCentering = true
+}
+
+BuiltIn "Index 3"
+{
+  MappedName = "I1-Index."
+  Level      = 3
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+BuiltIn "Index 4"
+{
+  MappedName = "I1-Index."
+  Level      = 4
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+BuiltIn "Index 5"
+{
+  MappedName = "I1-Index."
+  Level      = 5
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+BuiltIn "Index 6"
+{
+  MappedName = "I1-Index."
+  Level      = 6
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "IPA"
+{
+  MappedName = "IPA"
+  IgnoreCentering = true
+}
+
+User "Italian"
+{
+  MappedName = "italian"
+  IgnoreCentering = true
+}
+
+User "Latin"
+{
+  MappedName = "latin"
+  IgnoreCentering = true
+}
+
+User "LinearMath"
+{
+  MappedName = "LinearMath"
+  IgnoreCentering = true
+}
+
+User "LineNums"
+{
+  MappedName = "LineNums"
+  IgnoreCentering = true
+}
+
+User "LitBold"
+{
+  MappedName = "LitBold"
+  IgnoreCentering = true
+}
+
+User "Literary"
+{
+  MappedName = "Literary"
+  IgnoreCentering = true
+}
+
+User "LitItalics"
+{
+  MappedName = "LitItalics"
+  IgnoreCentering = true
+}
+
+User "LeftFlush"
+{
+  MappedName = "LeftFlush."
+  IgnoreCentering = true
+}
+
+BuiltIn "List"
+{
+  MappedName = "L-List."
+  Level      = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  AggregationStyle = MultiLevel
+  IgnoreCentering = true
+}
+
+User "List1"
+{
+  MappedName = "L-List."
+  Level      = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "List2"
+{
+  MappedName = "L-List."
+  Level      = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "List3"
+{
+  MappedName = "L-List."
+  Level      = 3
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "List4"
+{
+  MappedName = "L-List."
+  Level      = 4
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "List5"
+{
+  MappedName = "L-List."
+  Level      = 5
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "List6"
+{
+  MappedName = "L-List."
+  Level      = 6
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+BuiltIn "List 2"
+{
+  MappedName = "L-List."
+  Level      = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+BuiltIn "List 3"
+{
+  MappedName = "L-List."
+  Level      = 3
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+BuiltIn "List 4"
+{
+  MappedName = "L-List."
+  Level      = 4
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+BuiltIn "List 5"
+{
+  MappedName = "L-List."
+  Level      = 5
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "List 6"
+{
+  MappedName = "L-List."
+  Level      = 6
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+BuiltIn "List Bullet"
+{
+  MappedName = "L-List."
+  Level      = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+BuiltIn "List Bullet 2"
+{
+  MappedName = "L-List."
+  Level      = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "MainBody"
+{
+  MappedName = "MainBody."
+  IgnoreContents = Always
+  IgnoreCentering = true
+}
+
+User "MainBodySingle"
+{
+  MappedName = "MainBodySingle."
+  IgnoreContents = Always
+  IgnoreCentering = true
+}
+
+User "math"
+{
+  MappedName = "math"
+  IgnoreCentering = true
+}
+
+User "math-TextInMath"
+{
+  MappedName = "math-TextInMath"
+  IgnoreCentering = true
+}
+
+User "None"
+{
+  MappedName = "B-BodyText."
+  IgnoreCentering = true
+}
+
+BuiltIn "Normal"
+{
+  MappedName = "B-BodyText."
+  IgnoreCentering = true
+}
+
+BuiltIn "Normal (web)"
+{
+  MappedName = "B-BodyText."
+  IgnoreCentering = true
+}
+
+BuiltIn "Normal Indent"
+{
+  MappedName = "B-BodyText."
+  IgnoreCentering = true
+}
+
+User "NoteRef"
+{
+  MappedName = "NoteRef"
+  IgnoreCentering = true
+}
+
+User "NoteSeparationLine"
+{
+  MappedName = "NoteSeparationLine."
+  IgnoreContents = Always
+  IgnoreCentering = true
+}
+
+User "OneWordBridge"
+{
+  MappedName = "OneWordBridge"
+  IgnoreCentering = true
+}
+
+BuiltIn "Plain Text"
+{
+  MappedName = "B-BodyText."
+  IgnoreCentering = true
+}
+
+# Poem styles are deprecated
+# To use them, the transcriber must count the maximum hierarchy level
+# of each poem within Word and choose a *set* of styles to use
+# accordingly. We still support them for imports of older documents,
+# but recommend Poetry styles instead, and place these on the toolbar/ribbon.
+User "Poem1"
+{
+  MappedName = "P1-Poem1."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Poem2a"
+{
+  MappedName = "P2-Poem2."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Poem2b"
+{
+  MappedName = "P2-Poem2."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Poem3a"
+{
+  MappedName = "P3-Poem3."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Poem3b"
+{
+  MappedName = "P3-Poem3."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Poem3c"
+{
+  MappedName = "P3-Poem3."
+  Level = 3
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Poem4a"
+{
+  MappedName = "P4-Poem4."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Poem4b"
+{
+  MappedName = "P4-Poem4."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Poem4c"
+{
+  MappedName = "P4-Poem4."
+  Level = 3
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Poem4d"
+{
+  MappedName = "P4-Poem4."
+  Level = 4
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Poem5a"
+{
+  MappedName = "P5-Poem5."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Poem5b"
+{
+  MappedName = "P5-Poem5."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Poem5c"
+{
+  MappedName = "P5-Poem5."
+  Level = 3
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Poem5d"
+{
+  MappedName = "P5-Poem5."
+  Level = 4
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Poem5e"
+{
+  MappedName = "P5-Poem5."
+  Level = 5
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Poem6a"
+{
+  MappedName = "P6-Poem6."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Poem6b"
+{
+  MappedName = "P6-Poem6."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Poem6c"
+{
+  MappedName = "P6-Poem6."
+  Level = 3
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Poem6d"
+{
+  MappedName = "P6-Poem6."
+  Level = 4
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Poem6e"
+{
+  MappedName = "P6-Poem6."
+  Level = 5
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Poem6f"
+{
+  MappedName = "P6-Poem6."
+  Level = 6
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+# Poetry styles are recommended instead of deprecated Poem styles (see above).
+User "Poetry1"
+{
+  MappedName = "P-Poetry."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Poetry2"
+{
+  MappedName = "P-Poetry."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Poetry3"
+{
+  MappedName = "P-Poetry."
+  Level = 3
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Poetry4"
+{
+  MappedName = "P-Poetry."
+  Level = 4
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Poetry5"
+{
+  MappedName = "P-Poetry."
+  Level = 5
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Poetry6"
+{
+  MappedName = "P-Poetry."
+  Level = 6
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Portuguese"
+{
+  MappedName = "Portuguese"
+  IgnoreCentering = true
+}
+
+User "PrelimPageNumber"
+{
+  MappedName = "PrelimPageNumber."
+  IgnoreContents = Always
+  IgnoreCentering = true
+}
+
+User "PrelimPageNumberSingle"
+{
+  MappedName = "PrelimPageNumberSingle."
+  IgnoreContents = Always
+  IgnoreCentering = true
+}
+
+User "ProsePlay"
+{
+  MappedName = "PP-ProsePlay."
+  IgnoreCentering = true
+}
+
+User "ProseStage"
+{
+  MappedName = "PS-ProseStage."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  AggregationStyle = Paragraphs
+  IgnoreCentering = true
+}
+
+BuiltIn "Quote"
+{
+  MappedName = "Quote."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "RefPageNumber"
+{
+  MappedName = "RefPageNumber."
+  IgnoreCentering = true
+}
+
+User "RefPageNumberEmbed"
+{
+  MappedName = "RefPageNumberEmbed"
+  IgnoreCentering = true
+}
+
+User "RefPageNemeth"
+{
+  MappedName = "RefPageNemeth."
+  IgnoreCentering = true
+}
+
+User "RefPageNemethEmbed"
+{
+  MappedName = "RefPageNemethEmbed"
+  IgnoreCentering = true
+}
+
+User "RightFlush"
+{
+  MappedName = "RF-RightFlush."
+  IgnoreCentering = true
+}
+
+User "RunningHead"
+{
+  MappedName = "RunningHead."
+  IgnoreCentering = true
+}
+
+User "Spanish"
+{
+  MappedName = "spanish"
+  IgnoreCentering = true
+}
+
+User "Stairstep1"
+{
+  MappedName = "StairstepTable."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Stairstep2"
+{
+  MappedName = "StairstepTable."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Stairstep3"
+{
+  MappedName = "StairstepTable."
+  Level = 3
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Stairstep4"
+{
+  MappedName = "StairstepTable."
+  Level = 4
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Stairstep5"
+{
+  MappedName = "StairstepTable."
+  Level = 5
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Stairstep6"
+{
+  MappedName = "StairstepTable."
+  Level = 6
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "TechnicalNotation"
+{
+  MappedName = "math"
+  IgnoreCentering = true
+}
+
+User "TG-Key"
+{
+  MappedName = "TG-Key."
+  IgnoreCentering = true
+}
+
+BuiltIn "Title"
+{
+  MappedName = "H1-HeadingCentered."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "TN-Embed"
+{
+  MappedName = "TN-Embed"
+  IgnoreCentering = true
+}
+
+User "TN-Nemeth"
+{
+  MappedName = "TN-Nemeth"
+  IgnoreCentering = true
+}
+
+User "TranscriberGeneratedPageNumber"
+{
+  MappedName = "TranscriberGeneratedPageNumber."
+  IgnoreContents = Always
+  IgnoreCentering = true
+}
+
+User "TranscriberNote"
+{
+  MappedName = "TranscriberNote."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "TOC"
+{
+  MappedName = "C-Contents."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+BuiltIn "TOC 1"
+{
+  MappedName = "C-Contents."
+  Level      = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+BuiltIn "TOC 2"
+{
+  MappedName = "C-Contents."
+  Level      = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+BuiltIn "TOC 3"
+{
+  MappedName = "C-Contents."
+  Level      = 3
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+BuiltIn "TOC 4"
+{
+  MappedName = "C-Contents."
+  Level      = 4
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+BuiltIn "TOC 5"
+{
+  MappedName = "C-Contents."
+  Level      = 5
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+BuiltIn "TOC 6"
+{
+  MappedName = "C-Contents."
+  Level      = 6
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "Uncontracted"
+{
+  MappedName = "Uncontracted"
+  IgnoreCentering = true
+}
+
+User "VersePlay1"
+{
+  MappedName = "VP-VersePlay."
+  Level = 1
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "VersePlay2"
+{
+  MappedName = "VP-VersePlay."
+  Level = 2
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  IgnoreCentering = true
+}
+
+User "VerseStage"
+{
+  MappedName = "VS-VerseStage."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  AggregationStyle = Paragraphs
+  IgnoreCentering = true
+}
+
+BuiltIn "Default Paragraph Font"
+{
+  MappedName = "none"
+  IgnoreCentering = true
+}
+
+BuiltIn "Footnote Reference"
+{
+  IgnoreSuperscript = Yes
+  MappedNameInNote = "NoteRef"
+  IgnoreCentering = true
+}
+
+BuiltIn "Endnote Reference"
+{
+  IgnoreSuperscript = Yes
+  MappedNameInNote = "NoteRef"
+  IgnoreCentering = true
+}
+
+BuiltIn "Footnote Text"
+{
+  MappedName = "FootnoteEmbed"
+  IgnoreCentering = true
+}
+
+BuiltIn "Endnote Text"
+{
+  MappedName = "EndnoteEmbed"
+  IgnoreCentering = true
+}
+
+BuiltIn "List Paragraph"
+{
+  MappedName = "E-Exercise."
+  AggregateForward = IfSameName
+  AggregateBackward = IfSameName
+  AggregationStyle = MultiLevel
+  IgnoreCentering = true
+}
+
+BuiltIn "Intense Quote"
+{
+  MappedName = "Style181"
+  IgnoreCentering = true
+}
+
+BuiltIn "No Spacing"
+{
+  MappedName = "B-BodyText."
+  IgnoreCentering = true
+}
+
+BuiltIn "??msoStyle92??"
+{
+  MappedName = "Style92"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle93??"
+{
+  MappedName = "Style93"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle106??"
+{
+  MappedName = "Style106"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle156??"
+{
+  MappedName = "Style156"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle158??"
+{
+  MappedName = "Style158"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle159??"
+{
+  MappedName = "Style159"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle160??"
+{
+  MappedName = "Style160"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle161??"
+{
+  MappedName = "Style161"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle162??"
+{
+  MappedName = "Style162"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle163??"
+{
+  MappedName = "Style163"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle164??"
+{
+  MappedName = "Style164"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle165??"
+{
+  MappedName = "Style165"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle166??"
+{
+  MappedName = "Style166"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle167??"
+{
+  MappedName = "Style167"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle168??"
+{
+  MappedName = "Style168"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle169??"
+{
+  MappedName = "Style169"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle170??"
+{
+  MappedName = "Style170"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle171??"
+{
+  MappedName = "Style171"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle172??"
+{
+  MappedName = "Style172"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle173??"
+{
+  MappedName = "Style173"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle174??"
+{
+  MappedName = "Style174"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle175??"
+{
+  MappedName = "Style175"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle176??"
+{
+  MappedName = "Style176"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle177??"
+{
+  MappedName = "Style177"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle178??"
+{
+  MappedName = "Style178"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle182??"
+{
+  MappedName = "Style182"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle183??"
+{
+  MappedName = "Style183"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle184??"
+{
+  MappedName = "Style184"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle185??"
+{
+  MappedName = "Style185"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle186??"
+{
+  MappedName = "Style186"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle187??"
+{
+  MappedName = "Style187"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle188??"
+{
+  MappedName = "Style188"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle189??"
+{
+  MappedName = "Style189"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle190??"
+{
+  MappedName = "Style190"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle191??"
+{
+  MappedName = "Style191"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle192??"
+{
+  MappedName = "Style192"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle193??"
+{
+  MappedName = "Style193"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle194??"
+{
+  MappedName = "Style194"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle195??"
+{
+  MappedName = "Style195"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle196??"
+{
+  MappedName = "Style196"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle197??"
+{
+  MappedName = "Style197"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle198??"
+{
+  MappedName = "Style198"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle199??"
+{
+  MappedName = "Style199"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle200??"
+{
+  MappedName = "Style200"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle201??"
+{
+  MappedName = "Style201"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle202??"
+{
+  MappedName = "Style202"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle203??"
+{
+  MappedName = "Style203"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle204??"
+{
+  MappedName = "Style204"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle205??"
+{
+  MappedName = "Style205"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle206??"
+{
+  MappedName = "Style206"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle207??"
+{
+  MappedName = "Style207"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle208??"
+{
+  MappedName = "Style208"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle209??"
+{
+  MappedName = "Style209"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle210??"
+{
+  MappedName = "Style210"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle211??"
+{
+  MappedName = "Style211"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle212??"
+{
+  MappedName = "Style212"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle213??"
+{
+  MappedName = "Style213"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle214??"
+{
+  MappedName = "Style214"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle215??"
+{
+  MappedName = "Style215"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle216??"
+{
+  MappedName = "Style216"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle217??"
+{
+  MappedName = "Style217"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle218??"
+{
+  MappedName = "Style218"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle219??"
+{
+  MappedName = "Style219"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle220??"
+{
+  MappedName = "Style220"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle221??"
+{
+  MappedName = "Style221"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle222??"
+{
+  MappedName = "Style222"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle223??"
+{
+  MappedName = "Style223"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle224??"
+{
+  MappedName = "Style224"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle225??"
+{
+  MappedName = "Style225"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle226??"
+{
+  MappedName = "Style226"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle227??"
+{
+  MappedName = "Style227"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle228??"
+{
+  MappedName = "Style228"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle229??"
+{
+  MappedName = "Style229"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle230??"
+{
+  MappedName = "Style230"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle231??"
+{
+  MappedName = "Style231"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle232??"
+{
+  MappedName = "Style232"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle233??"
+{
+  MappedName = "Style233"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle234??"
+{
+  MappedName = "Style234"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle235??"
+{
+  MappedName = "Style235"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle236??"
+{
+  MappedName = "Style236"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle237??"
+{
+  MappedName = "Style237"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle238??"
+{
+  MappedName = "Style238"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle239??"
+{
+  MappedName = "Style239"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle240??"
+{
+  MappedName = "Style240"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle241??"
+{
+  MappedName = "Style241"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle242??"
+{
+  MappedName = "Style242"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle243??"
+{
+  MappedName = "Style243"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle244??"
+{
+  MappedName = "Style244"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle245??"
+{
+  MappedName = "Style245"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle246??"
+{
+  MappedName = "Style246"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle247??"
+{
+  MappedName = "Style247"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle248??"
+{
+  MappedName = "Style248"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle249??"
+{
+  MappedName = "Style249"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle250??"
+{
+  MappedName = "Style250"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle251??"
+{
+  MappedName = "Style251"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle252??"
+{
+  MappedName = "Style252"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle253??"
+{
+  MappedName = "Style253"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle254??"
+{
+  MappedName = "Style254"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle255??"
+{
+  MappedName = "Style255"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle256??"
+{
+  MappedName = "Style256"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle257??"
+{
+  MappedName = "Style257"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle258??"
+{
+  MappedName = "Style258"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle259??"
+{
+  MappedName = "Style259"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle260??"
+{
+  MappedName = "Style260"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle261??"
+{
+  MappedName = "Style261"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle262??"
+{
+  MappedName = "Style262"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle263??"
+{
+  MappedName = "Style263"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle264??"
+{
+  MappedName = "Style264"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle267??"
+{
+  MappedName = "Style267"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle268??"
+{
+  MappedName = "Style268"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle269??"
+{
+  MappedName = "Style269"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle270??"
+{
+  MappedName = "Style270"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle271??"
+{
+  MappedName = "Style271"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle272??"
+{
+  MappedName = "Style272"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle273??"
+{
+  MappedName = "Style273"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle274??"
+{
+  MappedName = "Style274"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle275??"
+{
+  MappedName = "Style275"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle276??"
+{
+  MappedName = "Style276"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle277??"
+{
+  MappedName = "Style277"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle278??"
+{
+  MappedName = "Style278"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle279??"
+{
+  MappedName = "Style279"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle280??"
+{
+  MappedName = "Style280"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle281??"
+{
+  MappedName = "Style281"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle282??"
+{
+  MappedName = "Style282"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle283??"
+{
+  MappedName = "Style283"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle284??"
+{
+  MappedName = "Style284"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle285??"
+{
+  MappedName = "Style285"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle286??"
+{
+  MappedName = "Style286"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle287??"
+{
+  MappedName = "Style287"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle288??"
+{
+  MappedName = "Style288"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle289??"
+{
+  MappedName = "Style289"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle290??"
+{
+  MappedName = "Style290"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle291??"
+{
+  MappedName = "Style291"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle292??"
+{
+  MappedName = "Style292"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle293??"
+{
+  MappedName = "Style293"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle294??"
+{
+  MappedName = "Style294"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle295??"
+{
+  MappedName = "Style295"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle296??"
+{
+  MappedName = "Style296"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle297??"
+{
+  MappedName = "Style297"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle298??"
+{
+  MappedName = "Style298"
+  IgnoreCentering = true
+}
+
+
+BuiltIn "??msoStyle299??"
+{
+  MappedName = "Style299"
+  IgnoreCentering = true
+}
+
+User "Balloon Text"
+{
+  MappedName = "BalloonText"
+  IgnoreCentering = true
+}

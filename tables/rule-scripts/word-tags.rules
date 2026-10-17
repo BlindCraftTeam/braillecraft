@@ -1,0 +1,126 @@
+| OpenXML cleanup: boxing styles, table codes, adjacent runs of one style, line breaks, link bytes
+| 1;1 2011-01-04 JES: remove any text contents of boxing styles
+| 1;2 2014-01-18 PJS: revise handling of BoxBegin and BoxEnd, leaving
+|                     handling of these to wrdpost.sbt
+
+| Preserve any opening boxing style tag, but go to state -1 to delete
+| the text contents until a closing tag is encountered.  This logic
+| presumes that such tags are always simply paired and not nested.
+|028es|~BE-BoxEnd.|031~|028es|~BE-BoxEnd.|031~~-1~(~
+
+| State -1 rules - Delete all until a closing boxing style tag, then
+| resume original state.
+|028ee|~BE-BoxEnd.|031~|028ee|~BE-BoxEnd.|031~-1~~)~
+
+| htbs codes are created by word2007.xsl with parameters as plain text, e.g:
+| <bc:htbs>r:1:0:b:n:a</bc:htbs>
+| These rules bring the parameters into the code in binary form, e.g.:
+| [bc:htbs;r:1:0:b:n:a]
+<bc:htbs>~|028htbs;~1~2~
+</bc:htbs>~|031~2~1~
+
+| Combine adjacent runs of ExactTranslation and other styles
+| (with or without a single space).
+| This is required to fix up .docx files when text in a
+| mapped character style is separated into different runs
+| due to unique RSID values.
+|028ee|~BL-BlockProtectLevel|031 |028es|~BL-BlockProtectLevel|031~ ~
+|028ee|~BL-BlockProtectLevel|031|028es|~BL-BlockProtectLevel|031~~
+|028ee|~BP-BlockProtect|031 |028es|~BP-BlockProtect|031~ ~
+|028ee|~BP-BlockProtect|031|028es|~BP-BlockProtect|031~~
+|028ee|~CI-CBCInline|031 |028es|~CI-CBCInline|031~ ~
+|028ee|~CI-CBCInline|031|028es|~CI-CBCInline|031~~
+|028ee|~ExactTranslation|031 |028es|~ExactTranslation|031~ ~
+|028ee|~ExactTranslation|031|028es|~ExactTranslation|031~~
+|028ee|~GO-GuideWordsOff|031 |028es|~GO-GuideWordsOff|031~ ~
+|028ee|~GO-GuideWordsOff|031|028es|~GO-GuideWordsOff|031~~
+|028ee|~GW-GuideWord|031 |028es|~GW-GuideWord|031~ ~
+|028ee|~GW-GuideWord|031|028es|~GW-GuideWord|031~~
+|028ee|~Group|031 |028es|~Group|031~ ~
+|028ee|~Group|031|028es|~Group|031~~
+|028ee|~GuideDots|031 |028es|~GuideDots|031~ ~
+|028ee|~GuideDots|031|028es|~GuideDots|031~~
+|028ee|~Hyperlink|031 |028es|~Hyperlink|031~ ~
+|028ee|~Hyperlink|031|028es|~Hyperlink|031~~
+|028ee|~LineNums|031 |028es|~LineNums|031~ ~
+|028ee|~LineNums|031|028es|~LineNums|031~~
+|028ee|~LinearMath|031 |028es|~LinearMath|031~ ~
+|028ee|~LinearMath|031|028es|~LinearMath|031~~
+|028ee|~LitBold|031 |028es|~LitBold|031~ ~
+|028ee|~LitBold|031|028es|~LitBold|031~~
+|028ee|~LitItalics|031 |028es|~LitItalics|031~ ~
+|028ee|~LitItalics|031|028es|~LitItalics|031~~
+|028ee|~Literary|031 |028es|~Literary|031~ ~
+|028ee|~Literary|031|028es|~Literary|031~~
+|028ee|~NB-NoBold|031 |028es|~NB-NoBold|031~ ~
+|028ee|~NB-NoBold|031|028es|~NB-NoBold|031~~
+|028ee|~NN-NewPageNextNemeth|031 |028es|~NN-NewPageNextNemeth|031~ ~
+|028ee|~NN-NewPageNextNemeth|031|028es|~NN-NewPageNextNemeth|031~~
+|028ee|~NS-NoNumberSign|031 |028es|~NS-NoNumberSign|031~ ~
+|028ee|~NS-NoNumberSign|031|028es|~NS-NoNumberSign|031~~
+|028ee|~RefPageNemethEmbed|031 |028es|~RefPageNemethEmbed|031~ ~
+|028ee|~RefPageNemethEmbed|031|028es|~RefPageNemethEmbed|031~~
+|028ee|~RefPageNumberEmbed|031 |028es|~RefPageNumberEmbed|031~ ~
+|028ee|~RefPageNumberEmbed|031|028es|~RefPageNumberEmbed|031~~
+|028ee|~SoftReturn|031 |028es|~SoftReturn|031~ ~
+|028ee|~SoftReturn|031|028es|~SoftReturn|031~~
+|028ee|~TN-Nemeth|031 |028es|~TN-Nemeth|031~ ~
+|028ee|~TN-Nemeth|031|028es|~TN-Nemeth|031~~
+|028ee|~TechnicalNotation|031 |028es|~TechnicalNotation|031~ ~
+|028ee|~TechnicalNotation|031|028es|~TechnicalNotation|031~~
+|028ee|~Uncontracted|031 |028es|~Uncontracted|031~ ~
+|028ee|~Uncontracted|031|028es|~Uncontracted|031~~
+|028ee|~acronym|031 |028es|~acronym|031~ ~
+|028ee|~acronym|031|028es|~acronym|031~~
+|028ee|~bold|031 |028es|~bold|031~ ~
+|028ee|~bold|031|028es|~bold|031~~
+|028ee|~box|031 |028es|~box|031~ ~
+|028ee|~box|031|028es|~box|031~~
+|028ee|~brlinline|031 |028es|~brlinline|031~ ~
+|028ee|~brlinline|031|028es|~brlinline|031~~
+|028ee|~br|031 |028es|~br|031~ ~
+|028ee|~br|031|028es|~br|031~~
+|028ee|~compinline|031 |028es|~compinline|031~ ~
+|028ee|~compinline|031|028es|~compinline|031~~
+|028ee|~dutch|031 |028es|~dutch|031~ ~
+|028ee|~dutch|031|028es|~dutch|031~~
+|028ee|~finnish|031 |028es|~finnish|031~ ~
+|028ee|~finnish|031|028es|~finnish|031~~
+|028ee|~french|031 |028es|~french|031~ ~
+|028ee|~french|031|028es|~french|031~~
+|028ee|~german|031 |028es|~german|031~ ~
+|028ee|~german|031|028es|~german|031~~
+|028ee|~i-italic|031 |028es|~i-italic|031~ ~
+|028ee|~i-italic|031|028es|~i-italic|031~~
+|028ee|~italian|031 |028es|~italian|031~ ~
+|028ee|~italian|031|028es|~italian|031~~
+|028ee|~italic|031 |028es|~italic|031~ ~
+|028ee|~italic|031|028es|~italic|031~~
+|028ee|~latin|031 |028es|~latin|031~ ~
+|028ee|~latin|031|028es|~latin|031~~
+|028ee|~maori|031 |028es|~maori|031~ ~
+|028ee|~maori|031|028es|~maori|031~~
+|028ee|~portuguese|031 |028es|~portuguese|031~ ~
+|028ee|~portuguese|031|028es|~portuguese|031~~
+|028ee|~ref.pg.no-in-math|031 |028es|~ref.pg.no-in-math|031~ ~
+|028ee|~ref.pg.no-in-math|031|028es|~ref.pg.no-in-math|031~~
+|028ee|~ref.pg.no|031 |028es|~ref.pg.no|031~ ~
+|028ee|~ref.pg.no|031|028es|~ref.pg.no|031~~
+|028ee|~spanish|031 |028es|~spanish|031~ ~
+|028ee|~spanish|031|028es|~spanish|031~~
+|028ee|~swahili|031 |028es|~swahili|031~ ~
+|028ee|~swahili|031|028es|~swahili|031~~
+|028ee|~swedish|031 |028es|~swedish|031~ ~
+|028ee|~swedish|031|028es|~swedish|031~~
+|028ee|~underline|031 |028es|~underline|031~ ~
+|028ee|~underline|031|028es|~underline|031~~
+
+| Replace <br/> elements with [sk] commands to the program
+<br/><br/><br/><br/><br/>~<bc:sk5/>~
+<br/><br/><br/><br/>~<bc:sk4/>~
+<br/><br/><br/>~<bc:sk3/>~
+<br/><br/>~<bc:sk2/>~
+<br/>~<bc:sk1/>~
+
+| Replace <bc:hyperlink-byte/> elements with byte 16 (see xmlproc/hyper.cpp)
+<bc:hyperlink-byte/>~|016~~
