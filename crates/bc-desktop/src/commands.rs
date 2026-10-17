@@ -3825,31 +3825,59 @@ fn default_views() {
     d.destroy();
 }
 
+/// Global, Internationalization (dialog 1051), as the original's dialog procedure: filled from the settings; Support
+/// UI Automation (14) enables the screen reader choice (15, 16); a double-click in either list is OK.
 fn internationalization() {
-    let (current, uia) = app::with(|a| (a.settings.encoding.clone(), a.settings.reader.uia));
+    let (current, uia, prefer, access) =
+        app::with(|a| (a.settings.encoding.clone(), a.settings.reader.uia, a.settings.prefer_patterns, a.settings.access_patterns));
     let list = encodings::all();
     let names: Vec<&str> = list.iter().map(|e| e.name.as_str()).collect();
     let pos = list.iter().position(|e| e.id == current).map(|p| p as u32);
-    let Some(d) = settings_dialog(1051, "", None, |d| {
-        d.set_items(7, &["English"], Some(0));
-        d.set_items(10, &names, pos);
-        d.set_radio(&[11, 12], 0);
-        d.set_checked(14, uia);
-        d.set_radio(&[15, 16], 0);
-    }) else {
-        return;
+    let d = open_dialog(1051, None);
+    d.set_items(7, &["English"], Some(0));
+    d.set_items(10, &names, pos);
+    d.set_radio(&[11, 12], usize::from(prefer));
+    d.set_checked(14, uia);
+    d.set_radio(&[15, 16], usize::from(access));
+    let reader_choice = |d: &Dlg| {
+        let on = d.checked(14);
+        d.enable(15, on);
+        d.enable(16, on);
     };
+    reader_choice(&d);
+    let me = Dlg { id: d.id, dialog: d.dialog, page: d.page };
+    d.on_check(14, move || reader_choice(&me));
+    for l in [7, 10] {
+        if let Some(list) = d.win(l).and_then(|w| w.as_widget::<ListBox>()) {
+            let dialog = d.dialog;
+            list.on_item_double_clicked(move |_| dialog.end_modal(wxdragon::id::ID_OK));
+        }
+    }
+    let ok = d.show() == 1;
     let chosen = d.selection(10).and_then(|i| list.get(i as usize)).map(|e| e.id.clone());
     let uia = d.checked(14);
+    let prefer = d.radio(&[11, 12]) == Some(1);
+    let access = d.radio(&[15, 16]) == Some(1);
     d.destroy();
-    app::with(|a| a.settings.reader.uia = uia);
-    // The editing windows answer UI Automation clients only while it is on (spec 15).
-    unsafe { wxdragon_sys::wxd_DocEditor_SetSupportUIAutomation(uia) };
-    settings_store::save_internationalization(chosen.as_deref().unwrap_or(&current), uia);
-    let Some(new) = chosen else { return };
-    if new == current {
+    if !ok {
         return;
     }
+    app::with(|a| {
+        a.settings.reader.uia = uia;
+        a.settings.prefer_patterns = prefer;
+        a.settings.access_patterns = access;
+        for doc in a.docs.iter_mut() {
+            doc.area_stale = true;
+            doc.last_line_key.clear();
+        }
+    });
+    // The editing windows answer UI Automation clients only while it is on (spec 15).
+    unsafe { wxdragon_sys::wxd_DocEditor_SetSupportUIAutomation(uia) };
+    settings_store::save_internationalization(chosen.as_deref().unwrap_or(&current), uia, prefer, access);
+    let Some(new) = chosen.filter(|n| *n != current) else {
+        app::with(|a| a.apply_view());
+        return;
+    };
     // Braille documents keep their cells: their text is rewritten in the new encoding's characters; codes keep theirs.
     app::with(|a| {
         let before = encodings::find(&current);

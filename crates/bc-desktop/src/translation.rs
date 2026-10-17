@@ -306,10 +306,21 @@ pub fn back(code: &str, text: &Shown, initial: &str, enc: &Encoding, styles: &St
 
 /// Braille text from one encoding to another, cell for cell; the codes keep their text.
 pub fn convert_braille(doc: &Shown, from: &Encoding, to: &Encoding) -> Shown {
+    map_cells(doc, |run| to.cells_to_text(&from.text_to_cells(run)))
+}
+
+/// Braille text in `enc`'s characters written as Unicode braille patterns (U+2800 plus the dots), as the original
+/// shows braille when "Prefer Unicode Braille Patterns" is chosen; the codes keep their text.
+pub fn as_patterns(doc: &Shown, enc: &Encoding) -> Shown {
+    map_cells(doc, |run| enc.text_to_cells(run))
+}
+
+/// `doc` with each run of text between its codes changed by `convert`.
+fn map_cells(doc: &Shown, convert: impl Fn(&str) -> String) -> Shown {
     let chars: Vec<char> = doc.text.chars().collect();
     let mut text = String::with_capacity(doc.text.len());
     let mut at = 0;
-    let convert = |run: &[char]| to.cells_to_text(&from.text_to_cells(&run.iter().collect::<String>()));
+    let convert = |run: &[char]| convert(&run.iter().collect::<String>());
     for &(start, end) in &doc.codes {
         text.push_str(&convert(&chars[at.min(start)..start]));
         text.extend(&chars[start..end.min(chars.len())]);

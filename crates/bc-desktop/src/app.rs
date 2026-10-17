@@ -248,6 +248,12 @@ pub struct Settings {
     pub view_prefs: ViewPrefs,
     /// Global, Printer Setup: the printer, paper and margins documents print with when they have none of their own.
     pub printer: crate::print::PrinterSetup,
+    /// Global, Internationalization: "Prefer Unicode Braille Patterns for Braille Display" (braille shown in a
+    /// braille font is written as Unicode braille patterns) and "Report Braille to Screen Readers as Unicode Braille
+    /// Patterns" (a braille document's text given to UI Automation clients), as the original (PreferBraillePatterns,
+    /// AccessUseBraillePatterns).
+    pub prefer_patterns: bool,
+    pub access_patterns: bool,
 }
 
 impl Default for Settings {
@@ -293,6 +299,8 @@ impl Default for Settings {
             verbose_labels: false,
             view_prefs: ViewPrefs::default(),
             printer: crate::print::PrinterSetup::default(),
+            prefer_patterns: false,
+            access_patterns: false,
         }
     }
 }
@@ -651,6 +659,9 @@ impl App {
         // The codes the line shows (spec 24 2d.2): every code while the document shows its codes, else
         // as Global, View Preferences says: all, all but the idle code, or none.
         let codes = if d.view.codes { LineCodes::ShowAll } else { self.settings.view_prefs.line_codes };
+        // A print document's braille, shown in a braille font, as Unicode braille patterns when they are preferred.
+        let patterns = d.kind == DocKind::Print && self.settings.prefer_patterns && self.settings.default_views.translated_font != ViewFont::Print;
+        let r = r.map(|s| if patterns { crate::translation::as_patterns(&s, enc) } else { s });
         r.map(|s| match codes {
             LineCodes::ShowAll => s.text,
             LineCodes::HideIdle => s.text_keeping_codes(|c| !bc_core::doctext::is_idle_code(c)),
@@ -726,6 +737,15 @@ impl App {
         // them (spec 24 2d.2, spec 27 3b).
         let line_numbers =
             self.docs[i].kind == DocKind::Braille && self.settings.view_prefs.line_numbers && !self.docs[i].view.codes;
+        // A braille document's cells (Global, Internationalization): drawn as Unicode braille patterns when they are
+        // preferred and the document is shown in a braille font; given to screen readers as patterns only where the
+        // original has that choice, its UI Automation text on Windows, while Support UI Automation is on.
+        let braille = self.docs[i].kind == DocKind::Braille;
+        let enc = self.encoding();
+        let forms = crate::editor_view::CellForms {
+            paint: (braille && self.settings.prefer_patterns && self.docs[i].view.font != ViewFont::Print).then_some(enc),
+            access: (braille && cfg!(windows) && self.settings.reader.uia && self.settings.access_patterns).then_some(enc),
+        };
         let d = &mut self.docs[i];
         if d.ed_layout != key {
             d.ed.layout = layout;
@@ -735,7 +755,7 @@ impl App {
         }
         d.area_stale = false;
         let area = d.area;
-        area.show(&d.ed, &mut d.area_rows, line_numbers, keep_from_top);
+        area.show(&d.ed, &mut d.area_rows, line_numbers, keep_from_top, forms);
     }
 
     /// Edits document `i` by `change` on its editor (typing, Backspace, Delete, a code put in): the document before

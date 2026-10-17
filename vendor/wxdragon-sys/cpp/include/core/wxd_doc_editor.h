@@ -36,9 +36,11 @@ WXD_EXPORTED wxd_Window_t* wxd_DocEditor_Create(wxd_Window_t* parent, void* data
 
 // Sets the rows: `count` NUL-terminated UTF-8 texts, and for each its kind: 0 a text row, 1 a page break row (drawn
 // as a line across, no text). Replaces the earlier rows; `changed_from` is the first row that differs from before
-// (screen readers are told the text changed from there), or -1 when nothing changed.
-WXD_EXPORTED void wxd_DocEditor_SetRows(wxd_Window_t* editor, const char* const* rows, const int* kinds, int count,
-                                        int changed_from);
+// (screen readers are told the text changed from there), or -1 when nothing changed. `access_rows`, when not NULL,
+// are `count` texts of the same lengths that screen readers get in place of the drawn rows (braille written in
+// another form for screen readers than on screen).
+WXD_EXPORTED void wxd_DocEditor_SetRows(wxd_Window_t* editor, const char* const* rows, const int* kinds,
+                                        const char* const* access_rows, int count, int changed_from);
 
 // Sets the line number column: `count` labels, one per row (NULL or "" for none). `width` 0 hides the column.
 WXD_EXPORTED void wxd_DocEditor_SetLineNumbers(wxd_Window_t* editor, const char* const* labels, int count, int width);

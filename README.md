@@ -113,7 +113,9 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   is not built yet.)
 - **Global, Fonts and File, New.** Fonts lists the fonts installed on the computer (typewriter fonts first for the
   print font) and checks each point size, 5 to 180, in the dialog; the printed-output sizes are greyed while their
-  size is set automatically. File, New remembers Show Hidden Templates.
+  size is set automatically. File, New remembers Show Hidden Templates. Global, Internationalization keeps its two
+  Unicode choices: braille shown in a braille font can be written as Unicode braille patterns, and on Windows a
+  braille document's text can be given to screen readers (UI Automation) as Unicode braille patterns.
 - **Save As.** Formatted braille (BRF in a choice of braille encodings), PEF (Portable Embosser Format), formatted
   text in a choice of code pages (the encoding or code page chosen in the Save As dialog's own Encoding box), coded braille, refreshable braille (.lbf), LaTeX, and the older document format.
 - **Printing.** Print documents and braille (with interline print) through the system printer.

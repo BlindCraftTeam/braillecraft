@@ -138,9 +138,10 @@ bool DocEditor::SetFont(const wxFont& font)
     return changed;
 }
 
-void DocEditor::SetRows(std::vector<wxString> rows, std::vector<int> kinds, int changedFrom)
+void DocEditor::SetRows(std::vector<wxString> rows, std::vector<int> kinds, std::vector<wxString> access, int changedFrom)
 {
     m_rows = std::move(rows);
+    m_accessRows = std::move(access);
     m_kinds = std::move(kinds);
     m_kinds.resize(m_rows.size(), 0);
     m_extents.clear();
@@ -458,9 +459,10 @@ const wxString& DocEditor::AccessibleText()
         for (size_t r = 0; r < m_rows.size(); ++r) {
             m_rowStart[r] = (int)at;
             if (m_kinds[r] == 1) continue;
-            m_accessibleText += m_rows[r];
+            const wxString& text = m_accessRows.size() == m_rows.size() ? m_accessRows[r] : m_rows[r];
+            m_accessibleText += text;
             m_accessibleText += '\n';
-            at += m_rows[r].length() + 1;
+            at += text.length() + 1;
         }
         m_rowStart[m_rows.size()] = (int)at;
         m_accessibleValid = true;
@@ -517,19 +519,21 @@ wxd_Window_t* wxd_DocEditor_Create(wxd_Window_t* parent, void* data, wxd_DocEdit
     return reinterpret_cast<wxd_Window_t*>(new DocEditor(p, data, key, chr, mouse, focus, free_data));
 }
 
-void wxd_DocEditor_SetRows(wxd_Window_t* editor, const char* const* rows, const int* kinds, int count, int changed_from)
+void wxd_DocEditor_SetRows(wxd_Window_t* editor, const char* const* rows, const int* kinds,
+                           const char* const* access_rows, int count, int changed_from)
 {
     DocEditor* e = Ed(editor);
     if (!e) return;
-    std::vector<wxString> r;
+    std::vector<wxString> r, a;
     std::vector<int> k;
     r.reserve(count);
     k.reserve(count);
     for (int i = 0; i < count; ++i) {
         r.push_back(wxString::FromUTF8(rows[i] ? rows[i] : ""));
         k.push_back(kinds ? kinds[i] : 0);
+        if (access_rows) a.push_back(wxString::FromUTF8(access_rows[i] ? access_rows[i] : ""));
     }
-    e->SetRows(std::move(r), std::move(k), changed_from);
+    e->SetRows(std::move(r), std::move(k), std::move(a), changed_from);
 }
 
 void wxd_DocEditor_SetLineNumbers(wxd_Window_t* editor, const char* const* labels, int count, int width)

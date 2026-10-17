@@ -75,8 +75,38 @@ pub fn create(parent: &impl WxWidget, key: u64) -> Area {
 #[derive(Default)]
 pub struct ShownRows {
     rows: Vec<String>,
+    access: Vec<String>,
     kinds: Vec<c_int>,
     labels: Vec<String>,
+}
+
+/// How a braille document's cells are written in the window (Global, Internationalization): as the document holds
+/// them in the display encoding (None), or as Unicode braille patterns read through that encoding: `paint` for what
+/// is drawn, `access` for the text given to screen readers.
+#[derive(Clone, Copy, Default)]
+pub struct CellForms {
+    pub paint: Option<&'static crate::encodings::Encoding>,
+    pub access: Option<&'static crate::encodings::Encoding>,
+}
+
+/// Row `r`'s text with its cells (not its code text) written as Unicode braille patterns through `enc`.
+fn row_patterns(ed: &Editor, r: usize, text: &str, enc: &crate::encodings::Encoding) -> String {
+    let in_code = |p: usize| ed.doc.codes.iter().any(|&(s, e)| s <= p && p < e);
+    let code: Vec<bool> = if ed.coded { ed.row_sources(r).iter().map(|s| s.is_some_and(in_code)).collect() } else { Vec::new() };
+    let chars: Vec<char> = text.chars().collect();
+    let mut out = String::with_capacity(text.len());
+    let mut run = String::new();
+    for (k, &c) in chars.iter().enumerate() {
+        if code.get(k).copied().unwrap_or(false) {
+            out.push_str(&enc.text_to_cells(&run));
+            run.clear();
+            out.push(c);
+        } else {
+            run.push(c);
+        }
+    }
+    out.push_str(&enc.text_to_cells(&run));
+    out
 }
 
 impl Area {
@@ -87,17 +117,24 @@ impl Area {
     /// Gives the window `ed`'s rows (when they changed), the line numbers (`line_numbers`: the formatted view of a
     /// braille document with them on, spec 24 2d.2) and the caret and selection; `keep_from_top` keeps the caret
     /// row that many rows from the top (a view switch, spec 27 2c).
-    pub fn show(&self, ed: &Editor, last: &mut ShownRows, line_numbers: bool, keep_from_top: Option<usize>) {
+    pub fn show(&self, ed: &Editor, last: &mut ShownRows, line_numbers: bool, keep_from_top: Option<usize>, forms: CellForms) {
         if self.0.is_null() {
             return;
         }
         let count = ed.rows();
         let mut rows = Vec::with_capacity(count);
+        let mut access = Vec::new();
+        let separate = forms.paint.map(|e| &e.id) != forms.access.map(|e| &e.id);
         let mut kinds = Vec::with_capacity(count);
         let mut labels = Vec::with_capacity(if line_numbers { count } else { 0 });
         for r in 0..count {
             let row = ed.row(r);
-            rows.push(ed.row_text(r));
+            let text = ed.row_text(r);
+            let form = |f: Option<&crate::encodings::Encoding>| f.map_or_else(|| text.clone(), |e| row_patterns(ed, r, &text, e));
+            if separate {
+                access.push(form(forms.access));
+            }
+            rows.push(form(forms.paint));
             kinds.push(c_int::from(matches!(row, Some(Row::Break { .. }))));
             if line_numbers {
                 labels.push(match row {
@@ -106,12 +143,23 @@ impl Area {
                 });
             }
         }
-        if rows != last.rows || kinds != last.kinds {
-            let changed_from = rows.iter().zip(&last.rows).zip(kinds.iter().zip(&last.kinds)).take_while(|((a, b), (c, d))| a == b && c == d).count();
-            let c: Vec<CString> = rows.iter().map(|s| CString::new(s.replace('\0', " ")).unwrap_or_default()).collect();
+        if rows != last.rows || kinds != last.kinds || access != last.access {
+            let changed_from = rows
+                .iter()
+                .zip(&last.rows)
+                .zip(kinds.iter().zip(&last.kinds))
+                .enumerate()
+                .take_while(|(k, ((a, b), (c, d)))| a == b && c == d && access.get(*k) == last.access.get(*k))
+                .count();
+            let cstrings = |v: &[String]| -> Vec<CString> { v.iter().map(|s| CString::new(s.replace('\0', " ")).unwrap_or_default()).collect() };
+            let (c, ca) = (cstrings(&rows), cstrings(&access));
             let p: Vec<*const c_char> = c.iter().map(|s| s.as_ptr()).collect();
-            unsafe { ffi::wxd_DocEditor_SetRows(self.0, p.as_ptr(), kinds.as_ptr(), p.len() as c_int, changed_from as c_int) };
+            let pa: Vec<*const c_char> = ca.iter().map(|s| s.as_ptr()).collect();
+            // The screen reader text, when it is written otherwise than what is drawn.
+            let access_ptr = if pa.is_empty() { std::ptr::null() } else { pa.as_ptr() };
+            unsafe { ffi::wxd_DocEditor_SetRows(self.0, p.as_ptr(), kinds.as_ptr(), access_ptr, p.len() as c_int, changed_from as c_int) };
             last.rows = rows;
+            last.access = access;
             last.kinds = kinds;
         }
         if labels != last.labels {
@@ -155,5 +203,20 @@ impl Area {
         if let Ok(c) = CString::new(name) {
             unsafe { ffi::wxd_DocEditor_SetAccessibleName(self.0, c.as_ptr()) };
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bc_core::doctext::Shown;
+
+    #[test]
+    fn cells_become_braille_patterns_and_codes_stay() {
+        let enc = crate::encodings::find(crate::encodings::DEFAULT);
+        let ed = Editor::new(Shown::marked("ab[g1]c"), bc_core::format::Layout::braille(40, 25), None, true, 42);
+        let text = ed.row_text(0);
+        assert_eq!(text, "ab[g1]c");
+        assert_eq!(row_patterns(&ed, 0, &text, enc), "\u{2801}\u{2803}[g1]\u{2809}");
     }
 }

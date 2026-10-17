@@ -18,7 +18,7 @@ public:
     bool AcceptsFocus() const override { return true; }
     bool AcceptsFocusFromKeyboard() const override { return true; }
 
-    void SetRows(std::vector<wxString> rows, std::vector<int> kinds, int changedFrom);
+    void SetRows(std::vector<wxString> rows, std::vector<int> kinds, std::vector<wxString> access, int changedFrom);
     void SetLineNumbers(std::vector<wxString> labels, int width);
     void SetCaretPlace(int row, int col, int anchorRow, int anchorCol, int keepFromTop);
     void PlaceCaret();
@@ -92,6 +92,8 @@ private:
     wxd_DocEditor_FreeFn m_free;
 
     std::vector<wxString> m_rows;
+    // What screen readers get in place of each row, when it differs from what is drawn (empty otherwise).
+    std::vector<wxString> m_accessRows;
     std::vector<int> m_kinds;
     std::vector<std::vector<int>> m_extents;
     std::vector<wxString> m_labels;

@@ -399,6 +399,12 @@ pub fn load(s: &mut Settings) {
     if let Some(n) = get_number("Accessibility", "UIAutomation") {
         s.reader.uia = n != 0;
     }
+    if let Some(b) = get_bool("Display", "PreferBraillePatterns") {
+        s.prefer_patterns = b;
+    }
+    if let Some(b) = get_bool("Display", "AccessUseBraillePatterns") {
+        s.access_patterns = b;
+    }
 }
 
 /// The region Document, Translation Tables lists, from an earlier run.
@@ -506,10 +512,13 @@ pub fn save_code_page(name: &str) {
     set(ROOT, "CodePage", name);
 }
 
-/// Global, Internationalization: the braille encoding and Support UI Automation.
-pub fn save_internationalization(encoding: &str, uia: bool) {
+/// Global, Internationalization: the braille encoding, Support UI Automation, and the two Unicode braille pattern
+/// choices (braille display, braille reported to screen readers).
+pub fn save_internationalization(encoding: &str, uia: bool, prefer_patterns: bool, access_patterns: bool) {
     set(ROOT, "BrailleEncoding", encoding);
     set("Accessibility", "UIAutomation", if uia { "1" } else { "0" });
+    set("Display", "PreferBraillePatterns", yes_no(prefer_patterns));
+    set("Display", "AccessUseBraillePatterns", yes_no(access_patterns));
 }
 
 /// The answer kept for a message or question with a "Do not show (or ask) this again" box: the answer plus one (so 0
