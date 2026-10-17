@@ -1160,24 +1160,50 @@ fn save(key: Option<u64>, as_new: bool) -> bool {
     let wildcard = types.iter().map(|(label, ext, _)| format!("{label}|*.{ext}")).collect::<Vec<_>>().join("|");
     // The name proposed: the document's own, with the extension of the first type.
     let stem = name.rsplit_once('.').map_or(name.as_str(), |(s, _)| s).to_string();
+    // The file's encoding is chosen in the dialog itself, in its Encoding box, which shows for the formatted type
+    // only; the first type and the first encoding are chosen every time.
+    let items: Vec<String> = if braille { brf_encodings() } else { bc_core::codepages::NAMES.iter().map(|n| n.to_string()).collect() };
+    let shown_for: Vec<i32> = types.iter().enumerate().filter(|(_, t)| t.2 == SaveType::Formatted).map(|(i, _)| i as i32).collect();
+    let c = |t: &str| std::ffi::CString::new(t).unwrap_or_default();
+    let (title, wildcard, dir, file, label, list) = (
+        c("Save As"),
+        c(&wildcard),
+        c(&path.as_ref().and_then(|p| p.parent()).map(|d| d.to_string_lossy().into_owned()).unwrap_or_default()),
+        c(&format!("{stem}.{own}")),
+        c("Encoding"),
+        c(&items.join("\n")),
+    );
+    let mut buffer = vec![0u8; 4096];
+    let (mut type_index, mut item) = (0i32, 0i32);
     let f = app::frame();
-    let dialog = FileDialog::builder(&f)
-        .with_message("Save As")
-        .with_wildcard(&wildcard)
-        .with_default_file(&format!("{stem}.{own}"))
-        .with_style(FileDialogStyle::Save | FileDialogStyle::OverwritePrompt)
-        .build();
-    if let Some(dir) = path.as_ref().and_then(|p| p.parent()) {
-        dialog.set_directory(&dir.to_string_lossy());
-    }
-    dialog.set_filter_index(0);
-    if dialog.show_modal() != wxdragon::id::ID_OK {
+    // SAFETY: every string is a live zero-ended CString, the buffer's length is passed with it, and the two outputs
+    // are live integers; the frame is the program's main window.
+    let ok = unsafe {
+        wxdragon_sys::wxd_SaveDialog_WithChoice(
+            f.handle_ptr(),
+            title.as_ptr(),
+            wildcard.as_ptr(),
+            dir.as_ptr(),
+            file.as_ptr(),
+            0,
+            label.as_ptr(),
+            list.as_ptr(),
+            shown_for.as_ptr(),
+            shown_for.len() as i32,
+            buffer.as_mut_ptr() as *mut std::os::raw::c_char,
+            buffer.len() as i32,
+            &mut type_index,
+            &mut item,
+        )
+    };
+    if ok == 0 {
         return false;
     }
-    let Some(chosen) = dialog.get_path().map(std::path::PathBuf::from) else { return false };
+    let end = buffer.iter().position(|&b| b == 0).unwrap_or(buffer.len());
+    let chosen = std::path::PathBuf::from(String::from_utf8_lossy(&buffer[..end]).into_owned());
     // The chosen type, unless the name is typed with the extension of another type, which then gives the first
     // type with that extension.
-    let filter = types.get(dialog.get_filter_index().max(0) as usize).copied().unwrap_or(types[0]);
+    let filter = types.get(type_index.max(0) as usize).copied().unwrap_or(types[0]);
     let typed = chosen.extension().and_then(|e| e.to_str()).map(str::to_string);
     let kind = match typed {
         Some(e) if !filter.1.eq_ignore_ascii_case(&e) => types.iter().find(|t| t.1.eq_ignore_ascii_case(&e)).copied().unwrap_or(filter),
@@ -1185,7 +1211,7 @@ fn save(key: Option<u64>, as_new: bool) -> bool {
     };
     let chosen = if chosen.extension().is_some_and(|e| e.eq_ignore_ascii_case(kind.1)) { chosen } else { chosen.with_extension(kind.1) };
     match kind.2 {
-        SaveType::Formatted => write_formatted(key, &chosen, braille, None),
+        SaveType::Formatted => write_formatted(key, &chosen, braille, item.max(0) as usize),
         SaveType::Refreshable => write_refreshable(key, &chosen),
         SaveType::Coded => write_coded(key, &chosen),
         SaveType::Latex => write_latex(key, &chosen),
@@ -1543,7 +1569,7 @@ fn open_pdf(path: &Path) -> Option<u64> {
 /// The command line's /brf and /prf: formatted braille or text with the first encoding or code page, which Save As
 /// also chooses first every time.
 pub fn write_formatted_for(key: u64, path: &Path, braille: bool) -> bool {
-    write_formatted(key, path, braille, Some(0))
+    write_formatted(key, path, braille, 0)
 }
 
 /// The command line's /lbf: refreshable braille.
@@ -1551,32 +1577,10 @@ pub fn write_refreshable_for(key: u64, path: &Path) -> bool {
     write_refreshable(key, path)
 }
 
-/// Save As formatted braille (.brf) for a braille document or formatted text (.prf) for a print document: the
-/// document laid out into pages and written as the reference program's page writer writes them (spec 04d-B). The
-/// document itself keeps its own file and name.
-fn write_formatted(key: u64, path: &Path, braille: bool, given: Option<usize>) -> bool {
-    let choice = if let Some(c) = given {
-        c
-    } else if braille {
-        let list = brf_encodings();
-        let refs: Vec<&str> = list.iter().map(String::as_str).collect();
-        let f = app::frame();
-        let d = SingleChoiceDialog::builder(&f, "Braille encoding of the file:", "Formatted braille", &refs).build();
-        d.set_selection(0);
-        if d.show_modal() != wxdragon::id::ID_OK {
-            return false;
-        }
-        d.get_selection().max(0) as usize
-    } else {
-        // The code pages for formatted text, the first chosen every time (spec 04d-E).
-        let f = app::frame();
-        let d = SingleChoiceDialog::builder(&f, "Code page of the file:", "Formatted text", &bc_core::codepages::NAMES).build();
-        d.set_selection(0);
-        if d.show_modal() != wxdragon::id::ID_OK {
-            return false;
-        }
-        d.get_selection().max(0) as usize
-    };
+/// Save As formatted braille (.brf) for a braille document or formatted text (.prf) for a print document, in the
+/// encoding or code page at `choice` of the Encoding box: the document laid out into pages and written as the
+/// reference program's page writer writes them (spec 04d-B). The document itself keeps its own file and name.
+fn write_formatted(key: u64, path: &Path, braille: bool, choice: usize) -> bool {
     let Some((pages, shown_in)) = app::with(|a| {
         let i = a.index_of(key)?;
         let shown = a.docs[i].shown();

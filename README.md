@@ -86,7 +86,7 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   with a continuation letter on later braille pages, and a print page change line where a print page begins in the
   middle of a braille page.
 - **Save As.** Formatted braille (BRF in a choice of braille encodings), PEF (Portable Embosser Format), formatted
-  text in a choice of code pages, coded braille, refreshable braille (.lbf), LaTeX, and the older document format.
+  text in a choice of code pages (the encoding or code page chosen in the Save As dialog's own Encoding box), coded braille, refreshable braille (.lbf), LaTeX, and the older document format.
 - **Printing.** Print documents and braille (with interline print) through the system printer.
 - **Embossing.** Embosser setups for 139 embosser models, including Index and Enabling Technologies, with page ranges and
   copies, to a printer queue, a serial port or a file. Embossers on an FTDI USB connection (the EBrailler Cosmo) are

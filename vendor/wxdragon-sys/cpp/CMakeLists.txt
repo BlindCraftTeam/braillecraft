@@ -195,6 +195,7 @@ set(WXDRAGON_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/print.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/reader_static_text.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/cursor_locator.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/save_dialog.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/space_after.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/line_gutter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/doc_editor.cpp

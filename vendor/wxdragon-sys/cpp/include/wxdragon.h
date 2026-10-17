@@ -136,6 +136,7 @@ extern "C" {
 #include "core/wxd_reader_static_text.h"
 // Added for BrailleCraft: the Cursor Locator
 #include "core/wxd_cursor_locator.h"
+#include "core/wxd_save_dialog.h"
 #include "core/wxd_space_after.h"
 #include "core/wxd_line_gutter.h"
 // Added for BrailleCraft: the drawn document editing window

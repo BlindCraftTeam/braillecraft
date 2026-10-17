@@ -52,3 +52,9 @@ listed in cpp/CMakeLists.txt and the header included from cpp/include/wxdragon.h
 
 The Rust bindings are generated from the header when the crate builds, so no Rust file changed.
 The workspace Cargo.toml uses this copy through [patch.crates-io].
+
+Also added, in cpp/include/core/wxd_save_dialog.h and cpp/src/save_dialog.cpp (listed in cpp/CMakeLists.txt and
+included from cpp/include/wxdragon.h):
+- wxd_SaveDialog_WithChoice: a Save As file dialog with a labelled choice in it (through wxFileDialogCustomizeHook),
+  shown only for given file types; on Linux the GTK file chooser's "filter" property is watched to follow the type,
+  and the panel holding the controls is fitted to them again when they are shown or hidden.
