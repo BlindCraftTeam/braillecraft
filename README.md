@@ -61,8 +61,11 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
 - **Translation.** Print to braille and braille to print with 657 translation tables for 188 languages and braille
   codes, chosen by region and language (Document, Translation Tables) or by learning course (Learning Tables).
   Language codes in the text switch tables in the middle of a document. Every character the built-in character
-  table names translates (accented letters, £, €, œ, dashes, curly quotes and thousands more); text files are read
-  as UTF-8, or as Windows code page 1252 when they are not UTF-8.
+  table names translates (accented letters, £, €, œ, dashes, curly quotes and thousands more); File, Open finds a
+  file's kind from its name and content (formatted text, formatted braille, coded text, coded braille, PDF, PEF, a
+  document file) and, for any file that is not a document file, asks in the import dialog for its template, its
+  kind, and the code page or braille encoding to read it in; Insert File does the same and refuses braille in a print
+  document and print in a braille one.
 - **Translated line.** Under the document, the braille (or the print) of the line you are on, updated as you write.
 - **View preferences.** A margin bell a chosen number of cells before the end of a braille line, which codes the
   translated line shows, line numbers beside each line of a braille document in the formatted view when

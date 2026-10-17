@@ -14,6 +14,7 @@ pub mod emboss_out;
 pub mod emboss_setup;
 pub mod embossers;
 pub mod engine;
+pub mod filekind;
 pub mod format;
 pub mod fview;
 pub mod pef;

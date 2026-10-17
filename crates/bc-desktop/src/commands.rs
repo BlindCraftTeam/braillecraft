@@ -139,10 +139,6 @@ fn active_area() -> Option<crate::editor_view::Area> {
     app::with(|a| a.doc().map(|d| d.area))
 }
 
-fn insert_text(text: &str) {
-    insert_shown(&Shown::plain(text));
-}
-
 /// Puts `s` (text and codes) in place of the selection, its codes known as codes; the caret goes after it.
 fn insert_shown(s: &Shown) {
     let area = app::with(|a| {
@@ -398,6 +394,7 @@ pub fn run(id: i32, checked: bool) {
 /// What File, New shows: the templates in alphabetical order, less the hidden ones (unless Show Hidden Templates is
 /// checked) and those of other regions (Select Region...); the default template is selected.
 struct NewDialogState {
+    ids: TemplateIds,
     hidden: Vec<String>,
     default: String,
     show_hidden: bool,
@@ -408,6 +405,20 @@ struct NewDialogState {
     names: Vec<String>,
     current: Option<String>,
 }
+
+/// The template controls of a dialog: File, New (1017) and the import dialog (1043) have the same ones.
+#[derive(Clone, Copy)]
+struct TemplateIds {
+    list: i32,
+    default: i32,
+    hide: i32,
+    show: i32,
+    region: i32,
+    show_hidden: i32,
+}
+
+const NEW_TEMPLATES: TemplateIds = TemplateIds { list: 10, default: 11, hide: 12, show: 13, region: 14, show_hidden: 15 };
+const IMPORT_TEMPLATES: TemplateIds = TemplateIds { list: 7, default: 8, hide: 9, show: 10, region: 11, show_hidden: 12 };
 
 const REGION_NAMES: [&str; 6] = ["Western Hemisphere", "Europe", "Asia", "Africa", "Pacific", "All Regions/All Languages"];
 
@@ -438,7 +449,7 @@ fn fill_new_dialog(d: &Dlg, s: &mut NewDialogState, keep: Option<String>) {
     let items: Vec<&str> = names.iter().map(String::as_str).collect();
     let want = keep.unwrap_or_else(|| s.default.clone());
     let sel = names.iter().position(|n| *n == want).or(if names.is_empty() { None } else { Some(0) });
-    d.set_items(10, &items, sel.map(|i| i as u32));
+    d.set_items(s.ids.list, &items, sel.map(|i| i as u32));
     s.current = sel.map(|i| names[i].clone());
     s.names = names;
     update_hide_button(d, s);
@@ -447,18 +458,21 @@ fn fill_new_dialog(d: &Dlg, s: &mut NewDialogState, keep: Option<String>) {
 /// Hide Template and Show Template Always share a place: the second shows for a hidden template.
 fn update_hide_button(d: &Dlg, s: &NewDialogState) {
     let hidden = s.current.as_ref().is_some_and(|n| s.hidden.contains(n));
-    if let Some(w) = d.win(12) {
+    if let Some(w) = d.win(s.ids.hide) {
         w.show(!hidden);
     }
-    if let Some(w) = d.win(13) {
+    if let Some(w) = d.win(s.ids.show) {
         w.show(hidden);
     }
 }
 
-fn file_new() {
+/// The template list of a dialog and its buttons (make default, hide, show always, region, show hidden), as File, New
+/// has them; what the list shows and its current template.
+fn template_chooser(d: &Dlg, ids: TemplateIds) -> std::rc::Rc<std::cell::RefCell<NewDialogState>> {
     use std::cell::RefCell;
     use std::rc::Rc;
     let state = Rc::new(RefCell::new(NewDialogState {
+        ids,
         hidden: settings_store::load_hidden_templates(),
         default: translation::default_template(),
         show_hidden: false,
@@ -466,14 +480,12 @@ fn file_new() {
         names: Vec::new(),
         current: None,
     }));
-    let d = open_dialog(1017, None);
-    d.set_radio(&[7, 8], 0);
-    d.set_checked(15, false);
-    fill_new_dialog(&d, &mut state.borrow_mut(), None);
+    d.set_checked(ids.show_hidden, false);
+    fill_new_dialog(d, &mut state.borrow_mut(), None);
     let copy = |d: &Dlg| Dlg { id: d.id, dialog: d.dialog, page: d.page };
 
     let (dc, st) = (copy(&d), state.clone());
-    d.on_button(11, move || {
+    d.on_button(ids.default, move || {
         let Some(name) = st.borrow().current.clone() else { return };
         if st.borrow().hidden.contains(&name) {
             message("This template is normally hidden, so it cannot be made the default.  You must first use the \"Show Template Always\" button.");
@@ -484,7 +496,7 @@ fn file_new() {
         fill_new_dialog(&dc, &mut st.borrow_mut(), Some(name));
     });
     let (dc, st) = (copy(&d), state.clone());
-    d.on_button(12, move || {
+    d.on_button(ids.hide, move || {
         let Some(name) = st.borrow().current.clone() else { return };
         if st.borrow().default == name {
             message("This is the default template.  It cannot be hidden unless you first choose another default.");
@@ -495,14 +507,14 @@ fn file_new() {
         fill_new_dialog(&dc, &mut st.borrow_mut(), Some(name));
     });
     let (dc, st) = (copy(&d), state.clone());
-    d.on_button(13, move || {
+    d.on_button(ids.show, move || {
         let Some(name) = st.borrow().current.clone() else { return };
         st.borrow_mut().hidden.retain(|n| *n != name);
         settings_store::save_hidden_templates(&st.borrow().hidden);
         fill_new_dialog(&dc, &mut st.borrow_mut(), Some(name));
     });
     let (dc, st) = (copy(&d), state.clone());
-    d.on_button(14, move || {
+    d.on_button(ids.region, move || {
         let current = (0..REGION_NAMES.len()).position(|i| region_of(i) == st.borrow().region);
         let r = open_dialog(1018, None);
         r.set_items(7, &REGION_NAMES, current.map(|i| i as u32));
@@ -515,7 +527,7 @@ fn file_new() {
             fill_new_dialog(&dc, &mut st.borrow_mut(), keep);
         }
     });
-    if let Some(c) = d.win(15).and_then(|w| w.as_widget::<CheckBox>()) {
+    if let Some(c) = d.win(ids.show_hidden).and_then(|w| w.as_widget::<CheckBox>()) {
         let (dc, st) = (copy(&d), state.clone());
         c.on_toggled(move |e| {
             st.borrow_mut().show_hidden = e.is_checked();
@@ -523,7 +535,7 @@ fn file_new() {
             fill_new_dialog(&dc, &mut st.borrow_mut(), keep);
         });
     }
-    if let Some(l) = d.win(10).and_then(|w| w.as_widget::<ListBox>()) {
+    if let Some(l) = d.win(ids.list).and_then(|w| w.as_widget::<ListBox>()) {
         let (dc, st) = (copy(&d), state.clone());
         l.on_selection_changed(move |e| {
             let mut s = st.borrow_mut();
@@ -531,6 +543,32 @@ fn file_new() {
             update_hide_button(&dc, &s);
         });
     }
+    state
+}
+
+/// Document `key` takes template `name`'s tables, styles and page numbering.
+fn apply_template(key: u64, name: &str) {
+    let tables = translation::template_tables(name);
+    let styles = translation::template_style_list(name);
+    let numbers = translation::template_page_numbers(name);
+    app::with(|a| {
+        if let Some(i) = a.index_of(key) {
+            if let Some(t) = tables {
+                a.docs[i].tables = t;
+            }
+            a.docs[i].styles = styles;
+            a.docs[i].page_numbers = numbers;
+            a.docs[i].template = name.to_string();
+            a.docs[i].last_line_key.clear();
+        }
+        a.refresh_menus();
+    });
+}
+
+fn file_new() {
+    let d = open_dialog(1017, None);
+    d.set_radio(&[7, 8], 0);
+    let state = template_chooser(&d, NEW_TEMPLATES);
     let ok = d.show() == 1;
     let braille = d.radio(&[7, 8]) == Some(1);
     let template = state.borrow().current.clone();
@@ -538,34 +576,9 @@ fn file_new() {
     if ok {
         let key = documents::new_document(if braille { DocKind::Braille } else { DocKind::Print }, None, &Shown::default());
         if let Some(name) = template {
-            let tables = translation::template_tables(&name);
-            let styles = translation::template_style_list(&name);
-            let numbers = translation::template_page_numbers(&name);
-            app::with(|a| {
-                if let Some(i) = a.index_of(key) {
-                    if let Some(t) = tables {
-                        a.docs[i].tables = t;
-                    }
-                    a.docs[i].styles = styles;
-                    a.docs[i].page_numbers = numbers;
-                    a.docs[i].template = name;
-                    a.docs[i].last_line_key.clear();
-                }
-                a.refresh_menus();
-            });
+            apply_template(key, &name);
         }
     }
-}
-
-fn read_text_file(path: &Path) -> Result<String, String> {
-    let bytes = std::fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
-    let text = match String::from_utf8(bytes) {
-        Ok(s) => s,
-        // Not UTF-8: read as Windows code page 1252, the usual code page of text files from Windows (curly quotes,
-        // dashes, œ and the euro sign are in 0x80 to 0x9F there, which ISO Latin-1 leaves as control characters).
-        Err(e) => bc_core::internal::windows_1252(&e.into_bytes()),
-    };
-    Ok(text.replace("\r\n", "\n").replace('\r', "\n"))
 }
 
 fn pick_file(message_text: &str) -> Option<std::path::PathBuf> {
@@ -673,7 +686,7 @@ fn open_dx_document(path: &Path) -> Option<u64> {
 
 fn open_file() {
     let Some(path) = pick_file("Open") else { return };
-    if let Some(key) = open_path(&path) {
+    if let Some(key) = open_path_asking(&path, true) {
         locator_after_open(key);
     }
 }
@@ -686,28 +699,38 @@ fn locator_after_open(key: u64) {
     }
 }
 
-/// Opens a document file (.dxp, .dxb) or a text or braille file in a new document window; its key, or None when it
-/// could not be read (a message says why).
+/// Opens a document file in a new document window, or imports any other file: its kind is found from its name and
+/// content (bc_core::filekind), the import dialog asks for the template, the kind and the code page or braille
+/// encoding (`ask`; not for the command line), and the file is read by that kind. Its key, or None when it could not
+/// be opened (a message says why).
 pub fn open_path(path: &Path) -> Option<u64> {
+    open_path_asking(path, false)
+}
+
+fn open_path_asking(path: &Path, ask: bool) -> Option<u64> {
     let path = path.to_path_buf();
-    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase();
-    if ext == "dxp" || ext == "dxb" {
-        return open_dx_document(&path);
+    let bytes = match std::fs::read(&path) {
+        Ok(b) => b,
+        Err(e) => {
+            message(&format!("{}: {e}", path.display()));
+            return None;
+        }
+    };
+    let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+    let detected = bc_core::filekind::detect(&name, &bytes);
+    match detected {
+        FileKind::Document => return open_dx_document(&path),
+        // BrailleCraft's own addition, with no import dialog.
+        FileKind::Pef => return open_pef(&path),
+        _ => {}
     }
-    if ext == "pef" {
-        return open_pef(&path);
-    }
-    if ext == "pdf" {
-        return open_pdf(&path);
-    }
-    match read_text_file(&path) {
-        Ok(text) => {
-            let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase();
-            let braille = matches!(ext.as_str(), "brf" | "brl" | "bru");
-            let text = if braille { text.replace('\u{c}', "\n") } else { text };
-            let name = path.file_name().map(|n| n.to_string_lossy().into_owned());
-            // A text or braille file holds no codes: all of it is text.
-            let key = documents::new_document(if braille { DocKind::Braille } else { DocKind::Print }, name, &Shown::plain(&text));
+    let choice = if ask { import_dialog(detected)? } else { ImportChoice::of(detected) };
+    let key = match choice.kind {
+        FileKind::Pdf => open_pdf(&path)?,
+        kind => {
+            let shown = read_import(&bytes, &choice)?;
+            let doc_kind = if kind.is_braille() { DocKind::Braille } else { DocKind::Print };
+            let key = documents::new_document(doc_kind, Some(name), &shown);
             app::with(|a| {
                 if let Some(i) = a.index_of(key) {
                     a.docs[i].dirty = false;
@@ -719,10 +742,153 @@ pub fn open_path(path: &Path) -> Option<u64> {
                 }
                 a.set_title();
             });
-            Some(key)
+            key
         }
-        Err(e) => {
-            message(&e);
+    };
+    if let Some(t) = &choice.template {
+        apply_template(key, t);
+    }
+    Some(key)
+}
+
+use bc_core::filekind::FileKind;
+
+/// What the import dialog chose: the kind of file, the template, and the code page or braille encoding read in.
+struct ImportChoice {
+    kind: FileKind,
+    template: Option<String>,
+    code_page: String,
+    encoding: String,
+}
+
+impl ImportChoice {
+    /// The choice when no dialog is shown: the kind found, the settings' code page and braille encoding.
+    fn of(kind: FileKind) -> ImportChoice {
+        ImportChoice { kind, template: None, code_page: import_code_page(), encoding: app::with(|a| a.settings.encoding.clone()) }
+    }
+}
+
+/// The code page text files are imported in: the one last chosen in the import dialog, else the system's when it
+/// is ISO-8859-1, ISO-8859-2, WINDOWS-1250 or WINDOWS-1252, else ISO-8859-1.
+fn import_code_page() -> String {
+    settings_store::load_code_page()
+        .filter(|c| bc_core::codepages::NAMES.contains(&c.as_str()))
+        .unwrap_or_else(|| bc_core::codepages::default_import(system_code_page()).to_string())
+}
+
+/// The system's code page (Windows); other systems have none of the four.
+fn system_code_page() -> Option<&'static str> {
+    #[cfg(windows)]
+    {
+        extern "system" {
+            fn GetACP() -> u32;
+        }
+        // SAFETY: GetACP takes nothing and only returns a number.
+        return match unsafe { GetACP() } {
+            1250 => Some("WINDOWS-1250"),
+            1252 => Some("WINDOWS-1252"),
+            28591 => Some("ISO-8859-1"),
+            28592 => Some("ISO-8859-2"),
+            _ => None,
+        };
+    }
+    #[allow(unreachable_code)]
+    None
+}
+
+/// The import dialog (1043): the templates as File, New lists them, the import filters with the kind found chosen,
+/// and the code page (text kinds) or braille encoding (braille kinds) to read the file in. None when cancelled.
+fn import_dialog(kind: FileKind) -> Option<ImportChoice> {
+    let d = open_dialog(1043, None);
+    let state = template_chooser(&d, IMPORT_TEMPLATES);
+    let filters = FileKind::filters();
+    let names: Vec<&str> = filters.iter().map(|f| f.1).collect();
+    let at = filters.iter().position(|f| f.0 == kind).unwrap_or(filters.len() - 1);
+    d.set_items(14, &names, Some(at as u32));
+    let code_pages: Vec<&str> = bc_core::codepages::NAMES.to_vec();
+    let encodings: Vec<&str> = encodings::all().iter().map(|e| e.name.as_str()).collect();
+    let code_page = import_code_page();
+    let encoding = app::with(|a| a.settings.encoding.clone());
+    let encoding_at = encodings::all().iter().position(|e| e.id == encoding);
+    let copy = |d: &Dlg| Dlg { id: d.id, dialog: d.dialog, page: d.page };
+    // The code page or braille encoding box, by the filter chosen.
+    let show_for = std::rc::Rc::new({
+        let (d, code_pages, encodings, code_page) = (copy(&d), code_pages.clone(), encodings.clone(), code_page.clone());
+        move |k: FileKind| {
+            let (label, items, at): (&str, &[&str], Option<usize>) = if k.asks_code_page() {
+                ("Code Page (Character Set):", &code_pages, code_pages.iter().position(|c| *c == code_page))
+            } else if k.asks_braille_encoding() {
+                ("Braille Encoding:", &encodings, encoding_at)
+            } else {
+                ("", &[], None)
+            };
+            d.set_text(15, label);
+            d.set_items(16, items, at.map(|i| i as u32));
+            for id in [15, 16] {
+                if let Some(w) = d.win(id) {
+                    w.show(!items.is_empty());
+                }
+            }
+        }
+    });
+    show_for(kind);
+    if let Some(l) = d.win(14).and_then(|w| w.as_widget::<ListBox>()) {
+        let show_for = show_for.clone();
+        l.on_selection_changed(move |e| {
+            if let Some(f) = e.get_selection().and_then(|i| FileKind::filters().get(i as usize)) {
+                show_for(f.0);
+            }
+        });
+    }
+    let ok = d.show() == 1;
+    let kind = d.chosen_in(14, &names).map_or(kind, |i| filters[i].0);
+    let chosen_page = d.chosen_in(16, &code_pages);
+    let chosen_encoding = d.chosen_in(16, &encodings);
+    let template = state.borrow().current.clone();
+    d.destroy();
+    if !ok {
+        return None;
+    }
+    let mut choice = ImportChoice { kind, template, code_page, encoding };
+    if kind.asks_code_page() {
+        if let Some(i) = chosen_page {
+            choice.code_page = code_pages[i].to_string();
+            settings_store::save_code_page(&choice.code_page);
+        }
+    } else if kind.asks_braille_encoding() {
+        if let Some(i) = chosen_encoding {
+            choice.encoding = encodings::all()[i].id.clone();
+        }
+    }
+    Some(choice)
+}
+
+/// A file's text as `choice` says to read it: text kinds in the chosen code page; braille kinds in the chosen braille
+/// encoding, shown in the display encoding (a form feed between pages becomes a line break). The kinds BrailleCraft
+/// cannot import say so.
+fn read_import(bytes: &[u8], choice: &ImportChoice) -> Option<Shown> {
+    let kind_name = FileKind::filters().iter().find(|f| f.0 == choice.kind).map_or("", |f| f.1);
+    match choice.kind {
+        FileKind::Unsupported | FileKind::Music => {
+            message("This document cannot be imported into BrailleCraft.  It appears to be in an unsupported file format.");
+            None
+        }
+        FileKind::Rtf => {
+            message("This document cannot be imported into BrailleCraft.  It appears to be in Rich Text Format (RTF).  If Microsoft® Word is installed, you can use it to convert your document to a native Word format and import that into BrailleCraft.");
+            None
+        }
+        FileKind::CodedText | FileKind::FormattedText => {
+            let text = bc_core::codepages::decode(&choice.code_page, bytes);
+            Some(Shown::plain(&text.replace("\r\n", "\n").replace('\r', "\n")))
+        }
+        FileKind::CodedBraille | FileKind::FormattedBraille | FileKind::Orbit => {
+            let text: String = bytes.iter().map(|&b| char::from(b)).collect();
+            let text = text.replace("\r\n", "\n").replace('\r', "\n").replace('\u{c}', "\n");
+            let display = app::with(|a| a.encoding());
+            Some(translation::convert_braille(&Shown::plain(&text), encodings::find(&choice.encoding), display))
+        }
+        _ => {
+            message(&format!("BrailleCraft cannot import {kind_name} files yet."));
             None
         }
     }
@@ -733,10 +899,38 @@ fn insert_file() {
         return;
     }
     let Some(path) = pick_file("Insert File") else { return };
-    match read_text_file(&path) {
-        Ok(text) => insert_text(&text),
-        Err(e) => message(&e),
+    let bytes = match std::fs::read(&path) {
+        Ok(b) => b,
+        Err(e) => {
+            message(&format!("{}: {e}", path.display()));
+            return;
+        }
+    };
+    let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+    let detected = bc_core::filekind::detect(&name, &bytes);
+    let braille_doc = app::with(|a| a.doc().map(|d| d.kind == DocKind::Braille)).unwrap_or(false);
+    // A document file is inserted with its codes; any other file through the import dialog.
+    let (shown, braille) = if detected == FileKind::Document {
+        let Ok(doc) = bc_core::dxfile::read(&bytes) else {
+            message("This document cannot be imported into BrailleCraft.  It appears to be in an unsupported file format.");
+            return;
+        };
+        (Shown::from_running(&doc.text), doc.kind == bc_core::DocumentKind::Braille)
+    } else {
+        let Some(choice) = import_dialog(detected) else { return };
+        let braille = choice.kind.is_braille();
+        let Some(shown) = read_import(&bytes, &choice) else { return };
+        (shown, braille)
+    };
+    if braille && !braille_doc {
+        message("You cannot insert a Braille document into a print document.");
+        return;
     }
+    if !braille && braille_doc {
+        message("You cannot insert a print document into a Braille document.");
+        return;
+    }
+    insert_shown(&shown);
 }
 
 /// Asks about an unsaved document. Returns false when the user cancels.

@@ -457,6 +457,15 @@ pub fn save_shortcuts(k: &Shortcuts) {
     set(s, "ControlPageNav", Shortcuts::PAGE_NAV[k.control_page_nav.min(2)]);
 }
 
+/// The code page text files are imported in, as the import dialog last chose it.
+pub fn load_code_page() -> Option<String> {
+    get_text(ROOT, "CodePage")
+}
+
+pub fn save_code_page(name: &str) {
+    set(ROOT, "CodePage", name);
+}
+
 /// Global, Internationalization: the braille encoding and Support UI Automation.
 pub fn save_internationalization(encoding: &str, uia: bool) {
     set(ROOT, "BrailleEncoding", encoding);
