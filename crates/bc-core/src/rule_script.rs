@@ -492,6 +492,17 @@ mod tests {
     }
 
     #[test]
+    fn the_import_scripts_load_and_run() {
+        for name in ["ninit-codes.rules", "normalize-spaces.rules", "page-end-blanks.rules", "nemeth-in-ueb-1.rules", "nemeth-in-ueb-2.rules", "table-outline.rules"] {
+            let mut script = shipped(name);
+            script.run(b"Some text  with spaces.\r\nMore.\r\n").unwrap_or_else(|e| panic!("{name}: {e}"));
+        }
+        // Blank lines before a form feed are taken out.
+        let out = shipped("page-end-blanks.rules").run(b"text\r\n\r\n\r\n\x0cnext").unwrap();
+        assert!(!out.windows(5).any(|w| w == b"\r\n\r\n\x0c"), "{:?}", String::from_utf8_lossy(&out));
+    }
+
+    #[test]
     fn faults_are_refused() {
         assert_eq!(RuleScript::from_bytes(b"a|12~b~", None).unwrap_err().code, 200);
         assert_eq!(RuleScript::from_bytes(b"a~b~x~", None).unwrap_err().code, 0xF0);
