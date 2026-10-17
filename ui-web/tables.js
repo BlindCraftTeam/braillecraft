@@ -1105,6 +1105,12 @@ export const MENUS = [
     "kind": "normal"
    },
    {
+    "id": 3110,
+    "label": "Python Options...",
+    "shortcut": "",
+    "kind": "normal"
+   },
+   {
     "id": 3111,
     "label": "&Notification Settings...",
     "shortcut": "",

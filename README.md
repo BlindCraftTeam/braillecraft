@@ -80,7 +80,9 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   footnotes, endnotes, hyperlinks, page breaks and fields go through the Word style map the template names
   (default, Australian, BANA, French, Russian or UK basic, shipped as data) and the Word import rule scripts, with
   the Global, Word Importer settings (Courier as computer braille, hard page breaks, skipped lines, print page
-  breaks, braille fonts, embedded codes, bold, italics, underline and language switches ignored) and the Global,
+  breaks, braille fonts, embedded codes, bold, italics, underline and language switches ignored; the original's
+  defaults: hard page breaks kept, language switches ignored, codes typed in Word as `[[*code*]]` taken as codes,
+  duplicate hyperlinks removed and URLs tagged as computer notation) and the Global,
   Import Options settings (hyperlinks as text, URLs, both or hyperlink codes, duplicates removed, URLs tagged as
   computer notation, spaces around signs of comparison, spaces around dashes, unknown characters). The web build opens files
   the same way, through the same import dialog and import steps, with its settings kept in the browser.

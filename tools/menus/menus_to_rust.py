@@ -15,7 +15,7 @@ import sys
 # Document Global Help), Python Options (Python macros), and the licensing, registration and companion-program
 # items, which have no counterpart in BrailleCraft.
 LEAVE_OUT_MENUS = {"&Macro"}
-LEAVE_OUT_IDS = {3110, 3208, 3209, 3212}
+LEAVE_OUT_IDS = {3208, 3209, 3212}
 RELABEL = {3206: "&New in BrailleCraft 0.1", 3211: "&About BrailleCraft..."}
 
 # Items shown with a check mark. Highlight: "while it is active a check mark (tick mark) appears next to it on the

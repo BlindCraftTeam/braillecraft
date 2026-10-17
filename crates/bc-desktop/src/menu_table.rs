@@ -252,6 +252,7 @@ const M18: &[Entry] = &[
     Entry::Item(3107, "&Fonts...", Kind::Normal),
     Entry::Item(3108, "&View Preferences...", Kind::Normal),
     Entry::Item(3109, "&Shortcut Preferences...", Kind::Normal),
+    Entry::Item(3110, "Python Options...", Kind::Normal),
     Entry::Item(3111, "&Notification Settings...", Kind::Normal),
     Entry::Separator,
     Entry::Item(3113, "Import &Options...", Kind::Normal),

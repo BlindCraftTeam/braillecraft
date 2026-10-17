@@ -71,14 +71,18 @@ impl Default for Options {
             ignore_typeforms: false,
             hard_pages: true,
             skipped_lines: false,
-            print_pages: PrintPages::Internal,
+            // The original's defaults, from its settings descriptor table (spec 28 section 19): section Word,
+            // PrintPages "none", the embedded codes key "yes", PreserveHardPageBreaks "yes", IgnoreLanguageSwitches "yes",
+            // the rest "no"; section Hyperlinks, Action "both", RemoveDuplicates "yes", AutoTagCBC "yes"; section
+            // ImportOptions, AddSpaces "no", RemoveDashSpaces "no".
+            print_pages: PrintPages::Ignore,
             internal_hyperlinks: false,
             defer_footnotes: true,
             defer_endnotes: true,
             hyperlinks: 2,
-            remove_duplicates: false,
-            auto_tag_cbc: false,
-            codes: false,
+            remove_duplicates: true,
+            auto_tag_cbc: true,
+            codes: true,
             add_spaces: false,
             remove_dash_spaces: false,
         }
