@@ -100,6 +100,12 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   its period. Rename Style checks the new name in the dialog. Code List (F5) lists all 300 codes by category,
   remembers the categories chosen, and takes a double-click as OK. A paragraph style applied takes whole paragraphs, Join Lines and
   Join Styles work on the selection, and New Paragraph inside a style ends it and starts it again.
+- **Find and Replace as the original.** Each document keeps its own Find and Replace. A search looks in the
+  selection first, then offers the rest of the document and the other end of it; it can search for codes, for a
+  style by its name (Replace renames a style's codes, or takes them out), or with a `*` at the end of a code standing
+  for the rest of its name. Find leaves the caret at what it finds. Replace asks Yes, No, All or Stop for each match,
+  each replacement is one undo step and All is one together, the caret and selection go back where they were, and
+  the number of replacements is shown (with "do not show again").
 - **Save As.** Formatted braille (BRF in a choice of braille encodings), PEF (Portable Embosser Format), formatted
   text in a choice of code pages (the encoding or code page chosen in the Save As dialog's own Encoding box), coded braille, refreshable braille (.lbf), LaTeX, and the older document format.
 - **Printing.** Print documents and braille (with interline print) through the system printer.

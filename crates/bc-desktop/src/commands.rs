@@ -8,7 +8,7 @@ use std::path::Path;
 
 use wxdragon::prelude::*;
 
-use crate::app::{self, DocKind, FindSpec, Hyphen, Style, ViewFont};
+use crate::app::{self, DocKind, Hyphen, Style, ViewFont};
 use crate::codes::{self, Dynamic, Insert};
 use crate::dlg::Dlg;
 use crate::documents;
@@ -16,6 +16,7 @@ use crate::encodings;
 use crate::settings_store;
 use crate::translation;
 use bc_core::doctext::{codes_properly_marked, style_codes_problem, style_name_problem, Shown, NEW_STYLE_NAME};
+use bc_core::find;
 use bc_core::table_list::TableList;
 
 // Messages for parts of the program that later build steps bring. They say what is missing and where it comes.
@@ -2243,16 +2244,6 @@ fn toggle_highlight() {
     });
 }
 
-/// Replaces document places `from` to `to` of the active document with plain `text`: in the formatted view in the
-/// document itself, else in the editing area.
-fn replace_plain(from: usize, to: usize, text: &str) {
-    app::with(|a| {
-        if let Some(i) = a.active {
-            a.edit(i, from, to, &Shown::plain(text));
-        }
-    });
-}
-
 /// Edit, Change Case, as the original (bc_core doctext change_case): the selection or the word at the caret; the
 /// caret goes to the start of the range.
 fn change_case() {
@@ -2338,149 +2329,342 @@ fn goto_position() {
     }
 }
 
-fn find_next(spec: &FindSpec, text: &str, from: i64, backward: bool) -> Option<i64> {
-    let fold = |s: &str| if spec.match_case { s.to_string() } else { s.to_lowercase() };
-    let hay: Vec<char> = fold(text).chars().collect();
-    let needle: Vec<char> = fold(&spec.find).chars().collect();
-    if needle.is_empty() || needle.len() > hay.len() {
-        return None;
-    }
-    let is_word = |i: i64| i >= 0 && (i as usize) < hay.len() && (hay[i as usize].is_alphanumeric() || hay[i as usize] == '_');
-    let fits = |i: usize| hay[i..i + needle.len()] == needle[..] && !(spec.whole_words && (is_word(i as i64 - 1) || is_word((i + needle.len()) as i64)));
-    let last = hay.len() - needle.len();
-    if backward {
-        let start = (from - 1).min(last as i64);
-        (0..=start.max(-1)).rev().filter(|i| *i >= 0).map(|i| i as usize).find(|&i| fits(i)).map(|i| i as i64)
-    } else {
-        ((from.max(0) as usize)..=last).find(|&i| fits(i)).map(|i| i as i64)
+/// What Edit, Find and Edit, Replace work on (spec 32): the active document's running text (codes marked), the caret
+/// and the selection's anchor in it, whether there is a selection, whether it is a print document, whether it shows
+/// codes, and its style names.
+struct FindContext {
+    running: String,
+    caret: usize,
+    anchor: usize,
+    had_sel: bool,
+    print: bool,
+    codes: bool,
+    styles: Vec<String>,
+}
+
+fn find_context() -> Option<FindContext> {
+    app::with(|a| {
+        a.doc().map(|d| {
+            let shown = d.shown();
+            let (f, t) = d.selection();
+            let c = d.caret();
+            let anchor = if c == f { t } else { f };
+            let to_running = |p: usize| shown.slice(0, p).to_running().chars().count();
+            FindContext {
+                running: shown.to_running(),
+                caret: to_running(c),
+                anchor: to_running(anchor),
+                had_sel: f != t,
+                print: matches!(d.kind, DocKind::Print),
+                codes: d.view.codes,
+                styles: d.styles.iter().map(|s| s.name.clone()).collect(),
+            }
+        })
+    })
+}
+
+/// The document place of running-text place `r`.
+fn shown_place(running: &str, r: usize) -> i64 {
+    Shown::from_running(&running.chars().take(r).collect::<String>()).text.chars().count() as i64
+}
+
+/// Puts `running` in the active document as one undo step.
+fn put_running(running: &str) {
+    let new_shown = Shown::from_running(running);
+    app::with(|a| {
+        if let Some(i) = a.active {
+            a.edit_by(i, |e| {
+                let len = e.doc.text.chars().count();
+                e.replace(0, len, &new_shown);
+                Shown::default()
+            });
+        }
+    });
+}
+
+/// The questions of a search (spec 32 2.2, 2.3), Yes answering true.
+fn search_question(q: find::Question) -> bool {
+    yes_no(match q {
+        find::Question::RestOfDocument => "BrailleCraft was unable to find the text within the selected area.  Would you like to search the rest of the document?",
+        find::Question::WrapToStart => "BrailleCraft has finished searching to the end of the document.  Would you like to continue searching at the beginning?",
+        find::Question::WrapToEnd => "BrailleCraft has finished searching to the beginning of the document.  Would you like to continue searching at the end?",
+    })
+}
+
+/// The search options of Find (case 8, backward 9, whole words 10, radios 12 to 14) and Replace (10, 11, 12, radios
+/// 14 to 16) filled from `s` and enabled as the original enables them (spec 32 1.1): case sensitive only in a print
+/// document and not for a style name, whole words not for a style name; choosing literal or wildcard enables both,
+/// choosing style name disables both (case only in a print document).
+fn search_options(d: &Dlg, s: &find::Search, case: i32, whole: i32, radios: [i32; 3], print: bool) {
+    d.set_checked(case, s.match_case);
+    d.set_checked(case + 1, s.backward);
+    d.set_checked(whole, s.whole_words);
+    d.set_radio(&radios, if s.stylename { 1 } else if s.wildcard { 2 } else { 0 });
+    d.enable(case, print && !s.stylename);
+    d.enable(whole, !s.stylename);
+    for (k, r) in radios.into_iter().enumerate() {
+        let me = Dlg { id: d.id, dialog: d.dialog, page: d.page };
+        d.on_radio(r, move || {
+            let style = k == 1;
+            if !style || print {
+                me.enable(case, !style);
+            }
+            me.enable(whole, !style);
+        });
     }
 }
 
-fn read_find(d: &Dlg, replace: bool) -> FindSpec {
-    if replace {
-        FindSpec { find: d.text(7), replace_with: d.text(9), match_case: d.checked(10), backward: d.checked(11), whole_words: d.checked(12) }
-    } else {
-        FindSpec { find: d.text(7), replace_with: String::new(), match_case: d.checked(8), backward: d.checked(9), whole_words: d.checked(10) }
+/// The search the options say, for `text` (running text); a `*` before a code's end becomes the wildcard mark when
+/// wildcards are chosen, as the original stores it (spec 32 1.2).
+fn read_search(d: &Dlg, text: String, case: i32, whole: i32, radios: [i32; 3]) -> find::Search {
+    let r = d.radio(&radios).unwrap_or(0);
+    let text = if r == 2 { text.replace("*\u{1f}", "\u{1b}\u{1f}") } else { text };
+    find::Search {
+        text,
+        match_case: d.checked(case),
+        backward: d.checked(case + 1),
+        whole_words: d.checked(whole),
+        stylename: r == 1,
+        wildcard: r == 2,
+        ..Default::default()
     }
 }
 
-/// The active document's text and its selection, as document places.
-fn doc_and_selection() -> Option<(String, i64, i64)> {
-    app::with(|a| a.doc().map(|d| {
-        let (f, t) = d.selection();
-        (d.shown().text, f as i64, t as i64)
-    }))
+/// The selection and caret a search starts from (spec 32 0.2), with no wrap and nothing found yet.
+fn begin_search(s: &mut find::Search, cx: &FindContext) {
+    s.had_selection = cx.had_sel;
+    s.caret = cx.caret;
+    s.anchor = cx.anchor;
+    s.wrapped = false;
+    s.selection_done = false;
+    s.found = false;
+}
+
+/// A match found by Find or Find Again: the caret at its start, past the start code for a style name, nothing
+/// selected (spec 32 2.6).
+fn show_found(running: &str, m: &(usize, usize, Vec<(usize, usize)>), s: &find::Search) {
+    let p = shown_place(running, if s.style { m.1 } else { m.0 });
+    select_range(p, p);
 }
 
 fn find(again: bool) {
-    let Some((value, sel_from, sel_to)) = doc_and_selection() else { return };
-    let mut spec = app::with(|a| a.last_find.clone());
-    if !again || spec.is_none() {
-        let d = open_dialog(1020, None);
-        d.set_radio(&[12, 13, 14], 0);
-        match &spec {
-            Some(s) => {
-                d.set_text(7, &s.find);
-                d.set_checked(8, s.match_case);
-                d.set_checked(9, s.backward);
-                d.set_checked(10, s.whole_words);
-            }
-            None => {
-                let sel: String = value.chars().skip(sel_from as usize).take((sel_to - sel_from) as usize).collect();
-                if !sel.is_empty() {
-                    d.set_text(7, &sel);
-                }
-            }
-        }
-        let ok = d.show() == 1;
-        let s = read_find(&d, false);
-        d.destroy();
-        if !ok {
-            return;
-        }
-        if s.find.is_empty() {
-            message("The search string is empty.");
-            return;
-        }
-        app::with(|a| a.last_find = Some(s.clone()));
-        spec = Some(s);
+    let Some(cx) = find_context() else { return };
+    let stored = app::with(|a| a.doc().map(|d| d.find.clone())).unwrap_or_default();
+    if again && !stored.text.is_empty() {
+        find_again(&cx, stored);
+        return;
     }
-    let spec = spec.expect("find spec");
-    let from = if spec.backward { sel_from } else { sel_to };
-    let len = value.chars().count() as i64;
-    let mut found = find_next(&spec, &value, from, spec.backward);
-    let at_edge = if spec.backward { from == len } else { from == 0 };
-    if found.is_none() && !at_edge {
-        // Offer to continue from the other end of the document.
-        let q = if spec.backward {
-            "BrailleCraft has finished searching to the beginning of the document.  Would you like to continue searching at the end?"
-        } else {
-            "BrailleCraft has finished searching to the end of the document.  Would you like to continue searching at the beginning?"
-        };
-        if !yes_no(q) {
-            return;
-        }
-        found = find_next(&spec, &value, if spec.backward { len } else { 0 }, spec.backward);
-    }
-    match found {
-        Some(i) => select_range(i, i + spec.find.chars().count() as i64),
-        None => message(if again { "The text does not appear again in the document." } else { "Text was not found in the document." }),
-    }
-}
-
-fn replace() {
-    let Some((_, sel_from, sel_to)) = doc_and_selection() else { return };
-    let last = app::with(|a| a.last_find.clone());
-    let d = open_dialog(1021, None);
-    d.set_radio(&[14, 15, 16], 0);
-    if let Some(s) = &last {
-        d.set_text(7, &s.find);
-        d.set_checked(10, s.match_case);
-        d.set_checked(12, s.whole_words);
-    }
+    let d = open_dialog(1020, None);
+    d.set_text(7, &find::running_to_field(&stored.text, cx.codes));
+    search_options(&d, &stored, 8, 10, [12, 13, 14], cx.print);
+    d.check_on_ok(|d| find::field_problem(&d.text(7), false).map(|m| (7, m)));
     let ok = d.show() == 1;
-    let spec = read_find(&d, true);
+    let mut s = read_search(&d, find::field_to_running(&d.text(7)), 8, 10, [12, 13, 14]);
     d.destroy();
     if !ok {
         return;
     }
-    if spec.find.is_empty() {
-        message("The search string is empty.");
-        return;
+    // A style name searches for the style's start code; one whole style code typed is searched as it is.
+    s.style = s.stylename && find::style_code_name(&s.text).is_none();
+    begin_search(&mut s, &cx);
+    let found = find::find(&cx.running, cx.caret, &mut s, cx.print, false, &mut search_question);
+    app::with(|a| {
+        if let Some(doc) = a.doc_mut() {
+            doc.find = s.clone();
+        }
+    });
+    match found {
+        Some(m) => show_found(&cx.running, &m, &s),
+        None => message("Text was not found in the document."),
     }
-    app::with(|a| a.last_find = Some(spec.clone()));
-    let mut count = 0;
-    let mut all = false;
-    let mut pos = if spec.backward { sel_from } else { sel_to };
-    let find_len = spec.find.chars().count() as i64;
-    let repl_len = spec.replace_with.chars().count() as i64;
-    while let Some(i) = doc_and_selection().and_then(|(v, _, _)| find_next(&spec, &v, pos, spec.backward)) {
-        select_range(i, i + find_len);
-        let answer = if all {
-            5
-        } else {
-            let c = open_dialog(1024, None);
-            for b in [5, 6, 7] {
-                c.closes_with(b);
+}
+
+/// Edit, Find Again (spec 32 4): the remembered Find, one unit on from the caret; its state is not kept back.
+fn find_again(cx: &FindContext, mut s: find::Search) {
+    let u = find::Units::new(&cx.running);
+    let k = u.unit_of(cx.caret);
+    let from = if s.backward { u.at[k.saturating_sub(1)] } else { u.at[(k + 1).min(u.u.len())] };
+    match find::find(&cx.running, from, &mut s, cx.print, false, &mut search_question) {
+        Some(m) => show_found(&cx.running, &m, &s),
+        None => message("The text does not appear again in the document."),
+    }
+}
+
+/// The find and replace texts of the Replace dialog as running text, and whether it is a style search (spec 32 1.3
+/// steps 4 and 6): with style name chosen, a whole style code typed for find (and for replace, unless it is empty) is
+/// taken as its bare name; it is a style search when both are names or both are codes.
+fn replace_texts(d: &Dlg) -> (String, String, bool) {
+    let mut find_r = find::field_to_running(&d.text(7));
+    let mut with_r = find::field_to_running(&d.text(9));
+    let stylename = d.radio(&[14, 15, 16]) == Some(1);
+    if stylename {
+        if let Some(name) = find::style_code_name(&find_r) {
+            if with_r.is_empty() {
+                find_r = name;
+            } else if let Some(w) = find::style_code_name(&with_r) {
+                find_r = name;
+                with_r = w;
             }
-            let r = c.show();
-            c.destroy();
-            r
-        };
-        match answer {
-            5 | 7 => {
-                if answer == 7 {
-                    all = true;
-                }
-                replace_plain(i as usize, (i + find_len) as usize, &spec.replace_with);
-                count += 1;
-                pos = if spec.backward { i } else { i + repl_len };
-            }
-            6 => pos = if spec.backward { i } else { i + find_len },
-            _ => break,
         }
     }
-    message(&format!("{count} replacements were made."));
+    let style = stylename && find::style_code_name(&find_r).is_some() == find::style_code_name(&with_r).is_some();
+    (find_r, with_r, style)
+}
+
+fn replace() {
+    use std::cell::Cell;
+    use std::rc::Rc;
+    let Some(cx) = find_context() else { return };
+    let (stored, stored_with) = app::with(|a| a.doc().map(|d| (d.replace.clone(), d.replace_with.clone()))).unwrap_or_default();
+    let d = open_dialog(1021, None);
+    // The replacement is shown only with the find text it belongs to (spec 32 1.3).
+    let (s0, w0) = if stored.text.is_empty() { (find::Search::default(), String::new()) } else { (stored, stored_with) };
+    d.set_text(7, &find::running_to_field(&s0.text, cx.codes));
+    d.set_text(9, &find::running_to_field(&w0, cx.codes));
+    search_options(&d, &s0, 10, 12, [14, 15, 16], cx.print);
+    let proceed = Rc::new(Cell::new(true));
+    let go = proceed.clone();
+    let styles = cx.styles.clone();
+    d.check_on_ok(move |d| {
+        if let Some(m) = find::field_problem(&d.text(7), false) {
+            return Some((7, m));
+        }
+        if let Some(m) = find::field_problem(&d.text(9), true) {
+            return Some((9, m));
+        }
+        let (f, w, style) = replace_texts(d);
+        if !style {
+            return None;
+        }
+        let known = |n: &str| styles.iter().any(|s| s.eq_ignore_ascii_case(n));
+        // No stays in the dialog, Yes goes on, Cancel closes it with nothing replaced (the choices are kept).
+        let ask = |name: &str, field: i32| {
+            match yes_no_cancel(&format!("There is no style defined with the name \"{name}\".  Are you sure you want to replace all occurrences of the style \"{f}\" with \"{w}\"?")) {
+                Some(true) => None,
+                Some(false) => Some((field, String::new())),
+                None => {
+                    go.set(false);
+                    d.dialog.end_modal(wxdragon::id::ID_OK);
+                    Some((field, String::new()))
+                }
+            }
+        };
+        if !known(&f) {
+            ask(&f, 7)
+        } else if !w.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_')) {
+            Some((9, "The style name contains invalid characters.  Style names may only contain letters (uppercase and lowercase), numbers, the period, the hyphen, and the underscore.".into()))
+        } else if !w.is_empty() && !known(&w) {
+            ask(&w, 9)
+        } else {
+            None
+        }
+    });
+    let ok = d.show() == 1;
+    let (find_r, with_r, style) = replace_texts(&d);
+    let mut s = read_search(&d, find_r, 10, 12, [14, 15, 16]);
+    d.destroy();
+    if !ok {
+        return;
+    }
+    s.style = style;
+    let with = if s.wildcard { with_r.replace("*\u{1f}", "\u{1b}\u{1f}") } else { with_r };
+    app::with(|a| {
+        if let Some(doc) = a.doc_mut() {
+            doc.replace = s.clone();
+            doc.replace_with = with.clone();
+        }
+    });
+    if proceed.get() {
+        run_replace(&cx, s, &with);
+    }
+}
+
+/// The replacing of Edit, Replace (spec 32 3): each match shown selected with Confirm Replacement (1024): Yes
+/// replaces it and goes on, No goes on, All replaces it and every later match as one undo step, Stop ends at it.
+/// Then the caret and selection as they were (moved by the replacements before them), and the count.
+fn run_replace(cx: &FindContext, mut s: find::Search, with: &str) {
+    begin_search(&mut s, cx);
+    let braille = !cx.print;
+    let mut running = cx.running.clone();
+    let mut count = 0u32;
+    let mut stopped = false;
+    let mut next = find::find(&running, cx.caret, &mut s, cx.print, false, &mut search_question);
+    if next.is_none() {
+        message("Text was not found in the document.");
+    }
+    while let Some(m) = next.take() {
+        let end = if s.style { find::style_end_after(&running, m.1, &s.text).map_or(m.1, |e| e.1) } else { m.1 };
+        select_range(shown_place(&running, m.0), shown_place(&running, end));
+        let c = open_dialog(1024, None);
+        for b in [5, 6, 7] {
+            c.closes_with(b);
+        }
+        let answer = c.show();
+        c.destroy();
+        match answer {
+            5 => {
+                let done = find::replace_match(&running, &m, &s, with, braille);
+                s.caret = done.moved(s.caret);
+                s.anchor = done.moved(s.anchor);
+                running = done.text;
+                put_running(&running);
+                count += 1;
+                next = find::find(&running, done.caret, &mut s, cx.print, false, &mut search_question);
+            }
+            6 => {
+                let u = find::Units::new(&running);
+                let k = u.unit_of(m.0);
+                let from = if s.backward { u.at[k.saturating_sub(1)] } else { u.at[(k + 1).min(u.u.len())] };
+                next = find::find(&running, from, &mut s, cx.print, false, &mut search_question);
+            }
+            7 => {
+                let mut all = Some(m);
+                while let Some(x) = all {
+                    let done = find::replace_match(&running, &x, &s, with, braille);
+                    s.caret = done.moved(s.caret);
+                    s.anchor = done.moved(s.anchor);
+                    running = done.text;
+                    count += 1;
+                    all = find::find(&running, done.caret, &mut s, cx.print, true, &mut search_question);
+                }
+                put_running(&running);
+            }
+            _ => {
+                stopped = true;
+                s.caret = m.0;
+            }
+        }
+    }
+    if cx.had_sel && !stopped {
+        select_range(shown_place(&running, s.anchor), shown_place(&running, s.caret));
+    } else {
+        let p = shown_place(&running, s.caret);
+        select_range(p, p);
+    }
+    app::with(|a| {
+        if let Some(doc) = a.doc_mut() {
+            doc.replace.wrapped = s.wrapped;
+        }
+    });
+    replacements_message(count);
+}
+
+/// "%d replacements were made." in the notice 1054, not shown again once its box was checked (kept under Mutable,
+/// Replacements, as the original keeps it: the answer plus one).
+fn replacements_message(count: u32) {
+    const SECTION: &str = "Mutable";
+    const KEY: &str = "Replacements";
+    if settings_store::kept_answer(SECTION, KEY).is_some_and(|v| v != 0) {
+        return;
+    }
+    let d = open_dialog(1054, Some("BrailleCraft"));
+    d.set_text(5, &format!("{count} replacements were made."));
+    let answer = d.show();
+    let keep = d.checked(6);
+    d.destroy();
+    if keep {
+        settings_store::keep_answer(SECTION, KEY, answer as u32 + 1);
+    }
 }
 
 // ------------------------------------------------------------------ View
@@ -3850,14 +4034,6 @@ mod tests {
         let pages = bc_core::format::format(&Shown::plain("Caf\u{e9} \u{3b1}"), &bc_core::format::Layout::print(20, 1), None);
         assert_eq!(prf_bytes(&pages, "ISO-8859-1"), b"Caf\xe9 #\r\n\x0c".to_vec());
         assert_eq!(prf_bytes(&pages, "WINDOWS-1253"), b"Caf# \xe1\r\n\x0c".to_vec());
-    }
-
-    #[test]
-    fn finds_whole_words_both_ways() {
-        let spec = FindSpec { find: "the".into(), replace_with: String::new(), match_case: false, backward: false, whole_words: true };
-        let text = "other The the";
-        assert_eq!(find_next(&spec, text, 0, false), Some(6));
-        assert_eq!(find_next(&spec, text, 13, true), Some(10));
     }
 
     #[test]

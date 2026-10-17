@@ -120,6 +120,11 @@ pub struct Doc {
     pub file_styles: Vec<(String, u16)>,
     /// Edit, Highlight: while on, caret moves extend the selection from where it was turned on.
     pub highlight_anchor: Option<usize>,
+    /// Edit, Find and Edit, Replace as last used in this window, with the search state the original keeps there
+    /// (spec 32 0.2): the find spec, and the replace spec with its replacement text.
+    pub find: bc_core::find::Search,
+    pub replace: bc_core::find::Search,
+    pub replace_with: String,
     pub last_line_key: String,
     pub six_down: HashSet<usize>,
     pub chord: usize,
@@ -334,15 +339,6 @@ impl Default for ViewPrefs {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct FindSpec {
-    pub find: String,
-    pub replace_with: String,
-    pub match_case: bool,
-    pub backward: bool,
-    pub whole_words: bool,
-}
-
 pub struct App {
     pub frame: MDIParentFrame,
     pub menus: Menus,
@@ -352,7 +348,6 @@ pub struct App {
     pub untitled: [u32; 2],
     pub settings: Settings,
     pub memory: Memory,
-    pub last_find: Option<FindSpec>,
     pub busy: bool,
     /// Text taken out of a document or copied, with its codes, newest last: putting the same text back (paste,
     /// undo) puts its codes back.

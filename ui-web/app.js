@@ -2801,112 +2801,230 @@ async function gotoPosition() {
   showStatus();
 }
 
-// Find: the next place `spec.find` is from `from`, forward or backward, matching case and whole words as asked.
-function findNext(spec, text, from, backward) {
-  const fold = (s) => (spec.match_case ? s : s.toLowerCase());
-  const hay = [...fold(text)];
-  const needle = [...fold(spec.find)];
-  if (!needle.length || needle.length > hay.length) return null;
-  const isWord = (i) => i >= 0 && i < hay.length && (/[\p{L}\p{N}]/u.test(hay[i]) || hay[i] === "_");
-  const fits = (i) => needle.every((c, k) => hay[i + k] === c) && !(spec.whole_words && (isWord(i - 1) || isWord(i + needle.length)));
-  const last = hay.length - needle.length;
-  if (backward) {
-    for (let i = Math.min(from - 1, last); i >= 0; i--) if (fits(i)) return i;
-  } else {
-    for (let i = Math.max(from, 0); i <= last; i++) if (fits(i)) return i;
+// Edit, Find, Find Again and Replace, as the original (bc_core find, spec 32; the desktop program's find and
+// replace). The search is kept with the document, as the original keeps it per window.
+const SEARCH_QUESTIONS = {
+  rest: "BrailleCraft was unable to find the text within the selected area.  Would you like to search the rest of the document?",
+  start: "BrailleCraft has finished searching to the end of the document.  Would you like to continue searching at the beginning?",
+  end: "BrailleCraft has finished searching to the beginning of the document.  Would you like to continue searching at the end?",
+};
+
+// One search on the editor's text (core editor_find), its questions asked as they come. Answers the result: its
+// spec, and the match with its places when found.
+async function runSearch(spec, { begin = false, from = -1, step = 0, all = false } = {}) {
+  const forward = editor.selectionDirection !== "backward";
+  const caret = forward ? editor.selectionEnd : editor.selectionStart;
+  const anchor = forward ? editor.selectionStart : editor.selectionEnd;
+  let answers = "";
+  for (;;) {
+    const out = JSON.parse(core.editor_find(JSON.stringify(spec), begin, anchor, caret, from, step, doc.kind === "print", all, answers));
+    if (!out.ask) return out;
+    answers += (await yesNo(SEARCH_QUESTIONS[out.ask])) ? "y" : "n";
   }
-  return null;
 }
 
-let lastFind = null;
+// The search options of Find (case 8, backward 9, whole words 10, radios 12 to 14) and Replace (10, 11, 12, radios
+// 14 to 16), filled from `s` and enabled as the original: case only in a print document and not for a style name,
+// whole words not for a style name; literal or wildcard enables both, style name disables both.
+function searchOptions(d, s, caseId, wholeId, radios) {
+  const print = doc.kind === "print";
+  d.setChecked(caseId, !!s.match_case);
+  d.setChecked(caseId + 1, !!s.backward);
+  d.setChecked(wholeId, !!s.whole_words);
+  d.setRadio(radios, s.stylename ? 1 : s.wildcard ? 2 : 0);
+  d.enable(caseId, print && !s.stylename);
+  d.enable(wholeId, !s.stylename);
+  radios.forEach((id, k) =>
+    d.get(id)?.addEventListener("change", () => {
+      const style = k === 1;
+      if (!style || print) d.enable(caseId, !style);
+      d.enable(wholeId, !style);
+    }),
+  );
+}
 
-// Edit, Find (dialog 1020) and Find Again: the next place, with the offer to go on from the other end.
-async function find(again) {
-  let spec = lastFind;
-  if (!again || !spec) {
-    const sel = editor.value.slice(editor.selectionStart, editor.selectionEnd);
-    const { result, d } = await showDialog(1020, {
-      setup(d) {
-        d.setRadio([12, 13, 14], 0);
-        if (spec) {
-          d.setText(7, spec.find);
-          d.setChecked(8, spec.match_case);
-          d.setChecked(9, spec.backward);
-          d.setChecked(10, spec.whole_words);
-        } else if (sel) {
-          d.setText(7, sel);
-        }
-      },
-    });
-    if (result !== "ok") return;
-    const s = { find: d.text(7), replace_with: "", match_case: d.checked(8), backward: d.checked(9), whole_words: d.checked(10) };
-    if (!s.find) {
-      await message("The search string is empty.");
-      return;
-    }
-    lastFind = spec = s;
-  }
-  const value = editor.value;
-  const from = spec.backward ? editor.selectionStart : editor.selectionEnd;
-  let found = findNext(spec, value, from, spec.backward);
-  const atEdge = spec.backward ? from === value.length : from === 0;
-  if (found === null && !atEdge) {
-    const q = spec.backward
-      ? "BrailleCraft has finished searching to the beginning of the document.  Would you like to continue searching at the end?"
-      : "BrailleCraft has finished searching to the end of the document.  Would you like to continue searching at the beginning?";
-    if (!(await yesNo(q))) return;
-    found = findNext(spec, value, spec.backward ? value.length : 0, spec.backward);
-  }
-  if (found === null) {
-    await message(again ? "The text does not appear again in the document." : "Text was not found in the document.");
-    return;
-  }
+// The search the options say for `text` (running text); a `*` before a code's end becomes the wildcard mark when
+// wildcards are chosen.
+function readSearch(d, text, caseId, wholeId, radios) {
+  const r = d.radio(radios) ?? 0;
+  return {
+    text: r === 2 ? text.replaceAll("*\u001f", "\u001b\u001f") : text,
+    match_case: d.checked(caseId),
+    backward: d.checked(caseId + 1),
+    whole_words: d.checked(wholeId),
+    stylename: r === 1,
+    wildcard: r === 2,
+  };
+}
+
+const fieldRefused = async (d, field, problem) => {
+  if (!problem) return false;
+  await message(problem);
+  d.get(field)?.focus();
+  d.get(field)?.select?.();
+  return true;
+};
+
+// A match found by Find or Find Again: the caret at its start, past the start code for a style name.
+function showFound(out) {
+  const at = out.spec.style ? out.after : out.from;
   editor.focus();
-  editor.setSelectionRange(found, found + [...spec.find].length);
+  editor.setSelectionRange(at, at);
   showStatus();
 }
 
-// Edit, Replace (dialog 1021): each place asked about (dialog 1024: Replace, Skip, Replace All), then the count.
+async function find(again) {
+  if (!core) return;
+  const stored = doc.find ?? {};
+  if (again && stored.text) {
+    // Find Again: one unit on from the caret; the search's state is not kept back.
+    const out = await runSearch(stored, { from: caretRunning(), step: stored.backward ? -1 : 1 });
+    if (out.match) showFound(out);
+    else await message("The text does not appear again in the document.");
+    return;
+  }
+  const codes = !!doc.view.codes;
+  const { result, d } = await showDialog(1020, {
+    setup(d) {
+      d.setText(7, core.find_running_to_field(stored.text ?? "", codes));
+      searchOptions(d, stored, 8, 10, [12, 13, 14]);
+    },
+    onOk: async (d) => !(await fieldRefused(d, 7, core.find_field_problem(d.text(7), false))),
+  });
+  if (result !== "ok") return;
+  const s = readSearch(d, core.find_field_to_running(d.text(7)), 8, 10, [12, 13, 14]);
+  // A style name searches for the style's start code; one whole style code typed is searched as it is.
+  s.style = s.stylename && !core.find_style_code_name(s.text);
+  const out = await runSearch(s, { begin: true });
+  doc.find = out.spec;
+  if (out.match) showFound(out);
+  else await message("Text was not found in the document.");
+}
+
+// The caret as a running-text place.
+function caretRunning() {
+  const forward = editor.selectionDirection !== "backward";
+  const caret = forward ? editor.selectionEnd : editor.selectionStart;
+  return core.editor_running_at(caret);
+}
+
+// The Replace dialog's texts as running text and whether it is a style search: with style name chosen, a whole style
+// code typed is taken as its bare name; a style search when both are names or both are codes.
+function replaceTexts(d) {
+  let f = core.find_field_to_running(d.text(7));
+  let w = core.find_field_to_running(d.text(9));
+  const stylename = d.radio([14, 15, 16]) === 1;
+  if (stylename) {
+    const name = core.find_style_code_name(f);
+    if (name) {
+      const wn = core.find_style_code_name(w);
+      if (!w) f = name;
+      else if (wn) [f, w] = [name, wn];
+    }
+  }
+  const style = stylename && !!core.find_style_code_name(f) === !!core.find_style_code_name(w);
+  return { f, w, style };
+}
+
 async function replace() {
-  const last = lastFind;
+  if (!core) return;
+  const stored = doc.replace?.text ? doc.replace : {};
+  const storedWith = stored.text ? (doc.replaceWith ?? "") : "";
+  const codes = !!doc.view.codes;
+  const names = await styleNames();
+  let proceed = true;
   const { result, d } = await showDialog(1021, {
     setup(d) {
-      d.setRadio([14, 15, 16], 0);
-      if (last) {
-        d.setText(7, last.find);
-        d.setChecked(10, last.match_case);
-        d.setChecked(12, last.whole_words);
-      }
+      d.setText(7, core.find_running_to_field(stored.text ?? "", codes));
+      d.setText(9, core.find_running_to_field(storedWith, codes));
+      searchOptions(d, stored, 10, 12, [14, 15, 16]);
+    },
+    async onOk(d) {
+      if (await fieldRefused(d, 7, core.find_field_problem(d.text(7), false))) return false;
+      if (await fieldRefused(d, 9, core.find_field_problem(d.text(9), true))) return false;
+      const { f, w, style } = replaceTexts(d);
+      if (!style) return true;
+      const known = (n) => names.some((s) => s.toLowerCase() === n.toLowerCase());
+      // No stays in the dialog, Yes goes on, Cancel closes it with nothing replaced (the choices are kept).
+      const ask = async (name) => {
+        const a = await yesNoCancel(`There is no style defined with the name "${name}".  Are you sure you want to replace all occurrences of the style "${f}" with "${w}"?`);
+        if (a === null) proceed = false;
+        return a !== false;
+      };
+      if (!known(f)) return ask(f);
+      if (![...w].every((c) => /[A-Za-z0-9._-]/.test(c)))
+        return !(await fieldRefused(d, 9, "The style name contains invalid characters.  Style names may only contain letters (uppercase and lowercase), numbers, the period, the hyphen, and the underscore."));
+      if (w && !known(w)) return ask(w);
+      return true;
     },
   });
   if (result !== "ok") return;
-  const spec = { find: d.text(7), replace_with: d.text(9), match_case: d.checked(10), backward: d.checked(11), whole_words: d.checked(12) };
-  if (!spec.find) {
-    await message("The search string is empty.");
-    return;
-  }
-  lastFind = spec;
+  const { f, w, style } = replaceTexts(d);
+  const s = readSearch(d, f, 10, 12, [14, 15, 16]);
+  s.style = style;
+  const withText = s.wildcard ? w.replaceAll("*\u001f", "\u001b\u001f") : w;
+  doc.replace = s;
+  doc.replaceWith = withText;
+  if (proceed) await runReplace(s, withText);
+}
+
+// The replacing (spec 32 3): each match shown selected with Confirm Replacement (1024): Yes replaces it and goes on,
+// No goes on, All replaces it and every later match, Stop ends at it. Then the caret and selection as they were,
+// moved by the replacements before them, and the count.
+async function runReplace(spec, withText) {
+  const braille = doc.kind === "braille";
+  const hadSel = editor.selectionStart !== editor.selectionEnd;
   let count = 0;
-  let all = false;
-  let pos = spec.backward ? editor.selectionStart : editor.selectionEnd;
-  const [findLen, replLen] = [[...spec.find].length, [...spec.replace_with].length];
-  for (let i = findNext(spec, editor.value, pos, spec.backward); i !== null; i = findNext(spec, editor.value, pos, spec.backward)) {
+  let stopped = false;
+  const replaceOne = (out) => {
+    const r = JSON.parse(core.editor_replace(JSON.stringify(out.spec), JSON.stringify(out.match), withText, braille));
+    editor.value = r.text;
+    doc.dirty = true;
+    count += 1;
+    return r;
+  };
+  let out = await runSearch(spec, { begin: true });
+  if (!out.match) await message("Text was not found in the document.");
+  while (out.match) {
     editor.focus();
-    editor.setSelectionRange(i, i + findLen);
-    const answer = all ? "5" : (await showDialog(1024, { closes: [5, 6, 7] })).result;
-    if (answer === "5" || answer === "7") {
-      if (answer === "7") all = true;
-      editor.setRangeText(spec.replace_with, i, i + findLen, "end");
-      // Each replacement is its own edit, so the codes between them are left as they are.
-      editor.dispatchEvent(new Event("input"));
-      count += 1;
-      pos = spec.backward ? i : i + replLen;
+    editor.setSelectionRange(out.from, out.to);
+    showStatus();
+    const answer = (await showDialog(1024, { closes: [5, 6, 7] })).result;
+    if (answer === "5") {
+      const r = replaceOne(out);
+      out = await runSearch(r.spec, { from: r.caret });
     } else if (answer === "6") {
-      pos = spec.backward ? i : i + findLen;
-    } else break;
+      out = await runSearch(out.spec, { from: out.match[0], step: out.spec.backward ? -1 : 1 });
+    } else if (answer === "7") {
+      while (out.match) {
+        const r = replaceOne(out);
+        out = await runSearch(r.spec, { from: r.caret, all: true });
+      }
+    } else {
+      stopped = true;
+      out.spec.caret = out.match[0];
+      break;
+    }
   }
-  editor.dispatchEvent(new Event("input"));
-  await message(`${count} replacements were made.`);
+  const s = out.spec;
+  const caret = core.editor_running_place(s.caret);
+  if (hadSel && !stopped) {
+    const anchor = core.editor_running_place(s.anchor);
+    editor.setSelectionRange(Math.min(anchor, caret), Math.max(anchor, caret), anchor <= caret ? "forward" : "backward");
+  } else editor.setSelectionRange(caret, caret);
+  editor.focus();
+  lastLine = null;
+  showStatus();
+  showTranslatedLine();
+  await replacementsMessage(count);
+}
+
+// "%d replacements were made." in the notice 1054, not shown again once its box was checked (Mutable, Replacements:
+// the answer plus one, as the original keeps it).
+async function replacementsMessage(count) {
+  if (Number(store.get("Mutable.Replacements")) > 0) return;
+  const { result, d } = await showDialog(1054, { title: "BrailleCraft", setup: (d) => d.setText(5, `${count} replacements were made.`) });
+  if (d.checked(6)) store.set("Mutable.Replacements", String((result === "ok" ? 1 : 2) + 1));
 }
 
 // The document's styles: those of its file, else those of the template it was made from.

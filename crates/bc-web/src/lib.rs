@@ -338,6 +338,126 @@ pub fn editor_style_command(what: &str, name: &str, anchor: u32, caret: u32) -> 
     })
 }
 
+/// Edit, Find and Replace on the editor's text (bc_core find, spec 32). `spec` is the search as JSON (bc_core find
+/// Search, places in running text). With `begin` the search starts from the selection (`anchor`, `caret`, UTF-16
+/// places): no wrap, nothing found yet. It starts at running place `from` (the search's own caret when negative),
+/// moved `step` units first (Find Again's step, the step past a declined match). The questions are answered from
+/// `answers` in turn ("y" or "n" each); a question past them is answered {"ask": "rest" | "start" | "end"} for the
+/// page to ask and call again with its answer added. Else {"spec", "match": [start, end, spans] in running places,
+/// "from" and "to": the UTF-16 places of the match (to after the style's end code for a style search), "after":
+/// the UTF-16 place after the style's start code}, or {"spec"} when nothing is found.
+#[wasm_bindgen]
+pub fn editor_find(spec: &str, begin: bool, anchor: u32, caret: u32, from: i32, step: i32, print: bool, replace_all: bool, answers: &str) -> String {
+    use bc_core::find;
+    EDITOR.with(|e| {
+        let e = e.borrow();
+        let t = e.shown.text.clone();
+        let running = e.shown.to_running();
+        let to_running = |u: u32| e.shown.slice(0, char_pos(&t, u)).to_running().chars().count();
+        let shown_u16 = |r: usize| {
+            let s = Shown::from_running(&running.chars().take(r).collect::<String>()).text;
+            s.encode_utf16().count() as u32
+        };
+        let mut s: find::Search = serde_json::from_str(spec).unwrap_or_default();
+        if begin {
+            s.had_selection = anchor != caret;
+            s.caret = to_running(caret);
+            s.anchor = to_running(anchor);
+            s.wrapped = false;
+            s.selection_done = false;
+            s.found = false;
+        }
+        let u = find::Units::new(&running);
+        let k = u.unit_of(if from < 0 { s.caret } else { from as usize });
+        let k = (k as i64 + step as i64).clamp(0, u.u.len() as i64) as usize;
+        let start = u.at[k];
+        let mut given = answers.chars();
+        let mut asked = None;
+        let mut ask = |q: find::Question| match given.next() {
+            Some(a) => a == 'y',
+            None => {
+                asked.get_or_insert(q);
+                false
+            }
+        };
+        let found = find::find(&running, start, &mut s, print, replace_all, &mut ask);
+        if let Some(q) = asked {
+            let q = match q {
+                find::Question::RestOfDocument => "rest",
+                find::Question::WrapToStart => "start",
+                find::Question::WrapToEnd => "end",
+            };
+            return serde_json::json!({ "ask": q }).to_string();
+        }
+        match found {
+            Some(m) => {
+                let to = if s.style { find::style_end_after(&running, m.1, &s.text).map_or(m.1, |x| x.1) } else { m.1 };
+                serde_json::json!({ "spec": s, "match": m, "from": shown_u16(m.0), "to": shown_u16(to), "after": shown_u16(m.1) }).to_string()
+            }
+            None => serde_json::json!({ "spec": s }).to_string(),
+        }
+    })
+}
+
+/// One replacement of a match `editor_find` answered (`m` its "match"), by `with` (running text; a braille document
+/// puts it in lower case) on the editor's text: answers {"text": the editor's new text, "spec": the search with its
+/// selection moved by the change, "caret": the running place to search on from}.
+#[wasm_bindgen]
+pub fn editor_replace(spec: &str, m: &str, with: &str, braille: bool) -> String {
+    use bc_core::find;
+    EDITOR.with(|e| {
+        let mut e = e.borrow_mut();
+        let mut s: find::Search = serde_json::from_str(spec).unwrap_or_default();
+        let Ok(m) = serde_json::from_str::<(usize, usize, Vec<(usize, usize)>)>(m) else { return String::new() };
+        let done = find::replace_match(&e.shown.to_running(), &m, &s, with, braille);
+        s.caret = done.moved(s.caret);
+        s.anchor = done.moved(s.anchor);
+        e.shown = Shown::from_running(&done.text);
+        serde_json::json!({ "text": e.shown.text, "spec": s, "caret": done.caret }).to_string()
+    })
+}
+
+/// The running place of UTF-16 place `u` in the editor's text.
+#[wasm_bindgen]
+pub fn editor_running_at(u: u32) -> u32 {
+    EDITOR.with(|e| {
+        let e = e.borrow();
+        e.shown.slice(0, char_pos(&e.shown.text, u)).to_running().chars().count() as u32
+    })
+}
+
+/// The UTF-16 place in the editor's text of running place `r`.
+#[wasm_bindgen]
+pub fn editor_running_place(r: u32) -> u32 {
+    EDITOR.with(|e| {
+        let running: String = e.borrow().shown.to_running().chars().take(r as usize).collect();
+        Shown::from_running(&running).text.encode_utf16().count() as u32
+    })
+}
+
+/// The Find and Replace fields: what the original says about one (empty when nothing; `replace` for the replace
+/// field), a field as running text, and a remembered text as the field shows it.
+#[wasm_bindgen]
+pub fn find_field_problem(field: &str, replace: bool) -> String {
+    bc_core::find::field_problem(field, replace).unwrap_or_default()
+}
+
+#[wasm_bindgen]
+pub fn find_field_to_running(field: &str) -> String {
+    bc_core::find::field_to_running(field)
+}
+
+#[wasm_bindgen]
+pub fn find_running_to_field(running: &str, codes: bool) -> String {
+    bc_core::find::running_to_field(running, codes)
+}
+
+/// The style name of a running text that is one whole style start or end code, else empty.
+#[wasm_bindgen]
+pub fn find_style_code_name(running: &str) -> String {
+    bc_core::find::style_code_name(running).unwrap_or_default()
+}
+
 /// The editor takes a document's running text (codes marked 0x1C ... 0x1F, as a document file keeps them); answers
 /// the text as the editor shows it.
 #[wasm_bindgen]

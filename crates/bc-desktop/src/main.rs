@@ -191,7 +191,6 @@ fn main() {
             untitled: [0, 0],
             settings,
             memory: dlg::Memory::default(),
-            last_find: None,
             busy: false,
             known: Vec::new(),
         });

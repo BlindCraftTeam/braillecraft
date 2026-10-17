@@ -129,6 +129,9 @@ def kind_of(c):
         if any(k in f for k in ("BS_CHECKBOX", "BS_AUTOCHECKBOX", "BS_3STATE", "BS_AUTO3STATE")):
             return "Check"
         return "Button"
+    # The original's codes edit field is a text field (shown as one by `control`).
+    if c["class"].endswith("_CODESEDIT"):
+        return "Text"
     return {"Static": "Static", "Edit": "Text", "ListBox": "List",
             "ComboBox": "Combo"}.get(c["class"], "Static")
 
