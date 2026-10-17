@@ -8,17 +8,20 @@
 //! Rules (spec 19, from the reference program's documentation unless marked):
 //! - margins: left (where a line starts after a forced new line), runover (where it starts after a word wrap) and a
 //!   right margin counted in from the full width; at first left = runover = the first cell, right margin 0.
-//!   [indP] new line if not at the start of one, left margin P, runover keeping its offset; [inmP] left margin
-//!   without a new line; [ptysN] runover = left + N; [ptye] runover = left; [rmN] right margin.
+//!   [indP:F] new line if not at the start of one, left margin at cell P counted from 1 (1 when not given; from the
+//!   current margin when F is 1 or 3), runover keeping its offset; [inmP:F] the same without a new line; [ptysN]
+//!   runover = left + N (2 when not given); [ptye] runover = left; [rmN] right margin.
 //! - [<] new line always (a blank line when already at the start of one); [l] new line unless at the start of one;
 //!   [p] new paragraph: new line, then (print documents) one blank line, the first line starting at the third cell of
 //!   a braille document and the first of a print document, counted from the edge of the page (F0b, from the braille
-//!   and print formatting files); [skN] [l] then N blank lines; [svsblN] N blank lines between text lines.
+//!   and print formatting files); [skN] [l] then N blank lines (0 when not given; a negative N to the line -N from
+//!   the page end); [svsblN] N blank lines after every line (1 when not given).
 //! - Words that do not fit go to the next line at the runover margin. Extra spaces are left out.
 //! - [pg] new page always (two in a row give a blank page); [top] new page if the page has text; [cpN:L] new page if
 //!   fewer than N + 1 lines remain, else a new line and L blank lines (braille 1 and 0, print 2 and 1, F0b).
 //! - [hdsN:L] ... [hde] centred heading: on a new page if fewer than N + 1 lines remain (braille 1, print 2), else
-//!   after L blank lines (braille 0, print 1); each heading line starts at (width - length + 1) / 2 (F0b).
+//!   after L blank lines (braille 0, print 1); each heading line is centred on the whole line, (cells - length) / 2,
+//!   its words wrapping inside the right margin.
 //! - [fr] the next word flush right.
 //! - [es~name] ... [ee~name]: the style's begin and end codes from the document's styles, in place.
 //! - Braille page numbers: in the corner the document's page numbering names for even and odd pages, on a line of
@@ -142,7 +145,7 @@ fn pieces(doc: &Shown, styles: Option<&StyleTable>) -> Vec<Piece> {
             let end = end.min(chars.len());
             let code: String = chars[(start + 1).min(end)..end.saturating_sub(1).max(start + 1).min(end)].iter().collect();
             after_break_code = crate::doctext::breaks_line(&code);
-            expand(&code, styles, &mut out, 0);
+            expand(&code, styles, &mut out, 0, start);
             // A code's place is where the pen stands once the code has done its work (a [p] at the start stands
             // where the paragraph's text starts). INFERENCE: the reference records a place when its input reaches it
             // (spec 27 5b); whether that is before or after a code's own effect is not traced.
@@ -178,9 +181,18 @@ fn pieces(doc: &Shown, styles: Option<&StyleTable>) -> Vec<Piece> {
     out
 }
 
-/// A code as pieces: a style code becomes its begin or end codes (themselves codes in brackets), anything else
-/// stays a code. `depth` stops a style that names itself.
-fn expand(code: &str, styles: Option<&StyleTable>, out: &mut Vec<Piece>, depth: usize) {
+/// A code as pieces: a style code becomes its begin or end codes (themselves codes in brackets); the text of a [q~X]
+/// code is cells of the word it is in, and that of a [d~X] code cells that end the word (the reference's word
+/// reader takes both into the word); anything else stays a code. `depth` stops a style that names itself; `pos` is
+/// the code's place in the document, which its cells come from.
+fn expand(code: &str, styles: Option<&StyleTable>, out: &mut Vec<Piece>, depth: usize, pos: usize) {
+    if let Some(text) = code.strip_prefix("q~").or_else(|| code.strip_prefix("d~")) {
+        out.extend(text.chars().map(|c| Piece::Char(c, pos)));
+        if code.starts_with('d') {
+            out.push(Piece::Space);
+        }
+        return;
+    }
     let style = code.strip_prefix("es~").map(|n| (n, 0)).or_else(|| code.strip_prefix("ee~").map(|n| (n, 1)));
     if let (Some((name, which)), Some(table), true) = (style, styles, depth < 4) {
         if let Some(codes) = table.lookup(name.as_bytes(), which) {
@@ -192,7 +204,7 @@ fn expand(code: &str, styles: Option<&StyleTable>, out: &mut Vec<Piece>, depth: 
             let mut rest = text.as_str();
             while let Some(s) = rest.find('[') {
                 let Some(e) = rest[s..].find(']') else { break };
-                expand(&rest[s + 1..s + e], styles, out, depth + 1);
+                expand(&rest[s + 1..s + e], styles, out, depth + 1, pos);
                 rest = &rest[s + e + 1..];
             }
         }
@@ -248,6 +260,8 @@ struct Formatter {
     /// Marks met while a word was being collected, each with the index in the word of the cell after it: they are
     /// placed with the word (Formatter::word).
     word_marks: Vec<(usize, usize)>,
+    /// A code ended the last word: the next one follows it with no space (a line may still end between them).
+    touching: bool,
 }
 
 impl Formatter {
@@ -269,6 +283,7 @@ impl Formatter {
             running: None,
             running_head: None,
             word_marks: Vec::new(),
+            touching: false,
         }
     }
 
@@ -291,6 +306,16 @@ impl Formatter {
                 i += 1;
             }
         }
+    }
+
+    /// The left margin a [indP:F] or [inmP:F] sets: cell P counted from 1 (1 when not given), from the current
+    /// margin when F is 1 or 3, within the line.
+    fn margin(&self, p: Option<i64>, f: Option<i64>) -> usize {
+        let mut cell = p.unwrap_or(1) - 1;
+        if matches!(f, Some(1) | Some(3)) {
+            cell += self.left as i64 + 1;
+        }
+        cell.clamp(0, self.layout.cells.saturating_sub(1) as i64) as usize
     }
 
     fn width(&self) -> usize {
@@ -339,12 +364,10 @@ impl Formatter {
             line.text.pop();
             line.sources.pop();
         }
-        let had_text = line.sources.iter().any(Option::is_some);
         self.push_line(line);
-        if had_text {
-            for _ in 0..self.blank_between {
-                self.push_line(Line::default());
-            }
+        // Line spacing follows every line end, a blank line's too.
+        for _ in 0..self.blank_between {
+            self.push_line(Line::default());
         }
         self.start_col = next_col;
         self.after_page_code = false;
@@ -436,14 +459,18 @@ impl Formatter {
         while !rest.is_empty() {
             let used = self.line.text.chars().count();
             let has_text = self.line_has_text();
-            let start = if has_text { used + 1 } else { self.start_col.max(used) };
+            let gap = usize::from(has_text && !self.touching);
+            let start = if has_text { used + gap } else { self.start_col.max(used) };
             if start + rest.len() > width && has_text {
+                self.touching = false;
                 self.end_line(self.left + self.runover_offset);
                 continue;
             }
             let fits = width.saturating_sub(start).max(1);
             if has_text {
-                self.put(' ', None);
+                if gap == 1 {
+                    self.put(' ', None);
+                }
             } else {
                 for _ in used..start {
                     self.put(' ', None);
@@ -463,6 +490,7 @@ impl Formatter {
         }
         let col = self.line.text.chars().count();
         self.place_word_marks(k, col);
+        self.touching = false;
     }
 
     fn code(&mut self, code: &str) {
@@ -508,10 +536,14 @@ impl Formatter {
                 }
             }
             "sk" => {
+                // [skN]: [l], then N lines (0 when not given, at most three pages' lines); a negative N goes to the
+                // line -N from the page end.
                 if self.line_has_text() {
                     self.end_line(self.left);
                 }
-                for _ in 0..first.unwrap_or(1).max(0) {
+                let n = first.unwrap_or(0);
+                let count = if n < 0 { self.capacity() as i64 - self.page.len() as i64 + n } else { n };
+                for _ in 0..count.clamp(0, 3 * self.layout.lines as i64) {
                     self.push_line(Line::default());
                 }
             }
@@ -519,19 +551,24 @@ impl Formatter {
                 if self.line_has_text() {
                     self.end_line(self.left);
                 }
-                self.left = first.unwrap_or(0).max(0) as usize;
+                self.left = self.margin(first, n.get(1).copied());
                 self.start_col = self.left;
             }
             "inm" => {
-                self.left = first.unwrap_or(0).max(0) as usize;
+                self.left = self.margin(first, n.get(1).copied());
                 if !self.line_has_text() {
                     self.start_col = self.left;
                 }
             }
-            "ptys" => self.runover_offset = first.unwrap_or(0).max(0) as usize,
+            // [ptys] alone is a runover two cells in.
+            "ptys" => self.runover_offset = first.unwrap_or(2).max(0) as usize,
             "ptye" => self.runover_offset = 0,
             "rm" => self.right = first.unwrap_or(0).max(0) as usize,
-            "svsbl" => self.blank_between = first.unwrap_or(0).max(0) as usize,
+            // [svsblN]: N blank lines after every line (1 when not given), at most (lines - 4) / 2.
+            "svsbl" => {
+                let most = (self.layout.lines as i64 - 4).max(0) / 2;
+                self.blank_between = first.unwrap_or(1).clamp(0, most) as usize;
+            }
             "pg" => {
                 if self.after_page_code && !self.page_has_text() {
                     // Two page codes in a row: a blank page.
@@ -622,8 +659,9 @@ impl Formatter {
         }
         for l in lines {
             let len = l.text.chars().count();
-            // A centred line starts at (width - length + 1) / 2 (spec 19 F0b).
-            let pad = (width + 1).saturating_sub(len) / 2;
+            // A centred line is centred on the whole line, rounding down; the right margin only narrows where its
+            // words wrap.
+            let pad = self.layout.cells.saturating_sub(len) / 2;
             let mut centred = Line { text: " ".repeat(pad), sources: vec![None; pad], marks: Vec::new() };
             centred.text.push_str(&l.text);
             centred.sources.extend(l.sources);
@@ -645,13 +683,19 @@ impl Formatter {
                 if !word.is_empty() {
                     self.word(&std::mem::take(word));
                 }
+                self.touching = false;
             }
             Piece::Code(code) => {
-                // Codes the formatter does not lay out take no room and do not break a word.
+                // A code in a word ends the word, and what follows it is placed against it, except the codes that
+                // belong to a word (grouping, word break, verse and font marks). Codes the formatter does not lay
+                // out take no room.
+                let in_word = matches!(code.as_str(), ":" | ";")
+                    || ["wb", "vss", "vse", "fts~", "fte~"].iter().any(|w| code.starts_with(w));
+                if !in_word && !word.is_empty() {
+                    self.word(&std::mem::take(word));
+                    self.touching = true;
+                }
                 if is_layout(code) {
-                    if !word.is_empty() {
-                        self.word(&std::mem::take(word));
-                    }
                     self.code(code);
                 }
             }
@@ -1120,8 +1164,14 @@ mod tests {
     fn a_braille_paragraph_starts_at_the_third_cell_and_runover_follows_the_margin() {
         let pages = format(&m("[p]\naaa bbb ccc"), &Layout::braille(9, 3), None);
         assert_eq!(texts(&pages[0]), ["  aaa bbb", "ccc", ""]);
-        let pages = format(&m("[ind2][ptys2]aaa bbb ccc"), &Layout::braille(9, 3), None);
+        // Margins count cells from 1: [ind3] is the third cell; [ptys] alone runs over two cells further in.
+        let pages = format(&m("[ind3][ptys2]aaa bbb ccc"), &Layout::braille(9, 3), None);
         assert_eq!(texts(&pages[0]), ["  aaa bbb", "    ccc", ""]);
+        let pages = format(&m("[ind1][ptys]aaa bbb ccc"), &Layout::braille(8, 3), None);
+        assert_eq!(texts(&pages[0]), ["aaa bbb", "  ccc", ""]);
+        // [ind2:1] is two cells on from the current margin.
+        let pages = format(&m("[ind3]a[ind2:1]b"), &Layout::braille(9, 3), None);
+        assert_eq!(texts(&pages[0])[..2], ["  a", "    b"]);
     }
 
     #[test]
@@ -1150,14 +1200,17 @@ mod tests {
     }
 
     #[test]
-    fn a_bracket_cell_is_text_and_a_paragraph_column_ignores_the_margin_and_centring_rounds_up() {
+    fn a_bracket_cell_is_text_and_a_paragraph_column_ignores_the_margin_and_centring_rounds_down() {
         // Brackets in the text, even ones that look like a code, are text.
         let pages = format(&Shown::plain("d[n by] \"[hds2]\" x"), &Layout::braille(20, 2), None);
         assert_eq!(texts(&pages[0])[0], "d[n by] \"[hds2]\" x");
         let pages = format(&m("[ind4][p]\nab"), &Layout::braille(10, 2), None);
         assert_eq!(texts(&pages[0])[0], "  ab");
         let pages = format(&m("[hds]abc[hde]"), &Layout::braille(6, 2), None);
-        assert_eq!(texts(&pages[0])[0], "  abc");
+        assert_eq!(texts(&pages[0])[0], " abc");
+        // Centred on the whole line, not inside the right margin.
+        let pages = format(&m("[rm4][hds]ab[hde]"), &Layout::braille(10, 2), None);
+        assert_eq!(texts(&pages[0])[0], "    ab");
     }
 
     /// The shipped sample documents (when a folder of them is named in BC_DX_SAMPLES) lay out, as print and as
@@ -1312,8 +1365,20 @@ mod tests {
     }
 
     #[test]
+    fn code_text_is_laid_out_and_a_code_ends_a_word() {
+        // [q~X] is cells of its word, [d~X] cells that end the word.
+        let pages = format(&m("aa [q~,']b [d~xx]yy"), &Layout::braille(20, 2), None);
+        assert_eq!(texts(&pages[0])[0], "aa ,'b xx yy");
+        // The two parts of a word a code ends touch, but a line may end between them.
+        let pages = format(&m("abc[x]de"), &Layout::braille(10, 2), None);
+        assert_eq!(texts(&pages[0])[0], "abcde");
+        let pages = format(&m("abc[x]de"), &Layout::braille(4, 3), None);
+        assert_eq!(texts(&pages[0])[..2], ["abc", "de"]);
+    }
+
+    #[test]
     fn running_head_text_is_not_body_text() {
-        let pages = format(&m("ab[tls]Head Line[tle]cd ef[rfs]Foot[rfe]"), &Layout::braille(20, 3), None);
+        let pages = format(&m("ab [tls]Head Line[tle] cd ef[rfs]Foot[rfe]"), &Layout::braille(20, 3), None);
         assert_eq!(texts(&pages[0])[0], "ab cd ef");
         assert!(texts(&pages[0]).iter().all(|l| !l.contains("Head") && !l.contains("Foot")));
     }
