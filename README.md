@@ -142,7 +142,9 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   print font) and checks each point size, 5 to 180, in the dialog; the printed-output sizes are greyed while their
   size is set automatically. File, New remembers Show Hidden Templates. Global, Internationalization keeps its two
   Unicode choices: braille shown in a braille font can be written as Unicode braille patterns, and on Windows a
-  braille document's text can be given to screen readers (UI Automation) as Unicode braille patterns.
+  braille document's text can be given to screen readers (UI Automation) as Unicode braille patterns. The web
+  build shows the patterns too (in the editor and the translated line, the document keeping its own characters);
+  there the text screen readers read is the text shown.
 - **Save As.** Formatted braille (BRF in a choice of braille encodings), PEF (Portable Embosser Format), formatted
   text in a choice of code pages (the encoding or code page chosen in the Save As dialog's own Encoding box; each
   Windows code page written and read by Windows' own table, on every system), coded braille, refreshable braille (.lbf), eBraille (.ebrl, braille documents) and EPUB 3 (.epub, print documents), HTML, LaTeX, HTML with MathJax (both HTML forms written as the original writes them, with no head, title or language on the plain HTML, and the original's fixed head on the MathJax page), and the older document format. File, Save eBraille saves the same package; Document, eBraille Metadata holds the package's metadata (required, recommended and additional properties, with the language, braille system and attribute dialogs, and an XML preview that can be edited); the quality notice shows before each save until its box is checked. Where the original's behaviour could not be read (the element of a paragraph style, which styles are headings and lists, the metadata property names of the recommended page, the list contents of the dialogs), the choice made is marked in the code.

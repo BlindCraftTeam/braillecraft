@@ -342,6 +342,9 @@ const settings = {
   shortcuts: { ...DEFAULT_SHORTCUTS, ...store.json("shortcuts", {}) },
   encoding: store.get("encoding") || "north-american",
   uia: store.get("uia") === "1",
+  // Global, Internationalization: braille shown as Unicode braille patterns, and reported to screen readers so.
+  preferPatterns: store.get("PreferBraillePatterns") === "1",
+  accessPatterns: store.get("AccessUseBraillePatterns") === "1",
   verbose: store.get("verbose") === "1",
   sixKeySet: store.get("sixkey.set") || "fdsjkl",
 };
@@ -407,6 +410,92 @@ function cellChar(pattern) {
   return [...(encodingNow().cells[pattern] ?? "")][0] ?? String.fromCodePoint(0x2800 + pattern);
 }
 
+// Global, Internationalization, "Prefer Unicode Braille Patterns for Braille Display": a braille document shown in a
+// braille font shows its cells as Unicode braille patterns read through the shown encoding (a character the
+// encoding does not list is a blank cell), as the desktop program draws them; codes keep their text. The document
+// keeps its own characters: docText holds the document while the text field shows the patterns, and an edit made
+// in the field is taken as the change between the text last shown and the text now, its inserted part read back
+// through the encoding, so the unchanged characters stay exactly as they were. On the web the text screen readers
+// read is the text shown, so the dialog's screen reader choice follows the display here.
+let docText = "";
+let shownText = "";
+let patternsShown = false;
+function patternsOn() {
+  return doc.kind === "braille" && settings.preferPatterns && doc.view.font !== "print";
+}
+function cellIndex() {
+  const m = new Map();
+  encodingNow().cells.forEach((chars, p) => {
+    for (const c of chars ?? "") if (!m.has(c)) m.set(c, p);
+  });
+  return m;
+}
+// Every character of `text` as its pattern, but the code spans (UTF-16 ranges, from the core's tracker when
+// `codes` is not given) and line breaks.
+function toPatterns(text, codes) {
+  const cellOf = cellIndex();
+  const spans = codes ?? (core ? core.editor_codes() : new Uint32Array(0));
+  let out = "";
+  let c = 0;
+  for (let i = 0; i < text.length; i++) {
+    while (c < spans.length && spans[c + 1] <= i) c += 2;
+    const ch = text[i];
+    if ((c < spans.length && spans[c] <= i && i < spans[c + 1]) || ch === "\n") {
+      out += ch;
+      continue;
+    }
+    const p = cellOf.get(ch);
+    out += p === undefined ? "⠀" : String.fromCodePoint(0x2800 + p);
+  }
+  return out;
+}
+function fromPatterns(text) {
+  return text.replace(/[⠀-⠿]/g, (ch) => cellChar(ch.codePointAt(0) - 0x2800));
+}
+// The document's text (what the core and the files work on) and the text field's content.
+function editorText() {
+  return patternsShown ? docText : editor.value;
+}
+function setEditorText(t) {
+  docText = t;
+  patternsShown = patternsOn();
+  editor.value = patternsShown ? toPatterns(t) : t;
+  shownText = editor.value;
+}
+// After an edit in the field: the document takes the change, and the field shows the patterns again with the
+// caret where it was.
+function takeEdit() {
+  if (!patternsShown) return;
+  const now = editor.value;
+  if (now === shownText) return;
+  const n = Math.min(now.length, shownText.length);
+  let a = 0;
+  while (a < n && now[a] === shownText[a]) a++;
+  let b = 0;
+  while (b < n - a && now[now.length - 1 - b] === shownText[shownText.length - 1 - b]) b++;
+  const inserted = fromPatterns(now.slice(a, now.length - b));
+  docText = docText.slice(0, a) + inserted + docText.slice(shownText.length - b);
+  const [s, e, top] = [editor.selectionStart, editor.selectionEnd, editor.scrollTop];
+  editor.value = toPatterns(docText);
+  shownText = editor.value;
+  editor.setSelectionRange(s, e);
+  editor.scrollTop = top;
+}
+// The field shown again as the view and the settings now ask (a view font or encoding change), the caret kept.
+function reshowEditor() {
+  const [s, e, top] = [editor.selectionStart, editor.selectionEnd, editor.scrollTop];
+  setEditorText(editorText());
+  editor.setSelectionRange(s, e);
+  editor.scrollTop = top;
+}
+// A line of braille (the translated line of a print document) as patterns, its bracketed codes kept.
+function linePatterns(text) {
+  const codes = [];
+  const re = /\[[^\]\n]*\]/g;
+  for (let m = re.exec(text); m; m = re.exec(text)) codes.push(m.index, m.index + m[0].length);
+  return toPatterns(text, Uint32Array.from(codes));
+}
+
 // The braille fonts of the shown encoding ("BrailleCraft Braille North American English" and its SimBraille),
 // loaded from fonts/ beside the page when first used.
 const facesAdded = new Set();
@@ -448,6 +537,7 @@ function applyView() {
   $("translated-section").hidden = !v.translated;
   statusLine.style.fontFamily = `"${settings.fonts.status_face}", system-ui, sans-serif`;
   statusLine.style.fontSize = `${settings.fonts.status_size}pt`;
+  if (patternsShown !== patternsOn()) reshowEditor();
   refreshMenus();
   lastLine = null;
   showStatus();
@@ -476,12 +566,12 @@ function refreshMenus() {
 }
 
 function caretLine() {
-  const before = editor.value.slice(0, editor.selectionStart);
+  const before = editorText().slice(0, editor.selectionStart);
   const line = before.split("\n").length;
   const column = before.length - before.lastIndexOf("\n");
   const start = before.lastIndexOf("\n") + 1;
-  const end = editor.value.indexOf("\n", start);
-  return { line, column, text: editor.value.split("\n")[line - 1] ?? "", start, end: end < 0 ? editor.value.length : end };
+  const end = editorText().indexOf("\n", start);
+  return { line, column, text: editorText().split("\n")[line - 1] ?? "", start, end: end < 0 ? editorText().length : end };
 }
 
 // The status line, as the desktop program shows it (bc_core::status): the current style, Page, Line and Column on the
@@ -509,7 +599,7 @@ function showStatus() {
   }
   syncNumbering();
   // As in the desktop program, the text as it is shown (in the shown encoding) is laid out.
-  const status = core.status_line(editor.value, doc.cells, doc.lines, doc.kind === "braille", editor.selectionStart, doc.view.codes, settings.verbose, doc.view.six_key, doc.highlight !== null && doc.highlight !== undefined);
+  const status = core.status_line(editorText(), doc.cells, doc.lines, doc.kind === "braille", editor.selectionStart, doc.view.codes, settings.verbose, doc.view.six_key, doc.highlight !== null && doc.highlight !== undefined);
   if (statusLine.textContent !== status) statusLine.textContent = status;
 }
 
@@ -543,8 +633,10 @@ async function showTranslatedLine() {
     // The caret's line with the editor's codes; the result keeps its own codes apart from braille brackets.
     const { start, end } = caretLine();
     const part = core.editor_slice(start, end);
-    translated.textContent =
-      doc.kind === "print" ? fromNA(core.running_text(await translateText(e, part, file, false, true))) : core.running_text(await translateText(e, toNA(part), file, true, true));
+    // A print document's braille, shown in a braille font, as Unicode braille patterns when they are preferred.
+    const patterns = doc.kind === "print" && settings.preferPatterns && settings.views.translated_font !== "print";
+    const line = doc.kind === "print" ? fromNA(core.running_text(await translateText(e, part, file, false, true))) : core.running_text(await translateText(e, toNA(part), file, true, true));
+    translated.textContent = patterns ? linePatterns(line) : line;
   } catch (err) {
     translated.textContent = String(err.message ?? err);
   }
@@ -578,10 +670,12 @@ editor.addEventListener("keyup", (e) => {
 });
 
 editor.addEventListener("input", () => {
-  // The codes follow the edit (bc_core::doctext, as in the desktop program); a code that lost a bracket goes as a
-  // whole, last first, and that change comes back here.
+  // The document takes the edit (the field may show braille patterns), then the codes follow it
+  // (bc_core::doctext, as in the desktop program); a code that lost a bracket goes as a whole, last first, and
+  // that change comes back here.
+  takeEdit();
   if (core) {
-    const remains = core.editor_edit(editor.value);
+    const remains = core.editor_edit(editorText());
     if (remains.length) {
       for (let k = 0; k < remains.length; k += 2) editor.setRangeText("", remains[k], remains[k + 1], "end");
       editor.dispatchEvent(new Event("input"));
@@ -1637,8 +1731,8 @@ async function copiesField(d, cid) {
 // when Selection lays it out as a document of its own, else null }), or null when a message was shown and the
 // dialog stays open; the caret and the selection are the editor's as the dialog opened.
 async function chosenPages(d, radios, fields, braille, caret, from, to) {
-  const count = core.page_count(editor.value, doc.cells, doc.lines, braille);
-  const pageOf = (pos) => core.page_of(editor.value, doc.cells, doc.lines, braille, Math.max(0, pos));
+  const count = core.page_count(editorText(), doc.cells, doc.lines, braille);
+  const pageOf = (pos) => core.page_of(editorText(), doc.cells, doc.lines, braille, Math.max(0, pos));
   let range;
   switch (d.radio(radios) ?? 0) {
     case 0:
@@ -1660,7 +1754,7 @@ async function chosenPages(d, radios, fields, braille, caret, from, to) {
     }
     case 3:
       // Page numbers are matched against the pages' own numbers; sequence numbers count the pages in order.
-      range = JSON.parse(core.parse_page_numbers(d.text(fields[0]), editor.value, doc.cells, doc.lines, braille));
+      range = JSON.parse(core.parse_page_numbers(d.text(fields[0]), editorText(), doc.cells, doc.lines, braille));
       break;
     default:
       range = JSON.parse(core.parse_range(d.text(fields[1]), count));
@@ -1713,7 +1807,7 @@ async function print() {
       d.hide(13);
       // No page-number range when two pages carry the same page number; Interline Print starts from the
       // document's embosser layout and is the job's choice only (spec 24).
-      d.enable(12, !core.page_numbers_repeat(editor.value, doc.cells, doc.lines, braille));
+      d.enable(12, !core.page_numbers_repeat(editorText(), doc.cells, doc.lines, braille));
       d.setChecked(17, braille && doc.layout.interline !== 0);
       d.enable(17, braille);
     },
@@ -1727,7 +1821,7 @@ async function print() {
     },
   });
   if (result !== "ok") return;
-  const pages = JSON.parse(core.page_lines(job.text ?? editor.value, doc.cells, doc.lines, braille, Int32Array.from(job.pages)));
+  const pages = JSON.parse(core.page_lines(job.text ?? editorText(), doc.cells, doc.lines, braille, Int32Array.from(job.pages)));
   const back = job.interline ? await documentEngine(true) : null;
   const area = $("print-area");
   area.replaceChildren();
@@ -1896,7 +1990,7 @@ async function emboss() {
     setup(d) {
       d.setText(7, "1");
       wirePageRange(d, EMBOSS_RANGE, [14, 15]);
-      d.enable(12, !core.page_numbers_repeat(editor.value, doc.cells, doc.lines, braille));
+      d.enable(12, !core.page_numbers_repeat(editorText(), doc.cells, doc.lines, braille));
       d.setText(23, shownName(setup));
       d.setText(25, core.formName(doc.layout.form));
     },
@@ -2095,7 +2189,7 @@ function newDocument(braille, template) {
   doc.dirty = false;
   embosserDefaults();
   doc.view = newView(braille);
-  editor.value = "";
+  setEditorText("");
   core?.editor_load_plain("");
   showTitle();
   editor.focus();
@@ -2428,8 +2522,8 @@ fileInput.addEventListener("change", async () => {
     doc.kind = d.braille ? "braille" : "print";
     // The editor takes the file's codes as codes; brackets in its text stay text.
     const text = core.editor_load(d.running);
-    editor.value = d.braille ? fromNA(text) : text;
-    if (d.braille) core.editor_convert(editor.value);
+    setEditorText(d.braille ? fromNA(text) : text);
+    if (d.braille) core.editor_convert(editorText());
     doc.file = d;
     doc.saved = true;
     // The document's own embosser setup and page layout, as the file keeps them; cells and lines are taken by a
@@ -2456,12 +2550,12 @@ fileInput.addEventListener("change", async () => {
     doc.kind = read.braille ? "braille" : "print";
     if (read.running !== undefined) {
       const text = core.editor_load(read.running);
-      editor.value = read.braille ? fromNA(text) : text;
-      if (read.braille) core.editor_convert(editor.value);
+      setEditorText(read.braille ? fromNA(text) : text);
+      if (read.braille) core.editor_convert(editorText());
     } else {
       // A text file holds no codes: all of it is text.
-      editor.value = read.braille ? fromNA(read.plain) : read.plain;
-      core?.editor_load_plain(editor.value);
+      setEditorText(read.braille ? fromNA(read.plain) : read.plain);
+      core?.editor_load_plain(editorText());
     }
     doc.file = null;
     doc.saved = read.saved ?? false;
@@ -2484,7 +2578,7 @@ async function translateDocument() {
     statusLine.textContent = "Translation is not available in this copy of the web build.";
     return;
   }
-  if (!editor.value.trim()) {
+  if (!editorText().trim()) {
     await message("The file that you are trying to translate is empty.");
     return;
   }
@@ -2505,8 +2599,8 @@ async function translateDocument() {
   const untitled = !doc.saved && /^Untitled /.test(doc.name);
   const text = core.editor_load(out);
   doc.file = file.as_kind(toBraille, text);
-  editor.value = toBraille ? fromNA(text) : text;
-  if (toBraille) core.editor_convert(editor.value);
+  setEditorText(toBraille ? fromNA(text) : text);
+  if (toBraille) core.editor_convert(editorText());
   doc.kind = toBraille ? "braille" : "print";
   doc.name = untitled ? `Untitled ${toBraille ? "Braille" : "Print"} Document 1` : `${stem()}${toBraille ? ".brf" : ".txt"}`;
   if (toBraille) doc.cells = 40;
@@ -2520,7 +2614,7 @@ async function translateDocument() {
 // ------------------------------------------------------------------ File, Save and Save As
 
 // The document's text as files keep it: braille in North American ASCII braille, whatever encoding it is shown in.
-const storedText = () => (doc.kind === "braille" ? toNA(editor.value) : editor.value);
+const storedText = () => (doc.kind === "braille" ? toNA(editorText()) : editorText());
 
 // The Save As file types, in the reference program's order for each kind of document (spec 04d-B); the first is
 // chosen when the dialog opens, every time.
@@ -2604,12 +2698,12 @@ async function chooseFrom(title, prompt, items, selected = 0) {
 async function documentFile() {
   if (!doc.file && doc.template) {
     try {
-      doc.file = core.new_document(doc.kind === "braille", editor.value, await (await fetch(`templates/${doc.template.file}.template`)).text());
+      doc.file = core.new_document(doc.kind === "braille", editorText(), await (await fetch(`templates/${doc.template.file}.template`)).text());
     } catch {
       // The template could not be read: the default template, as for a new document.
     }
   }
-  doc.file ??= core.new_document(doc.kind === "braille", editor.value, await templateText());
+  doc.file ??= core.new_document(doc.kind === "braille", editorText(), await templateText());
   return doc.file;
 }
 
@@ -2633,7 +2727,7 @@ async function formattedBytes(braille) {
   if (!braille) {
     const pages = core.code_pages();
     const i = await chooseFrom("Formatted text", "Code page of the file:", pages);
-    return i === null ? null : core.formatted_text(editor.value, doc.cells, doc.lines, pages[i]);
+    return i === null ? null : core.formatted_text(editorText(), doc.cells, doc.lines, pages[i]);
   }
   const all = await encodings();
   const na = all.find((e) => e.id === "north-american");
@@ -2654,7 +2748,7 @@ async function formattedBytes(braille) {
   }
   // Each character goes to its cell through the encoding the document is shown in.
   const shownCells = encodingNow().cells.length ? encodingNow().cells : na.cells;
-  return core.formatted_braille(editor.value, doc.cells, doc.lines, JSON.stringify(shownCells), Uint32Array.from(codes));
+  return core.formatted_braille(editorText(), doc.cells, doc.lines, JSON.stringify(shownCells), Uint32Array.from(codes));
 }
 
 // File, Save As: the name and type chosen, then the file written as that type and saved by the browser. A name
@@ -2709,7 +2803,7 @@ async function saveAs() {
         break;
       case "html":
         bytes = core.html(
-          editor.value,
+          editorText(),
           await fetchBytes("tables/rule-scripts/html-tags.rules"),
           await fetchBytes("tables/rule-scripts/html-italics.rules"),
           await fetchBytes("tables/rule-scripts/html-styles.rules"),
@@ -2719,7 +2813,7 @@ async function saveAs() {
       default:
         // LaTeX, or HTML with MathJax: the text export table and that type's own rule script.
         bytes = core[type[2]](
-          editor.value,
+          editorText(),
           new TextDecoder().decode(await fetchBytes("tables/table-txxtxa-binary-forward.bmt")),
           await fetchBytes(`tables/rule-scripts/${type[2]}.rules`),
         );
@@ -2754,7 +2848,7 @@ async function ebraillePackage() {
   if (!(await onceNotice("EBrailleQualityWarning", EBRAILLE_QUALITY_WARNING))) return null;
   const e = encodingNow();
   const cells = e.cells.length ? e.cells : naCells();
-  return (await documentFile()).ebraille(editor.value, doc.kind === "braille", JSON.stringify(ebrailleMeta()), JSON.stringify(cells));
+  return (await documentFile()).ebraille(editorText(), doc.kind === "braille", JSON.stringify(ebrailleMeta()), JSON.stringify(cells));
 }
 
 // File, Save eBraille (1107): the package downloaded as eBraille for a braille document, EPUB 3 for a print one.
@@ -2848,7 +2942,7 @@ async function ebrailleMetadata() {
 // is asked about (Save As).
 async function save(asNew) {
   if (!core) {
-    download(`${stem()}.txt`, editor.value, "text/plain");
+    download(`${stem()}.txt`, editorText(), "text/plain");
     return;
   }
   const own = doc.kind === "braille" ? "dxb" : "dxp";
@@ -2915,24 +3009,34 @@ async function internationalization() {
     setup(d) {
       d.setItems(7, ["English"], 0);
       d.setItems(10, all.map((e) => e.name), all.findIndex((e) => e.id === current));
-      d.setRadio([11, 12], 0);
+      d.setRadio([11, 12], settings.preferPatterns ? 1 : 0);
       d.setChecked(14, settings.uia);
-      d.setRadio([15, 16], 0);
+      d.setRadio([15, 16], settings.accessPatterns ? 1 : 0);
     },
   });
   if (result !== "ok") return;
   settings.uia = d.checked(14);
   store.set("uia", settings.uia ? "1" : "0");
+  settings.preferPatterns = d.radio([11, 12]) === 1;
+  store.set("PreferBraillePatterns", settings.preferPatterns ? "1" : "0");
+  settings.accessPatterns = d.radio([15, 16]) === 1;
+  store.set("AccessUseBraillePatterns", settings.accessPatterns ? "1" : "0");
   const chosen = all.find((e) => e.name === d.selected(10));
-  if (!chosen || chosen.id === current) return;
-  if (doc.kind === "braille" && core) {
-    editor.value = core.convert_braille(editor.value, JSON.stringify(encodingNow().cells), JSON.stringify(chosen.cells));
-    // Converted cell for cell: the codes stay where they are.
-    core.editor_convert(editor.value);
+  if (chosen && chosen.id !== current) {
+    if (doc.kind === "braille" && core) {
+      const text = core.convert_braille(editorText(), JSON.stringify(encodingNow().cells), JSON.stringify(chosen.cells));
+      settings.encoding = chosen.id;
+      currentEncoding = chosen;
+      setEditorText(text);
+      // Converted cell for cell: the codes stay where they are.
+      core.editor_convert(text);
+    }
+    settings.encoding = chosen.id;
+    store.set("encoding", chosen.id);
+    currentEncoding = chosen;
   }
-  settings.encoding = chosen.id;
-  store.set("encoding", chosen.id);
-  currentEncoding = chosen;
+  // The field shows the patterns, or the characters, as now chosen.
+  reshowEditor();
   applyView();
 }
 
@@ -3121,7 +3225,7 @@ async function editStandard(id) {
       // The selection, codes and all, goes to the clipboard; its codes are kept, so pasting it brings them back.
       core?.editor_remember(from, to);
       try {
-        await navigator.clipboard.writeText(editor.value.slice(from, to));
+        await navigator.clipboard.writeText(editorText().slice(from, to));
       } catch {
         document.execCommand("copy");
       }
@@ -3141,8 +3245,8 @@ async function editStandard(id) {
     case 1206:
       // With no selection Clear is the Delete key, as in the original: the character after the caret goes (a code
       // with it goes whole, as the editor takes codes out).
-      if (from === to && to < editor.value.length) {
-        const next = editor.value.codePointAt(to) > 0xffff ? 2 : 1;
+      if (from === to && to < editorText().length) {
+        const next = editorText().codePointAt(to) > 0xffff ? 2 : 1;
         editor.setSelectionRange(to, to + next);
       }
       insertText("");
@@ -3172,7 +3276,7 @@ function changeCase() {
   for (let k = out.length - 2; k >= 2; k -= 2) {
     const c = String.fromCodePoint(out[k + 1]);
     const at = out[k];
-    editor.setRangeText(c, at, at + (editor.value.codePointAt(at) > 0xffff ? 2 : 1), "preserve");
+    editor.setRangeText(c, at, at + (editorText().codePointAt(at) > 0xffff ? 2 : 1), "preserve");
   }
   editor.dispatchEvent(new Event("input"));
   editor.setSelectionRange(start, start);
@@ -3241,7 +3345,7 @@ function insertFile() {
 // Edit, Goto (dialog 1019): a page, line and column of the laid-out pages, as the status line counts them.
 async function gotoPosition() {
   const braille = doc.kind === "braille";
-  const status = core ? core.status_line(editor.value, doc.cells, doc.lines, braille, editor.selectionStart, false, false, false, false) : "";
+  const status = core ? core.status_line(editorText(), doc.cells, doc.lines, braille, editor.selectionStart, false, false, false, false) : "";
   const at = (label) => Number((new RegExp(`${label}:(\\d+)`).exec(status) ?? [])[1] ?? 1);
   const { result, d } = await showDialog(1019, {
     setup(d) {
@@ -3260,7 +3364,7 @@ async function gotoPosition() {
     await message("You cannot go to pages with numbers less than 1.");
     return;
   }
-  const offset = core.position_of(editor.value, doc.cells, doc.lines, braille, page, line, column);
+  const offset = core.position_of(editorText(), doc.cells, doc.lines, braille, page, line, column);
   if (offset < 0) {
     await message("You cannot go to that location in the document.");
     return;
@@ -3443,7 +3547,7 @@ async function runReplace(spec, withText) {
   let stopped = false;
   const replaceOne = (out) => {
     const r = JSON.parse(core.editor_replace(JSON.stringify(out.spec), JSON.stringify(out.match), withText, braille));
-    editor.value = r.text;
+    setEditorText(r.text);
     doc.dirty = true;
     count += 1;
     return r;
@@ -3526,7 +3630,7 @@ function styleCommand(what, name = "") {
   const out = core.editor_style_command(what, name, anchor, caret);
   if (!out) return;
   const { text, caret: at } = JSON.parse(out);
-  editor.value = text;
+  setEditorText(text);
   editor.setSelectionRange(at, at);
   doc.dirty = true;
   lastLine = null;
@@ -3563,7 +3667,7 @@ function styleLevel(step) {
     return;
   }
   if (!r.changed) return;
-  editor.value = r.text;
+  setEditorText(r.text);
   editor.setSelectionRange(Math.min(r.anchor, r.caret), Math.max(r.anchor, r.caret), r.caret < r.anchor ? "backward" : "forward");
   doc.dirty = true;
   lastLine = null;
@@ -3693,8 +3797,8 @@ async function modifyStyle() {
           // The style's codes are renamed in the text.
           const [from, to] = [editor.selectionStart, editor.selectionEnd];
           // The style's codes are renamed where codes are; text that only reads like the code is left as it is.
-          editor.value = core.editor_rename_style(old, name);
-          editor.setSelectionRange(Math.min(from, editor.value.length), Math.min(to, editor.value.length));
+          setEditorText(core.editor_rename_style(old, name));
+          editor.setSelectionRange(Math.min(from, editorText().length), Math.min(to, editorText().length));
         }
         doc.dirty = true;
         d.setItems(8, file.style_names, file.style_names.indexOf(name));
@@ -3824,7 +3928,7 @@ async function tableProperties() {
   const out = core.editor_table_apply(JSON.stringify(t), Math.max(typeIndex, 0), swapChanged, d.text(11), d.text(13), d.text(15), d.text(17), anchor, caret);
   if (!out) return;
   const r = JSON.parse(out);
-  editor.value = r.text;
+  setEditorText(r.text);
   editor.focus();
   if (info.create) editor.setSelectionRange(r.caret, r.caret);
   else editor.setSelectionRange(Math.min(r.anchor, r.caret), Math.max(r.anchor, r.caret), r.anchor <= r.caret ? "forward" : "backward");
