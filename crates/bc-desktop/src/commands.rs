@@ -966,8 +966,8 @@ fn read_import(bytes: &[u8], choice: &ImportChoice) -> Option<Shown> {
             let text = bc_core::codepages::decode("UTF-8", bytes);
             Some(Shown::plain(&text.replace("\r\n", "\n").replace('\r', "\n")))
         }
-        // Coded text, coded braille and formatted braille go through the import chain of their kind.
-        FileKind::CodedText | FileKind::CodedBraille | FileKind::FormattedBraille => {
+        // Coded text, coded braille, formatted braille and Orbit braille go through the import chain of their kind.
+        FileKind::CodedText | FileKind::CodedBraille | FileKind::FormattedBraille | FileKind::Orbit => {
             let files = match translation::import_files() {
                 Ok(f) => f,
                 Err(e) => {
@@ -978,6 +978,7 @@ fn read_import(bytes: &[u8], choice: &ImportChoice) -> Option<Shown> {
             let (input, recipe) = match choice.kind {
                 FileKind::CodedText => (bytes.to_vec(), Recipe::CodedText(choice.code_page.clone())),
                 FileKind::CodedBraille => (bytes.to_vec(), Recipe::CodedBraille),
+                FileKind::Orbit => (bytes.to_vec(), Recipe::Orbit),
                 _ => (north_american(bytes, encodings::find(&choice.encoding)), Recipe::FormattedBraille(settings_store::load_braide())),
             };
             let imported = bc_core::import_chain::run(&input, &recipe, &files);
@@ -991,12 +992,6 @@ fn read_import(bytes: &[u8], choice: &ImportChoice) -> Option<Shown> {
                 message(&imported.errors.join("\n"));
             }
             Some(Shown::from_running(&bc_core::internal::decode(&imported.text)))
-        }
-        FileKind::Orbit => {
-            let text: String = bytes.iter().map(|&b| char::from(b)).collect();
-            let text = text.replace("\r\n", "\n").replace('\r', "\n").replace('\u{c}', "\n");
-            let display = app::with(|a| a.encoding());
-            Some(translation::convert_braille(&Shown::plain(&text), encodings::find(&choice.encoding), display))
         }
         _ => {
             message(&format!("BrailleCraft cannot import {kind_name} files yet."));

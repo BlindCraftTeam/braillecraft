@@ -9,6 +9,8 @@
 //!   normalised three times.
 //! - Coded text: the file decoded in the chosen code page and written as internal text, then the same steps as coded
 //!   braille with the print scan table.
+//! - Orbit Reader braille (.obf): line ends to line codes and capitals to small letters, the import scan with the
+//!   braille scan table, then the Nemeth-in-UEB scripts as for formatted braille.
 //!
 //! The braille encoding step that comes first for formatted braille (the file's encoding to North American braille
 //! ASCII) is the caller's, which holds the encodings. A step that fails is reported and the chain goes on with the
@@ -31,6 +33,7 @@ pub enum Recipe {
     CodedBraille,
     /// Coded text in the named code page (as `codepages::decode` names them).
     CodedText(String),
+    Orbit,
 }
 
 /// The chain's result: the internal text, the steps that failed (each with its reason) and what the formatted
@@ -77,6 +80,13 @@ pub fn run(bytes: &[u8], recipe: &Recipe, files: &dyn Files) -> Imported {
             text = coded_text_bytes(&text, page);
             scan(PRINT_SCAN, &mut text, &mut out.errors);
         }
+        Recipe::Orbit => {
+            script("orbit-lines.rules", &mut text, &mut out.errors);
+            scan(BRAILLE_SCAN, &mut text, &mut out.errors);
+            nemeth(files, &mut text, &mut out.errors, true);
+            out.text = text;
+            return out;
+        }
     }
     script("ninit-codes.rules", &mut text, &mut out.errors);
     // Tables to outlines is optional in the recipes: it runs when it is there. The optional maths step that follows
@@ -91,13 +101,29 @@ pub fn run(bytes: &[u8], recipe: &Recipe, files: &dyn Files) -> Imported {
         script("normalize-spaces.rules", &mut text, &mut out.errors);
     }
     if matches!(recipe, Recipe::FormattedBraille(_)) {
-        script("nemeth-in-ueb-1.rules", &mut text, &mut out.errors);
-        text = reversed(&text);
-        script("nemeth-in-ueb-2.rules", &mut text, &mut out.errors);
-        text = reversed(&text);
+        nemeth(files, &mut text, &mut out.errors, false);
     }
     out.text = text;
     out
+}
+
+/// The Nemeth-in-UEB scripts: the first, the text reversed, the second on the reversed text, reversed back. In the
+/// Orbit recipe the two scripts are optional (run when they are there).
+fn nemeth(files: &dyn Files, text: &mut Vec<u8>, errors: &mut Vec<String>, optional: bool) {
+    for (k, name) in ["nemeth-in-ueb-1.rules", "nemeth-in-ueb-2.rules"].into_iter().enumerate() {
+        if k == 1 {
+            *text = reversed(text);
+        }
+        match files.rule_script(name) {
+            Ok(mut s) => match s.run(text) {
+                Ok(t) => *text = t,
+                Err(e) => errors.push(format!("{name}: {e}")),
+            },
+            Err(_) if optional => {}
+            Err(e) => errors.push(format!("{name}: {e}")),
+        }
+    }
+    *text = reversed(text);
 }
 
 /// Coded text as internal text: decoded in its code page (a byte order mark at the start dropped), each zero-width
@@ -185,6 +211,14 @@ mod tests {
         let got = run(b"$p Hello hyphen-\r\nated.", &Recipe::CodedText("WINDOWS-1252".into()), &Shipped);
         assert!(got.errors.is_empty(), "{:?}", got.errors);
         assert_eq!(got.text, b"\x1cp\x1fHello hyphenated.".to_vec());
+    }
+
+    #[test]
+    fn orbit_lines_become_line_codes() {
+        let got = run(b"ABC\r\nDEF", &Recipe::Orbit, &Shipped);
+        assert!(got.errors.is_empty(), "{:?}", got.errors);
+        // The script writes the line code in its internal form, which the scan passes on.
+        assert_eq!(got.text, b"abc\x1cl\x1fdef".to_vec());
     }
 
     #[test]
