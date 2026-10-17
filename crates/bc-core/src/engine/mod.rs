@@ -24,7 +24,7 @@
 //! ```
 
 mod callbacks;
-mod chars;
+pub(crate) mod chars;
 pub mod compile;
 mod rules;
 mod scan_table;
@@ -42,7 +42,7 @@ pub use table::RuleTable;
 pub use tableset::{TableEntry, TableSet};
 pub use writer::Chitab;
 
-use chars::{encode_cp437, EOF};
+use chars::EOF;
 
 /// The output mode used when a document or the translated line is translated: every byte as it comes.
 pub const OUTPUT_MODE_DOCUMENT: i64 = 3;
@@ -232,7 +232,8 @@ impl Translator {
         brackets: bool,
     ) -> Result<Vec<i64>, EngineError> {
         let text = if brackets { text.replace('[', "\u{1c}").replace(']', "\u{1f}") } else { text.to_string() };
-        let codes = encode_cp437(&text).map_err(EngineError::NotEncodable)?;
+        // Internal text, two-byte codes as their two bytes, first byte first, as the scanner reads them.
+        let codes: Vec<i64> = crate::internal::encode(&text).map_err(EngineError::NotEncodable)?.into_iter().map(i64::from).collect();
         // The scanner gets the document's styles too, as the reference hands its scanner the same style lookup.
         let codes: Vec<i64> = scanner::scan(&self.scan, codes, style)?.into_iter().filter(|&c| c != EOF).collect();
         let mut stack: Vec<Rc<RuleTable>> = vec![self.rules.clone()];
@@ -338,7 +339,9 @@ mod tests {
     fn unknown_characters_are_escaped() {
         let Some(f) = folder() else { return };
         let t = english(&f);
-        assert_eq!(t.translate("½").unwrap(), "@$d\"6ab ");
+        // The code 0xAB has no Unicode form, so it is escaped by its code; a typed ½ is the fraction code F53D.
+        assert_eq!(t.translate(&crate::internal::decode(&[0xab])).unwrap(), "@$d\"6ab ");
+        assert_eq!(t.translate("½").unwrap(), "#a/b");
         assert_eq!(t.translate("ª").unwrap(), "@$u\"6aa ");
     }
 
@@ -499,7 +502,7 @@ mod tests {
     fn a_rule_that_repeats_without_taking_characters_is_stopped() {
         let semitic = shipped("semitic-language-transcription-basic-forward.bmt");
         assert_eq!(
-            semitic.translate("╜ Γ").unwrap(),
+            semitic.translate(&crate::internal::decode(&[0xbd, 0x20, 0xe2])).unwrap(),
             "\u{1c}lng~am\u{1f}***dbd??* \u{1c}lng~\u{1f}\u{1c}lng~\u{1f}*"
         );
     }
@@ -508,6 +511,11 @@ mod tests {
     fn missing_tables_and_characters_are_reported() {
         let dir = std::env::temp_dir().join("bc-engine-no-tables");
         assert!(matches!(Translator::open(&dir, "none.btb", "none.sct"), Err(EngineError::Read(_))));
-        assert_eq!(encode_cp437("€"), Err('€'));
+        let english = shipped("en-ueb-g2-forward.bmt");
+        assert!(matches!(english.translate("x \u{10fffd}"), Err(EngineError::NotEncodable('\u{10fffd}'))));
+        // Characters outside code page 437, and the two-byte code 9C83 as a back-translation hands it back.
+        for text in ["£5 œuvre \u{2014} \u{201c}Âme\u{201d} €", &crate::internal::decode(&[0x9c, 0x83, b'm', b'e'])] {
+            assert!(english.translate(text).is_ok(), "{text}");
+        }
     }
 }

@@ -17,6 +17,7 @@ pub mod format;
 pub mod fview;
 pub mod pef;
 pub mod ink;
+pub mod internal;
 pub mod lbf;
 pub mod menu_codes;
 pub mod printer_setup;

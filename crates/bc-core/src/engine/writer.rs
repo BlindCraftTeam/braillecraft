@@ -97,6 +97,11 @@ impl Chitab {
         std::fs::read(path).map(|b| Chitab::parse(&latin1(&b))).unwrap_or_default()
     }
 
+    /// Every internal code that has a Unicode form, with that form.
+    pub(crate) fn unicode_map(&self) -> &HashMap<i64, i64> {
+        &self.unicode
+    }
+
     /// The Unicode form of an internal code; "*" (0x2A) when it has none.
     pub fn unicode_of(&self, code: i64) -> i64 {
         match self.unicode.get(&code) {
@@ -597,7 +602,8 @@ impl<'a> Writer<'a> {
         }
     }
 
+    /// The output as Unicode: internal text, two-byte codes and all, through the character table.
     pub fn text(&self) -> String {
-        latin1(&self.file)
+        crate::internal::decode(&self.file)
     }
 }

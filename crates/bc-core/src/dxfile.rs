@@ -234,16 +234,9 @@ pub fn read(d: &[u8]) -> Result<DxDocument, DxError> {
     });
     let body = d.get(BODY..BODY + length).ok_or(DxError::BodyOutOfRange)?;
 
-    // The running text, codes kept as the file marks them (doctext::OPEN and CLOSE are 0x1C and 0x1F).
-    let text: String = body
-        .iter()
-        .map(|&b| match b {
-            0x1C => crate::doctext::OPEN,
-            0x1F => crate::doctext::CLOSE,
-            0x1E => '\u{a0}',
-            b => cp437(b),
-        })
-        .collect();
+    // The running text: internal text through the character table, codes kept as the file marks them
+    // (doctext::OPEN and CLOSE are 0x1C and 0x1F), 0x1E the hard space.
+    let text = crate::internal::decode(body);
     let (styles, style_index) = read_styles(d, BODY + length).unwrap_or_default();
     // The optional sections the descriptors point to; one that lies outside the file is left out.
     let mut embosser = String::new();
@@ -296,11 +289,7 @@ fn read_block(d: &[u8], at: &mut usize, width: usize) -> Option<(Vec<u16>, Vec<V
 /// A stored style string to running text: codes marked 0x1C ... 0x1F as in the file, so a bracket in a style's text
 /// (",*apt]" in a contents title) stays text.
 fn codes_text(b: &[u8]) -> String {
-    b.iter().map(|&b| match b {
-        0x1C => crate::doctext::OPEN,
-        0x1F => crate::doctext::CLOSE,
-        b => cp437(b),
-    }).collect()
+    crate::internal::decode(b)
 }
 
 /// The two style blocks after the body.
@@ -337,11 +326,7 @@ fn to_cp437(c: char) -> u8 {
 
 /// A style string in running text to stored bytes.
 fn codes_bytes(t: &str) -> Vec<u8> {
-    t.chars().map(|c| match c {
-        crate::doctext::OPEN => 0x1C,
-        crate::doctext::CLOSE => 0x1F,
-        c => to_cp437(c),
-    }).collect()
+    crate::internal::encode_lossy(t, b'?')
 }
 
 /// One block after the body (the layout read_block reads).
@@ -359,18 +344,11 @@ fn write_block(out: &mut Vec<u8>, values: Option<&[u16]>, strings: &[Vec<u8>]) {
     }
 }
 
-/// Running text (codes marked 0x1C ... 0x1F) as a document file stores its body: 8-bit code page 437, codes as the
-/// bytes 0x1C and 0x1F, a hard space as 0x1E.
+/// Running text (codes marked 0x1C ... 0x1F) as a document file stores its body: internal text (code page 437 with
+/// two-byte codes, crate::internal), codes as the bytes 0x1C and 0x1F, a hard space as 0x1E; "?" for a character
+/// internal text has no code for.
 pub fn body_bytes(running: &str) -> Vec<u8> {
-    running
-        .chars()
-        .map(|c| match c {
-            crate::doctext::OPEN => 0x1C,
-            crate::doctext::CLOSE => 0x1F,
-            '\u{a0}' => 0x1E,
-            c => to_cp437(c),
-        })
-        .collect()
+    crate::internal::encode_lossy(running, b'?')
 }
 
 /// The table names a document file in the older format (version 0) gives in place of newer ones (spec 04d-C, from

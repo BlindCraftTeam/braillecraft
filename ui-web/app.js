@@ -1811,7 +1811,7 @@ fileInput.addEventListener("change", async () => {
     }
   } else {
     doc.kind = ext === "brf" || ext === "brl" || ext === "bru" ? "braille" : "print";
-    const read = new TextDecoder("latin1").decode(bytes);
+    const read = decodeTextFile(bytes);
     // A text or braille file holds no codes: all of it is text.
     editor.value = doc.kind === "braille" ? fromNA(read.replaceAll("\f", "\n")) : read;
     core?.editor_load_plain(editor.value);
@@ -2364,6 +2364,16 @@ function changeCase() {
   editor.setSelectionRange(from, to);
 }
 
+// A text file's bytes as text, as the desktop program reads them: UTF-8 when they are valid UTF-8, else Windows
+// code page 1252 (curly quotes, dashes, œ and the euro sign in 0x80 to 0x9F).
+function decodeTextFile(bytes) {
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    return new TextDecoder("windows-1252").decode(bytes);
+  }
+}
+
 // Edit, Insert File: a file's text put in at the caret.
 function insertFile() {
   const input = document.createElement("input");
@@ -2371,7 +2381,7 @@ function insertFile() {
   input.addEventListener("change", async () => {
     const file = input.files[0];
     if (!file) return;
-    insertText(new TextDecoder("latin1").decode(new Uint8Array(await file.arrayBuffer())));
+    insertText(decodeTextFile(new Uint8Array(await file.arrayBuffer())));
   });
   input.click();
 }

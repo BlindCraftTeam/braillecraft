@@ -594,8 +594,9 @@ fn read_text_file(path: &Path) -> Result<String, String> {
     let bytes = std::fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
     let text = match String::from_utf8(bytes) {
         Ok(s) => s,
-        // Not UTF-8: read as Windows Latin 1, the usual code page of braille and text files from Windows.
-        Err(e) => e.into_bytes().iter().map(|&b| b as char).collect(),
+        // Not UTF-8: read as Windows code page 1252, the usual code page of text files from Windows (curly quotes,
+        // dashes, œ and the euro sign are in 0x80 to 0x9F there, which ISO Latin-1 leaves as control characters).
+        Err(e) => bc_core::internal::windows_1252(&e.into_bytes()),
     };
     Ok(text.replace("\r\n", "\n").replace('\r', "\n"))
 }

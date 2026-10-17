@@ -55,7 +55,9 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   and Page Down do).
 - **Translation.** Print to braille and braille to print with 657 translation tables for 188 languages and braille
   codes, chosen by region and language (Document, Translation Tables) or by learning course (Learning Tables).
-  Language codes in the text switch tables in the middle of a document.
+  Language codes in the text switch tables in the middle of a document. Every character the built-in character
+  table names translates (accented letters, £, €, œ, dashes, curly quotes and thousands more); text files are read
+  as UTF-8, or as Windows code page 1252 when they are not UTF-8.
 - **Translated line.** Under the document, the braille (or the print) of the line you are on, updated as you write.
 - **View preferences.** A margin bell a chosen number of cells before the end of a braille line, which codes the
   translated line shows, line numbers beside each line of a braille document in the formatted view when
