@@ -298,13 +298,14 @@ jobs:
           python3 tools/web/make_web_tables.py
           git diff --exit-code ui-web/tables.js
           cargo build --release -p bc-web --target wasm32-unknown-unknown
-          mkdir -p site/fonts site/tables/rule-scripts site/embossers
+          mkdir -p site/fonts site/tables/rule-scripts site/tables/scan site/embossers
           wasm-bindgen --target web --no-typescript --out-dir site/pkg target/wasm32-unknown-unknown/release/bc_web.wasm
           cp ui-web/* site/
           cp ui/fonts/*.ttf ui/fonts/encodings.json site/fonts/
           # Every shipped table, fetched by the page when a document uses it, with the index and the list by language.
           cp tables/*.bmt tables/index.tsv tables/languages.tsv site/tables/
           cp tables/rule-scripts/*.rules site/tables/rule-scripts/
+          cp tables/scan/*.sct site/tables/scan/
           cp embossers/embossers.txt site/embossers/
           cp -r templates site/templates
 

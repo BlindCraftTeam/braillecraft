@@ -1783,6 +1783,211 @@ async function emboss() {
   }
 }
 
+// ------------------------------------------------------------------ importing files
+
+// The kinds read through an import chain (kinds as the core names them).
+const CHAIN_KINDS = ["CodedText", "CodedBraille", "FormattedBraille", "Orbit"];
+
+// What the desktop program says for a kind it cannot import.
+function importRefusal({ kind, filter }) {
+  if (kind === "Unsupported" || kind === "Music") {
+    return "This document cannot be imported into BrailleCraft.  It appears to be in an unsupported file format.";
+  }
+  if (kind === "Rtf") {
+    return "This document cannot be imported into BrailleCraft.  It appears to be in Rich Text Format (RTF).  If Microsoft® Word is installed, you can use it to convert your document to a native Word format and import that into BrailleCraft.";
+  }
+  return `BrailleCraft cannot import ${filter} files yet.`;
+}
+
+// The templates as File, New lists them (templates/index.tsv), in alphabetical order.
+let templateList = null;
+async function templateNames() {
+  if (!templateList) {
+    try {
+      const index = await (await fetch("templates/index.tsv")).text();
+      templateList = index
+        .split("\n")
+        .filter((l) => l.trim() && !l.startsWith("#"))
+        .map((l) => l.split("\t"))
+        .filter((c) => c.length >= 3)
+        .map((c) => ({ file: c[1], name: c[2].trim() }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+    } catch {
+      templateList = [];
+    }
+  }
+  return templateList;
+}
+
+// The import dialog (1043): the templates, the import filters with the kind found chosen, and the code page (text
+// kinds) or braille encoding (braille kinds) to read the file in. Null when cancelled.
+async function importDialog(detected) {
+  const filters = core
+    .import_filters()
+    .split("\n")
+    .map((l) => {
+      const [kind, name, marks = ""] = l.split("\t");
+      return { kind, name, marks };
+    });
+  const names = filters.map((f) => f.name);
+  const templates = await templateNames();
+  const templateLabels = templates.map((t) => t.name);
+  const pages = core.code_pages();
+  const encs = await encodings();
+  const encodingLabels = encs.map((e) => e.name);
+  const codePage = store.get("CodePage") ?? core.default_import_code_page();
+  const encodingAt = encs.findIndex((e) => e.id === encodingNow().id);
+  const showFor = (d, name) => {
+    const marks = filters.find((f) => f.name === name)?.marks ?? "";
+    const [label, items, at] = marks.includes("c")
+      ? ["Code Page (Character Set):", pages, pages.indexOf(codePage)]
+      : marks.includes("e")
+        ? ["Braille Encoding:", encodingLabels, encodingAt]
+        : ["", [], -1];
+    d.setText(15, label);
+    d.setItems(16, items, at >= 0 ? at : null);
+    for (const id of [15, 16]) {
+      const el = d.get(id);
+      if (el) (el.closest(".row") ?? el).hidden = items.length === 0;
+    }
+  };
+  const { result, d } = await showDialog(1043, {
+    setup(d) {
+      d.setItems(7, templateLabels, Math.max(0, templateLabels.indexOf("English (UEB) - basic")));
+      // Making, hiding and choosing templates belongs to the template list of File, New, which the web build does
+      // not have yet.
+      for (const id of [8, 9, 10, 11, 12]) d.enable(id, false);
+      const at = filters.findIndex((f) => f.kind === detected);
+      d.setItems(14, names, at >= 0 ? at : names.length - 1);
+      showFor(d, d.selected(14));
+    },
+    after(d) {
+      d.get(14)?.addEventListener("change", () => showFor(d, d.selected(14)));
+    },
+  });
+  if (result !== "ok") return null;
+  const chosen = filters.find((f) => f.name === d.selected(14));
+  const kind = chosen?.kind ?? detected;
+  const filter = chosen?.name ?? detected;
+  const marks = chosen?.marks ?? "";
+  const choice = {
+    kind,
+    filter,
+    braille: marks.includes("b"),
+    codePage,
+    encoding: encodingNow().id,
+    template: templates.find((t) => t.name === d.selected(7)) ?? null,
+  };
+  if (marks.includes("c") && d.selected(16)) {
+    choice.codePage = d.selected(16);
+    store.set("CodePage", choice.codePage);
+  } else if (marks.includes("e")) {
+    const i = d.chosenIn(16, encodingLabels);
+    if (i !== null) choice.encoding = encs[i].id;
+  }
+  // Formatted braille read with interpretation may be laid out again: the notice, until it is turned off.
+  if (kind === "FormattedBraille" && !braideSettings().preserve && !(await reformatNotice())) return null;
+  return choice;
+}
+
+// The notice that formatted braille may be reformatted (1054), with its "Do not show this message again" box, kept
+// as the desktop program keeps it (Mutable, BrailleReformatWarning: the answer plus one). False when closed without
+// OK.
+async function reformatNotice() {
+  const kept = Number(store.get("Mutable.BrailleReformatWarning"));
+  if (kept > 0) return kept - 1 === 1;
+  const { result, d } = await showDialog(1054, {
+    title: "BrailleCraft",
+    setup: (d) =>
+      d.setText(
+        5,
+        'BrailleCraft may reformat your braille document. To avoid this, set the "Read formatted braille without interpretation" option in the Global: Formatted Braille Importer dialog.',
+      ),
+  });
+  const answer = result === "ok" ? 1 : 2;
+  if (d.checked(6)) store.set("Mutable.BrailleReformatWarning", String(answer + 1));
+  return answer === 1;
+}
+
+// Global, Formatted Braille Importer, kept by the names the original program keeps them by; a value that is missing
+// or not understood keeps its default (main page numbers lower right, reference page numbers upper right, no running
+// head or foot, 30 lines of 40 cells, formatting not preserved).
+const BRAIDE_CORNERS = ["NoPages", "UpperLeft", "UpperRight", "LowerLeft", "LowerRight"];
+const BRAIDE_SIDES = ["None", "Odd", "Even", "Both"];
+function braideSettings() {
+  const get = (key) => store.get(`FormattedBrailleImporter.${key}`);
+  const word = (key, list, d) => {
+    const i = list.findIndex((w) => w.toLowerCase() === (get(key) ?? "").trim().toLowerCase());
+    return i >= 0 ? i : d;
+  };
+  const num = (key, d) => {
+    const n = Number(get(key));
+    return Number.isInteger(n) && n > 0 ? n : d;
+  };
+  return {
+    oddMain: word("OddMainPages", BRAIDE_CORNERS, 4),
+    evenMain: word("EvenMainPages", BRAIDE_CORNERS, 4),
+    oddReference: word("OddReferencePages", BRAIDE_CORNERS, 2),
+    evenReference: word("EvenReferencePages", BRAIDE_CORNERS, 2),
+    header: word("Header", BRAIDE_SIDES, 0),
+    footer: word("Footer", BRAIDE_SIDES, 0),
+    lines: num("MaxLen", 30),
+    cells: num("MaxWidth", 40),
+    preserve: (get("PreserveFormatting") ?? "no").trim().toLowerCase() === "yes",
+  };
+}
+function saveBraideSettings(s) {
+  const set = (key, v) => store.set(`FormattedBrailleImporter.${key}`, String(v));
+  set("OddMainPages", BRAIDE_CORNERS[s.oddMain]);
+  set("EvenMainPages", BRAIDE_CORNERS[s.evenMain]);
+  set("OddReferencePages", BRAIDE_CORNERS[s.oddReference]);
+  set("EvenReferencePages", BRAIDE_CORNERS[s.evenReference]);
+  set("Header", BRAIDE_SIDES[s.header]);
+  set("Footer", BRAIDE_SIDES[s.footer]);
+  set("MaxLen", s.lines);
+  set("MaxWidth", s.cells);
+  set("PreserveFormatting", s.preserve ? "yes" : "no");
+}
+
+// The Word importer's Unknown Characters setting, which coded text import uses: its list words by position
+// ("ignore" 0 marks with "*", "asterisc" 1 writes nothing, "hex" 2 the Unicode value); 0 when it is not kept.
+function unknownCharacters() {
+  const i = ["ignore", "asterisc", "hex"].indexOf((store.get("Word.UnknownCharacters") ?? "").trim().toLowerCase());
+  return i >= 0 ? i : 0;
+}
+
+// The file's braille characters in North American braille ASCII, as the formatted braille import's first step reads
+// them: each character that is not a control character and that the file's encoding lists becomes the North
+// American character of the same cell; any other byte stays as it is.
+async function northAmerican(bytes, encodingId) {
+  const enc = (await encodings()).find((e) => e.id === encodingId);
+  if (!enc || encodingId === "north-american") return bytes;
+  const cellOf = new Map();
+  enc.cells.forEach((chars, p) => {
+    for (const c of chars ?? "") if (!cellOf.has(c)) cellOf.set(c, p);
+  });
+  const na = naCells();
+  return bytes.map((b) => {
+    if (b < 0x80 && (b < 0x20 || b === 0x7f)) return b;
+    const p = cellOf.get(String.fromCharCode(b));
+    const c = p === undefined ? undefined : [...(na[p] ?? "")][0];
+    return c && c.codePointAt(0) < 0x100 ? c.codePointAt(0) : b;
+  });
+}
+
+// A file through the import chain of its kind, the chain's tables fetched once.
+let importFilesLoaded = false;
+async function importChain(bytes, choice) {
+  if (!importFilesLoaded) {
+    for (const name of core.import_file_names()) core.import_add_file(name, await fetchBytes(`tables/${name}`));
+    importFilesLoaded = true;
+  }
+  const s = braideSettings();
+  const input = choice.kind === "FormattedBraille" ? await northAmerican(bytes, choice.encoding) : bytes;
+  const braide = [s.oddMain, s.evenMain, s.oddReference, s.evenReference, s.header, s.footer, s.lines, s.cells, s.preserve ? 1 : 0];
+  return core.import_file(input, choice.kind, choice.codePage, unknownCharacters(), new Int32Array(braide));
+}
+
 // ------------------------------------------------------------------ commands
 
 const fileInput = $("file-input");
@@ -1798,8 +2003,17 @@ fileInput.addEventListener("change", async () => {
   doc.printer = null;
   doc.hyphen = 2902;
   doc.initialCodes = "";
+  doc.template = null;
   doc.dirty = false;
-  if ((ext === "dxp" || ext === "dxb") && core) {
+  // The file's kind from its name and first bytes, as the desktop program finds it; a file that is not a document
+  // file goes through the import dialog.
+  const detected = core ? core.detect_file(file.name, bytes) : ext === "dxp" || ext === "dxb" ? "Document" : "";
+  let choice = null;
+  if (core && detected !== "Document") {
+    choice = await importDialog(detected);
+    if (!choice) return;
+  }
+  if (detected === "Document" && core) {
     try {
       const d = core.read_document(bytes);
       doc.kind = d.braille ? "braille" : "print";
@@ -1824,7 +2038,7 @@ fileInput.addEventListener("change", async () => {
       statusLine.textContent = String(err.message ?? err);
       return;
     }
-  } else if (ext === "pdf" && core) {
+  } else if (choice && choice.kind === "Pdf") {
     // A PDF becomes a print document with codes, its styles named as the template names them.
     doc.kind = "print";
     doc.file = null;
@@ -1836,14 +2050,39 @@ fileInput.addEventListener("change", async () => {
       return;
     }
     doc.saved = false;
+  } else if (choice && CHAIN_KINDS.includes(choice.kind)) {
+    // Coded text, coded braille, formatted braille and Orbit braille through the import chain of their kind.
+    let imported;
+    try {
+      imported = await importChain(bytes, choice);
+    } catch (err) {
+      statusLine.textContent = String(err.message ?? err);
+      return;
+    }
+    if (imported.long_page) await message("Page depth exceeded.");
+    if (imported.wide_line) await message("Page width exceeded.");
+    if (imported.errors) await message(imported.errors);
+    doc.kind = choice.braille ? "braille" : "print";
+    const text = core.editor_load(imported.running);
+    editor.value = doc.kind === "braille" ? fromNA(text) : text;
+    if (doc.kind === "braille") core.editor_convert(editor.value);
+    doc.file = null;
+    doc.saved = false;
+    doc.template = choice.template;
+  } else if (choice && choice.kind !== "FormattedText") {
+    await message(importRefusal(choice));
+    return;
   } else {
-    doc.kind = ext === "brf" || ext === "brl" || ext === "bru" ? "braille" : "print";
-    const read = decodeTextFile(bytes);
-    // A text or braille file holds no codes: all of it is text.
+    // Formatted text, read as UTF-8 whatever the code page box says, as the original program's formatted text
+    // importer reads it; with no core, any file as text.
+    doc.kind = !core && /^(brf|brl|bru)$/.test(ext) ? "braille" : "print";
+    const read = core ? new TextDecoder("utf-8").decode(bytes).replace(/\r\n?/g, "\n") : decodeTextFile(bytes);
+    // A text file holds no codes: all of it is text.
     editor.value = doc.kind === "braille" ? fromNA(read.replaceAll("\f", "\n")) : read;
     core?.editor_load_plain(editor.value);
     doc.file = null;
     doc.saved = false;
+    doc.template = choice?.template ?? null;
   }
   doc.name = file.name;
   // A document opens in its kind's default view; a document file keeps whether its translated line shows.
@@ -1972,9 +2211,17 @@ async function chooseFrom(title, prompt, items, selected = 0) {
   return ok && list.selectedIndex >= 0 ? list.selectedIndex : null;
 }
 
-// The document's file: the one it was read from or last saved as, else a new one from the default template, kept
-// so the styles and page numbering changed in the Document menu stay with the document.
+// The document's file: the one it was read from or last saved as, else a new one from the template chosen when it
+// was imported or the default template, kept so the styles and page numbering changed in the Document menu stay with
+// the document.
 async function documentFile() {
+  if (!doc.file && doc.template) {
+    try {
+      doc.file = core.new_document(doc.kind === "braille", editor.value, await (await fetch(`templates/${doc.template.file}.template`)).text());
+    } catch {
+      // The template could not be read: the default template, as for a new document.
+    }
+  }
   doc.file ??= core.new_document(doc.kind === "braille", editor.value, await templateText());
   return doc.file;
 }
@@ -3082,20 +3329,24 @@ const COMMANDS = {
       setup: (d) => d.setItems(10, ["Ignore", "Mark from Word document", "Treat hard page breaks as print page breaks", "Use publishers' <ipp no=#> reference page tags"], 0),
     }),
   3116: () => message("The PDF importer and its options are built in step 9 of the plan."),
-  3117: () =>
-    showDialog(1045, {
-      memory: "",
+  // Global, Formatted Braille Importer (1045): the settings the formatted braille import reads. The four groups are
+  // braille page numbers on even and on odd pages and print page numbers on even and on odd pages of the file; then
+  // the running head and foot pages, the lines and cells of the file's pages. With "Read formatted braille without
+  // interpretation" checked (formatting preserved) the other controls are disabled.
+  3117: async () => {
+    const GROUPS = [[8, 9, 10, 11, 12], [14, 15, 16, 17, 18], [20, 21, 22, 23, 24], [26, 27, 28, 29, 30]];
+    const HEADER = [32, 33, 34, 35];
+    const FOOTER = [37, 38, 39, 40];
+    const s = braideSettings();
+    const { result, d } = await showDialog(1045, {
       setup(d) {
-        d.setRadio([8, 9, 10, 11, 12], 2);
-        d.setRadio([14, 15, 16, 17, 18], 4);
-        d.setRadio([20, 21, 22, 23, 24], 0);
-        d.setRadio([26, 27, 28, 29, 30], 0);
-        d.setRadio([32, 33, 34, 35], 0);
-        d.setRadio([37, 38, 39, 40], 0);
-        d.setText(42, "25");
-        d.setText(44, "40");
+        d.setChecked(6, s.preserve);
+        [s.evenMain, s.oddMain, s.evenReference, s.oddReference].forEach((v, k) => d.setRadio(GROUPS[k], v));
+        d.setRadio(HEADER, s.header);
+        d.setRadio(FOOTER, s.footer);
+        d.setText(42, String(s.lines));
+        d.setText(44, String(s.cells));
       },
-      // "When this is checked, most of the other controls on the dialog are disabled" (the manual).
       after(d) {
         const apply = () => {
           for (let c = 7; c <= 44; c++) d.enable(c, !d.checked(6));
@@ -3103,7 +3354,20 @@ const COMMANDS = {
         d.get(6)?.addEventListener("change", apply);
         apply();
       },
-    }),
+    });
+    if (result !== "ok") return;
+    const n = { ...s, preserve: d.checked(6) };
+    const corners = GROUPS.map((g, k) => d.radio(g) ?? [s.evenMain, s.oddMain, s.evenReference, s.oddReference][k]);
+    [n.evenMain, n.oddMain, n.evenReference, n.oddReference] = corners;
+    n.header = d.radio(HEADER) ?? s.header;
+    n.footer = d.radio(FOOTER) ?? s.footer;
+    // A count that is not a number above 0 keeps the one there was.
+    const lines = d.number(42);
+    const cells = d.number(44);
+    if (lines > 0) n.lines = lines;
+    if (cells > 0) n.cells = cells;
+    saveBraideSettings(n);
+  },
   3211: async () => {
     if (core) await tableFor("");
     await showDialog(1016, {

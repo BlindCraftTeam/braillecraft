@@ -49,6 +49,19 @@ pub struct Imported {
 const BRAILLE_SCAN: &str = "import-braille.sct";
 const PRINT_SCAN: &str = "import-print.sct";
 
+/// Every file a chain may read: the scan tables (tables/scan) and the rule scripts (tables/rule-scripts), for a
+/// caller that has to fetch them first.
+pub const SCAN_TABLES: [&str; 2] = [BRAILLE_SCAN, PRINT_SCAN];
+pub const RULE_SCRIPTS: [&str; 7] = [
+    "page-end-blanks.rules",
+    "ninit-codes.rules",
+    "table-outline.rules",
+    "normalize-spaces.rules",
+    "nemeth-in-ueb-1.rules",
+    "nemeth-in-ueb-2.rules",
+    "orbit-lines.rules",
+];
+
 /// Runs the recipe over the file's bytes.
 pub fn run(bytes: &[u8], recipe: &Recipe, files: &dyn Files) -> Imported {
     let mut out = Imported::default();

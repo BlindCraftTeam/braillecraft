@@ -69,7 +69,8 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   are imported the way the original program imports them (an Orbit file's line ends become line codes): formatted braille is read page by page, with the page numbers in its corners taken
   as page numbering, running heads and feet, print page changes, indented, centred and as-is lines turned back into
   codes; then format words ($p, |IND5 and the like), line ends, hyphens at line ends and spaces are read as the import
-  scan tables say, and the import rule scripts finish the codes, tables and Nemeth passages.
+  scan tables say, and the import rule scripts finish the codes, tables and Nemeth passages. The web build opens files
+  the same way, through the same import dialog and import steps, with its settings kept in the browser.
 - **Translated line.** Under the document, the braille (or the print) of the line you are on, updated as you write.
 - **View preferences.** A margin bell a chosen number of cells before the end of a braille line, which codes the
   translated line shows, line numbers beside each line of a braille document in the formatted view when

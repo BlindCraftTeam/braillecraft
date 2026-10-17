@@ -86,6 +86,143 @@ fn derive(s: Shown) {
     })
 }
 
+// ------------------------------------------------------------------ importing files
+
+thread_local! {
+    /// The files the import chains read, as the page fetched them, by name.
+    static IMPORT_FILES: std::cell::RefCell<std::collections::HashMap<String, Vec<u8>>> = Default::default();
+}
+
+/// The files the import chains read, for the page to fetch and hand in with `import_add_file`: "scan/<name>" and
+/// "rule-scripts/<name>" under tables/.
+#[wasm_bindgen]
+pub fn import_file_names() -> Vec<String> {
+    let scan = bc_core::import_chain::SCAN_TABLES.iter().map(|n| format!("scan/{n}"));
+    scan.chain(bc_core::import_chain::RULE_SCRIPTS.iter().map(|n| format!("rule-scripts/{n}"))).collect()
+}
+
+/// A file the import chains read (a name from `import_file_names`, without its folder) and its bytes.
+#[wasm_bindgen]
+pub fn import_add_file(name: &str, bytes: &[u8]) {
+    let name = name.rsplit('/').next().unwrap_or(name).to_string();
+    IMPORT_FILES.with(|f| f.borrow_mut().insert(name, bytes.to_vec()));
+}
+
+struct Fetched;
+
+impl bc_core::import_chain::Files for Fetched {
+    fn scan_table(&self, name: &str) -> Result<Vec<u8>, String> {
+        IMPORT_FILES.with(|f| f.borrow().get(name).cloned()).ok_or_else(|| format!("{name} was not found."))
+    }
+    fn rule_script(&self, name: &str) -> Result<bc_core::rule_script::RuleScript, String> {
+        let bytes = self.scan_table(name)?;
+        bc_core::rule_script::RuleScript::from_bytes(&bytes, None).map_err(|e| e.to_string())
+    }
+}
+
+/// The import filters in the order the import dialog lists them, one per line: the kind (as `detect_file` names it),
+/// a tab, the name, a tab, and its marks: "c" asks for a code page, "e" for a braille encoding, "b" makes a braille
+/// document.
+#[wasm_bindgen]
+pub fn import_filters() -> String {
+    use bc_core::filekind::FileKind;
+    FileKind::filters()
+        .iter()
+        .map(|(k, name)| {
+            let marks = [(k.asks_code_page(), 'c'), (k.asks_braille_encoding(), 'e'), (k.is_braille(), 'b')];
+            format!("{k:?}\t{name}\t{}", marks.iter().filter(|m| m.0).map(|m| m.1).collect::<String>())
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// The code page a text file is imported in when none has been chosen: ISO-8859-1, as for a system that is not
+/// one of the four the original program names.
+#[wasm_bindgen]
+pub fn default_import_code_page() -> String {
+    bc_core::codepages::default_import(None).to_string()
+}
+
+/// The kind of a file from its name and its first bytes, as File, Open finds it ("Document", "Pef", "CodedText",
+/// "FormattedBraille", "Rtf" and so on).
+#[wasm_bindgen]
+pub fn detect_file(name: &str, bytes: &[u8]) -> String {
+    format!("{:?}", bc_core::filekind::detect(name, bytes))
+}
+
+/// A file read through the import chain of its kind.
+#[wasm_bindgen]
+pub struct Imported {
+    running: String,
+    errors: String,
+    long_page: bool,
+    wide_line: bool,
+}
+
+#[wasm_bindgen]
+impl Imported {
+    /// The document text in running form (codes marked 0x1C ... 0x1F).
+    #[wasm_bindgen(getter)]
+    pub fn running(&self) -> String {
+        self.running.clone()
+    }
+    /// The steps that failed, one per line (empty when none did).
+    #[wasm_bindgen(getter)]
+    pub fn errors(&self) -> String {
+        self.errors.clone()
+    }
+    /// A formatted braille page had more lines than the importer's lines per page.
+    #[wasm_bindgen(getter)]
+    pub fn long_page(&self) -> bool {
+        self.long_page
+    }
+    /// A formatted braille line had more cells than the importer's cells per line.
+    #[wasm_bindgen(getter)]
+    pub fn wide_line(&self) -> bool {
+        self.wide_line
+    }
+}
+
+/// A coded text, coded braille, formatted braille or Orbit file through its import chain (the files from
+/// `import_file_names` handed in first). `kind` is the kind as `detect_file` names it; `code_page` and `unknown` (0 "*", 1
+/// nothing, 2 "{U+XXXX}") are for coded text; formatted braille comes in North American braille ASCII with
+/// `braide` = odd and even main page corners, odd and even reference page corners, header, footer, lines, cells and
+/// 1 to keep its formatting.
+#[wasm_bindgen]
+pub fn import_file(bytes: &[u8], kind: &str, code_page: &str, unknown: u8, braide: Vec<i32>) -> Result<Imported, JsError> {
+    use bc_core::filekind::FileKind;
+    use bc_core::import_chain::Recipe;
+    let filter = kind;
+    let kind = FileKind::filters().iter().find(|f| format!("{:?}", f.0) == kind).map(|f| f.0);
+    let recipe = match kind {
+        Some(FileKind::CodedText) => Recipe::CodedText(code_page.to_string(), unknown),
+        Some(FileKind::CodedBraille) => Recipe::CodedBraille,
+        Some(FileKind::Orbit) => Recipe::Orbit,
+        Some(FileKind::FormattedBraille) => {
+            let at = |k: usize, d: i32| braide.get(k).copied().unwrap_or(d);
+            let mut s = bc_core::braide::Settings::default();
+            s.odd_main = at(0, s.odd_main);
+            s.even_main = at(1, s.even_main);
+            s.odd_reference = at(2, s.odd_reference);
+            s.even_reference = at(3, s.even_reference);
+            s.header = at(4, s.header);
+            s.footer = at(5, s.footer);
+            s.lines = at(6, s.lines as i32).max(1) as usize;
+            s.cells = at(7, s.cells as i32).max(1) as usize;
+            s.preserve = at(8, 0) != 0;
+            Recipe::FormattedBraille(s)
+        }
+        _ => return Err(JsError::new(&format!("{filter} files are not read through an import chain."))),
+    };
+    let out = bc_core::import_chain::run(bytes, &recipe, &Fetched);
+    Ok(Imported {
+        running: bc_core::internal::decode(&out.text),
+        errors: out.errors.join("\n"),
+        long_page: out.warnings.long_page,
+        wide_line: out.warnings.wide_line,
+    })
+}
+
 /// The program's version, for the About box.
 #[wasm_bindgen]
 pub fn version() -> String {
