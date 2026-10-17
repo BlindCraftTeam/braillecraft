@@ -28,6 +28,11 @@ RELABEL = {3206: "&New in BrailleCraft 0.1", 3211: "&About BrailleCraft..."}
 CHECK = {1209, 1301, 1307, 1309, 1310, 2801, 2802}
 RADIO = {1303, 1304, 1305, 2701, 2702, 2703, 2704, 2705, 2706, 2901, 2902, 2903, 2904, 2905}
 
+# Keys the menu text names that the accelerator table does not bind and that are shown and bound all the same: Del
+# for Clear (with no selection Clear is the Delete key, so the key does what it did) and Alt+K for Suppress Skipped
+# Line, which no other control uses.
+MENU_KEYS = {1206, 1903}
+
 LINE = re.compile(r"^( +)(.*?)(?:\t(.*?))?(?:  \[id (\d+)\])?$")
 
 
@@ -77,7 +82,10 @@ def main():
             n = int(ident)
             if n in LEAVE_OUT_IDS:
                 continue
-            parent.append(("item", n, RELABEL.get(n, label), accel.get(n)))
+            key = accel.get(n)
+            if key is None and n in MENU_KEYS and _menu_keys:
+                key = _menu_keys.replace("Alt-", "Alt+").replace("Ctrl-", "Ctrl+").replace("Shift-", "Shift+")
+            parent.append(("item", n, RELABEL.get(n, label), key))
 
     def tidy(entries):
         # No separator first, last or doubled once items are left out.

@@ -481,6 +481,10 @@ pub fn edit_command(a: &mut app::App, i: usize, id: i32) -> bool {
             a.remember(part);
             if id == 1203 && from != to {
                 a.edit(i, from, to, &Shown::default());
+                // Cut ends Highlight, as in the original.
+                if a.docs[i].highlight_anchor.take().is_some() {
+                    a.update_status();
+                }
             }
         }
         1205 => {
@@ -489,7 +493,8 @@ pub fn edit_command(a: &mut app::App, i: usize, id: i32) -> bool {
             a.edit(i, from, to, &s);
         }
         1206 if from != to => a.edit(i, from, to, &Shown::default()),
-        1206 => {}
+        // With no selection Clear is the Delete key, as in the original.
+        1206 => a.edit_by(i, |e| e.delete(false)),
         1201 | 1202 => {
             a.undo(i, id == 1202);
         }

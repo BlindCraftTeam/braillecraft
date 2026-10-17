@@ -2606,7 +2606,11 @@ async function editStandard(id) {
       } catch {
         document.execCommand("copy");
       }
-      if (id === 1203) insertText("");
+      if (id === 1203 && from !== to) {
+        insertText("");
+        // Cut ends Highlight, as in the original.
+        doc.highlight = null;
+      }
       break;
     case 1205:
       try {
@@ -2616,6 +2620,12 @@ async function editStandard(id) {
       }
       break;
     case 1206:
+      // With no selection Clear is the Delete key, as in the original: the character after the caret goes (a code
+      // with it goes whole, as the editor takes codes out).
+      if (from === to && to < editor.value.length) {
+        const next = editor.value.codePointAt(to) > 0xffff ? 2 : 1;
+        editor.setSelectionRange(to, to + next);
+      }
       insertText("");
       break;
     case 1207:
@@ -2967,13 +2977,17 @@ async function modifyStyle() {
     },
   });
   if (result !== "ok" || !d.selected(8)) return;
+  // Changed codes are asked about first (1002), as in the original.
+  const changed = d.text(12) !== shownCodes[0] || d.text(14) !== shownCodes[1];
+  if (changed && !(await yesNo(`Are you sure you want to change the codes associated with style "${d.selected(8)}"?`))) return;
   file.set_style_codes(d.selected(8), d.text(12), d.text(14));
-  if (d.text(12) !== shownCodes[0] || d.text(14) !== shownCodes[1]) doc.dirty = true;
+  if (changed) doc.dirty = true;
   lastLine = null;
   showTranslatedLine();
 }
 
-// Document, Delete Style (dialog 1047): the chosen style leaves the document.
+// Document, Delete Style (dialog 1047), as the original: a document keeps at least one style (2172), and the style
+// chosen leaves the document only after Yes to 1026.
 async function deleteStyle() {
   const file = await documentFile();
   if (!file.style_names.length) {
@@ -2987,6 +3001,11 @@ async function deleteStyle() {
     },
   });
   if (result !== "ok" || !d.selected(7)) return;
+  if (file.style_names.length < 2) {
+    await message("There must always be at least one style.");
+    return;
+  }
+  if (!(await yesNo(`Are you sure you want to remove style "${d.selected(7)}"?`))) return;
   file.remove_style(d.selected(7));
   doc.dirty = true;
   lastLine = null;
@@ -3547,7 +3566,7 @@ function itemNode(entry, menuLabel, level) {
       s.className = "shortcut";
       s.textContent = entry.shortcut;
       item.append(s);
-      item.setAttribute("aria-keyshortcuts", entry.shortcut.replace(/\s/g, ""));
+      item.setAttribute("aria-keyshortcuts", entry.shortcut.replace(/\s/g, "").replace(/\bDel\b/, "Delete"));
     }
     item.addEventListener("click", () => run(entry.id, menuLabel, entry.label));
   }
@@ -3711,7 +3730,7 @@ for (const m of MENUS) {
   (function collect(items) {
     for (const entry of items) {
       if (entry.items) collect(entry.items);
-      else if (entry.shortcut) SHORTCUTS.set(entry.shortcut.toLowerCase(), [entry.id, m.label, entry.label]);
+      else if (entry.shortcut) SHORTCUTS.set(entry.shortcut.toLowerCase().replace(/\bdel\b/, "delete"), [entry.id, m.label, entry.label]);
     }
   })(m.items);
 }

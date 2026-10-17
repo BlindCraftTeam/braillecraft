@@ -3328,12 +3328,21 @@ fn modify_style() {
         return;
     }
     if let Some(name) = name {
+        // Changed codes are asked about first (1002), as in the original.
+        use crate::translation::{codes_for_dialog, codes_from_dialog};
+        let changed = app::with(|a| {
+            a.doc()
+                .and_then(|doc| doc.styles.iter().find(|s| s.name == name))
+                .is_some_and(|s| begin != codes_for_dialog(&s.begin) || end != codes_for_dialog(&s.end))
+        });
+        if changed && !yes_no(&format!("Are you sure you want to change the codes associated with style \"{name}\"?")) {
+            return;
+        }
         app::with(|a| {
             if let Some(doc) = a.doc_mut() {
                 if let Some(s) = doc.styles.iter_mut().find(|s| s.name == name) {
                     // A field is taken back only when it was changed, so text in a style that reads like a bracket
                     // (a braille cell in a contents title) is not made into a code by showing it.
-                    use crate::translation::{codes_for_dialog, codes_from_dialog};
                     if begin != codes_for_dialog(&s.begin) {
                         s.begin = codes_from_dialog(&begin);
                     }
@@ -3347,8 +3356,17 @@ fn modify_style() {
     }
 }
 
+/// Document, Delete Style, as the original: a document keeps at least one style (2172), and the style chosen is
+/// removed only after Yes to 1026.
 fn delete_style() {
     if let Some(s) = choose_style(1047) {
+        if style_names().len() < 2 {
+            message("There must always be at least one style.");
+            return;
+        }
+        if !yes_no(&format!("Are you sure you want to remove style \"{}\"?", s.name)) {
+            return;
+        }
         app::with(|a| {
             if let Some(d) = a.doc_mut() {
                 d.styles.retain(|x| x.name != s.name);

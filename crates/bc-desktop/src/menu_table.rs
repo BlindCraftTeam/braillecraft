@@ -26,7 +26,7 @@ const M1: &[Entry] = &[
     Entry::Item(1203, "Cu&t\tCtrl+X", Kind::Normal),
     Entry::Item(1204, "&Copy\tCtrl+C", Kind::Normal),
     Entry::Item(1205, "&Paste\tCtrl+V", Kind::Normal),
-    Entry::Item(1206, "C&lear", Kind::Normal),
+    Entry::Item(1206, "C&lear\tDel", Kind::Normal),
     Entry::Item(1207, "Select &All\tCtrl+A", Kind::Normal),
     Entry::Separator,
     Entry::Item(1209, "&Highlight\tCtrl+H", Kind::Check),
@@ -76,7 +76,7 @@ const M5: &[Entry] = &[
 const M6: &[Entry] = &[
     Entry::Item(1901, "New &Line\tCtrl+L", Kind::Normal),
     Entry::Item(1902, "S&kip Line\tCtrl+K", Kind::Normal),
-    Entry::Item(1903, "Suppress Skipped Line", Kind::Normal),
+    Entry::Item(1903, "Suppress Skipped Line\tAlt+K", Kind::Normal),
     Entry::Item(1904, "&Centering\tShift+F6", Kind::Normal),
     Entry::Item(1905, "&Flush Right\tShift+F7", Kind::Normal),
     Entry::Item(1906, "Flush Right &w/Leader\tAlt+F7", Kind::Normal),

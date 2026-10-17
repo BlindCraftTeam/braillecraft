@@ -113,7 +113,7 @@ export const MENUS = [
    {
     "id": 1206,
     "label": "C&lear",
-    "shortcut": "",
+    "shortcut": "Del",
     "kind": "normal"
    },
    {
@@ -382,7 +382,7 @@ export const MENUS = [
      {
       "id": 1903,
       "label": "Suppress Skipped Line",
-      "shortcut": "",
+      "shortcut": "Alt+K",
       "kind": "normal"
      },
      {

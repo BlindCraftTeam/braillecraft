@@ -13,6 +13,7 @@
 
 #import <AppKit/AppKit.h>
 #import <objc/runtime.h>
+#include <cstring>
 #include <wx/wxprec.h>
 #include <wx/wx.h>
 #include "doc_editor_internal.h"
@@ -200,15 +201,25 @@ static NSView* ViewOf(DocEditor* e)
 
 // The subclass answers -class and -superclass as its base class does. wxWidgets passes an event it does not handle
 // on through [self superclass]; answered by the subclass itself that is wxWidgets' own class, whose handler would
-// call itself without end.
+// call itself without end. The answers are taken from the subclass itself, wherever it is in the object's class
+// chain: the system can put a class of its own above it (key-value observing does), and counting from the object's
+// class would then answer wxWidgets' class, which is the same endless call (a click moving focus off the editor).
+static Class OwnSubclass(id self)
+{
+    for (Class c = object_getClass(self); c; c = class_getSuperclass(c)) {
+        if (strncmp(class_getName(c), "BCDocEditor_", 12) == 0) return c;
+    }
+    return object_getClass(self);
+}
+
 static Class ClassAsBase(id self, SEL)
 {
-    return class_getSuperclass(object_getClass(self));
+    return class_getSuperclass(OwnSubclass(self));
 }
 
 static Class SuperclassAsBase(id self, SEL)
 {
-    return class_getSuperclass(class_getSuperclass(object_getClass(self)));
+    return class_getSuperclass(class_getSuperclass(OwnSubclass(self)));
 }
 
 // The subclass of `base` with the accessibility methods, made once per base class.
