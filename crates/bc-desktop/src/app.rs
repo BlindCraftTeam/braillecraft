@@ -751,6 +751,15 @@ impl App {
         layout.print_numbers_even = bc_core::format::Corner::from_code(d.page_numbers[2]);
         layout.print_numbers_odd = bc_core::format::Corner::from_code(d.page_numbers[3]);
         layout.first_number_shown = d.page_numbers[4].max(1) as usize;
+        // The document's hyphenation table (spec 36).
+        let choice = match d.hyphen {
+            Hyphen::None => 0,
+            Hyphen::Dashes => 1,
+            Hyphen::DashesHyphens => 2,
+            Hyphen::French => 3,
+            Hyphen::French113 => 4,
+        };
+        layout.hyphen = crate::translation::hyphen_table(choice, !braille);
         (h.finish(), layout, crate::translation::style_table(&d.styles))
     }
 

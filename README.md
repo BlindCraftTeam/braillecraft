@@ -100,7 +100,11 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   Delete Style and changing a style's codes ask first, and the last style cannot be deleted; Clear (Del) with nothing
   selected deletes the character at the caret, and Cut ends Highlight. Shortcut Preferences checks its codes in the
   dialog, Notification Settings brings back every message hidden with "do not show again", and a new hyphen table
-  lays the document out again. Change Case works on the word at the caret when nothing is selected, and steps
+  lays the document out again. Words are hyphenated at line ends as the original does, by the document's Hyphen
+  Table (None, Dashes, Dashes and Hyphens, French, French 113; the tables ship as data): at a break marked in the
+  text, after or before a dash, after an internal hyphen, or (French, in braille documents) at a syllable break the
+  table's automaton finds, with a hyphen inserted; a word longer than a line with no break point is cut at the line
+  end; a computer braille word ([wb-cb]) breaks after punctuation and carries the continuation sign. Change Case works on the word at the caret when nothing is selected, and steps
   lower case to a capital on each word to upper case and back. Six-key entry (F2) works in print documents too. Goto checks its numbers in the dialog,
   offers the closest location when a place has no text, and goes to a print page with Use reference page number. Add Style
   checks the name in the dialog, then opens Edit Style Codes for the codes, and a style that cannot be nested gets

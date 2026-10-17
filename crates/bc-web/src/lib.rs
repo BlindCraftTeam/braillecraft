@@ -1442,6 +1442,25 @@ thread_local! {
     /// The active document's page numbering (the five values of Document, Page Numbering), which its pages are laid
     /// out with.
     static NUMBERING: std::cell::Cell<[u32; 5]> = const { std::cell::Cell::new([0; 5]) };
+    /// The active document's hyphenation table (Document, Hyphen Table), which its pages are laid out with.
+    static HYPHEN: std::cell::RefCell<Option<bc_core::hyphen::HyphenTable>> = const { std::cell::RefCell::new(None) };
+}
+
+/// The hyphenation table file (under tables/hyphenation, without ".hct") for a document's Hyphen Table choice (0
+/// None to 4 French 113) in a print or braille document (spec 36 1.2).
+#[wasm_bindgen]
+pub fn hyphenation_file(choice: u32, print: bool) -> String {
+    bc_core::hyphen::file_name(choice.min(4) as u8, print).to_string()
+}
+
+/// Sets the hyphenation table the active document's pages are laid out with, from the table's text (empty: none);
+/// false when the text is not a table.
+#[wasm_bindgen]
+pub fn set_hyphenation(text: &str) -> bool {
+    let table = if text.trim().is_empty() { None } else { bc_core::hyphen::HyphenTable::parse(text).ok() };
+    let ok = table.is_some() || text.trim().is_empty();
+    HYPHEN.with(|h| *h.borrow_mut() = table);
+    ok
 }
 
 /// Sets the page numbering the active document's pages are laid out with: braille page numbers on even pages and
@@ -1471,6 +1490,7 @@ fn page_layout(cells: u32, lines: u32, braille: bool) -> bc_core::format::Layout
     layout.print_numbers_even = bc_core::format::Corner::from_code(n[2]);
     layout.print_numbers_odd = bc_core::format::Corner::from_code(n[3]);
     layout.first_number_shown = n[4].max(1) as usize;
+    layout.hyphen = HYPHEN.with(|h| h.borrow().clone());
     layout
 }
 

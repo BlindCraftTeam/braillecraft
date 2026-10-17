@@ -95,6 +95,9 @@ pub struct Layout {
     /// Print page numbers (from [lea]) on even pages and on odd pages.
     pub print_numbers_even: Corner,
     pub print_numbers_odd: Corner,
+    /// The document's hyphenation table (Document, Hyphen Table; spec 36); none breaks words only where the text
+    /// marks a break, as the None table does.
+    pub hyphen: Option<crate::hyphen::HyphenTable>,
 }
 
 impl Layout {
@@ -108,6 +111,7 @@ impl Layout {
             first_number_shown: 1,
             print_numbers_even: Corner::None,
             print_numbers_odd: Corner::None,
+            hyphen: None,
         }
     }
 
@@ -209,6 +213,8 @@ enum Piece {
     Code(String),
     /// A document position that gets no cell: where the formatter's pen stands there is recorded (Line::marks).
     Mark(usize),
+    /// The character U+001D: a hyphenation break may follow the cell before it.
+    Break,
 }
 
 /// The document in pieces: its codes (the ranges the document marks as codes; a bracket elsewhere is text), with
@@ -248,6 +254,10 @@ fn pieces(doc: &Shown, styles: Option<&StyleTable>) -> Vec<Piece> {
             ' ' => {
                 out.push(Piece::Space);
                 after_break_code = false;
+                i += 1;
+            }
+            '\u{1d}' => {
+                out.push(Piece::Break);
                 i += 1;
             }
             c => {
@@ -530,6 +540,14 @@ struct Formatter {
     table: Option<Box<table::Collector>>,
     htbfmt: (i64, String),
     page_tables: Vec<TableRegion>,
+    /// Hyphenation (spec 36): the cells of the word being collected after which a marked break (U+001D) may come;
+    /// the [wbN] override of the cells before an automaton break (-1 for the table's); the [wb-cb] continuation
+    /// string and the [svcbh] hyphen override; the last word's characters, which [svcbh] reads.
+    word_breaks: Vec<usize>,
+    wb_min: i64,
+    cb_cont: String,
+    hyphen_override: Option<char>,
+    last_word: Vec<char>,
 }
 
 impl Formatter {
@@ -605,6 +623,11 @@ impl Formatter {
             table: None,
             htbfmt: (0, String::new()),
             page_tables: Vec::new(),
+            word_breaks: Vec::new(),
+            wb_min: -1,
+            cb_cont: "_&".into(),
+            hyphen_override: None,
+            last_word: Vec::new(),
         }
     }
 
@@ -1271,60 +1294,173 @@ impl Formatter {
             }
         }
         let word_break = std::mem::take(&mut self.word_break);
-        let mut rest = cells;
-        let mut k = 0;
-        while !rest.is_empty() {
-            // Each line's own width (a page number's line is narrower).
+        let mut cells: Vec<(char, Option<usize>)> = cells.to_vec();
+        let mut flags = vec![false; cells.len()];
+        for &k in &self.word_breaks {
+            if k < flags.len() {
+                flags[k] = true;
+            }
+        }
+        self.word_breaks.clear();
+        self.last_word = cells.iter().map(|c| c.0).collect();
+        // Without the document's table the None table applies: marked breaks only.
+        let table = self.layout.hyphen.clone().unwrap_or_else(crate::hyphen::HyphenTable::none);
+        // The word placed as the original places it (spec 36 section 4): whole when it fits after the pending
+        // space; else the first piece up to a break point the hyphenation table finds (a marked break, a dash, an
+        // internal hyphen, or an automaton break with a hyphen inserted); else, for a word longer than a whole
+        // line, cut at the line end with no mark when at least one cell is free; else the whole word goes to the
+        // next line. The remainder goes on from the runover margin, searched and cut again while it is longer than
+        // a line. [wb-no] searches for no break; [wb-cb] breaks a computer-braille word after punctuation (or at
+        // the room less the continuation string) and writes the continuation string after the first part.
+        let n = cells.len();
+        let width = self.width();
+        let used = self.line.text.chars().count();
+        let has_text = self.line_has_text();
+        let gap = usize::from(has_text && !self.touching);
+        let col = if has_text { used } else { self.start_col.max(used).max(self.rooms().0) };
+        let mut placed = 0usize;
+        let mut k = 0usize;
+        if col + gap + n <= width {
+            self.put_piece(&cells, 0, n, &mut k, gap, used, col);
+            self.place_word_marks(k, self.line.text.chars().count());
+            self.touching = false;
+            return;
+        }
+        if word_break == 2 {
+            self.computer_braille_word(cells, gap, used, col);
+            return;
+        }
+        if word_break == 0 {
+            let room = width as i64 - col as i64 - gap as i64;
+            let before = cells.len();
+            let bp = crate::hyphen::break_point(&table, crate::hyphen::Word { cells: &mut cells, flags: &mut flags }, 0, room, 0, self.wb_min, self.hyphen_override);
+            if cells.len() > before {
+                self.shift_word_marks(bp.saturating_sub(1));
+            }
+            if bp > 0 {
+                placed = bp.min(width.saturating_sub(col + gap));
+                self.put_piece(&cells, 0, placed, &mut k, gap, used, col);
+            }
+        }
+        if placed == 0 && cells.len() > width && col + gap < width {
+            placed = width - col - gap;
+            self.put_piece(&cells, 0, placed, &mut k, gap, used, col);
+        }
+        while placed < cells.len() {
+            self.touching = false;
+            self.end_line(self.runover());
+            if cells[placed].0 == ' ' {
+                placed += 1;
+                k += 1;
+                if placed >= cells.len() {
+                    break;
+                }
+            }
             let width = self.width();
             let used = self.line.text.chars().count();
-            let has_text = self.line_has_text();
-            let gap = usize::from(has_text && !self.touching);
-            let start = if has_text { used + gap } else { self.start_col.max(used).max(self.rooms().0) };
-            let room = width.saturating_sub(start);
-            // A word that does not fit breaks after the last hyphen that does (INFERENCE: the reference also breaks
-            // where translation marks a break and after its hyphenation pair; only the hyphen cell is used here). A
-            // word longer than a whole line starts on this line when there is room after the space; else it goes to
-            // the next line, and a word longer than a line with nothing before it is cut at the line end.
-            // [wb-no] lets no hyphen break the word; [wb-cb] lets it break at any cell (INFERENCE: without a
-            // continuation sign).
-            let take = if rest.len() <= room {
-                rest.len()
-            } else if word_break == 2 && room >= 1 {
-                room
-            } else if let Some(n) = rest[..room.min(rest.len())].iter().rposition(|c| c.0 == '-').map(|i| i + 1).filter(|_| word_break != 1) {
-                n
-            } else if !has_text {
-                room.max(1)
-            } else if rest.len() > width && room >= 1 {
-                room
-            } else {
-                self.touching = false;
-                self.end_line(self.runover());
-                continue;
-            };
-            if has_text {
-                if gap == 1 {
-                    self.put(' ', None);
+            let col = self.start_col.max(used).max(self.rooms().0);
+            let left = cells.len() - placed;
+            let mut piece = width.saturating_sub(col).min(left);
+            if width < col + left && word_break == 0 {
+                let before = cells.len();
+                let bp = crate::hyphen::break_point(&table, crate::hyphen::Word { cells: &mut cells, flags: &mut flags }, placed, (width as i64 - col as i64).max(0), 0, self.wb_min, self.hyphen_override);
+                if cells.len() > before {
+                    self.shift_word_marks(bp.saturating_sub(1));
                 }
-            } else {
-                for _ in used..start {
-                    self.put(' ', None);
+                if bp > placed {
+                    piece = bp - placed;
                 }
             }
-            let (now, later) = rest.split_at(take);
-            for &(c, s) in now {
-                let col = self.line.text.chars().count();
-                self.place_word_marks(k, col);
-                self.put(c, s);
-                k += 1;
+            if piece == 0 {
+                piece = left.min(1);
             }
-            rest = later;
-            if !rest.is_empty() {
-                self.end_line(self.runover());
-            }
+            self.put_piece(&cells, placed, piece, &mut k, 0, used, col);
+            placed += piece;
         }
         let col = self.line.text.chars().count();
         self.place_word_marks(k, col);
+        self.touching = false;
+    }
+
+    /// Puts `count` cells of `cells` from `from` on the line: after a space when `gap` is 1, else from column `col`
+    /// of an empty line (spaces up to it from the `used` cells).
+    fn put_piece(&mut self, cells: &[(char, Option<usize>)], from: usize, count: usize, k: &mut usize, gap: usize, used: usize, col: usize) {
+        if self.line_has_text() {
+            if gap == 1 {
+                self.put(' ', None);
+            }
+        } else {
+            for _ in used..col {
+                self.put(' ', None);
+            }
+        }
+        for &(c, s) in &cells[from..from + count] {
+            let at = self.line.text.chars().count();
+            self.place_word_marks(*k, at);
+            self.put(c, s);
+            *k += 1;
+        }
+    }
+
+    /// A hyphen was inserted into the word after cell index `at`: the marks of the cells after it move up one.
+    fn shift_word_marks(&mut self, at: usize) {
+        for m in &mut self.word_marks {
+            if m.1 > at {
+                m.1 += 1;
+            }
+        }
+    }
+
+    /// A [wb-cb] word that does not fit (spec 36 section 6): broken after the last punctuation cell past the third
+    /// within the room less the continuation string, else at that room; the continuation string follows the first
+    /// part; the remainder goes on from the runover margin. INFERENCE: the original first looks ahead to the next
+    /// computer-braille word and may join or move the whole word (its five cases are not traced, spec 36 unknown
+    /// 10); here the word is placed whole when it fits, else split.
+    fn computer_braille_word(&mut self, cells: Vec<(char, Option<usize>)>, gap: usize, used: usize, col: usize) {
+        let mut rest: &[(char, Option<usize>)] = &cells;
+        let mut k = 0usize;
+        let (mut gap, mut used, mut col) = (gap, used, col);
+        loop {
+            let width = self.width();
+            let n = rest.len();
+            if col + gap + n <= width {
+                self.put_piece(rest, 0, n, &mut k, gap, used, col);
+                break;
+            }
+            let cont = self.cb_cont.clone();
+            let room = width.saturating_sub(col).saturating_sub(cont.chars().count());
+            let mut count = room.min(n);
+            let split = crate::hyphen::cb_split(rest, room).unsigned_abs() as usize;
+            if split > 0 && split < count {
+                count = split;
+            }
+            if count == 0 && self.line_has_text() {
+                self.touching = false;
+                self.end_line(self.runover());
+                used = self.line.text.chars().count();
+                col = self.start_col.max(used).max(self.rooms().0);
+                gap = 0;
+                continue;
+            }
+            let count = count.max(1).min(n);
+            self.put_piece(rest, 0, count, &mut k, gap, used, col);
+            for c in cont.chars() {
+                if self.line.text.chars().count() < width {
+                    self.put(c, None);
+                }
+            }
+            rest = &rest[count..];
+            if rest.is_empty() {
+                break;
+            }
+            self.touching = false;
+            self.end_line(self.runover());
+            used = self.line.text.chars().count();
+            col = self.start_col.max(used).max(self.rooms().0);
+            gap = 0;
+        }
+        let at = self.line.text.chars().count();
+        self.place_word_marks(k, at);
         self.touching = false;
     }
 
@@ -1341,6 +1477,30 @@ impl Formatter {
             return;
         }
         if code == "htbe" {
+            return;
+        }
+        // [wbP] the cells before an automaton hyphenation break (P - 1); [wb] alone the table's (spec 36 section 3).
+        if let Some(rest) = code.strip_prefix("wb") {
+            if rest.is_empty() || rest.chars().all(|c| c.is_ascii_digit()) {
+                self.wb_min = rest.parse::<i64>().map_or(-1, |p| p - 1);
+            }
+            return;
+        }
+        // [svcbhN]: 0 or 2 the last word's cells (up to ten) become the computer-braille continuation string; 1 or
+        // 2 its first cell the hyphen for inserted breaks; 3 resets that to the table's.
+        if let Some(rest) = code.strip_prefix("svcbh") {
+            let n: i64 = rest.trim().parse().unwrap_or(0);
+            if n == 0 || n == 2 {
+                self.cb_cont = self.last_word.iter().take(10).collect();
+            }
+            if n == 1 || n == 2 {
+                if let Some(&c) = self.last_word.first().filter(|c| (0x20..0x80).contains(&(**c as u32))) {
+                    self.hyphen_override = Some(c);
+                }
+            }
+            if n == 3 {
+                self.hyphen_override = None;
+            }
             return;
         }
         // [fr;F~X] the next word flush right (before a page number's room), with fill F ('p' partial) of the first
@@ -1844,11 +2004,12 @@ impl Formatter {
                     self.word(&std::mem::take(word));
                     self.touching = true;
                 }
-                // The word break mode of the word in progress: [wb-no] none, [wb-cb] computer braille, [wb] normal.
+                // The word break mode of the word in progress: [wb-no] none, [wb-cb] computer braille (as [wb-no]
+                // on a line narrower than five cells), [wb] normal.
                 match code.as_str() {
                     "wb-no" => self.word_break = 1,
-                    "wb-cb" => self.word_break = 2,
-                    "wb" => self.word_break = 0,
+                    "wb-cb" => self.word_break = if self.layout.cells < 5 { 1 } else { 2 },
+                    c if c.starts_with("wb") => self.word_break = 0,
                     _ => {}
                 }
                 if is_layout(code) {
@@ -1860,6 +2021,13 @@ impl Formatter {
                     self.word_marks.push((*pos, word.len()));
                 } else if self.heading.is_none() && self.running.is_none() {
                     self.mark(*pos);
+                }
+            }
+            // A marked hyphenation break (U+001D, the old assisted-hyphen code): the word may break after the cell
+            // before it (spec 36 section 3).
+            Piece::Break => {
+                if let Some(k) = word.len().checked_sub(1) {
+                    self.word_breaks.push(k);
                 }
             }
         }
@@ -2002,6 +2170,8 @@ fn is_layout(code: &str) -> bool {
     code.starts_with("htbs")
         || code == "htbe"
         || code.starts_with("htbfmt")
+        || code.starts_with("svcbh")
+        || (code.starts_with("wb") && code[2..].chars().all(|c| c.is_ascii_digit()))
         || code.starts_with("fr;")
         || code.starts_with("fr~")
         || code.starts_with("tab~")
@@ -2684,7 +2854,17 @@ mod tests {
 
     #[test]
     fn a_word_that_does_not_fit_breaks_after_a_hyphen_and_a_long_word_starts_on_the_line() {
+        // With the Dashes and Hyphens table (the templates' default) the word breaks after its hyphen.
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tables/hyphenation/dashes-hyphens.hct");
+        let mut layout = Layout::braille(8, 3);
+        layout.hyphen = Some(crate::hyphen::HyphenTable::parse(&std::fs::read_to_string(path).unwrap()).unwrap());
+        let pages = format(&m("aaa bbb-ccc"), &layout, None);
+        assert_eq!(texts(&pages[0])[..2], ["aaa bbb-", "ccc"]);
+        // Without a table (None) the word goes whole to the next line; a marked break (U+001D) still breaks it,
+        // with a hyphen inserted.
         let pages = format(&m("aaa bbb-ccc"), &Layout::braille(8, 3), None);
+        assert_eq!(texts(&pages[0])[..2], ["aaa", "bbb-ccc"]);
+        let pages = format(&m("aaa bbb\u{1d}ccc"), &Layout::braille(8, 3), None);
         assert_eq!(texts(&pages[0])[..2], ["aaa bbb-", "ccc"]);
         // Longer than a line: as much as fits after the space, the rest on the next line.
         let pages = format(&m("ab cdefghijk"), &Layout::braille(6, 3), None);
@@ -2833,10 +3013,14 @@ mod tests {
         assert_eq!(pages.len(), 3);
         assert!(pages[1].lines.iter().all(|l| l.text.trim().is_empty()));
         assert_eq!(texts(&pages[2])[0], "b");
-        // [wb-no]: the word moves whole to the next line instead of breaking at its hyphen.
-        let pages = format(&m("xy ab-cd"), &Layout::braille(6, 3), None);
+        // [wb-no]: the word moves whole to the next line instead of breaking at its hyphen (with the Dashes and
+        // Hyphens table).
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tables/hyphenation/dashes-hyphens.hct");
+        let mut layout = Layout::braille(6, 3);
+        layout.hyphen = Some(crate::hyphen::HyphenTable::parse(&std::fs::read_to_string(path).unwrap()).unwrap());
+        let pages = format(&m("xy ab-cd"), &layout, None);
         assert_eq!(texts(&pages[0])[..2], ["xy ab-", "cd"]);
-        let pages = format(&m("xy [wb-no]ab-cd"), &Layout::braille(6, 3), None);
+        let pages = format(&m("xy [wb-no]ab-cd"), &layout, None);
         assert_eq!(texts(&pages[0])[..2], ["xy", "ab-cd"]);
         // An anticipatory head shows as it stands when the page closes.
         let pages = format(&m("[tls]one[tle][svant1]a[tls]two[tle]b"), &Layout::braille(10, 4), None);

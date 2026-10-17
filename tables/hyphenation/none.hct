@@ -1,0 +1,35 @@
+| none.hct 1;1 - hyphenation control tbl; breaks nowhere
+| 1;1 1990-1-2 JES: from dash.hct 1;1
+-hinit 1
+| hyphenation mode:
+|   0 = no breaks whatsoever (even at dashes)
+|   1 = breaks preferably after, possibly before, dashes
+|   2 = like 1, but also breaks after internal hyphens
+|   3 = Markov algorithm
+0
+| sequence used for dash (2 chars)
+--
+| hyphen character
+-
+| minimum "real" word length to hyphenate at all
+4
+| minimum length word to leave before break at dash
+2
+| min to leave before internal hyphen
+2
+| min to leave before algorithm-break
+2
+ | spare
+ | spare
+# | char which, at beginning of wd, excludes it from hy'n (number sign)
+| transition-string for beginning-of-word (actually n/a)
+| !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_
+ 1000000000001010000000011000000000000000000000000000000000000001
+2 | no. of algorithm states (>=2, <= 16); req: 0=unsure; 1=end of wd
+| !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_
+ 10000001000001             | 0 = uncertain
+ 10000001000001001111111101 | 1 = at end
+| transition-string for excluding pieces all of a class (e.g. lower signs)
+| !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_
+ 1000000100001110111111111101
+*** | required table terminator

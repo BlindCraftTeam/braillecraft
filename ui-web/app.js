@@ -489,6 +489,7 @@ function caretLine() {
 // Gives the core the active document's page numbering, which its pages are laid out with. A new document takes
 // its template's, once its document file is made.
 function syncNumbering() {
+  syncHyphenation();
   if (doc.file) {
     core.set_page_numbering(Uint32Array.from(doc.file.page_numbers));
     return;
@@ -3964,11 +3965,32 @@ async function codeList() {
   if (chosen) insertCodes(`[${chosen[0]}${d.text(22)}]`);
 }
 
-// Document, Hyphen Table: the document's table; a change marks the document changed, as in the original.
+// Document, Hyphen Table: the document's table; a change marks the document changed and lays the document out
+// again, as in the original.
 function setHyphen(id) {
   if (doc.hyphen !== id) doc.dirty = true;
   doc.hyphen = id;
   refreshMenus();
+  syncHyphenation();
+}
+
+// Gives the core the active document's hyphenation table (Document, Hyphen Table; French in a print document
+// takes Dashes and Hyphens), each table file read once from tables/hyphenation beside the page.
+const hyphenTables = new Map();
+async function syncHyphenation() {
+  if (!core) return;
+  const d = doc;
+  const file = core.hyphenation_file((d.hyphen ?? 2902) - 2901, d.kind !== "braille");
+  if (!hyphenTables.has(file)) {
+    try {
+      hyphenTables.set(file, await (await fetch(`tables/hyphenation/${file}.hct`)).text());
+    } catch {
+      hyphenTables.set(file, "");
+    }
+  }
+  if (d !== doc) return;
+  core.set_hyphenation(hyphenTables.get(file));
+  showStatus();
 }
 
 // ------------------------------------------------------------------ Document, Translation and Learning Tables

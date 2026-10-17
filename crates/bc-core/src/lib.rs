@@ -23,6 +23,7 @@ pub mod find;
 pub mod font_list;
 pub mod format;
 pub mod fview;
+pub mod hyphen;
 pub mod html_export;
 pub mod pef;
 pub mod pdf_import;

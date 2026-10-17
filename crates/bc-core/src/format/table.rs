@@ -414,6 +414,7 @@ impl Collector {
                 // Placed with the character after it.
                 self.pending_marks.push(*pos);
             }
+            Piece::Break => {}
             Piece::Code(code) => {
                 if !self.word.is_empty() {
                     let w = std::mem::take(&mut self.word);

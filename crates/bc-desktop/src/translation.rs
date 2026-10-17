@@ -35,6 +35,9 @@ thread_local! {
     static REGION: Cell<u32> = const { Cell::new(1) };
     /// The folder of the rule scripts coded files are made with (tables/rule-scripts).
     static RULES: RefCell<Option<std::path::PathBuf>> = const { RefCell::new(None) };
+    /// The hyphenation tables folder (tables/hyphenation) and the tables read from it, by file name.
+    static HYPHENS: RefCell<Option<std::path::PathBuf>> = const { RefCell::new(None) };
+    static HYPHEN_TABLES: RefCell<HashMap<String, Option<bc_core::hyphen::HyphenTable>>> = RefCell::new(HashMap::new());
     /// The command line's /template, for this run.
     static RUN_TEMPLATE: RefCell<Option<String>> = const { RefCell::new(None) };
 }
@@ -125,6 +128,22 @@ impl bc_core::import_chain::Files for ImportFiles {
     }
 }
 
+/// The hyphenation table for a document's Hyphen Table choice (0 None to 4 French 113; spec 36 1.2: French in a
+/// print document takes Dashes and Hyphens), read once from tables/hyphenation; None when it is not there.
+pub fn hyphen_table(choice: u8, print: bool) -> Option<bc_core::hyphen::HyphenTable> {
+    let name = bc_core::hyphen::file_name(choice, print).to_string();
+    HYPHEN_TABLES.with(|t| {
+        t.borrow_mut()
+            .entry(name.clone())
+            .or_insert_with(|| {
+                let folder = HYPHENS.with(|h| h.borrow().clone())?;
+                let text = std::fs::read_to_string(folder.join(format!("{name}.hct"))).ok()?;
+                bc_core::hyphen::HyphenTable::parse(&text).ok()
+            })
+            .clone()
+    })
+}
+
 /// The Word style map a template names: its "word:mws" pseudo-style's text, as a program data file name.
 pub fn word_map_of_template(name: &str) -> String {
     let text = TEMPLATES.with(|t| {
@@ -147,6 +166,7 @@ pub fn load(folder: &Path) -> Result<usize, String> {
     braille.print_document = false;
     TABLES.with(|t| *t.borrow_mut() = Some(set));
     RULES.with(|r| *r.borrow_mut() = Some(folder.join("rule-scripts")));
+    HYPHENS.with(|h| *h.borrow_mut() = Some(folder.join("hyphenation")));
     LANGUAGES.with(|l| *l.borrow_mut() = Some((print, braille)));
     LIST.with(|l| *l.borrow_mut() = list);
     Ok(n)

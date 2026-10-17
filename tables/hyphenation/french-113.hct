@@ -1,0 +1,41 @@
+| frabrl.hct 1;2 - hyphenation control tbl for French text
+| 1;1 1988-2-9 JES (derived from dash.hct)
+| 1;2 1994-9-16/20 JES: handle lowercase letters as well as u.c., which is
+|     necessary for new .brx files (since there is no internal upcasing, as
+|     with former .sct-based scanning)
+-hinit 1
+| hyphenation mode:
+|   0 = no breaks whatsoever (even at dashes)
+|   1 = breaks preferably after, possibly before, dashes
+|   2 = like 1, but also breaks after internal hyphens
+|   3 = Markov algorithm
+3
+| sequence used for dash (2 chars)
+--
+| hyphen character
+-
+| minimum "real" word length to hyphenate at all
+4
+| minimum length word to leave before break at dash
+2
+| min to leave before internal hyphen
+2
+| min to leave before algorithm-break
+2
+ | spare
+ | spare
+# | char which, at beginning of wd, excludes it from hy'n (number sign)
+| transition-string for beginning-of-word
+| !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~
+ 10000000000010100000000110000000000000000000000000000000000000010000000000000000000000000000000
+5 | no. of algorithm states (>=2, <= 16); req: 0=unsure; 1=end of wd
+| !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~
+ 10220001020221220204224322220200223332333230333234333230323220322233323332303332343332303232203| 0 uncertain
+ 10222221022221221111111121222222223332333230333234333232222222222233323332303332343332322222222| 1 at end
+ 13224401424221224244224322224244224442444240444243444243323224422244424442404442434442433232244| 2 bf V
+ 12222221222221224224224322222222223332333232333234333232223222322233323332323332343332322232223| 3 bf inel C
+ 1BB2BB21BBB2B12BD2BD22D32222BB2B2B###B###B#B###B#D###B#B2B32BB322B###B###B#B###B#D###B#B2B32BB3| 4 bf elig C
+| transition-string for excluding pieces all of a class (e.g. lower signs)
+| !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_
+ 1000000100001110111111111101
+*** | required table terminator
