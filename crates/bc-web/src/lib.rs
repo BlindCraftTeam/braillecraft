@@ -1368,6 +1368,11 @@ pub fn set_page_numbering(numbers: Vec<u32>) {
 /// A document's pages: a braille document in braille pages, a print document in print pages, with the active
 /// document's page numbering (as the desktop program lays them out for the view, File Print and File Emboss).
 fn laid_out(text: &str, cells: u32, lines: u32, braille: bool) -> Vec<bc_core::format::Page> {
+    bc_core::format::format(&shown_of(text), &page_layout(cells, lines, braille), None)
+}
+
+/// The page layout a document is laid out with: its page size and the active document's page numbering.
+fn page_layout(cells: u32, lines: u32, braille: bool) -> bc_core::format::Layout {
     let (c, l) = (cells.max(1) as usize, lines.max(1) as usize);
     let mut layout = if braille { bc_core::format::Layout::braille(c, l) } else { bc_core::format::Layout::print(c, l) };
     let n = NUMBERING.with(|c| c.get());
@@ -1376,7 +1381,46 @@ fn laid_out(text: &str, cells: u32, lines: u32, braille: bool) -> Vec<bc_core::f
     layout.print_numbers_even = bc_core::format::Corner::from_code(n[2]);
     layout.print_numbers_odd = bc_core::format::Corner::from_code(n[3]);
     layout.first_number_shown = n[4].max(1) as usize;
-    bc_core::format::format(&shown_of(text), &layout, None)
+    layout
+}
+
+/// Layout, Style Level + and - on the editor's text (bc_core style_level, spec 34), with the selection's anchor and
+/// the caret as UTF-16 places and the document laid out `cells` by `lines`. Answers JSON {"text", "anchor",
+/// "caret" (UTF-16), "beep", "changed"}; inside a table {"caret", "beep"} for the cell move.
+#[wasm_bindgen]
+pub fn editor_style_level(step: i32, anchor: u32, caret: u32, cells: u32, lines: u32, braille: bool) -> String {
+    use bc_core::style_level as sl;
+    EDITOR.with(|e| {
+        let mut e = e.borrow_mut();
+        let t = e.shown.text.clone();
+        let to_running = |u: u32| e.shown.slice(0, char_pos(&t, u)).to_running().chars().count();
+        let (a, c) = (to_running(anchor), to_running(caret));
+        let running = e.shown.to_running();
+        let place = |r: usize, text: &str| Shown::from_running(&text.chars().take(r).collect::<String>()).text.chars().count();
+        if bc_core::table_cmd::table_at(&running, c).is_some() {
+            return match sl::cell_move(&running, c, step > 0) {
+                Some(r) => serde_json::json!({ "caret": utf16_pos(&t, place(r, &running)), "beep": false }).to_string(),
+                None => serde_json::json!({ "beep": true }).to_string(),
+            };
+        }
+        let pages = bc_core::format::format(&e.shown, &page_layout(cells, lines, braille), None);
+        let page = bc_core::format::locate(&pages, char_pos(&t, caret)).0;
+        let page_start = pages.get(page.saturating_sub(1)).map_or(0, |p| p.start);
+        let start_r = e.shown.slice(0, page_start).to_running().chars().count();
+        let out = sl::change(&running, a, c, anchor != caret, step, start_r, sl::page_style(&running, start_r), sl::max_level(&running, c));
+        if out.changed {
+            e.shown = Shown::from_running(&out.running);
+        }
+        let text = e.shown.text.clone();
+        serde_json::json!({
+            "text": text,
+            "anchor": utf16_pos(&text, place(out.anchor, &out.running)),
+            "caret": utf16_pos(&text, place(out.caret, &out.running)),
+            "beep": out.beep,
+            "changed": out.changed,
+        })
+        .to_string()
+    })
 }
 
 /// How many pages a document takes laid out `cells` by `lines`.

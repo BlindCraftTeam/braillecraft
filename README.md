@@ -99,7 +99,10 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   checks the name in the dialog, then opens Edit Style Codes for the codes, and a style that cannot be nested gets
   its period. Rename Style checks the new name in the dialog. Code List (F5) lists all 300 codes by category,
   remembers the categories chosen, and takes a double-click as OK. A paragraph style applied takes whole paragraphs, Join Lines and
-  Join Styles work on the selection, and New Paragraph inside a style ends it and starts it again.
+  Join Styles work on the selection, and New Paragraph inside a style ends it and starts it again. Style Level +
+  and - (Alt+Right, Alt+Left) raise or lower the hierarchy level code [hlN] of the paragraph style at the caret, up
+  to the most levels the [hi] code allows, and renumber every run of level codes in a selection; inside a table they
+  move to the next or previous cell of the row; a failure beeps.
 - **Find and Replace as the original.** Each document keeps its own Find and Replace. A search looks in the
   selection first, then offers the rest of the document and the other end of it; it can search for codes, for a
   style by its name (Replace renames a style's codes, or takes them out), or with a `*` at the end of a code standing

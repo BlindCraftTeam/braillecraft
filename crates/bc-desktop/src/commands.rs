@@ -368,7 +368,8 @@ pub fn run(id: i32, checked: bool) {
 
         1401 => apply_style(),
         1402 => apply_last_style(),
-        1403 | 1404 => message(PLANNED_FORMATTER),
+        1403 => style_level(1),
+        1404 => style_level(-1),
         1406 => join_styles(),
         1407 => join_lines(),
         1409 => set_page_number(),
@@ -2806,6 +2807,48 @@ fn apply_last_style() {
     });
     if let Some(name) = name {
         apply_named_style(&name);
+    }
+}
+
+/// Layout, Style Level + and - (spec 34): inside a table the caret moves to the next or previous cell of its row;
+/// else the level code of the paragraph style at the caret, and every run of level codes in the selection, move by
+/// `step`. A failure beeps, as in the original.
+fn style_level(step: i32) {
+    use bc_core::style_level as sl;
+    let Some((shown, anchor, caret, page_start)) = app::with(|a| {
+        a.active.map(|i| {
+            let (shown, (f, t), c) = {
+                let d = &a.docs[i];
+                (d.shown(), d.selection(), d.caret())
+            };
+            let pages = a.laid_out(i, &shown);
+            let page = bc_core::format::locate(&pages, c).0;
+            let page_start = pages.get(page.saturating_sub(1)).map_or(0, |p| p.start);
+            (shown, if c == f { t } else { f }, c, page_start)
+        })
+    }) else {
+        return;
+    };
+    let to_running = |p: usize| shown.slice(0, p).to_running().chars().count();
+    let running = shown.to_running();
+    let (a_r, c_r, start_r) = (to_running(anchor), to_running(caret), to_running(page_start));
+    if bc_core::table_cmd::table_at(&running, c_r).is_some() {
+        match sl::cell_move(&running, c_r, step > 0) {
+            Some(r) => {
+                let p = shown_place(&running, r);
+                select_range(p, p);
+            }
+            None => crate::bell::ring(),
+        }
+        return;
+    }
+    let out = sl::change(&running, a_r, c_r, anchor != caret, step, start_r, sl::page_style(&running, start_r), sl::max_level(&running, c_r));
+    if out.beep {
+        crate::bell::ring();
+    }
+    if out.changed {
+        put_running(&out.running);
+        select_range(shown_place(&out.running, out.anchor), shown_place(&out.running, out.caret));
     }
 }
 

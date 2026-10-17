@@ -3198,6 +3198,43 @@ function styleCommand(what, name = "") {
   showTranslatedLine();
 }
 
+// The original's beep (a failure that shows no message), through the browser's audio.
+function beep() {
+  try {
+    const ctx = new AudioContext();
+    const tone = ctx.createOscillator();
+    tone.frequency.value = 800;
+    tone.connect(ctx.destination);
+    tone.start();
+    tone.stop(ctx.currentTime + 0.1);
+  } catch {
+    // No audio: nothing to hear.
+  }
+}
+
+// Layout, Style Level + and - (spec 34): inside a table the caret moves to the next or previous cell of its row;
+// else the level code of the paragraph style at the caret, and every run of level codes in the selection, move by
+// `step`. A failure beeps, as in the original.
+function styleLevel(step) {
+  if (!core) return;
+  const forward = editor.selectionDirection !== "backward";
+  const caret = forward ? editor.selectionEnd : editor.selectionStart;
+  const anchor = forward ? editor.selectionStart : editor.selectionEnd;
+  const r = JSON.parse(core.editor_style_level(step, anchor, caret, doc.cells, doc.lines, doc.kind === "braille"));
+  if (r.beep) beep();
+  if (r.text === undefined) {
+    if (r.caret !== undefined) editor.setSelectionRange(r.caret, r.caret);
+    return;
+  }
+  if (!r.changed) return;
+  editor.value = r.text;
+  editor.setSelectionRange(Math.min(r.anchor, r.caret), Math.max(r.anchor, r.caret), r.caret < r.anchor ? "backward" : "forward");
+  doc.dirty = true;
+  lastLine = null;
+  showStatus();
+  showTranslatedLine();
+}
+
 function applyNamedStyle(name) {
   styleCommand("apply", name);
 }
@@ -3769,8 +3806,8 @@ const COMMANDS = {
   1221: () => message(PLANNED_SPELL),
   1401: applyStyle,
   1402: applyLastStyle,
-  1403: () => message(PLANNED_FORMATTER),
-  1404: () => message(PLANNED_FORMATTER),
+  1403: () => styleLevel(1),
+  1404: () => styleLevel(-1),
   1406: joinStyles,
   1407: joinLines,
   1409: setPageNumber,
