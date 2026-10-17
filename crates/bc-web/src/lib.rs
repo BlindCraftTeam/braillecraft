@@ -1507,6 +1507,31 @@ impl Embossers {
         let options = bc_core::emboss_setup::job_options(&s, model, &l, 0, 0, 1, None);
         Ok(model.flag("ManualInterpoint") && options.interpoint)
     }
+
+    /// Embosser Setup's page block corrected to a setup (an empty `setup` for "(No Target Embosser)") as the
+    /// reference corrects it: JSON { layout, cells, lines }.
+    pub fn fit_block(&self, setup: &str, layout: &str, cells: u32, lines: u32) -> Result<String, JsError> {
+        let layout: Layout = serde_json::from_str(layout).map_err(error)?;
+        let s: Option<Setup> = if setup.is_empty() { None } else { Some(serde_json::from_str(setup).map_err(error)?) };
+        let target = s.as_ref().and_then(|s| find_model(&self.0, &s.model).map(|m| (s, m)));
+        let b = bc_core::emboss_setup::fit_block(target, &bc_core::emboss_setup::Block { layout, cells, lines });
+        Ok(serde_json::json!({ "layout": b.layout, "cells": b.cells, "lines": b.lines }).to_string())
+    }
+}
+
+/// The table of old and new values messages 3771 and 3773 end with (with `margins`, the two margins too); empty when
+/// none differs. Each block is JSON { layout, cells, lines }.
+#[wasm_bindgen]
+pub fn embosser_change_table(old: &str, new: &str, margins: bool) -> Result<String, JsError> {
+    let block = |text: &str| -> Result<bc_core::emboss_setup::Block, JsError> {
+        let v: serde_json::Value = serde_json::from_str(text).map_err(error)?;
+        Ok(bc_core::emboss_setup::Block {
+            layout: serde_json::from_value(v["layout"].clone()).map_err(error)?,
+            cells: v["cells"].as_u64().unwrap_or(0) as u32,
+            lines: v["lines"].as_u64().unwrap_or(0) as u32,
+        })
+    };
+    Ok(bc_core::emboss_setup::change_table(&block(old)?, &block(new)?, margins))
 }
 
 use bc_core::emboss_setup::{find_model, form_name, Layout, Setup};

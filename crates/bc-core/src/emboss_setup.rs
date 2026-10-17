@@ -591,6 +591,118 @@ pub fn check(s: &Setup, model: &Model, layout: &Layout, cells: u32, lines: u32) 
     }
 }
 
+/// The least lines per page and cells per line Embosser Setup allows: the reference reads them from its settings
+/// MinPageDepth and MinPageWidth, which nothing in its dialogs sets, so their defaults.
+pub const MIN_PAGE_DEPTH: u32 = 1;
+pub const MIN_PAGE_WIDTH: u32 = 10;
+
+/// An embosser page block as Embosser Setup holds it: the layout with its cells per line and lines per page.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Block {
+    pub layout: Layout,
+    pub cells: u32,
+    pub lines: u32,
+}
+
+/// A page block corrected to a setup as the reference does when Embosser Setup opens, when another setup is chosen
+/// and on OK: interpoint off unless the model can emboss interpoint and the setup has it on; interline print off
+/// unless the model has Interline or is a TranSend SE with an ink printer named; then lines with the top margin, then
+/// cells with the binding margin: the margin raised to the embosser's own margin (none when automated), the value put
+/// between the least (MIN_PAGE_DEPTH, MIN_PAGE_WIDTH) and 40 lines or 160 cells, the value lowered one at a time while
+/// the form check finds the text too long (flags 1 or 2), down to the least, then the margin lowered while it still
+/// does not fit. With no setup only the ranges apply and interpoint and interline are off; with a form the model does
+/// not have the form check fails and only the ranges and the margins' least apply.
+pub fn fit_block(target: Option<(&Setup, &Model)>, block: &Block) -> Block {
+    let mut b = block.clone();
+    let (interpoint_ok, interline_ok, left, top) = match target {
+        Some((s, m)) => {
+            let auto = automated(s, m);
+            (
+                m.flag("CanDoInterpoint") && s.interpoint_enabled,
+                m.flag("Interline") || (m.flag("TranSend") && !s.ink_printer.trim().is_empty()),
+                if auto { 0 } else { s.device_number(27) },
+                if auto { 0 } else { s.device_number(33) },
+            )
+        }
+        None => (false, false, 0, 0),
+    };
+    if !interpoint_ok {
+        b.layout.interpoint = false;
+    }
+    if !interline_ok {
+        b.layout.interline = 0;
+    }
+    let check = |b: &Block| target.and_then(|(s, m)| fit_flags(s, m, &b.layout, b.cells, b.lines));
+    // Lines and the top margin.
+    b.layout.top_margin = b.layout.top_margin.max(top);
+    b.lines = b.lines.clamp(MIN_PAGE_DEPTH, 40);
+    while b.lines > MIN_PAGE_DEPTH {
+        match check(&b) {
+            Some((_, f, _)) if f & 3 != 0 => b.lines -= 1,
+            _ => break,
+        }
+    }
+    while b.layout.top_margin >= 1 {
+        match check(&b) {
+            Some((_, f, _)) if f & 3 != 0 => b.layout.top_margin -= 1,
+            _ => break,
+        }
+    }
+    // Cells and the binding margin.
+    b.layout.binding = b.layout.binding.max(left);
+    b.cells = b.cells.clamp(MIN_PAGE_WIDTH, 160);
+    while b.cells > MIN_PAGE_WIDTH {
+        match check(&b) {
+            Some((_, _, f)) if f & 3 != 0 => b.cells -= 1,
+            _ => break,
+        }
+    }
+    while b.layout.binding >= 1 {
+        match check(&b) {
+            Some((_, _, f)) if f & 3 != 0 => b.layout.binding -= 1,
+            _ => break,
+        }
+    }
+    b
+}
+
+/// The table messages 3771 and 3773 end with: a heading row Old Format, New Format, then a row for each of lines per
+/// page, cells per line and (with `margins`) top margin and binding margin whose value differs, old then new; empty
+/// when none differs.
+pub fn change_table(old: &Block, new: &Block, margins: bool) -> String {
+    let mut rows = Vec::new();
+    if old.lines != new.lines {
+        rows.push(("Lines per Page", old.lines, new.lines));
+    }
+    if old.cells != new.cells {
+        rows.push(("Cells per Line", old.cells, new.cells));
+    }
+    if margins && old.layout.top_margin != new.layout.top_margin {
+        rows.push(("Top Margin", old.layout.top_margin, new.layout.top_margin));
+    }
+    if margins && old.layout.binding != new.layout.binding {
+        rows.push(("Binding Margin", old.layout.binding, new.layout.binding));
+    }
+    if rows.is_empty() {
+        return String::new();
+    }
+    let mut text = "\n\t\t\tOld Format\t\tNew Format".to_string();
+    for (label, o, n) in rows {
+        text.push_str(&format!("\n{label}\t\t{o}\t\t\t{n}"));
+    }
+    text
+}
+
+/// Message 3771: Embosser Setup corrected the values typed (shown on OK, the dialog stays open).
+pub fn corrected_message(table: &str) -> String {
+    format!("BrailleCraft has updated desired document settings to fit the selected page size.{table}")
+}
+
+/// Question 3773 (OK, Cancel): Document mode, the cells or lines differ from the document's.
+pub fn reformat_question(table: &str) -> String {
+    format!("Your document will be reformatted.{table}")
+}
+
 /// Message 2364, for a setup and a form as they are shown.
 pub fn form_not_defined_message(setup: &str, form: &str, cells: u32, lines: u32) -> String {
     format!(
@@ -786,6 +898,31 @@ mod tests {
         assert_eq!(cells & 0xf, 2);
         layout.form = "zz".into();
         assert_eq!(check(&setup, model, &layout, 40, 25), Check::FormNotDefined);
+    }
+
+    #[test]
+    fn a_page_block_is_corrected_value_first_then_margin() {
+        let cat = catalog();
+        let model = find_model(&cat, "Index Everest-D V5").unwrap();
+        let setup = Setup::for_model(&cat, "Index Everest-D V5", false);
+        let layout = Layout { form: "11_W".into(), binding: 8, interpoint: true, interline: 1, ..Layout::default() };
+        let block = Block { layout, cells: 60, lines: 25 };
+        // 47 cells on this form: the cells come down until margin and text fit, the margin is kept.
+        let fitted = fit_block(Some((&setup, model)), &block);
+        assert_eq!((fitted.cells, fitted.layout.binding, fitted.lines), (39, 8, 25));
+        // The model can emboss interpoint and has no interline print.
+        assert!(fitted.layout.interpoint);
+        assert_eq!(fitted.layout.interline, 0);
+        // Past the range: cells to 160, then down to the least, then the margin down.
+        let wide = Block { cells: 200, layout: Layout { binding: 50, ..block.layout.clone() }, ..block.clone() };
+        let fitted = fit_block(Some((&setup, model)), &wide);
+        assert_eq!((fitted.cells, fitted.layout.binding), (MIN_PAGE_WIDTH, 37));
+        // No setup: only the ranges, interpoint off.
+        let none = fit_block(None, &Block { cells: 5, lines: 99, ..block.clone() });
+        assert_eq!((none.cells, none.lines, none.layout.binding, none.layout.interpoint), (10, 40, 8, false));
+        let table = change_table(&block, &Block { cells: 39, ..block.clone() }, true);
+        assert_eq!(table, "\n\t\t\tOld Format\t\tNew Format\nCells per Line\t\t60\t\t\t39");
+        assert_eq!(change_table(&block, &block, true), "");
     }
 
     #[test]

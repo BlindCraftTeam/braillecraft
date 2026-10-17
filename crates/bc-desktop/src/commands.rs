@@ -3117,9 +3117,9 @@ fn shown_form(d: &Dlg) -> Option<String> {
 /// target is any entry after "(No Target Embosser)". Form (12, 13) and the top and binding margins (18 to 21) only
 /// with a target; Modify and Remove (9, 10) only with a target in Global mode; Emboss in Interpoint (22) only when the
 /// setup's model can emboss interpoint and the setup has interpoint switched on; Interline Print (24) only when the
-/// model has interline print (its Interline property; the reference also allows it when the setup names a TranSend
-/// SE printer, which BrailleCraft does not keep yet). A box that is not allowed is cleared, as the reference clears
-/// those values when it checks the block. Cells, lines and the banner page stay enabled.
+/// model has interline print (its Interline property) or is a TranSend SE whose setup names an ink printer. A box
+/// that is not allowed is cleared, as the reference clears those values when it checks the block. Cells, lines and
+/// the banner page stay enabled.
 fn apply_setup_target(d: &Dlg, global: bool) {
     let name = d.selected_text(7).filter(|s| s != NO_EMBOSSER);
     let target = d.selection(7).is_some_and(|i| i > 0) && name.is_some();
@@ -3128,7 +3128,9 @@ fn apply_setup_target(d: &Dlg, global: bool) {
         let model = cat.ok().zip(setup.as_ref()).and_then(|(cat, s)| crate::embosser::find_model(cat, &s.model));
         (
             model.is_some_and(|m| m.flag("CanDoInterpoint")) && setup.as_ref().is_some_and(|s| s.interpoint_enabled),
-            model.is_some_and(|m| m.flag("Interline")),
+            model.is_some_and(|m| {
+                m.flag("Interline") || (m.flag("TranSend") && setup.as_ref().is_some_and(|s| !s.ink_printer.trim().is_empty()))
+            }),
         )
     });
     for cid in [12, 13, 18, 19, 20, 21] {
@@ -3145,6 +3147,39 @@ fn apply_setup_target(d: &Dlg, global: bool) {
     if !(target && interline) {
         d.set_checked(24, false);
     }
+}
+
+/// Embosser Setup's page block as its fields hold it, `form` its paper.
+fn read_block(d: &Dlg, form: String, block: &bc_core::emboss_setup::Block) -> bc_core::emboss_setup::Block {
+    let field = |cid: i32, current: u32| d.number(cid).filter(|n| *n >= 0).map(|n| n.min(u32::MAX as i64) as u32).unwrap_or(current);
+    let mut layout = block.layout.clone();
+    layout.form = form;
+    layout.top_margin = field(19, layout.top_margin);
+    layout.binding = field(21, layout.binding);
+    layout.interpoint = d.checked(22);
+    layout.banner = d.checked(23);
+    layout.interline = u32::from(d.checked(24));
+    bc_core::emboss_setup::Block { cells: field(15, block.cells), lines: field(17, block.lines), layout }
+}
+
+/// Puts a page block into Embosser Setup's fields.
+fn show_block(d: &Dlg, b: &bc_core::emboss_setup::Block) {
+    d.set_text(15, &b.cells.to_string());
+    d.set_text(17, &b.lines.to_string());
+    d.set_text(19, &b.layout.top_margin.to_string());
+    d.set_text(21, &b.layout.binding.to_string());
+    d.set_checked(22, b.layout.interpoint);
+    d.set_checked(23, b.layout.banner);
+    d.set_checked(24, b.layout.interline != 0);
+}
+
+/// A page block corrected to the setup chosen in Embosser Setup's list (none for "(No Target Embosser)").
+fn fit_to_choice(d: &Dlg, block: &bc_core::emboss_setup::Block) -> bc_core::emboss_setup::Block {
+    let setup = d.selected_text(7).filter(|s| s != NO_EMBOSSER).and_then(|n| crate::embosser::load_setup(&n));
+    crate::embosser::with_catalog(|cat| {
+        let model = cat.ok().zip(setup.as_ref()).and_then(|(cat, s)| crate::embosser::find_model(cat, &s.model));
+        bc_core::emboss_setup::fit_block(setup.as_ref().zip(model), block)
+    })
 }
 
 /// Document / Global: Embosser Setup (dialog 1032, spec 25 section 2b). Document: the document's setup and its
@@ -3177,13 +3212,10 @@ fn embosser_setup(global: bool) {
     let (id, dialog) = (d.id, d.dialog);
     fill_setup_list(&d, &setup);
     fill_setup_forms(&d, &layout.form);
-    d.set_text(15, &cells.to_string());
-    d.set_text(17, &lines.to_string());
-    d.set_text(19, &layout.top_margin.to_string());
-    d.set_text(21, &layout.binding.to_string());
-    d.set_checked(22, layout.interpoint);
-    d.set_checked(23, layout.banner);
-    d.set_checked(24, layout.interline != 0);
+    // The block is corrected to the setup silently as the dialog opens; this corrected block is what the
+    // reformatting question compares with on OK.
+    let opened = fit_to_choice(&d, &bc_core::emboss_setup::Block { layout: layout.clone(), cells, lines });
+    show_block(&d, &opened);
     apply_setup_target(&d, global);
     // A new choice in the list keeps the form the page block shows where the new list has it (the reference reads
     // the block from the controls, then fills the form box and selects the block's form, else its first item).
@@ -3198,13 +3230,20 @@ fn embosser_setup(global: bool) {
     }
     if let Some(list) = d.win(7).and_then(|w| w.as_widget::<ListBox>()) {
         let bf = block_form.clone();
+        let base = opened.clone();
+        // A new choice: the block read from the fields, the form box filled for the new setup, the block corrected
+        // to it silently and shown.
         list.on_selection_changed(move |_| {
             let d = Dlg { id, dialog, page: None };
             let form = bf.borrow().clone();
+            let typed = read_block(&d, form.clone(), &base);
             fill_setup_forms(&d, &form);
             if let Some(code) = shown_form(&d) {
                 *bf.borrow_mut() = code;
             }
+            let mut typed = typed;
+            typed.layout.form = bf.borrow().clone();
+            show_block(&d, &fit_to_choice(&d, &typed));
             apply_setup_target(&d, global);
         });
     }
@@ -3272,48 +3311,29 @@ fn embosser_setup(global: bool) {
         let name = d.selected_text(7).filter(|s| s != NO_EMBOSSER).unwrap_or_default();
         let forms = setup_forms(&name);
         let shown = shown_form(&d).unwrap_or_default();
-        let form = forms.iter().find(|f| f.id == shown);
-        let field = |cid: i32, current: u32| d.number(cid).filter(|n| *n >= 0).map(|n| n as u32).unwrap_or(current);
-        let (c, l, top, binding) = (field(15, cells), field(17, lines), field(19, layout.top_margin), field(21, layout.binding));
-        let interline = d.checked(24);
-        // The page the form allows (with interline print, the interline page where the form gives one); with no
-        // embosser, 10 to 160 cells and 4 to 40 lines. Cells and binding margin share the line; lines and top margin
-        // share the page (spec 25 2c: both are counted apart from their margin). INFERENCE: the least page with a
-        // form is one cell and one line.
-        let ((max_c, max_l), (min_c, min_l)) = match form {
-            Some(f) => (if interline { f.interline.map(|i| i.0).unwrap_or(f.maximum) } else { f.maximum }, (1, 1)),
-            None => ((160, 40), (10, 4)),
-        };
-        let binding2 = binding.min(max_c.saturating_sub(min_c));
-        let c2 = c.clamp(min_c, max_c.saturating_sub(binding2).max(min_c));
-        let top2 = top.min(max_l.saturating_sub(min_l));
-        let l2 = l.clamp(min_l, max_l.saturating_sub(top2).max(min_l));
-        if (c2, l2, top2, binding2) != (c, l, top, binding) {
-            d.set_text(15, &c2.to_string());
-            d.set_text(17, &l2.to_string());
-            d.set_text(19, &top2.to_string());
-            d.set_text(21, &binding2.to_string());
-            // INFERENCE: the reference message ends with the corrected values (its %s); they are listed here.
-            message(&format!(
-                "BrailleCraft has updated desired document settings to fit the selected page size.\n\nCharacters per line: {c2}\nLines per page: {l2}\nTop margin in lines: {top2}\nBinding margin in characters: {binding2}"
-            ));
-            continue;
-        }
         // With "(No Target Embosser)" the form stays the block's own (its box is disabled, spec 25 12.1).
-        let form_code = match form {
+        let form_code = match forms.iter().find(|f| f.id == shown) {
             Some(f) => f.id.clone(),
             None if name.is_empty() => block_form.borrow().clone(),
             None => String::new(),
         };
-        let layout = emb::Layout {
-            form: form_code,
-            top_margin: top2,
-            binding: binding2,
-            interpoint: d.checked(22),
-            banner: d.checked(23),
-            interline: u32::from(interline),
-        };
-        break Some((name, layout, c2, l2));
+        // OK corrects the block to the setup: values it had to change are shown in message 3771 with the dialog kept
+        // open; otherwise in Document mode cells or lines unlike the document's ask question 3773 first.
+        let typed = read_block(&d, form_code, &opened);
+        let fitted = fit_to_choice(&d, &typed);
+        let table = bc_core::emboss_setup::change_table(&typed, &fitted, true);
+        if !table.is_empty() {
+            message(&bc_core::emboss_setup::corrected_message(&table));
+            show_block(&d, &fitted);
+            continue;
+        }
+        if !global {
+            let table = bc_core::emboss_setup::change_table(&opened, &fitted, false);
+            if !table.is_empty() && !ok_cancel(&bc_core::emboss_setup::reformat_question(&table)) {
+                continue;
+            }
+        }
+        break Some((name, fitted.layout, fitted.cells, fitted.lines));
     };
     d.destroy();
     let Some((name, layout, cells, lines)) = chosen else { return };

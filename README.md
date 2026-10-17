@@ -127,7 +127,9 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   pass, and manual interpoint embossers a second pass for the backs. Each embosser gets the job start, margins and
   line padding its driver gives it in the original: the Index parameter string for its firmware version, the Enabling
   codes when escape codes are allowed, and the embosser's own left, right and top margin settings. The web build
-  embosses through Web Serial where the browser has it, or to a downloaded file.
+  embosses through Web Serial where the browser has it, or to a downloaded file. Embosser Setup fits the page to the
+  embosser as the original does: lines and cells within range and lowered before the margins, a table of the old and
+  new values when OK had to change them, and a question before a document is reformatted to new cells or lines.
 - **Screen readers.** The editing area gives screen readers its text (the formatted lines or the coded rows, one
   line each), the caret, the selection and every change: through UI Automation on Windows while Global,
   Internationalization, Support UI Automation is on, as the original program does; through the macOS accessibility

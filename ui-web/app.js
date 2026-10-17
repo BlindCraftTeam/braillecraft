@@ -1388,6 +1388,41 @@ function fillSetupForms(d, cat, form) {
   d.enable(13, names.length > 0);
 }
 
+// Embosser Setup's page block ({ layout, cells, lines }) as its fields hold it, `form` its paper.
+function readBlock(d, form, base) {
+  const field = (cid, current) => {
+    const n = d.number(cid);
+    return n !== null && n >= 0 ? n : current;
+  };
+  const layout = {
+    ...base.layout,
+    form,
+    top_margin: field(19, base.layout.top_margin),
+    binding: field(21, base.layout.binding),
+    interpoint: d.checked(22),
+    banner: d.checked(23),
+    interline: d.checked(24) ? 1 : 0,
+  };
+  return { layout, cells: field(15, base.cells), lines: field(17, base.lines) };
+}
+
+function showBlock(d, b) {
+  d.setText(15, String(b.cells));
+  d.setText(17, String(b.lines));
+  d.setText(19, String(b.layout.top_margin));
+  d.setText(21, String(b.layout.binding));
+  d.setChecked(22, b.layout.interpoint);
+  d.setChecked(23, b.layout.banner);
+  d.setChecked(24, b.layout.interline !== 0);
+}
+
+// A page block corrected to the setup chosen in the list, as the original corrects it (none for no target).
+function fitToChoice(d, cat, b) {
+  const name = d.selected(7);
+  const s = name && name !== NO_EMBOSSER ? loadSetup(name) : null;
+  return JSON.parse(cat.fit_block(s ? JSON.stringify(s) : "", JSON.stringify(b.layout), b.cells, b.lines));
+}
+
 // Document / Global: Embosser Setup (dialog 1032, spec 25 section 2b). Document: the document's setup and its
 // embosser page layout. Global: the default setup and the layout new documents take; New, Modify Embosser and
 // Remove (Global only) open the setup sheet and change the kept setups.
@@ -1403,19 +1438,28 @@ async function embosserSetup(global) {
     : // A braille document shows its own cells and lines; a print document the default layout's.
       [doc.embosser, doc.layout, doc.kind === "braille" ? doc.cells : defCells, doc.kind === "braille" ? doc.lines : defLines];
   let chosen = null;
+  // The block as the dialog opened, corrected to its setup; the reformatting question compares with it on OK.
+  let opened = null;
+  const shownFormId = (d) => {
+    const name = d.selected(7) === NO_EMBOSSER ? "" : d.selected(7) ?? "";
+    // With "(No Target Embosser)" the paper stays the block's own (spec 25 12.1).
+    if (!name) return layout.form;
+    return setupForms(cat, name).find((f) => f.name === d.selected(13))?.id ?? "";
+  };
   const { result } = await showDialog(1032, {
     title: global ? "Global: Embosser Setup" : undefined,
     setup(d) {
       fillSetupList(d, setupName);
       fillSetupForms(d, cat, layout.form);
-      d.setText(15, String(cells));
-      d.setText(17, String(lines));
-      d.setText(19, String(layout.top_margin));
-      d.setText(21, String(layout.binding));
-      d.setChecked(22, layout.interpoint);
-      d.setChecked(23, layout.banner);
-      d.setChecked(24, layout.interline !== 0);
-      d.get(7).addEventListener("change", () => fillSetupForms(d, cat, loadSetup(d.selected(7))?.form ?? ""));
+      opened = fitToChoice(d, cat, { layout: { ...layout }, cells, lines });
+      showBlock(d, opened);
+      // A new choice: the block read from the fields, the form box filled for the new setup, the block corrected to
+      // it silently and shown.
+      d.get(7).addEventListener("change", () => {
+        const typed = readBlock(d, shownFormId(d), opened);
+        fillSetupForms(d, cat, loadSetup(d.selected(7))?.form ?? "");
+        showBlock(d, fitToChoice(d, cat, { ...typed, layout: { ...typed.layout, form: shownFormId(d) } }));
+      });
       if (!global) {
         [8, 9, 10].forEach((b) => d.hide(b));
         return;
@@ -1451,37 +1495,21 @@ async function embosserSetup(global) {
     },
     async onOk(d) {
       const name = d.selected(7) === NO_EMBOSSER ? "" : d.selected(7) ?? "";
-      const form = setupForms(cat, name).find((f) => f.name === d.selected(13));
-      const field = (cid, current) => {
-        const n = d.number(cid);
-        return n !== null && n >= 0 ? n : current;
-      };
-      const [c, l, top, binding] = [field(15, cells), field(17, lines), field(19, layout.top_margin), field(21, layout.binding)];
-      const interline = d.checked(24);
-      // The page the form allows; with no embosser, 10 to 160 cells and 4 to 40 lines. Cells and binding margin
-      // share the line, lines and top margin the page (spec 25 2c). INFERENCE: the least page with a form is one
-      // cell and one line. The form's interline page is not given to the web build; its most is used.
-      const [maxC, maxL, minC, minL] = form ? [form.cells, form.lines, 1, 1] : [160, 40, 10, 4];
-      const binding2 = Math.min(binding, Math.max(0, maxC - minC));
-      const c2 = Math.min(Math.max(c, minC), Math.max(maxC - binding2, minC));
-      const top2 = Math.min(top, Math.max(0, maxL - minL));
-      const l2 = Math.min(Math.max(l, minL), Math.max(maxL - top2, minL));
-      if (c2 !== c || l2 !== l || top2 !== top || binding2 !== binding) {
-        d.setText(15, String(c2));
-        d.setText(17, String(l2));
-        d.setText(19, String(top2));
-        d.setText(21, String(binding2));
-        await message(
-          `BrailleCraft has updated desired document settings to fit the selected page size.\n\nCharacters per line: ${c2}\nLines per page: ${l2}\nTop margin in lines: ${top2}\nBinding margin in characters: ${binding2}`,
-        );
+      // OK corrects the block to the setup: values it had to change are shown in message 3771 with the dialog kept
+      // open; otherwise in Document mode cells or lines unlike the document's ask question 3773 first.
+      const typed = readBlock(d, shownFormId(d), opened);
+      const fitted = fitToChoice(d, cat, typed);
+      const table = core.embosser_change_table(JSON.stringify(typed), JSON.stringify(fitted), true);
+      if (table) {
+        await message(`BrailleCraft has updated desired document settings to fit the selected page size.${table}`);
+        showBlock(d, fitted);
         return false;
       }
-      chosen = {
-        name,
-        layout: { form: form?.id ?? "", top_margin: top2, binding: binding2, interpoint: d.checked(22), banner: d.checked(23), interline: interline ? 1 : 0 },
-        cells: c2,
-        lines: l2,
-      };
+      if (!global) {
+        const change = core.embosser_change_table(JSON.stringify(opened), JSON.stringify(fitted), false);
+        if (change && !(await okCancel(`Your document will be reformatted.${change}`))) return false;
+      }
+      chosen = { name, layout: fitted.layout, cells: fitted.cells, lines: fitted.lines };
       return true;
     },
   });
