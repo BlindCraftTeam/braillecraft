@@ -340,7 +340,12 @@ struct Formatter {
     /// Where the next text on the line starts.
     start_col: usize,
     left: usize,
-    runover_offset: usize,
+    /// Where runover lines start, counted from the left margin (a level's runover may be left of it).
+    runover_offset: i64,
+    /// The level margins [hi...] set (left, runover, right, their increments per level, the most levels and the
+    /// limits; spec 19 7.3) and the current level (1-based).
+    levels: Option<[i64; 10]>,
+    level: i64,
     right: usize,
     blank_between: usize,
     flush_right: bool,
@@ -390,6 +395,8 @@ impl Formatter {
             start_col: 0,
             left: 0,
             runover_offset: 0,
+            levels: None,
+            level: 1,
             right: 0,
             blank_between: 0,
             flush_right: false,
@@ -443,6 +450,41 @@ impl Formatter {
     }
 
     /// Where the line's words wrap: the right margin, or the room a page number on the line keeps.
+    /// Where a runover line starts.
+    fn runover(&self) -> usize {
+        (self.left as i64 + self.runover_offset).clamp(0, self.layout.cells.saturating_sub(1) as i64) as usize
+    }
+
+    /// [hlN]: level N's margins (the current level when N is not given), from the level margins [hi] set: left
+    /// n * I + (L - 1), runover n * J + (V - 1), right n * K + R for n = N - 1, each held by its limit (an upper limit
+    /// for a positive increment, a lower one otherwise), then within the line.
+    fn set_level(&mut self, level: Option<i64>) {
+        let Some([l, v, r, i, j, k, most, nl, ol, pl]) = self.levels else {
+            self.left = 0;
+            self.runover_offset = 0;
+            self.right = 0;
+            return;
+        };
+        let mut n = level.unwrap_or(self.level) - 1;
+        if most > 0 {
+            n = n.min(most - 1);
+        }
+        let n = n.clamp(0, 255);
+        let limit = |value: i64, inc: i64, limit: i64| match limit {
+            lim if lim > 0 && inc > 0 => value.min(lim),
+            lim if lim > 0 => value.max(lim),
+            _ => value,
+        };
+        let cells = self.layout.cells.saturating_sub(1) as i64;
+        let left = limit(n * i + (l - 1), i, nl - 1).clamp(0, cells);
+        let runover = limit(n * j + (v - 1), j, ol - 1).clamp(0, cells);
+        let right = limit(n * k + r, k, pl).clamp(0, 159);
+        self.left = left as usize;
+        self.runover_offset = runover - left;
+        self.right = right as usize;
+        self.level = n + 1;
+    }
+
     fn width(&self) -> usize {
         self.layout.cells.saturating_sub(self.right.max(self.rooms().1)).max(1)
     }
@@ -651,7 +693,7 @@ impl Formatter {
             let len = cells.len();
             let used = self.line.text.chars().count();
             if used + 1 + len > self.layout.cells.saturating_sub(self.rooms().1) {
-                self.end_line(self.left + self.runover_offset);
+                self.end_line(self.runover());
             }
             let used = self.line.text.chars().count();
             for _ in used..self.layout.cells.saturating_sub(self.rooms().1).saturating_sub(len) {
@@ -690,7 +732,7 @@ impl Formatter {
                 room
             } else {
                 self.touching = false;
-                self.end_line(self.left + self.runover_offset);
+                self.end_line(self.runover());
                 continue;
             };
             if has_text {
@@ -711,7 +753,7 @@ impl Formatter {
             }
             rest = later;
             if !rest.is_empty() {
-                self.end_line(self.left + self.runover_offset);
+                self.end_line(self.runover());
             }
         }
         let col = self.line.text.chars().count();
@@ -788,8 +830,39 @@ impl Formatter {
                 }
             }
             // [ptys] alone is a runover two cells in.
-            "ptys" => self.runover_offset = first.unwrap_or(2).max(0) as usize,
+            "ptys" => self.runover_offset = first.unwrap_or(2).max(0),
             "ptye" => self.runover_offset = 0,
+            // [hiL:V:R:I:J:K:M:N:O:P] level margins, level 1 at once (spec 19 7.3): L and V the first cells (1-based)
+            // of a level-1 first line and runover line, R its right margin, I J K the increments per level, M the
+            // most levels, N O P limits. Not yet: the relative form (11th value) and the [p] values (12th to 14th).
+            "hi" => {
+                if self.line_has_text() {
+                    self.end_line(self.left);
+                }
+                let get = |k: usize, default: i64| n.get(k).copied().unwrap_or(default);
+                self.levels = Some([
+                    get(0, 1),
+                    get(1, 1),
+                    get(2, 0),
+                    get(3, 0),
+                    get(4, 0),
+                    get(5, 0),
+                    get(6, -1),
+                    get(7, -1),
+                    get(8, -1),
+                    get(9, -1),
+                ]);
+                self.set_level(Some(1));
+                self.start_col = self.left;
+            }
+            // [hlN] level N: acts as [l], then the level's margins.
+            "hl" => {
+                if self.line_has_text() {
+                    self.end_line(self.left);
+                }
+                self.set_level(first);
+                self.start_col = self.left;
+            }
             "rm" => self.right = first.unwrap_or(0).max(0) as usize,
             // [svsblN]: N blank lines after every line (1 when not given), at most (lines - 4) / 2.
             "svsbl" => {
@@ -1103,7 +1176,7 @@ fn is_layout(code: &str) -> bool {
     matches!(
         split_code(code).0,
         "<" | "l" | "p" | "sk" | "ind" | "inm" | "ptys" | "ptye" | "rm" | "svsbl" | "pg" | "top" | "cp" | "fr" | "hds" | "hde"
-            | "svpnp" | "svpfd"
+            | "svpnp" | "svpfd" | "hi" | "hl"
             | "tls" | "tle" | "tld" | "rfs" | "rfe" | "rfd" | "svrhp" | "svrfp" | "svrhs" | "svrfs" | "kps" | "kpe" | "sc"
     )
 }
@@ -1722,6 +1795,13 @@ mod tests {
         assert_eq!(texts(&pages[0])[0], "abcde");
         let pages = format(&m("abc[x]de"), &Layout::braille(4, 3), None);
         assert_eq!(texts(&pages[0])[..2], ["abc", "de"]);
+    }
+
+    #[test]
+    fn level_margins_set_each_level_first_line_and_runover() {
+        // A list: level 1 starts at cell 1 and runs over to cell 3, each level two cells further in.
+        let pages = format(&m("[hi1:3:0:2:2][hl1]aaa bbb ccc[hl2]aaa bbb ccc[hi]x"), &Layout::braille(9, 8), None);
+        assert_eq!(texts(&pages[0])[..6], ["aaa bbb", "  ccc", "  aaa bbb", "    ccc", "x", ""]);
     }
 
     #[test]
