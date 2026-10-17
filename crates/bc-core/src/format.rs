@@ -491,6 +491,25 @@ impl<'a> Formatter<'a> {
                 }
             }
             "fr" => self.flush_right = true,
+            // [kps] ... [kpe] keep a block together, with a new line implied at both ends (spec 19, Pages).
+            // INTERIM: moving a block that would cross a page to the next page is not done yet (queue line F6).
+            "kps" | "kpe" => {
+                if self.line_has_text() {
+                    self.end_line(self.left);
+                }
+            }
+            // [scL] skip L lines (1 when not given), only after a line that is not blank (spec 19, Lines).
+            "sc" => {
+                if self.line_has_text() {
+                    self.end_line(self.left);
+                }
+                let previous = self.page.last().or_else(|| self.pages.last().and_then(|p| p.lines.last()));
+                if previous.is_some_and(|l| l.sources.iter().any(Option::is_some)) {
+                    for _ in 0..first.unwrap_or(1).max(0) {
+                        self.push_line(Line::default());
+                    }
+                }
+            }
             "tls" | "rfs" => self.running = Some(Vec::new()),
             "tle" | "rfe" => {
                 if let Some(words) = self.running.take() {
@@ -603,7 +622,7 @@ fn is_layout(code: &str) -> bool {
     matches!(
         split_code(code).0,
         "<" | "l" | "p" | "sk" | "ind" | "inm" | "ptys" | "ptye" | "rm" | "svsbl" | "pg" | "top" | "cp" | "fr" | "hds" | "hde"
-            | "tls" | "tle" | "tld" | "rfs" | "rfe"
+            | "tls" | "tle" | "tld" | "rfs" | "rfe" | "kps" | "kpe" | "sc"
     )
 }
 
@@ -808,6 +827,15 @@ mod tests {
     fn a_formatted_file_has_trimmed_lines_and_a_form_feed_after_every_page() {
         let pages = format(&m("[p]\nab cd[pg]ef"), &Layout::braille(8, 2), None);
         assert_eq!(formatted_text(&pages), "  ab cd\r\n\r\n\u{c}ef\r\n\r\n\u{c}");
+    }
+
+    #[test]
+    fn keep_blocks_start_and_end_lines_and_skip_follows_text_only() {
+        let pages = format(&m("ab[kps]cd[kpe]ef"), &Layout::braille(20, 5), None);
+        assert_eq!(&texts(&pages[0])[..3], ["ab", "cd", "ef"]);
+        // [sc1] skips a line after text, none after a blank line or at the top.
+        let pages = format(&m("[sc1]ab[sc1]cd[sk1][sc1]ef"), &Layout::braille(20, 8), None);
+        assert_eq!(&texts(&pages[0])[..5], ["ab", "", "cd", "", "ef"]);
     }
 
     #[test]
