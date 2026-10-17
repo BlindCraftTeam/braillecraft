@@ -154,6 +154,22 @@ pub fn detect_file(name: &str, bytes: &[u8]) -> String {
     format!("{:?}", bc_core::filekind::detect(name, bytes))
 }
 
+/// A PEF file (Portable Embosser Format, bc_core::pef) as a braille document's text, as the desktop program opens
+/// one: its rows in North American ASCII braille, a line each, and a blank line between pages.
+#[wasm_bindgen]
+pub fn pef_open(xml: &str) -> Result<String, JsError> {
+    let pages = bc_core::pef::read(xml).map_err(|e| JsError::new(&e))?;
+    let mut text = String::new();
+    for page in &pages {
+        for row in page {
+            text.extend(row.chars().map(|c| bc_core::emboss::NA_CELLS[((c as u32).wrapping_sub(0x2800) & 0x3f) as usize] as char));
+            text.push('\n');
+        }
+        text.push('\n');
+    }
+    Ok(text)
+}
+
 /// A file read through the import chain of its kind.
 #[wasm_bindgen]
 pub struct Imported {
@@ -820,6 +836,18 @@ impl LanguageList {
         } else {
             bc_core::table_list::ALL_REGIONS
         }
+    }
+
+    /// The regions a template belongs to, for File, New's region filter: those of the language whose tables include
+    /// the template's table `code` (the index's first column, the table its documents name); every region for a
+    /// template whose table no language lists, as the desktop program lists one.
+    pub fn template_regions(&self, code: &str) -> u32 {
+        let code = code.trim().to_lowercase();
+        self.0
+            .entries
+            .iter()
+            .find(|e| e.tables.iter().any(|t| t.eq_ignore_ascii_case(&code)))
+            .map_or(bc_core::table_list::ALL_REGIONS, |e| e.regions)
     }
 
     /// What the two menus show for a document with `tables` and `initial` codes, as the desktop program fills them,

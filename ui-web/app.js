@@ -173,14 +173,16 @@ async function encodingCodes(name) {
 // The template File, New gives a document (the built-in default, "English (UEB) - basic"): its text, read once
 // from templates/ beside the page.
 let defaultTemplate = null;
+let defaultTemplateName = null;
 async function templateText() {
-  if (defaultTemplate === null) {
+  // The template File, New marked as the default (kept as DefaultTemplate), else the built-in default.
+  const want = store.get("DefaultTemplate") ?? "English (UEB) - basic";
+  if (defaultTemplate === null || defaultTemplateName !== want) {
+    defaultTemplateName = want;
     try {
       const index = await (await fetch("templates/index.tsv")).text();
-      const row = index
-        .split("\n")
-        .map((l) => l.split("\t"))
-        .find((c) => (c[2] ?? "").trim() === "English (UEB) - basic");
+      const rows = index.split("\n").map((l) => l.split("\t"));
+      const row = rows.find((c) => (c[2] ?? "").trim() === want) ?? rows.find((c) => (c[2] ?? "").trim() === "English (UEB) - basic");
       defaultTemplate = row ? await (await fetch(`templates/${row[1]}.template`)).text() : "";
     } catch {
       defaultTemplate = "";
@@ -1961,13 +1963,142 @@ async function templateNames() {
         .filter((l) => l.trim() && !l.startsWith("#"))
         .map((l) => l.split("\t"))
         .filter((c) => c.length >= 3)
-        .map((c) => ({ file: c[1], name: c[2].trim() }))
+        .map((c) => ({ code: c[0].trim(), file: c[1], name: c[2].trim() }))
         .sort((a, b) => a.name.localeCompare(b.name));
     } catch {
       templateList = [];
     }
   }
   return templateList;
+}
+
+// The template list of a dialog and its buttons (make default, hide, show always, region, show hidden), as File,
+// New has them in the desktop program; `ids` names the controls. Kept between runs as the desktop program keeps
+// them: the default template (DefaultTemplate), the hidden ones (HiddenTemplates, names separated by |) and Show
+// Hidden Templates (ShowAllTemplates, File New only). Returns the state; `current` is the template under the cursor.
+const NEW_TEMPLATES = { list: 10, default: 11, hide: 12, show: 13, region: 14, showHidden: 15, kept: true };
+const IMPORT_TEMPLATES = { list: 7, default: 8, hide: 9, show: 10, region: 11, showHidden: 12, kept: false };
+const REGION_NAMES = ["Western Hemisphere", "Europe", "Asia", "Africa", "Pacific", "All Regions/All Languages"];
+const DEFAULT_TEMPLATE = "English (UEB) - basic";
+function templateChooser(d, ids, all) {
+  const allRegions = core.LanguageList.region_bit(5);
+  const s = {
+    hidden: (store.get("HiddenTemplates") ?? "").split("|").filter(Boolean),
+    default: store.get("DefaultTemplate") ?? DEFAULT_TEMPLATE,
+    showHidden: ids.kept && store.get("ShowAllTemplates") === "yes",
+    region: allRegions,
+    names: [],
+    current: null,
+  };
+  // A template whose table is a listed language's belongs to its regions; any other is listed in every region.
+  const regionsOf = (t) => (languageList ? languageList.template_regions(t.code) : allRegions);
+  const listed = () =>
+    all
+      .filter((t) => s.showHidden || !s.hidden.includes(t.name))
+      .filter((t) => (regionsOf(t) & s.region) !== 0)
+      .map((t) => t.name);
+  // Hide Template and Show Template Always share a place: the second shows for a hidden template.
+  const updateHide = () => {
+    const hidden = s.current !== null && s.hidden.includes(s.current);
+    d.show(ids.hide, !hidden);
+    d.show(ids.show, hidden);
+  };
+  const fill = (keep) => {
+    const names = listed();
+    const want = keep ?? s.default;
+    let sel = names.indexOf(want);
+    if (sel < 0 && names.length) sel = 0;
+    d.setItems(ids.list, names, sel >= 0 ? sel : -1);
+    s.names = names;
+    s.current = sel >= 0 ? names[sel] : null;
+    updateHide();
+  };
+  d.setChecked(ids.showHidden, s.showHidden);
+  fill(null);
+  d.get(ids.list)?.addEventListener("change", () => {
+    s.current = d.selected(ids.list) ?? null;
+    updateHide();
+  });
+  d.get(ids.default)?.addEventListener("click", async () => {
+    const name = s.current;
+    if (name === null) return;
+    if (s.hidden.includes(name)) {
+      await message('This template is normally hidden, so it cannot be made the default.  You must first use the "Show Template Always" button.');
+      return;
+    }
+    store.set("DefaultTemplate", name);
+    s.default = name;
+    fill(name);
+  });
+  d.get(ids.hide)?.addEventListener("click", async () => {
+    const name = s.current;
+    if (name === null) return;
+    if (s.default === name) {
+      await message("This is the default template.  It cannot be hidden unless you first choose another default.");
+      return;
+    }
+    s.hidden.push(name);
+    store.set("HiddenTemplates", s.hidden.join("|"));
+    fill(name);
+  });
+  d.get(ids.show)?.addEventListener("click", () => {
+    const name = s.current;
+    if (name === null) return;
+    s.hidden = s.hidden.filter((n) => n !== name);
+    store.set("HiddenTemplates", s.hidden.join("|"));
+    fill(name);
+  });
+  d.get(ids.region)?.addEventListener("click", async () => {
+    const current = [0, 1, 2, 3, 4, 5].find((i) => core.LanguageList.region_bit(i) === s.region) ?? 5;
+    const { result, d: r } = await showDialog(1018, { setup: (r) => r.setItems(7, REGION_NAMES, current) });
+    const chosen = r.chosenIn(7, REGION_NAMES);
+    if (result === "ok" && chosen !== null) {
+      s.region = core.LanguageList.region_bit(chosen);
+      fill(s.current);
+    }
+  });
+  d.get(ids.showHidden)?.addEventListener("change", () => {
+    s.showHidden = d.checked(ids.showHidden);
+    if (ids.kept) store.set("ShowAllTemplates", s.showHidden ? "yes" : "no");
+    fill(s.current);
+  });
+  return s;
+}
+
+// File, New (dialog 1017): print or braille, and the template list with its buttons; the document takes the
+// template chosen, as the desktop program's does.
+async function fileNew() {
+  const all = await templateNames();
+  let state = null;
+  const { result, d } = await showDialog(1017, {
+    setup(d) {
+      d.setRadio([7, 8], 0);
+      state = templateChooser(d, NEW_TEMPLATES, all);
+    },
+  });
+  if (result !== "ok") return;
+  const template = all.find((t) => t.name === state?.current) ?? null;
+  newDocument(d.radio([7, 8]) === 1, template);
+}
+
+// A new empty document of a kind, from `template` (its file and name) or the default template.
+function newDocument(braille, template) {
+  doc.kind = braille ? "braille" : "print";
+  doc.name = braille ? "Untitled Braille Document 1" : "Untitled Print Document 1";
+  doc.file = null;
+  doc.saved = false;
+  doc.printer = null;
+  doc.hyphen = 2902;
+  doc.initialCodes = "";
+  doc.template = template;
+  doc.dirty = false;
+  embosserDefaults();
+  doc.view = newView(braille);
+  editor.value = "";
+  core?.editor_load_plain("");
+  showTitle();
+  editor.focus();
+  applyView();
 }
 
 // The import dialog (1043): the templates, the import filters with the kind found chosen, and the code page (text
@@ -1982,7 +2113,7 @@ async function importDialog(detected) {
     });
   const names = filters.map((f) => f.name);
   const templates = await templateNames();
-  const templateLabels = templates.map((t) => t.name);
+  let chooser = null;
   const pages = core.code_pages();
   const encs = await encodings();
   const encodingLabels = encs.map((e) => e.name);
@@ -2004,10 +2135,7 @@ async function importDialog(detected) {
   };
   const { result, d } = await showDialog(1043, {
     setup(d) {
-      d.setItems(7, templateLabels, Math.max(0, templateLabels.indexOf("English (UEB) - basic")));
-      // Making, hiding and choosing templates belongs to the template list of File, New, which the web build does
-      // not have yet.
-      for (const id of [8, 9, 10, 11, 12]) d.enable(id, false);
+      chooser = templateChooser(d, IMPORT_TEMPLATES, templates);
       const at = filters.findIndex((f) => f.kind === detected);
       d.setItems(14, names, at >= 0 ? at : names.length - 1);
       showFor(d, d.selected(14));
@@ -2027,7 +2155,7 @@ async function importDialog(detected) {
     braille: marks.includes("b"),
     codePage,
     encoding: encodingNow().id,
-    template: templates.find((t) => t.name === d.selected(7)) ?? null,
+    template: templates.find((t) => t.name === chooser?.current) ?? null,
   };
   if (marks.includes("c") && d.selected(16)) {
     choice.codePage = d.selected(16);
@@ -2202,6 +2330,14 @@ fileInput.addEventListener("change", async () => {
       statusLine.textContent = String(err.message ?? err);
       return;
     }
+  } else if (core && detected === "Pef") {
+    // A PEF file opens as a braille document with no import dialog, as in the desktop program.
+    try {
+      read = { braille: true, plain: core.pef_open(new TextDecoder().decode(bytes)), saved: true };
+    } catch (err) {
+      await message(String(err.message ?? err));
+      return;
+    }
   } else if (core) {
     const choice = await importDialog(detected);
     if (!choice) return;
@@ -2257,7 +2393,7 @@ fileInput.addEventListener("change", async () => {
       core?.editor_load_plain(editor.value);
     }
     doc.file = null;
-    doc.saved = false;
+    doc.saved = read.saved ?? false;
     doc.template = read.template ?? null;
   }
   doc.name = file.name;
@@ -3512,7 +3648,7 @@ async function confirmDiscard() {
 
 // File, Close: the web build holds one document, so a closed document gives way to a new empty one.
 async function closeDocument() {
-  if (await confirmDiscard()) await COMMANDS[1101]();
+  if (await confirmDiscard()) newDocument(false, null);
 }
 
 // File, Exit: after the save question, the page is closed where the browser allows it; else the browser's tab closes
@@ -3765,23 +3901,7 @@ function insertCode(id) {
 }
 
 const COMMANDS = {
-  1101: () => {
-    doc.kind = "print";
-    doc.name = "Untitled Print Document 1";
-    doc.file = null;
-    doc.saved = false;
-    doc.printer = null;
-    doc.hyphen = 2902;
-    doc.initialCodes = "";
-    doc.dirty = false;
-    embosserDefaults();
-    doc.view = newView(false);
-    editor.value = "";
-    core?.editor_load_plain("");
-    showTitle();
-    editor.focus();
-    applyView();
-  },
+  1101: fileNew,
   1102: () => fileInput.click(),
   1105: () => save(false),
   1106: () => save(true),

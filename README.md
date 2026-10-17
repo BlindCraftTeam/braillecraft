@@ -107,6 +107,9 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   [lps] and [lpr], the decimal character, the left-margin adjustment [svlma], the relative form of [hi] and its
   paragraph values, [skn], page parity [sd], magazine paragraphs [pm], anticipatory heads and print numbers [svant],
   the word-break modes [wb-no] and [wb-cb], and a print page beginning on the last lines of a page.
+- **Web build.** File, New offers the template list with Mark as Default, Hide, Show Template Always, Region and Show
+  Hidden Templates, kept in the browser as the desktop program keeps them; the import dialog has the same list; a
+  PEF file opens straight into a braille document.
 - **Find and Replace as the original.** Each document keeps its own Find and Replace. A search looks in the
   selection first, then offers the rest of the document and the other end of it; it can search for codes, for a
   style by its name (Replace renames a style's codes, or takes them out), or with a `*` at the end of a code standing
