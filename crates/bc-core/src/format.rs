@@ -398,6 +398,11 @@ struct Formatter {
     foot_pages: i64,
     head_side: Side,
     foot_side: Side,
+    /// [svrlbN] lines kept blank at the bottom of every page; [svprgN:L:M] where a paragraph starts (cell N counted
+    /// from 1, from the left margin when M is not 0) and the lines it skips; [kiN] keep blocks broken at [<] and [hl].
+    reserve: usize,
+    paragraph: (i64, i64, bool),
+    keep_interrupt: bool,
     /// The page being filled is an odd page (the page parity flips at every page).
     odd: bool,
     /// The page has been opened (its first content came), the head lines laid on it, and the foot it carries.
@@ -465,6 +470,9 @@ impl Formatter {
             head_side: Side::default(),
             foot_side: Side::default(),
             odd: true,
+            reserve: 0,
+            paragraph: if layout.braille { (3, 0, false) } else { (1, 1, false) },
+            keep_interrupt: false,
             opened: false,
             head_rows: 0,
             page_foot: None,
@@ -515,6 +523,28 @@ impl Formatter {
     /// Where a runover line starts.
     fn runover(&self) -> usize {
         (self.left as i64 + self.runover_offset).clamp(0, self.layout.cells.saturating_sub(1) as i64) as usize
+    }
+
+    /// Runs `end` (a [<] or [hl] line end); while [ki] is on, the keep block is closed before it and a new one
+    /// opened after it.
+    fn interrupt_keep(&mut self, end: impl FnOnce(&mut Formatter)) {
+        let interrupt = self.keep_interrupt && self.keep_depth > 0;
+        if interrupt {
+            self.keep_depth -= 1;
+            if self.keep_depth == 0 {
+                self.keep_start = None;
+            }
+        }
+        end(self);
+        if interrupt {
+            let at_top = self.page.len() == self.head_rows && !self.line_has_text();
+            if !at_top {
+                self.keep_depth += 1;
+                if self.keep_depth == 1 {
+                    self.keep_opened = true;
+                }
+            }
+        }
     }
 
     /// [hlN]: level N's margins (the current level when N is not given), from the level margins [hi] set: left
@@ -601,7 +631,12 @@ impl Formatter {
     /// The lines a page holds. A page number takes no line of its own: it goes on the first or last line, beside the
     /// text (rooms).
     fn capacity(&self) -> usize {
-        self.layout.lines.saturating_sub(usize::from(self.page_foot.is_some())).max(1)
+        self.usable().saturating_sub(usize::from(self.page_foot.is_some())).max(1)
+    }
+
+    /// The lines of a page in use: all but the [svrlb] reserve at the bottom.
+    fn usable(&self) -> usize {
+        self.layout.lines.saturating_sub(self.reserve).max(1)
     }
 
     /// The cells the page number keeps on the line being filled, at its start and at its end: the number's length
@@ -612,7 +647,7 @@ impl Formatter {
         let numbers = [(self.corner(), Some(self.number_text())), (self.print_corner(), self.page_print.clone())];
         for (c, text) in numbers {
             let Some(text) = text else { continue };
-            if (c.top() && at == 0) || (c.bottom() && at + 1 == self.layout.lines) {
+            if (c.top() && at == 0) || (c.bottom() && at + 1 == self.usable()) {
                 let room = text.chars().count() + 3;
                 if c.right() {
                     rooms.1 = rooms.1.max(room);
@@ -661,7 +696,7 @@ impl Formatter {
             }
             return;
         }
-        if !self.line_has_text() && self.page.len() + 1 == self.layout.lines && next_top {
+        if !self.line_has_text() && self.page.len() + 1 == self.usable() && next_top {
             // It begins on the next page (the page's end brings the count to 0).
             self.print_since = usize::MAX;
             return;
@@ -739,8 +774,8 @@ impl Formatter {
         let corner = self.corner();
         let number = self.number_text();
         let mut lines = std::mem::take(&mut self.page);
-        let room = self.layout.lines.max(1);
-        lines.resize(room, Line::default());
+        let room = self.usable();
+        lines.resize(self.layout.lines.max(room), Line::default());
         // The number goes on the first line (at the top) or the last (at the bottom), at its start or its end; the
         // text on that line was kept clear of it.
         let at = if corner.top() { Some(0) } else if corner.bottom() { Some(room - 1) } else { None };
@@ -981,8 +1016,10 @@ impl Formatter {
         let first = n.first().copied();
         match name {
             "<" => {
-                let next = self.left;
-                self.end_line(next);
+                self.interrupt_keep(|f| {
+                    let next = f.left;
+                    f.end_line(next);
+                });
             }
             "l" => {
                 if self.line_has_text() {
@@ -993,13 +1030,15 @@ impl Formatter {
                 if self.line_has_text() {
                     self.end_line(self.left);
                 }
-                // Print documents skip a line before every paragraph, at the top of a page too.
-                if !self.layout.braille {
+                // The lines a paragraph skips (print 1, braille 0, or [svprg]), at the top of a page too, and its first
+                // cell: braille the third, print the first, counted from the edge of the page (or from the left
+                // margin when [svprg] says so).
+                let (col, skip, from_margin) = self.paragraph;
+                for _ in 0..skip.max(0) {
                     self.push_line(Line::default());
                 }
-                // The paragraph column (spec 19 F0b, the braille and print formatting files): the third cell in
-                // braille, the first in print, counted from the edge of the page, not from the left margin.
-                self.start_col = if self.layout.braille { 2 } else { 0 };
+                let col = (col - 1).max(0) as usize + if from_margin { self.left } else { 0 };
+                self.start_col = col.min(self.layout.cells.saturating_sub(1));
             }
             "cp" => {
                 // New page if fewer than N + 1 lines remain, else a new line and L blank lines (braille 1 and 0,
@@ -1072,12 +1111,42 @@ impl Formatter {
             }
             // [hlN] level N: acts as [l], then the level's margins.
             "hl" => {
-                if self.line_has_text() {
-                    self.end_line(self.left);
-                }
+                self.interrupt_keep(|f| {
+                    if f.line_has_text() {
+                        f.end_line(f.left);
+                    }
+                });
                 self.set_level(first);
                 self.start_col = self.left;
             }
+            // [svrlbN] keep N lines blank at the bottom of the page.
+            "svrlb" => self.reserve = first.unwrap_or(0).clamp(0, self.layout.lines as i64 - 1) as usize,
+            // [svprgN:L:M] where paragraphs start and the lines they skip; alone, the document kind's.
+            "svprg" => {
+                let default = if self.layout.braille { (3, 0) } else { (1, 1) };
+                self.paragraph = (
+                    first.unwrap_or(default.0),
+                    n.get(1).copied().unwrap_or(default.1),
+                    n.get(2).copied().unwrap_or(0) != 0,
+                );
+            }
+            // [slN] N lines, the first ending a line with text; [stL] to line L of the page.
+            "sl" | "st" => {
+                let target = first.unwrap_or(if name == "st" { 1 } else { 0 });
+                let mut count = if name == "st" {
+                    target.clamp(1, self.layout.lines as i64) - 1 - self.page.len() as i64
+                } else {
+                    target
+                };
+                if self.line_has_text() {
+                    self.end_line(self.left);
+                    count -= 1;
+                }
+                for _ in 0..count.clamp(0, 3 * self.layout.lines as i64) {
+                    self.push_line(Line::default());
+                }
+            }
+            "ki" => self.keep_interrupt = first.unwrap_or(0) != 0,
             "rm" => self.right = first.unwrap_or(0).max(0) as usize,
             // [svsblN]: N blank lines after every line (1 when not given), at most (lines - 4) / 2.
             "svsbl" => {
@@ -1243,7 +1312,7 @@ impl Formatter {
             "tle" | "rfe" => {
                 if let Some((is_head, words)) = self.running.take() {
                     let cells = self.layout.cells;
-                    let lines = self.layout.lines;
+                    let lines = self.usable();
                     if is_head {
                         // At most two head lines, and head and foot lines fewer than the page's.
                         let width = self.head_side.width(cells);
@@ -1263,7 +1332,7 @@ impl Formatter {
             // [rfd] no foot from here, on this page too when its text has not come to the foot's line.
             "rfd" => {
                 self.foot = None;
-                if self.page.len() + 2 < self.layout.lines {
+                if self.page.len() + 2 < self.usable() {
                     self.page_foot = None;
                 }
             }
@@ -1503,7 +1572,7 @@ fn is_layout(code: &str) -> bool {
         split_code(code).0,
         "<" | "l" | "p" | "sk" | "ind" | "inm" | "ptys" | "ptye" | "rm" | "svsbl" | "pg" | "top" | "cp" | "fr" | "hds" | "hde"
             | "kbs" | "kbe" | "kpf" | "tab" | "run"
-            | "svpnp" | "svpfd" | "hi" | "hl" | "lea"
+            | "svpnp" | "svpfd" | "hi" | "hl" | "lea" | "svrlb" | "svprg" | "sl" | "st" | "ki"
             | "tls" | "tle" | "tld" | "rfs" | "rfe" | "rfd" | "svrhp" | "svrfp" | "svrhs" | "svrfs" | "kps" | "kpe" | "sc"
     )
 }
@@ -2122,6 +2191,28 @@ mod tests {
         assert_eq!(texts(&pages[0])[0], "abcde");
         let pages = format(&m("abc[x]de"), &Layout::braille(4, 3), None);
         assert_eq!(texts(&pages[0])[..2], ["abc", "de"]);
+    }
+
+    #[test]
+    fn page_and_line_codes() {
+        // [svrlb1] keeps the last line blank; the page number goes on the last line in use.
+        let mut layout = Layout::braille(10, 4);
+        layout.numbers_odd = Corner::LowerRight;
+        layout.numbers_even = Corner::LowerRight;
+        let pages = format(&m("[svrlb1]a\nb\nc\nd"), &layout, None);
+        assert_eq!(texts(&pages[0]), ["a", "b", "c       #a", ""]);
+        assert_eq!(texts(&pages[1])[0], "d");
+        // [st3] goes to the third line; [sl2] ends the line and skips one more.
+        let pages = format(&m("a[st3]b"), &Layout::braille(10, 4), None);
+        assert_eq!(texts(&pages[0])[..3], ["a", "", "b"]);
+        let pages = format(&m("a[sl2]b"), &Layout::braille(10, 4), None);
+        assert_eq!(texts(&pages[0])[..3], ["a", "", "b"]);
+        // [svprg5:0] paragraphs start at the fifth cell.
+        let pages = format(&m("[svprg5:0][p]\nab"), &Layout::braille(10, 2), None);
+        assert_eq!(texts(&pages[0])[0], "    ab");
+        // [ki1]: a new line in a keep block closes it and opens another, so only the last part moves.
+        let pages = format(&m("a\nb\n[kps][ki1]c\nd\ne[kpe]"), &Layout::braille(10, 4), None);
+        assert_eq!(texts(&pages[0])[..3], ["a", "b", "c"]);
     }
 
     #[test]
