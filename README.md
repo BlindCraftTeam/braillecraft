@@ -60,8 +60,10 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
 - **View preferences.** A margin bell a chosen number of cells before the end of a braille line, which codes the
   translated line shows, and the Cursor Locator: a rectangle that closes in on the caret when a document is opened
   or translated, when the view changes, or when Shift is pressed alone.
-- **Braille pages.** Lines per page, cells per line, margins, page numbering and running heads, shown in the status
-  line as page, line and column.
+- **Braille pages.** Lines per page, cells per line, margins, centred headings and page numbering, shown in the
+  status line as page, line and column. Each document's styles (headings, lists, paragraphs) are laid out from its
+  own style list. Running heads and feet are kept out of the body text; showing them at the top and bottom of later
+  pages is still being built.
 - **Save As.** Formatted braille (BRF in a choice of braille encodings), formatted text in a choice of code pages,
   coded braille, refreshable braille (.lbf), LaTeX, and the older document format.
 - **Printing.** Print documents and braille (with interline print) through the system printer.

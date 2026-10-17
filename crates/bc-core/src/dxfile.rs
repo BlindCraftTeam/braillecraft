@@ -311,10 +311,18 @@ fn read_styles(d: &[u8], at: usize) -> Option<(Vec<(String, String, String)>, Ve
     if codes.len() != 2 * names.len() {
         return None;
     }
+    // The codes of the name at place i are the pair at place index[i] (checked on the samples: dochow's h1. is
+    // then its heading codes; taken in the names' own order it was another style's).
+    if index.iter().any(|&k| k as usize >= names.len()) {
+        return None;
+    }
     let styles = names
         .iter()
         .enumerate()
-        .map(|(i, n)| (codes_text(n), codes_text(&codes[2 * i]), codes_text(&codes[2 * i + 1])))
+        .map(|(i, n)| {
+            let k = index[i] as usize;
+            (codes_text(n), codes_text(&codes[2 * k]), codes_text(&codes[2 * k + 1]))
+        })
         .collect();
     Some((styles, index))
 }
@@ -439,7 +447,13 @@ pub fn write(doc: &DxDocument) -> Vec<u8> {
     }
     let index: Vec<u16> = if kept { doc.style_index.clone() } else { (0..styles.len() as u16).collect() };
     write_block(&mut out, Some(&index), &styles.iter().map(|s| codes_bytes(&s.0)).collect::<Vec<_>>());
-    let codes: Vec<Vec<u8>> = styles.iter().flat_map(|s| [codes_bytes(&s.1), codes_bytes(&s.2)]).collect();
+    // Each style's codes go at the place its index value names, as they are read.
+    let mut codes: Vec<Vec<u8>> = vec![Vec::new(); 2 * styles.len()];
+    for (s, &k) in styles.iter().zip(&index) {
+        let k = (k as usize).min(styles.len().saturating_sub(1));
+        codes[2 * k] = codes_bytes(&s.1);
+        codes[2 * k + 1] = codes_bytes(&s.2);
+    }
     write_block(&mut out, None, &codes);
     // The optional sections after the styles, each with its descriptor pointing at where it now lies.
     let mut sections: Vec<(usize, u16, Vec<u8>)> = doc.sections.iter().filter(|s| s.0 != EMBOSSER_SLOT).cloned().collect();
@@ -525,6 +539,12 @@ mod tests {
             }
             let doc = read(&std::fs::read(&p).unwrap()).unwrap_or_else(|e| panic!("{}: {e}", p.display()));
             assert!(!doc.text.is_empty(), "{}", p.display());
+            // Each style has its own codes: the heading style h1. is a centred heading wherever a sample has it.
+            if let Some(h1) = doc.styles.iter().find(|s| s.0 == "h1.") {
+                assert!(h1.1.contains("\x1chds\x1f"), "{}: h1. begins {:?}", p.display(), h1.1);
+            }
+            // Written back, the styles are read again as they were.
+            assert_eq!(read(&write(&doc)).unwrap().styles, doc.styles, "{}", p.display());
             // The editor's form gives back the same running text.
             let back = crate::doctext::Shown::from_running(&doc.text).to_running();
             if back != doc.text {
@@ -576,6 +596,11 @@ mod tests {
         assert_eq!(back.style_index, vec![0, 1]);
         assert_eq!(&back.settings[64..88], &new_settings()[64..88]);
         assert_eq!(write(&back), bytes);
+        // Index values out of the names' order: each name keeps its own codes through a write and a read.
+        let shuffled = DxDocument { style_index: vec![1, 0], ..back.clone() };
+        let again = read(&write(&shuffled)).unwrap();
+        assert_eq!(again.styles, back.styles);
+        assert_eq!(again.style_index, vec![1, 0]);
         // The older format differs only in its version number.
         let old = write(&DxDocument { version: 0, ..back.clone() });
         assert_eq!(old[9], 0);

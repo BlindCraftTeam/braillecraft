@@ -399,7 +399,10 @@ mod tests {
         let styles = StyleTable::new(d.styles.iter().map(|(n, b, e)| (n.clone(), bytes(b), bytes(e))).collect());
         let t = Translator::open(&f, &format!("{}.btb", d.tables[0]), &format!("{}.sct", d.tables[1])).unwrap();
         let out = t.translate_marked(&d.text, Some(&styles), Some(&Languages::from_folder(&f).unwrap())).unwrap();
-        assert!(out.starts_with("\u{1c}svpnp2:2:0:0\u{1f}\u{1c}es~h1.\u{1f},,topical ,,how-to ,,guide"), "{}", &out[..80]);
+        // The heading style h1. holds heading codes, so "HOW-TO" is contracted by the American table, its "to" sign
+        // joined to the next word as EBAE writes it. (Before the style codes were paired by their index, h1. was read
+        // as a switch to Italian and the words were left uncontracted.)
+        assert!(out.starts_with("\u{1c}svpnp2:2:0:0\u{1f}\u{1c}es~h1.\u{1f},,topical ,,h[-6,,guide"), "{}", &out[..80]);
         if let Ok(expected) = std::env::var("BC_DX_EXPECTED") {
             let want = std::fs::read_to_string(std::path::Path::new(&expected).join("dochow.txt")).unwrap();
             assert!(out == want, "differs from the reference port at {:?}", out.chars().zip(want.chars()).position(|(a, b)| a != b));

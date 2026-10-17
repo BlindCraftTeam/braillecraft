@@ -224,6 +224,11 @@ struct Formatter<'a> {
     heading: Option<(Vec<(String, Vec<Option<usize>>)>, i64, i64)>,
     /// The last thing done was a page break by [pg] (a second one gives a blank page).
     after_page_code: bool,
+    /// Between [tls] and [tle] (or [rfs] and [rfe]): the words of a running head (or foot), which are not body text
+    /// (spec 19, page numbers and running heads). INTERIM: where the reference places it on later pages is not traced
+    /// (spec 19 section 4 UNKNOWN), so it is kept and not shown.
+    running: Option<Vec<String>>,
+    pub running_head: Option<String>,
 }
 
 impl<'a> Formatter<'a> {
@@ -242,6 +247,8 @@ impl<'a> Formatter<'a> {
             flush_right: false,
             heading: None,
             after_page_code: false,
+            running: None,
+            running_head: None,
         }
     }
 
@@ -349,6 +356,10 @@ impl<'a> Formatter<'a> {
 
     /// Places one word (its cells and their sources), wrapping it to the runover margin when it does not fit.
     fn word(&mut self, cells: &[(char, Option<usize>)]) {
+        if let Some(r) = &mut self.running {
+            r.push(cells.iter().map(|c| c.0).collect());
+            return;
+        }
         if let Some(h) = &mut self.heading {
             h.0.push((cells.iter().map(|c| c.0).collect(), cells.iter().map(|c| c.1).collect()));
             return;
@@ -480,6 +491,15 @@ impl<'a> Formatter<'a> {
                 }
             }
             "fr" => self.flush_right = true,
+            "tls" | "rfs" => self.running = Some(Vec::new()),
+            "tle" | "rfe" => {
+                if let Some(words) = self.running.take() {
+                    if name == "tle" {
+                        self.running_head = Some(words.join(" "));
+                    }
+                }
+            }
+            "tld" => self.running_head = None,
             "hds" => {
                 let (need, skip) = if self.layout.braille { (1, 0) } else { (2, 1) };
                 let need = first.unwrap_or(need);
@@ -583,6 +603,7 @@ fn is_layout(code: &str) -> bool {
     matches!(
         split_code(code).0,
         "<" | "l" | "p" | "sk" | "ind" | "inm" | "ptys" | "ptye" | "rm" | "svsbl" | "pg" | "top" | "cp" | "fr" | "hds" | "hde"
+            | "tls" | "tle" | "tld" | "rfs" | "rfe"
     )
 }
 
@@ -724,9 +745,22 @@ mod tests {
             }
             let doc = crate::dxfile::read(&std::fs::read(&p).unwrap()).unwrap();
             let doc = Shown::from_running(&doc.text);
+            // Every character of the text, except a running head's or foot's, which is not body text.
+            let mut running = false;
             let expected: Vec<usize> = pieces(&doc, None)
                 .iter()
-                .filter_map(|piece| if let Piece::Char(_, at) = piece { Some(*at) } else { None })
+                .filter_map(|piece| match piece {
+                    Piece::Code(c) if matches!(split_code(c).0, "tls" | "rfs") => {
+                        running = true;
+                        None
+                    }
+                    Piece::Code(c) if matches!(split_code(c).0, "tle" | "rfe") => {
+                        running = false;
+                        None
+                    }
+                    Piece::Char(_, at) if !running => Some(*at),
+                    _ => None,
+                })
                 .collect();
             for layout in [Layout::print(80, 50), Layout::braille(40, 25)] {
                 let pages = format(&doc, &layout, None);
@@ -774,5 +808,12 @@ mod tests {
     fn a_formatted_file_has_trimmed_lines_and_a_form_feed_after_every_page() {
         let pages = format(&m("[p]\nab cd[pg]ef"), &Layout::braille(8, 2), None);
         assert_eq!(formatted_text(&pages), "  ab cd\r\n\r\n\u{c}ef\r\n\r\n\u{c}");
+    }
+
+    #[test]
+    fn running_head_text_is_not_body_text() {
+        let pages = format(&m("ab[tls]Head Line[tle]cd ef[rfs]Foot[rfe]"), &Layout::braille(20, 3), None);
+        assert_eq!(texts(&pages[0])[0], "ab cd ef");
+        assert!(texts(&pages[0]).iter().all(|l| !l.contains("Head") && !l.contains("Foot")));
     }
 }
