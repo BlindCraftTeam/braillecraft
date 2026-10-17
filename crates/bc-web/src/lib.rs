@@ -1064,7 +1064,7 @@ pub fn menu_code(id: i32) -> String {
     }
 }
 
-/// The code vocabulary of Layout, Code List, as JSON [[code, description], ...].
+/// The codes of Layout, Code List, as JSON [[code, category bit, label], ...].
 #[wasm_bindgen]
 pub fn code_list() -> String {
     serde_json::to_string(bc_core::menu_codes::CODE_LIST).unwrap_or_default()
@@ -1487,7 +1487,7 @@ mod tests {
         assert_eq!(menu_code(1910), r#"{"text":"[p]"}"#);
         assert_eq!(menu_code(1701), r#"{"setting":"grade0"}"#);
         assert_eq!(menu_code(1), "");
-        assert!(code_list().starts_with(r#"[["atx","ASCII is all text"]"#));
+        assert!(code_list().starts_with(r##"[["#",4,"# (Go to tab stop, by number)"]"##));
         let text = "ab[l]\ncd[l]\nef";
         assert_eq!(position_of(text, 40, 2, true, 2, 1, 1), 12);
         assert_eq!(position_of(text, 40, 2, true, 9, 1, 1), -1);

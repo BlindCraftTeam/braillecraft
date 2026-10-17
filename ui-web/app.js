@@ -3248,35 +3248,54 @@ async function headerFooter(hf) {
   }
 }
 
-// Layout, Code List (dialog 1041): a code from the list with its parameters.
+// Layout, Code List (dialog 1041), as the original: the category boxes (All, then Page, Line, Tab, European, Greek
+// Letters, CBC, Math, Miscellaneous) choose the codes listed and are kept for the session from OK (at first All,
+// Page, Line and Tab); a double-click is OK; parameters with a space are refused in the dialog.
+const CODE_BOXES = [9, 10, 11, 12, 13, 14, 15, 16];
+let codeListKept = { all: true, mask: 7 };
 async function codeList() {
   const list = JSON.parse(core.code_list());
+  let shown = [];
+  const fill = (d) => {
+    const mask = (d.checked(8) ? 0xffffffff : 0) | CODE_BOXES.reduce((m, b, k) => (d.checked(b) ? m | (1 << k) : m), 0);
+    shown = list.filter(([, cat]) => (cat & mask) !== 0);
+    d.setItems(18, shown.map(([, , label]) => label), null);
+    d.setText(20, "");
+  };
+  const refuse = async (d) => {
+    if (!d.text(22).includes(" ")) return true;
+    await message("The parameters to a code must not contain spaces.");
+    d.get(22)?.focus();
+    d.get(22)?.select?.();
+    return false;
+  };
   const { result, d } = await showDialog(1041, {
     closes: [6],
     setup(d) {
-      d.setChecked(8, true);
-      d.setItems(18, list.map(([c, desc]) => `${c} (${desc})`), 0);
-      d.setText(20, `[${list[0][0]}]`);
+      d.setChecked(8, codeListKept.all);
+      CODE_BOXES.forEach((b, k) => d.setChecked(b, (codeListKept.mask & (1 << k)) !== 0));
+      fill(d);
       d.setText(22, "");
-      d.get(18).addEventListener("change", () => d.setText(20, `[${list[d.get(18).selectedIndex]?.[0] ?? ""}]`));
+      for (const b of [8, ...CODE_BOXES]) d.get(b)?.addEventListener("change", () => fill(d));
+      const listBox = d.get(18);
+      listBox?.addEventListener("change", () => d.setText(20, shown[listBox.selectedIndex] ? `[${shown[listBox.selectedIndex][0]}]` : ""));
+      listBox?.addEventListener("dblclick", () => listBox.form?.requestSubmit());
     },
+    onOk: refuse,
   });
   if (result === "6") {
     await message(PLANNED_HELP);
     return;
   }
   if (result !== "ok") return;
-  const params = d.text(22).trim();
-  if (/\s/.test(params)) {
-    await message("The parameters to a code must not contain spaces.");
-    return;
-  }
-  const chosen = list[d.get(18).selectedIndex];
-  if (chosen) insertCodes(`[${chosen[0]}${params}]`);
+  codeListKept = { all: d.checked(8), mask: CODE_BOXES.reduce((m, b, k) => (d.checked(b) ? m | (1 << k) : m), 0) };
+  const chosen = shown[d.get(18).selectedIndex];
+  if (chosen) insertCodes(`[${chosen[0]}${d.text(22)}]`);
 }
 
-// Document, Hyphenation: the document's hyphenation, marked in the menu (the formatter that uses it is step 8).
+// Document, Hyphen Table: the document's table; a change marks the document changed, as in the original.
 function setHyphen(id) {
+  if (doc.hyphen !== id) doc.dirty = true;
   doc.hyphen = id;
   refreshMenus();
 }

@@ -2261,7 +2261,7 @@ fn goto_position() {
     d.set_text(12, &column.to_string());
     d.set_checked(8, false);
     let me = Dlg { id: d.id, dialog: d.dialog, page: d.page };
-    d.on_button(8, move || {
+    d.on_check(8, move || {
         let on = me.checked(8);
         for cid in 9..=12 {
             me.enable(cid, !on);
@@ -2647,27 +2647,63 @@ fn code_list() {
     if active_area().is_none() {
         return;
     }
+    // The category boxes (All, then Page, Line, Tab, European, Greek Letters, CBC, Math, Miscellaneous) and the codes
+    // they show, as the original: the list holds the codes whose category is checked, All shows every code, and the
+    // boxes are kept for the session from OK (at the start All, Page, Line and Tab).
+    const BOXES: [i32; 8] = [9, 10, 11, 12, 13, 14, 15, 16];
+    thread_local! {
+        static KEPT: std::cell::Cell<(bool, u32)> = const { std::cell::Cell::new((true, 7)) };
+    }
+    fn shown(d: &Dlg) -> Vec<usize> {
+        let mask = if d.checked(8) { u32::MAX } else { 0 }
+            | BOXES.iter().enumerate().filter(|(_, &b)| d.checked(b)).fold(0, |m, (k, _)| m | 1 << k);
+        (0..codes::CODE_LIST.len()).filter(|&i| codes::CODE_LIST[i].1 & mask != 0).collect()
+    }
+    fn fill(d: &Dlg) {
+        let list = shown(d);
+        let items: Vec<&str> = list.iter().map(|&i| codes::CODE_LIST[i].2).collect();
+        d.set_items(18, &items, None);
+        d.set_text(20, "");
+    }
     let d = open_dialog(1041, None);
-    d.set_checked(8, true);
-    let items: Vec<String> = codes::CODE_LIST.iter().map(|(c, desc)| format!("{c} ({desc})")).collect();
-    let refs: Vec<&str> = items.iter().map(String::as_str).collect();
-    d.set_items(18, &refs, Some(0));
-    d.set_text(20, &format!("[{}]", codes::CODE_LIST[0].0));
+    let (all, mask) = KEPT.with(|k| k.get());
+    d.set_checked(8, all);
+    for (k, &b) in BOXES.iter().enumerate() {
+        d.set_checked(b, mask & (1 << k) != 0);
+    }
+    fill(&d);
     d.set_text(22, "");
+    for b in std::iter::once(8).chain(BOXES) {
+        let me = Dlg { id: d.id, dialog: d.dialog, page: d.page };
+        d.on_check(b, move || fill(&me));
+    }
+    let chosen_code = |d: &Dlg| d.selection(18).and_then(|i| shown(d).get(i as usize).copied());
     if let Some(list) = d.win(18).and_then(|w| w.as_widget::<ListBox>()) {
-        let chosen = d.win(20).and_then(|w| w.as_widget::<StaticText>());
-        list.on_selection_changed(move |e| {
-            if let (Some(i), Some(c)) = (e.get_selection(), chosen) {
-                if let Some((code, _)) = codes::CODE_LIST.get(i as usize) {
-                    c.set_label(&format!("[{code}]"));
+        let me = Dlg { id: d.id, dialog: d.dialog, page: d.page };
+        list.on_selection_changed(move |_| {
+            let code = chosen_code(&me).map(|i| format!("[{}]", codes::CODE_LIST[i].0)).unwrap_or_default();
+            me.set_text(20, &code);
+        });
+        // A double-click on a code is OK, with the same check.
+        let me = Dlg { id: d.id, dialog: d.dialog, page: d.page };
+        list.on_item_double_clicked(move |_| {
+            if me.text(22).contains(' ') {
+                message("The parameters to a code must not contain spaces.");
+                if let Some(w) = me.win(22) {
+                    w.set_focus();
                 }
+            } else {
+                me.dialog.end_modal(wxdragon::id::ID_OK);
             }
         });
     }
+    // Parameters with a space are refused in the dialog.
+    d.check_on_ok(|d| d.text(22).contains(' ').then(|| (22, "The parameters to a code must not contain spaces.".to_string())));
     d.closes_with(6);
     let r = d.show();
-    let chosen = d.selection(18);
+    let chosen = chosen_code(&d);
     let params = d.text(22);
+    let kept = (d.checked(8), BOXES.iter().enumerate().filter(|(_, &b)| d.checked(b)).fold(0, |m, (k, _)| m | 1 << k));
     d.destroy();
     if r == 6 {
         message(PLANNED_HELP);
@@ -2676,13 +2712,9 @@ fn code_list() {
     if r != 1 {
         return;
     }
-    let params = params.trim().to_string();
-    if params.chars().any(char::is_whitespace) {
-        message("The parameters to a code must not contain spaces.");
-        return;
-    }
-    if let Some((code, _)) = chosen.and_then(|i| codes::CODE_LIST.get(i as usize)) {
-        insert_shown(&Shown::marked(&format!("[{code}{params}]")));
+    KEPT.with(|k| k.set(kept));
+    if let Some(i) = chosen {
+        insert_shown(&Shown::marked(&format!("[{}{params}]", codes::CODE_LIST[i].0)));
     }
 }
 

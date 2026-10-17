@@ -97,7 +97,8 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   lower case to a capital on each word to upper case and back. Six-key entry (F2) works in print documents too. Goto checks its numbers in the dialog,
   offers the closest location when a place has no text, and goes to a print page with Use reference page number. Add Style
   checks the name in the dialog, then opens Edit Style Codes for the codes, and a style that cannot be nested gets
-  its period.
+  its period. Rename Style checks the new name in the dialog. Code List (F5) lists all 300 codes by category,
+  remembers the categories chosen, and takes a double-click as OK.
 - **Save As.** Formatted braille (BRF in a choice of braille encodings), PEF (Portable Embosser Format), formatted
   text in a choice of code pages (the encoding or code page chosen in the Save As dialog's own Encoding box), coded braille, refreshable braille (.lbf), LaTeX, and the older document format.
 - **Printing.** Print documents and braille (with interline print) through the system printer.

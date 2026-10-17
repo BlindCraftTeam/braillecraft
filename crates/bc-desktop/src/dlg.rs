@@ -725,6 +725,14 @@ impl Dlg {
         }
     }
 
+    /// A check box runs `handler` when it is checked or unchecked.
+    pub fn on_check(&self, cid: i32, handler: impl FnMut() + 'static) {
+        let mut handler = handler;
+        if let Some(c) = self.win(cid).and_then(|w| w.as_widget::<CheckBox>()) {
+            c.on_toggled(move |_| handler());
+        }
+    }
+
     /// A radio button runs `handler` when it is chosen.
     pub fn on_radio(&self, cid: i32, handler: impl FnMut() + 'static) {
         let mut handler = handler;
