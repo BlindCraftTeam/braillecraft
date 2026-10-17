@@ -203,6 +203,19 @@ impl Shown {
         Some(name)
     }
 
+    /// Layout, Apply Last Style: the name of the nearest paragraph style ended before `pos`, read from the text as
+    /// the original does (back from the caret or the selection start to the first style end code [ee~name] whose
+    /// name ends in "."; codes inside a code count too). None when there is none.
+    pub fn last_paragraph_style_before(&self, pos: usize) -> Option<String> {
+        let mut spans: Vec<(usize, usize)> = self.codes.iter().chain(self.inner.iter()).copied().filter(|c| c.0 < pos).collect();
+        spans.sort_by(|a, b| b.0.cmp(&a.0));
+        spans.into_iter().find_map(|(from, to)| {
+            let name: String = self.text.chars().skip(from + 1).take(to - from - 2).collect();
+            let style = name.strip_prefix("ee~")?;
+            style.ends_with('.').then(|| style.to_string())
+        })
+    }
+
     /// The text with each code whose name `keep` refuses taken out, brackets and all, with the editor's own line
     /// break after it; the other codes stay as shown.
     pub fn text_keeping_codes(&self, keep: impl Fn(&str) -> bool) -> String {
@@ -379,6 +392,22 @@ mod tests {
         let s = Shown { text: "x[y".into(), ..Shown::default() };
         assert_eq!(s.text_keeping_codes(|_| false), "x[y");
         assert!(!is_idle_code("idler"));
+    }
+
+    #[test]
+    fn last_paragraph_style_is_read_back_from_the_text() {
+        let s = Shown::marked("[es~para.]one[ee~para.] [es~em]two[ee~em] [es~h1.]x[ee~h1.] three");
+        let end = s.text.chars().count();
+        // The nearest end code before the place whose name ends in "."; a nested style ([ee~em]) is passed over.
+        assert_eq!(s.last_paragraph_style_before(end).as_deref(), Some("h1."));
+        let before_h1 = s.text.find("[es~h1.]").unwrap();
+        assert_eq!(s.last_paragraph_style_before(before_h1).as_deref(), Some("para."));
+        assert_eq!(s.last_paragraph_style_before(3), None);
+        // Inside a code that holds a code.
+        let s = Shown::marked("[hl4[ee~list.]]a");
+        assert_eq!(s.last_paragraph_style_before(s.text.chars().count()).as_deref(), Some("list."));
+        // Text that only looks like a code is not one.
+        assert_eq!(Shown::plain("[ee~para.]").last_paragraph_style_before(10), None);
     }
 
     fn run(s: &str) -> String {

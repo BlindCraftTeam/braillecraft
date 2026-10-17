@@ -751,6 +751,32 @@ impl Dlg {
         self.on_button(cid, move || dialog.end_modal(cid));
     }
 
+    /// OK first runs `check` on the dialog's fields, as the original checks a field before the dialog closes: when it
+    /// answers a field and a message, the message is shown, the field gets focus with its text selected, and the
+    /// dialog stays open with everything typed in it.
+    pub fn check_on_ok(&self, check: impl Fn(&Dlg) -> Option<(i32, String)> + 'static) {
+        let me = Dlg { id: self.id, dialog: self.dialog, page: self.page };
+        let dialog = self.dialog;
+        // wxDialog closes itself on a click of its affirmative button after this handler; moved to an id no control
+        // has, OK (and Enter on it, the default button) closes only through the check.
+        dialog.set_affirmative_id(0x7ffe);
+        self.on_button(1, move || match check(&me) {
+            Some((field, text)) => {
+                MessageDialog::builder(&dialog, &text, "BrailleCraft")
+                    .with_style(MessageDialogStyle::OK | MessageDialogStyle::IconWarning)
+                    .build()
+                    .show_modal();
+                if let Some(w) = me.win(field) {
+                    w.set_focus();
+                    if let Some(t) = w.as_widget::<TextCtrl>() {
+                        t.select_all();
+                    }
+                }
+            }
+            None => dialog.end_modal(wxdragon::id::ID_OK),
+        });
+    }
+
     /// Shows the dialog and waits for it to close. Focus starts in the first field (a text field, list, choice,
     /// check box or radio button), so typing goes straight into it. Returns the closing control id:
     /// 1 for OK, 2 for Cancel (also Escape and the close box), or the id given to `closes_with`.

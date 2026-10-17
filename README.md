@@ -87,6 +87,9 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   item) move to the next page whole rather than break across one. Print page numbers marked in the text show in their corner,
   with a continuation letter on later braille pages, and a print page change line where a print page begins in the
   middle of a braille page.
+- **Layout commands as the original.** Header and Footer place their text on all, odd or even pages (or end it), Set
+  Page Number and Document, Page Numbering check the number in the dialog, and Apply Last Style applies the paragraph
+  style last ended before the caret. A value a dialog refuses gets its message there, with what was typed kept.
 - **Save As.** Formatted braille (BRF in a choice of braille encodings), PEF (Portable Embosser Format), formatted
   text in a choice of code pages (the encoding or code page chosen in the Save As dialog's own Encoding box), coded braille, refreshable braille (.lbf), LaTeX, and the older document format.
 - **Printing.** Print documents and braille (with interline print) through the system printer.

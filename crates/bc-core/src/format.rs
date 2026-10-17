@@ -54,7 +54,7 @@ pub enum Corner {
 impl Corner {
     /// The value a document file and the Page Numbering dialog use: 0 none, 1 upper left, 2 upper right, 3 lower
     /// left, 4 lower right.
-    pub fn from_code(n: u16) -> Corner {
+    pub fn from_code(n: u32) -> Corner {
         match n {
             1 => Corner::UpperLeft,
             2 => Corner::UpperRight,
@@ -1179,7 +1179,7 @@ impl Formatter {
                     let get = |k: usize| n.get(k).copied().unwrap_or(0);
                     (get(0), get(1), get(2), get(3))
                 };
-                let corner = |v: i64| Corner::from_code(v.clamp(0, 4) as u16);
+                let corner = |v: i64| Corner::from_code(v.clamp(0, 4) as u32);
                 self.next_numbers = Some((corner(odd), corner(even)));
                 // A print position equal to the braille one on the same pages is off.
                 let p_odd = if p_odd == odd { 0 } else { p_odd };

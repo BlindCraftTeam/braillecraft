@@ -98,7 +98,6 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
         styles: crate::translation::template_style_list(&crate::translation::default_template()),
         file_settings: Vec::new(),
         file_styles: Vec::new(),
-        last_style: None,
         highlight_anchor: None,
         last_line_key: String::new(),
         six_down: HashSet::new(),

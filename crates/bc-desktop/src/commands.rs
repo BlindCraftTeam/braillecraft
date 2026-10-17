@@ -88,11 +88,19 @@ fn page_numbering() {
         d.set_radio(g, n as usize);
     }
     d.set_text(31, &numbers[4].to_string());
+    d.check_on_ok(|d| {
+        check_number(
+            d,
+            31,
+            "The first page to display page numbers must not be less than %d.",
+            "The first page to display page numbers must not be greater than %d.",
+        )
+    });
     let ok = d.show() == 1;
     let mut chosen = numbers;
     for (k, g) in GROUPS.iter().enumerate() {
         if let Some(i) = d.radio(g) {
-            chosen[k] = i as u16;
+            chosen[k] = i as u32;
         }
     }
     let first = d.number(31);
@@ -100,9 +108,8 @@ fn page_numbering() {
     if !ok {
         return;
     }
-    // A first page number that is not a number keeps the one the document had.
-    if let Some(n) = first.filter(|n| (1..=9999).contains(n)) {
-        chosen[4] = n as u16;
+    if let Some(n) = first {
+        chosen[4] = n as u32;
     }
     app::with(|a| {
         if let Some(doc) = a.doc_mut() {
@@ -333,8 +340,8 @@ pub fn run(id: i32, checked: bool) {
         1403 | 1404 | 1406 => message(PLANNED_FORMATTER),
         1407 => join_lines(),
         1409 => set_page_number(),
-        1410 => header_footer(1029, "[tls]", "[tle]", "[tld]"),
-        1411 => header_footer(1030, "[rfs]", "[rfe]", "[rfd]"),
+        1410 => header_footer(&HEADER),
+        1411 => header_footer(&FOOTER),
         1413 => message(PLANNED_FORMATTER),
         1416 => code_list(),
         1701..=2404 if has_doc => insert_code(id),
@@ -2470,25 +2477,27 @@ fn choose_style(dialog: i32) -> Option<Style> {
     app::with(|a| a.doc().and_then(|doc| doc.styles.iter().find(|s| s.name == chosen).cloned()))
 }
 
-fn apply_named_style(style: Style) {
-    wrap_selection(&Shown::marked(&format!("[es~{}]", style.name)), &Shown::marked(&format!("[ee~{}]", style.name)));
-    app::with(|a| {
-        if let Some(d) = a.doc_mut() {
-            d.last_style = Some(style);
-        }
-    });
+fn apply_named_style(name: &str) {
+    wrap_selection(&Shown::marked(&format!("[es~{name}]")), &Shown::marked(&format!("[ee~{name}]")));
 }
 
 fn apply_style() {
     if let Some(s) = choose_style(1046) {
-        apply_named_style(s);
+        apply_named_style(&s.name);
     }
 }
 
+/// The paragraph style ended last before the caret (or the selection start), read from the document text; nothing
+/// happens when there is none, as in the original.
 fn apply_last_style() {
-    match app::with(|a| a.doc().and_then(|d| d.last_style.clone())) {
-        Some(s) => apply_named_style(s),
-        None => message("No style has been applied yet in this document."),
+    let name = app::with(|a| {
+        a.doc().and_then(|d| {
+            let (from, to) = d.selection();
+            d.shown().last_paragraph_style_before(from.min(to))
+        })
+    });
+    if let Some(name) = name {
+        apply_named_style(&name);
     }
 }
 
@@ -2501,37 +2510,111 @@ fn join_lines() {
     }
 }
 
+/// A whole number field checked as the original checks one in its dialog: string 2644 when it is not a number, else
+/// `low` or `high` (with the limit put in for %d) when it is out of 1 ..= 2147483647.
+fn check_number(d: &Dlg, field: i32, low: &str, high: &str) -> Option<(i32, String)> {
+    const MAX: i64 = 0x7fff_ffff;
+    match d.number(field) {
+        None => Some((field, "The number entered is not valid.".into())),
+        Some(n) if n < 1 => Some((field, low.replace("%d", "1"))),
+        Some(n) if n > MAX => Some((field, high.replace("%d", &MAX.to_string()))),
+        Some(_) => None,
+    }
+}
+
 fn set_page_number() {
     let d = open_dialog(1042, None);
     d.set_text(7, "1");
     d.set_radio(&[9, 10], 0);
+    d.check_on_ok(|d| {
+        check_number(d, 7, "The page number may not be set lower than %d.", "The page number may not be set to be greater than %d.")
+    });
     let ok = d.show() == 1;
-    let page = d.text(7);
+    let page = d.number(7).unwrap_or(1);
     let roman = d.radio(&[9, 10]) == Some(1);
     d.destroy();
     if ok {
-        insert_shown(&Shown::marked(&format!("[{}][pv{}]", if roman { "pntr" } else { "pnta" }, page.trim())));
+        insert_shown(&Shown::marked(&format!("[{}][pv{page}]", if roman { "pntr" } else { "pnta" })));
     }
 }
 
-/// Layout, Header and Footer: the text between the start and end codes, or the code that discontinues it.
-fn header_footer(dialog: i32, start: &str, end: &str, none: &str) {
+/// The texts of Layout, Header (dialog 1029) and Footer (1030): its codes, the placement code and its messages.
+struct HeaderFooter {
+    dialog: i32,
+    start: &'static str,
+    end: &'static str,
+    none: &'static str,
+    placement: &'static str,
+    empty: &'static str,
+    too_long: &'static str,
+}
+
+const HEADER: HeaderFooter = HeaderFooter {
+    dialog: 1029,
+    start: "[tls]",
+    end: "[tle]",
+    none: "[tld]",
+    placement: "svrhp",
+    empty: "The header text is empty",
+    too_long: "The header text is too long.  It must not be greater than %d characters.",
+};
+
+const FOOTER: HeaderFooter = HeaderFooter {
+    dialog: 1030,
+    start: "[rfs]",
+    end: "[rfe]",
+    none: "[rfd]",
+    placement: "svrfp",
+    empty: "The footer text is empty.",
+    too_long: "The footer text is too long.  It must not be greater than %d characters.",
+};
+
+/// Layout, Header and Footer, as the original: All Pages, Odd Pages, Even Pages write the placement code 3, 1, 2
+/// ([svrhp3]) before the start code, the text and the end code; No Header writes the code that discontinues it and
+/// greys out the text. The text is checked in the dialog: 1 to 80 characters.
+fn header_footer(hf: &'static HeaderFooter) {
+    const RADIOS: [i32; 4] = [9, 10, 11, 12];
+    const PLACEMENT: [u32; 4] = [3, 1, 2, 0];
+    const LONGEST: usize = 80;
     if active_area().is_none() {
         return;
     }
-    let d = open_dialog(dialog, None);
-    d.set_radio(&[9, 10, 11, 12], 0);
+    let d = open_dialog(hf.dialog, None);
+    d.set_radio(&RADIOS, 0);
+    for (k, &id) in RADIOS.iter().enumerate() {
+        let me = Dlg { id: d.id, dialog: d.dialog, page: d.page };
+        d.on_radio(id, move || {
+            me.enable(6, k != 3);
+            me.enable(7, k != 3);
+        });
+    }
+    d.check_on_ok(move |d| {
+        if d.radio(&RADIOS) == Some(3) {
+            return None;
+        }
+        let n = d.text(7).chars().count();
+        if n == 0 {
+            Some((7, hf.empty.to_string()))
+        } else if n > LONGEST {
+            Some((7, hf.too_long.replace("%d", &LONGEST.to_string())))
+        } else {
+            None
+        }
+    });
     let ok = d.show() == 1;
     let text = d.text(7);
-    let off = d.radio(&[9, 10, 11, 12]) == Some(3);
+    let place = PLACEMENT[d.radio(&RADIOS).unwrap_or(0)];
     d.destroy();
     if ok {
         // The codes are codes; the header or footer text typed is text.
-        let mut s = Shown::marked(if off { none } else { start });
-        if !off {
+        let s = if place == 0 {
+            Shown::marked(hf.none)
+        } else {
+            let mut s = Shown::marked(&format!("[{}{place}]{}", hf.placement, hf.start));
             s.push(&Shown::plain(&text));
-            s.push(&Shown::marked(end));
-        }
+            s.push(&Shown::marked(hf.end));
+            s
+        };
         insert_shown(&s);
     }
 }

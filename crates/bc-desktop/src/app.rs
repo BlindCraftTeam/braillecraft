@@ -94,7 +94,7 @@ pub struct Doc {
     /// Page numbering, in the order the document file keeps it: braille page numbers on even pages and on odd pages,
     /// print page numbers on even pages and on odd pages (0 none, 1 upper left, 2 upper right, 3 lower left, 4 lower
     /// right), then the first page whose number is shown.
-    pub page_numbers: [u16; 5],
+    pub page_numbers: [u32; 5],
     /// The document laid out into pages, with what it was laid out from (a hash of the text, page size, numbering
     /// and styles); laid out again when any of them changes.
     pub pages: Option<(u64, std::rc::Rc<Vec<bc_core::format::Page>>)>,
@@ -118,7 +118,6 @@ pub struct Doc {
     /// block (empty for a new document), and the style names in the file's order with the index the file gives each.
     pub file_settings: Vec<u8>,
     pub file_styles: Vec<(String, u16)>,
-    pub last_style: Option<Style>,
     /// Edit, Highlight: while on, caret moves extend the selection from where it was turned on.
     pub highlight_anchor: Option<usize>,
     pub last_line_key: String,

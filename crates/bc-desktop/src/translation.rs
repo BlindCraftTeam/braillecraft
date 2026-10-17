@@ -161,7 +161,7 @@ pub fn template_hyphenation(name: &str) -> u16 {
     .unwrap_or(2)
 }
 
-pub fn template_page_numbers(name: &str) -> [u16; 5] {
+pub fn template_page_numbers(name: &str) -> [u32; 5] {
     with_templates(|t| {
         let t = t?;
         Some(templates::page_numbers(&t.text(t.by_name(name)?).ok()?))

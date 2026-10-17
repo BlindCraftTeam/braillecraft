@@ -105,8 +105,8 @@ pub fn tables(text: &str) -> Option<[String; 4]> {
 /// odd pages, print page numbers on even pages and on odd pages (0 none, 1 upper left, 2 upper right, 3 lower left,
 /// 4 lower right), then the first page whose number is shown. A setting the template leaves out takes the reference
 /// program's default (braille numbers lower right, print numbers upper right, spec 19; numbers from page 1).
-pub fn page_numbers(text: &str) -> [u16; 5] {
-    let corner = |key: &str, default: u16| match setting(text, key) {
+pub fn page_numbers(text: &str) -> [u32; 5] {
+    let corner = |key: &str, default: u32| match setting(text, key) {
         Some("None") => 0,
         Some("UpperLeft") => 1,
         Some("UpperRight") => 2,

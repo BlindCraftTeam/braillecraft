@@ -37,8 +37,9 @@ const BODY: usize = HEADER + SETTINGS;
 pub struct DxDocument {
     pub kind: DocumentKind,
     pub version: u16,
-    /// Braille page numbers on even and odd pages, print page numbers on even and odd pages, first page number.
-    pub page_numbering: [u16; 5],
+    /// Braille page numbers on even and odd pages, print page numbers on even and odd pages, first page number. Held
+    /// as 32-bit numbers as the original holds them in a document (+0x478 ... +0x488); the file keeps 16 bits of each.
+    pub page_numbering: [u32; 5],
     pub translated_line: bool,
     pub six_key: bool,
     /// Print-to-braille table, its scan table, braille-to-print table, its scan table.
@@ -231,7 +232,7 @@ pub fn read(d: &[u8]) -> Result<DxDocument, DxError> {
         return Err(DxError::NewerVersion(version));
     }
     let s = HEADER;
-    let page_numbering = [u16_at(d, s), u16_at(d, s + 2), u16_at(d, s + 4), u16_at(d, s + 6), u16_at(d, s + 8)];
+    let page_numbering = std::array::from_fn(|i| u16_at(d, s + 2 * i) as u32);
     let length = u32_at(d, s + 18) as usize;
     let tables = std::array::from_fn(|i| {
         let name = &d[s + 32 + i * 8..s + 40 + i * 8];
@@ -409,7 +410,7 @@ pub fn write(doc: &DxDocument) -> Vec<u8> {
     out.extend_from_slice(&version.to_be_bytes());
     let mut s = if doc.settings.len() == SETTINGS { doc.settings.clone() } else { new_settings() };
     for (i, v) in doc.page_numbering.iter().enumerate() {
-        s[2 * i..2 * i + 2].copy_from_slice(&v.to_be_bytes());
+        s[2 * i..2 * i + 2].copy_from_slice(&(*v as u16).to_be_bytes());
     }
     s[18..22].copy_from_slice(&(body.len() as u32).to_be_bytes());
     s[14..16].copy_from_slice(&u16::from(doc.coded_view).to_be_bytes());

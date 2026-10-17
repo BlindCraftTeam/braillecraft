@@ -467,10 +467,10 @@ function caretLine() {
 // its template's, once its document file is made.
 function syncNumbering() {
   if (doc.file) {
-    core.set_page_numbering(Uint16Array.from(doc.file.page_numbers));
+    core.set_page_numbering(Uint32Array.from(doc.file.page_numbers));
     return;
   }
-  core.set_page_numbering(new Uint16Array(5));
+  core.set_page_numbering(new Uint32Array(5));
   const d = doc;
   documentFile().then(() => {
     if (d === doc) showStatus();
@@ -992,6 +992,21 @@ async function messageBox(text, yesNo = false, cancel = false, okCancel = false)
   return cancel ? answer : answer === "ok";
 }
 const message = (text) => messageBox(text, false);
+
+// A whole number field checked as the original checks one in its dialog (an onOk): string 2644 when it is not a
+// number, else `low` or `high` with the limit for %d when it is out of 1 ... 2147483647. On a failure the message is
+// shown, the field gets focus with its text selected, and the dialog stays open.
+async function checkNumber(d, field, low, high) {
+  const MAX = 0x7fffffff;
+  const n = d.number(field);
+  const text = n === null ? "The number entered is not valid." : n < 1 ? low.replace("%d", "1") : n > MAX ? high.replace("%d", String(MAX)) : null;
+  if (text === null) return true;
+  await message(text);
+  const el = d.get(field);
+  el?.focus();
+  el?.select?.();
+  return false;
+}
 const yesNo = (text) => messageBox(text, true);
 const okCancel = (text) => messageBox(text, false, false, true);
 // Yes, No or Cancel: true, false, or null for Cancel.
@@ -2870,7 +2885,13 @@ async function applyStyle() {
 
 function applyNamedStyle(name) {
   wrapSelection(`[es~${name}]`, `[ee~${name}]`);
-  doc.lastStyle = name;
+}
+
+// Layout, Apply Last Style: the paragraph style ended last before the caret or the selection start, read from the
+// text; nothing happens when there is none, as in the original.
+function applyLastStyle() {
+  const name = core.editor_last_paragraph_style(Math.min(editor.selectionStart, editor.selectionEnd));
+  if (name) applyNamedStyle(name);
 }
 
 // Document, Add Style (dialog 1025): a new style, its codes typed or taken from the style it is based on.
@@ -2988,14 +3009,14 @@ async function pageNumbering() {
       GROUPS.forEach((g, k) => d.setRadio(g, numbers[k]));
       d.setText(31, String(numbers[4]));
     },
+    onOk: (d) =>
+      checkNumber(d, 31, "The first page to display page numbers must not be less than %d.", "The first page to display page numbers must not be greater than %d."),
   });
   if (result !== "ok") return;
   const chosen = GROUPS.map((g, k) => d.radio(g) ?? numbers[k]);
-  // A first page number that is not a number keeps the one the document had.
-  const first = d.number(31);
-  chosen.push(first !== null && first >= 1 && first <= 9999 ? first : numbers[4]);
+  chosen.push(d.number(31));
   if (chosen.some((n, k) => n !== numbers[k])) {
-    file.set_page_numbers(Uint16Array.from(chosen));
+    file.set_page_numbers(Uint32Array.from(chosen));
     doc.dirty = true;
   }
   showStatus();
@@ -3072,22 +3093,51 @@ async function setPageNumber() {
       d.setText(7, "1");
       d.setRadio([9, 10], 0);
     },
+    onOk: (d) => checkNumber(d, 7, "The page number may not be set lower than %d.", "The page number may not be set to be greater than %d."),
   });
-  if (result === "ok") insertCodes(`[${d.radio([9, 10]) === 1 ? "pntr" : "pnta"}][pv${d.text(7).trim()}]`);
+  if (result === "ok") insertCodes(`[${d.radio([9, 10]) === 1 ? "pntr" : "pnta"}][pv${d.number(7)}]`);
 }
 
-// Layout, Header and Footer (dialogs 1029, 1030): the text between the start and end codes, or the code that
-// discontinues it.
-async function headerFooter(rid, start, end, none) {
-  const { result, d } = await showDialog(rid, { setup: (d) => d.setRadio([9, 10, 11, 12], 0) });
+// Layout, Header and Footer (dialogs 1029, 1030), as the original: All Pages, Odd Pages, Even Pages write the
+// placement code 3, 1, 2 ([svrhp3]) before the start code, the text and the end code; No Header writes the code
+// that discontinues it and greys out the text. The text is checked in the dialog: 1 to 80 characters.
+const HEADER = { rid: 1029, start: "[tls]", end: "[tle]", none: "[tld]", placement: "svrhp", empty: "The header text is empty", tooLong: "The header text is too long.  It must not be greater than %d characters." };
+const FOOTER = { rid: 1030, start: "[rfs]", end: "[rfe]", none: "[rfd]", placement: "svrfp", empty: "The footer text is empty.", tooLong: "The footer text is too long.  It must not be greater than %d characters." };
+
+async function headerFooter(hf) {
+  const RADIOS = [9, 10, 11, 12];
+  const PLACEMENT = [3, 1, 2, 0];
+  const LONGEST = 80;
+  const { result, d } = await showDialog(hf.rid, {
+    setup(d) {
+      d.setRadio(RADIOS, 0);
+      RADIOS.forEach((id, k) =>
+        d.get(id)?.addEventListener("change", () => {
+          d.enable(6, k !== 3);
+          d.enable(7, k !== 3);
+        }),
+      );
+    },
+    async onOk(d) {
+      if (d.radio(RADIOS) === 3) return true;
+      const n = [...d.text(7)].length;
+      const text = n === 0 ? hf.empty : n > LONGEST ? hf.tooLong.replace("%d", String(LONGEST)) : null;
+      if (text === null) return true;
+      await message(text);
+      d.get(7)?.focus();
+      d.get(7)?.select?.();
+      return false;
+    },
+  });
   if (result !== "ok") return;
   // The codes are codes; the header or footer text typed is text.
-  if (d.radio([9, 10, 11, 12]) === 3) {
-    insertCodes(none);
+  const place = PLACEMENT[d.radio(RADIOS) ?? 0];
+  if (place === 0) {
+    insertCodes(hf.none);
   } else {
-    insertCodes(start);
+    insertCodes(`[${hf.placement}${place}]${hf.start}`);
     insertText(d.text(7));
-    insertCodes(end);
+    insertCodes(hf.end);
   }
 }
 
@@ -3291,14 +3341,14 @@ const COMMANDS = {
   1220: () => message(PLANNED_SPELL),
   1221: () => message(PLANNED_SPELL),
   1401: applyStyle,
-  1402: () => (doc.lastStyle ? applyNamedStyle(doc.lastStyle) : message("No style has been applied yet in this document.")),
+  1402: applyLastStyle,
   1403: () => message(PLANNED_FORMATTER),
   1404: () => message(PLANNED_FORMATTER),
   1406: () => message(PLANNED_FORMATTER),
   1407: joinLines,
   1409: setPageNumber,
-  1410: () => headerFooter(1029, "[tls]", "[tle]", "[tld]"),
-  1411: () => headerFooter(1030, "[rfs]", "[rfe]", "[rfd]"),
+  1410: () => headerFooter(HEADER),
+  1411: () => headerFooter(FOOTER),
   1413: () => message(PLANNED_FORMATTER),
   1416: codeList,
   1301: () => setView((v) => (v.full_page = !v.full_page)),

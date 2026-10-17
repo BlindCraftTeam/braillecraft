@@ -446,6 +446,16 @@ pub fn editor_codes() -> Vec<u32> {
     })
 }
 
+/// Layout, Apply Last Style: the paragraph style ended last before UTF-16 position `at` in the editor, read from its
+/// codes; empty when there is none.
+#[wasm_bindgen]
+pub fn editor_last_paragraph_style(at: u32) -> String {
+    EDITOR.with(|e| {
+        let e = e.borrow();
+        e.shown.last_paragraph_style_before(char_pos(&e.shown.text, at)).unwrap_or_default()
+    })
+}
+
 /// The editor's text in running form (codes marked 0x1C ... 0x1F), as a document file keeps it.
 #[wasm_bindgen]
 pub fn editor_running() -> String {
@@ -775,7 +785,7 @@ impl Document {
     /// odd pages and of print page numbers on even and odd pages (0 none, then upper left, upper right, lower left,
     /// lower right), then the first page number.
     #[wasm_bindgen(getter)]
-    pub fn page_numbers(&self) -> Vec<u16> {
+    pub fn page_numbers(&self) -> Vec<u32> {
         self.0.page_numbering.to_vec()
     }
 
@@ -798,8 +808,8 @@ impl Document {
         })
     }
 
-    pub fn set_page_numbers(&mut self, numbers: Vec<u16>) {
-        if let Ok(n) = <[u16; 5]>::try_from(numbers) {
+    pub fn set_page_numbers(&mut self, numbers: Vec<u32>) {
+        if let Ok(n) = <[u32; 5]>::try_from(numbers) {
             self.0.page_numbering = n;
         }
     }
@@ -1082,14 +1092,14 @@ pub fn emboss_job(text: &str, cells: u32, lines: u32, copies: u32) -> Vec<u8> {
 thread_local! {
     /// The active document's page numbering (the five values of Document, Page Numbering), which its pages are laid
     /// out with.
-    static NUMBERING: std::cell::Cell<[u16; 5]> = const { std::cell::Cell::new([0; 5]) };
+    static NUMBERING: std::cell::Cell<[u32; 5]> = const { std::cell::Cell::new([0; 5]) };
 }
 
 /// Sets the page numbering the active document's pages are laid out with: braille page numbers on even pages and
 /// on odd pages, print page numbers on even and odd pages, and the first page whose number is shown.
 #[wasm_bindgen]
-pub fn set_page_numbering(numbers: Vec<u16>) {
-    let mut n = [0u16; 5];
+pub fn set_page_numbering(numbers: Vec<u32>) {
+    let mut n = [0u32; 5];
     for (k, v) in numbers.into_iter().take(5).enumerate() {
         n[k] = v;
     }
