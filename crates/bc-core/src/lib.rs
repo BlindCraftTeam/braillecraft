@@ -7,6 +7,7 @@
 pub mod cmdline;
 pub mod codepages;
 pub mod doctext;
+pub mod braide;
 pub mod editor;
 pub mod dxfile;
 pub mod emboss;

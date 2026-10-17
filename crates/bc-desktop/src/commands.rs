@@ -877,8 +877,12 @@ fn read_import(bytes: &[u8], choice: &ImportChoice) -> Option<Shown> {
             message("This document cannot be imported into BrailleCraft.  It appears to be in Rich Text Format (RTF).  If Microsoft® Word is installed, you can use it to convert your document to a native Word format and import that into BrailleCraft.");
             None
         }
+        // Coded text is read in the chosen code page. Formatted text is read as UTF-8 whatever the code page box says,
+        // as the reference's formatted text importer reads it (its layout analysis, which makes paragraphs and
+        // headings of the lines, is queue line AUD-I-3).
         FileKind::CodedText | FileKind::FormattedText => {
-            let text = bc_core::codepages::decode(&choice.code_page, bytes);
+            let page = if choice.kind == FileKind::CodedText { choice.code_page.as_str() } else { "UTF-8" };
+            let text = bc_core::codepages::decode(page, bytes);
             Some(Shown::plain(&text.replace("\r\n", "\n").replace('\r', "\n")))
         }
         FileKind::CodedBraille | FileKind::FormattedBraille | FileKind::Orbit => {
