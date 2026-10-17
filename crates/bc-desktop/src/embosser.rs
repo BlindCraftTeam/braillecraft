@@ -343,6 +343,18 @@ fn show_general(general: &Dlg, has_model: bool) {
 /// while it is checked; Advanced's Send one character at a time (20) only for a port or a file. With no model none
 /// of them is usable.
 fn show_output(general: &Dlg, advanced: &Dlg, has_model: bool) {
+    // A model whose driver prints only through its system printer driver (the original's driver table marks the
+    // Tiger driver alone) can only be sent to a printer: Write to Port and Write to File are disabled and the output
+    // becomes Send to Printer (audit print-emboss E12).
+    let tiger = has_model
+        && with_catalog(|cat| {
+            cat.ok().and_then(|cat| find_model(cat, &general.selected_text(5).unwrap_or_default())).is_some_and(|m| m.driver() == "Emb_TigerEmbosserDriver")
+        });
+    general.enable(14, has_model && !tiger);
+    general.enable(15, has_model && !tiger);
+    if tiger && general.radio(&[13, 14, 15]) != Some(0) {
+        general.set_radio(&[13, 14, 15], 0);
+    }
     let kind = general.radio(&[13, 14, 15]).filter(|_| has_model);
     general.enable(16, kind == Some(0));
     general.enable(17, kind == Some(1));

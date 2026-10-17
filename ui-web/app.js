@@ -1140,8 +1140,9 @@ async function editSetup(setup, cat) {
   fillTranSend(transend, setup, lists);
   const hasModel = () => !(general.selected(5) ?? "(").startsWith("(");
   setTranSendTab(cat.flag(setup.model, "TranSend"));
+  const tigerModel = () => hasModel() && cat.driver(general.selected(5)) === "Emb_TigerEmbosserDriver";
   showGeneral(general, hasModel());
-  showOutput(general, advanced, hasModel());
+  showOutput(general, advanced, hasModel(), tigerModel());
   // The Device Settings groups shown again for the model, version and escape codes now chosen.
   const refreshDevice = () => {
     const model = hasModel() ? general.selected(5) : "";
@@ -1219,7 +1220,7 @@ async function editSetup(setup, cat) {
       lastPorts = JSON.stringify(ports);
     }
     showGeneral(general, !!model);
-    showOutput(general, advanced, !!model);
+    showOutput(general, advanced, !!model, tigerModel());
     setTranSendTab(!!model && cat.flag(model, "TranSend"));
     refreshDevice();
   });
@@ -1261,7 +1262,13 @@ function showGeneral(general, hasModel) {
 // The output controls for the output now chosen (spec 25 16.3), as in the desktop program: only the chosen output's
 // own field is usable; the Serial group and Initialize Serial Port only for a port beginning "com", the serial
 // settings only while it is checked; Advanced's Send one character at a time (20) only for a port or a file.
-function showOutput(general, advanced, hasModel) {
+function showOutput(general, advanced, hasModel, tiger = false) {
+  // A model whose driver prints only through its system printer driver (the original's driver table marks the
+  // Tiger driver alone) can only be sent to a printer: Write to Port and Write to File are disabled and the output
+  // becomes Send to Printer (audit print-emboss E12).
+  general.enable(14, hasModel && !tiger);
+  general.enable(15, hasModel && !tiger);
+  if (tiger && general.radio([13, 14, 15]) !== 0) general.setRadio([13, 14, 15], 0);
   const kind = hasModel ? general.radio([13, 14, 15]) : null;
   general.enable(16, kind === 0);
   general.enable(17, kind === 1);
@@ -2220,7 +2227,16 @@ fileInput.addEventListener("change", async () => {
     doc.saved = true;
     // The document's own embosser setup and page layout, as the file keeps them; cells and lines are taken by a
     // braille document.
-    if (d.embosser) doc.embosser = d.embosser;
+    // A setup no longer kept gives message 2358 and leaves the name empty (spec 25 10.1).
+    if (d.embosser) {
+      if (loadSetup(d.embosser)) doc.embosser = d.embosser;
+      else {
+        const l = d.embosser_layout ? JSON.parse(d.embosser_layout) : null;
+        await message(
+          `This document is set to use paper size "${l ? core.formName(l.layout.form) : ""}" on an undefined embosser ("${d.embosser}").  You must fix this in the "Document: Embosser Settings" dialogue before embossing the document; you should choose an embosser and paper size capable of fitting ${l?.lines ?? doc.lines} lines of ${l?.cells ?? doc.cells} cells to avoid reformatting the document.`,
+        );
+      }
+    }
     if (d.embosser_layout) {
       const l = JSON.parse(d.embosser_layout);
       doc.layout = l.layout;

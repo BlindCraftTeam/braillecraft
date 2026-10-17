@@ -741,6 +741,7 @@ fn open_dx_document(path: &Path) -> Option<u64> {
     };
     let name = path.file_name().map(|n| n.to_string_lossy().into_owned());
     let key = documents::new_document(if braille { DocKind::Braille } else { DocKind::Print }, name, &shown);
+    let mut undefined_setup: Option<String> = None;
     app::with(|a| {
         if let Some(i) = a.index_of(key) {
             let d = &mut a.docs[i];
@@ -758,9 +759,19 @@ fn open_dx_document(path: &Path) -> Option<u64> {
             d.file_styles = doc.styles.iter().map(|s| s.0.clone()).zip(doc.style_index.iter().copied()).collect();
             d.file_settings = doc.settings.clone();
             d.file_sections = doc.sections.clone();
-            // The document's own embosser setup, by name, as the file keeps it.
+            // The document's own embosser setup, by name, as the file keeps it; a setup no longer kept gives message
+            // 2358 after the open and leaves the name empty (spec 25 10.1, audit print-emboss E16).
             if !doc.embosser.is_empty() {
-                d.embosser = doc.embosser.clone();
+                if crate::embosser::load_setup(&doc.embosser).is_some() {
+                    d.embosser = doc.embosser.clone();
+                } else {
+                    let form = doc.layout.as_ref().map(|l| crate::embosser::form_name(&l.form)).unwrap_or_default();
+                    let (lines, cells) = doc.layout.as_ref().map_or((d.lines, d.cells), |l| (u32::from(l.lines), u32::from(l.cells)));
+                    undefined_setup = Some(format!(
+                        "This document is set to use paper size \"{form}\" on an undefined embosser (\"{}\").  You must fix this in the \"Document: Embosser Settings\" dialogue before embossing the document; you should choose an embosser and paper size capable of fitting {lines} lines of {cells} cells to avoid reformatting the document.",
+                        doc.embosser
+                    ));
+                }
             }
             // Its embosser page layout, when the file holds one (spec 25 section 10); cells and lines are taken by a
             // braille document, as Document, Embosser Setup sets them.
@@ -811,6 +822,9 @@ fn open_dx_document(path: &Path) -> Option<u64> {
         a.apply_view();
         a.set_title();
     });
+    if let Some(text) = undefined_setup {
+        message(&text);
+    }
     Some(key)
 }
 
@@ -1951,7 +1965,8 @@ pub fn emboss_with(skip: Option<u32>) {
     // interline print, else 17. The choice sets the document's interline print value (1 for 17 and 18, 2 for 19) and
     // the job's passes.
     use bc_core::ink::PassChoice;
-    let transend = model.flag("TranSend");
+    // Dialog 1038 only when the setup also names an ink printer (audit print-emboss E13); else the plain 1039.
+    let transend = model.flag("TranSend") && !setup.ink_printer.trim().is_empty();
     let mut layout = layout;
     let (copies, chosen, flags): (u32, Vec<Option<usize>>, u32) = match skip {
         Some(copies) => (copies, (0..pages.len()).map(Some).collect(), bc_core::ink::ALL_PASSES),
@@ -2025,6 +2040,31 @@ pub fn emboss_with(skip: Option<u32>) {
     });
     // A SuppressFeedPrompts setting that is not 0 skips the prompts between passes, as in the reference (spec 25 17.5).
     let suppressed = crate::settings_store::get(crate::settings_store::ROOT, "SuppressFeedPrompts").is_some_and(|v| v.trim() != "0" && !v.trim().is_empty());
+    // The output is opened first, before any pass, as the original opens its job (audit print-emboss E14): Write to
+    // File with no name asks for the file (its title and filter, strings 10044 and 10046), offering no name, and asks
+    // again while the file chosen cannot be made, with the system's own text; Cancel ends the job quietly. A failed
+    // job ends with its own message and then message 2694 (E15).
+    let target = match emb::target(&setup) {
+        Some(t) => t,
+        None => loop {
+            let f = app::frame();
+            let dialog = FileDialog::builder(&f)
+                .with_message("Emboss to File")
+                .with_wildcard("Embossed Braille File (*.ebf)|*.ebf")
+                .with_style(FileDialogStyle::Save | FileDialogStyle::OverwritePrompt)
+                .build();
+            let path = (dialog.show_modal() == wxdragon::id::ID_OK).then(|| dialog.get_path()).flatten();
+            dialog.destroy();
+            let Some(path) = path else { return };
+            match std::fs::File::create(&path) {
+                Ok(_) => break bc_core::emboss_out::Target::File(path.into()),
+                Err(e) => {
+                    let text = e.to_string();
+                    message(&if text.trim().is_empty() { format!("Cannot write to {path}") } else { text });
+                }
+            }
+        },
+    };
     // The ink pass first, to the setup's ink printer (spec 25 14.5 and 17): a printer that cannot be printed to ends
     // the job with message 2382, as a failed first pass does in the reference.
     if ink_pass {
@@ -2035,6 +2075,7 @@ pub fn emboss_with(skip: Option<u32>) {
             _ => {
                 let detail = format!("the ink printer \"{}\" could not be printed to", setup.ink_printer);
                 message(&bc_core::emboss_out::Failure::Printer(detail).message());
+                message("Printing failed.");
                 return;
             }
         }
@@ -2052,27 +2093,14 @@ pub fn emboss_with(skip: Option<u32>) {
     use bc_core::emboss::Sides;
     let manual = model.flag("ManualInterpoint") && options.interpoint && flags & 8 != 0;
     let passes: &[Sides] = if manual { &[Sides::Fronts, Sides::Backs] } else { &[Sides::All] };
-    let target = match emb::target(&setup) {
-        Some(t) => t,
-        None => {
-            // Write to File with no name: the file is asked for (INFERENCE: the reference's title and filter,
-            // strings 0x273c to 0x273e, were not read).
-            let f = app::frame();
-            let dialog = FileDialog::builder(&f)
-                .with_message("Emboss to File")
-                .with_wildcard("Braille files (*.brl, *.brf)|*.brl;*.brf|All files|*")
-                .with_default_file(&format!("{}.brl", std::path::Path::new(&name).file_stem().and_then(|s| s.to_str()).unwrap_or("Untitled")))
-                .with_style(FileDialogStyle::Save | FileDialogStyle::OverwritePrompt)
-                .build();
-            let path = (dialog.show_modal() == wxdragon::id::ID_OK).then(|| dialog.get_path()).flatten();
-            dialog.destroy();
-            let Some(path) = path else { return };
-            bc_core::emboss_out::Target::File(path.into())
-        }
-    };
+    // A progress window with Cancel while the job is sent, checked between sides as the original checks its own
+    // (audit print-emboss E15); the window itself is the toolkit's.
+    let frame = app::frame();
+    let progress = ProgressDialog::builder(&frame, "Embossing", &name, passes.len() as i32).with_style(ProgressDialogStyle::CanAbort).build();
+    let mut failed = false;
     for (n, &which) in passes.iter().enumerate() {
         if n > 0 && !suppressed && !ok_cancel("Please re-insert the stack of embossed sheets to emboss the second side.") {
-            return;
+            break;
         }
         // A port that is an FTDI device is written through the FTDI library (spec 25 21.1); the Typewriter driver
         // sends messages with the embosser's status and answer around each (21.2). To any other output the
@@ -2097,8 +2125,16 @@ pub fn emboss_with(skip: Option<u32>) {
         };
         if let Err(e) = sent {
             message(&e.message());
-            return;
+            failed = true;
+            break;
         }
+        if !progress.update(n as i32 + 1, None) {
+            break;
+        }
+    }
+    progress.destroy();
+    if failed {
+        message("Printing failed.");
     }
 }
 
