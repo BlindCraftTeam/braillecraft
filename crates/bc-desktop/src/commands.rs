@@ -604,7 +604,7 @@ fn pick_file(message_text: &str) -> Option<std::path::PathBuf> {
     let f = app::frame();
     let dialog = FileDialog::builder(&f)
         .with_message(message_text)
-        .with_wildcard("All supported files|*.txt;*.brf;*.brl;*.bru;*.dxp;*.dxb|Print and braille documents (*.dxp, *.dxb)|*.dxp;*.dxb|Braille files (*.brf, *.brl, *.bru)|*.brf;*.brl;*.bru|Text files (*.txt)|*.txt|All files|*")
+        .with_wildcard("All supported files|*.txt;*.brf;*.brl;*.bru;*.pef;*.dxp;*.dxb|Print and braille documents (*.dxp, *.dxb)|*.dxp;*.dxb|Braille files (*.brf, *.brl, *.bru)|*.brf;*.brl;*.bru|Portable Embosser Format (*.pef)|*.pef|Text files (*.txt)|*.txt|All files|*")
         .with_style(FileDialogStyle::Open | FileDialogStyle::FileMustExist)
         .build();
     if dialog.show_modal() == wxdragon::id::ID_OK {
@@ -726,6 +726,9 @@ pub fn open_path(path: &Path) -> Option<u64> {
     if ext == "dxp" || ext == "dxb" {
         return open_dx_document(&path);
     }
+    if ext == "pef" {
+        return open_pef(&path);
+    }
     match read_text_file(&path) {
         Ok(text) => {
             let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase();
@@ -795,6 +798,8 @@ enum SaveType {
     Coded,
     /// LaTeX (.tex, spec 22).
     Latex,
+    /// Portable Embosser Format (.pef, bc_core::pef): not in the reference program; the version 1 scope asks for it.
+    Pef,
 }
 
 /// The Save As file types, in the reference program's order for each kind of document (spec 04d-B), as far as
@@ -807,6 +812,7 @@ fn save_types(braille: bool) -> &'static [(&'static str, &'static str, SaveType)
             ("Formatted braille (*.brf)", "brf", SaveType::Formatted),
             ("Coded braille (*.bru)", "bru", SaveType::Coded),
             ("Refreshable braille (*.lbf)", "lbf", SaveType::Refreshable),
+            ("Portable Embosser Format (*.pef)", "pef", SaveType::Pef),
         ]
     } else {
         &[
@@ -869,6 +875,7 @@ fn save(key: Option<u64>, as_new: bool) -> bool {
         SaveType::Refreshable => write_refreshable(key, &chosen),
         SaveType::Coded => write_coded(key, &chosen),
         SaveType::Latex => write_latex(key, &chosen),
+        SaveType::Pef => write_pef(key, &chosen),
         SaveType::OlderDocument => write_document(key, &chosen, 0),
         SaveType::Document => write_document(key, &chosen, 1),
     }
@@ -1092,6 +1099,85 @@ fn write_refreshable(key: u64, path: &Path) -> bool {
         return false;
     }
     true
+}
+
+/// Save As PEF for a braille document: its laid-out pages as Unicode braille, the page size and interpoint of its
+/// embosser layout, its name as the title. The document itself keeps its own file and name.
+fn write_pef(key: u64, path: &Path) -> bool {
+    let Some(xml) = app::with(|a| {
+        let i = a.index_of(key)?;
+        let shown = a.docs[i].shown();
+        let pages = a.laid_out(i, &shown);
+        let enc = a.encoding();
+        let d = &a.docs[i];
+        let title = d.name.rsplit_once('.').map_or(d.name.as_str(), |(s, _)| s).to_string();
+        let secs = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |t| t.as_secs());
+        let identifier = format!("braillecraft-{title}-{secs}");
+        let cell = |c: char| enc.text_to_cells(&c.to_string()).chars().next().map_or(0, |u| (u as u32).saturating_sub(0x2800) as u8);
+        Some(bc_core::pef::write(&pages, d.cells as usize, d.lines as usize, d.layout.interpoint, &title, &identifier, &civil_date(secs), cell))
+    }) else {
+        return false;
+    };
+    if let Err(e) = std::fs::write(path, xml) {
+        message(&format!("{}: {e}", path.display()));
+        return false;
+    }
+    true
+}
+
+/// The date (YYYY-MM-DD, UTC) of `secs` seconds after 1970-01-01.
+fn civil_date(secs: u64) -> String {
+    // Days to a proleptic Gregorian date (Howard Hinnant's days-to-civil method).
+    let z = (secs / 86_400) as i64 + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = yoe + era * 400 + i64::from(m <= 2);
+    format!("{y:04}-{m:02}-{d:02}")
+}
+
+/// Opens a PEF file as a braille document: each row a line of cells in the display encoding, each page ending in a
+/// line break as a formatted braille file's form feed does.
+fn open_pef(path: &Path) -> Option<u64> {
+    let xml = match std::fs::read_to_string(path) {
+        Ok(x) => x,
+        Err(e) => {
+            message(&format!("{}: {e}", path.display()));
+            return None;
+        }
+    };
+    let pages = match bc_core::pef::read(&xml) {
+        Ok(p) => p,
+        Err(e) => {
+            message(&e);
+            return None;
+        }
+    };
+    let enc = app::with(|a| a.encoding());
+    let mut text = String::new();
+    for page in &pages {
+        for row in page {
+            text.extend(row.chars().map(|c| enc.cell_char(((c as u32) - 0x2800) as usize & 0x3f)));
+            text.push('\n');
+        }
+        text.push('\n');
+    }
+    let name = path.file_name().map(|n| n.to_string_lossy().into_owned());
+    let key = documents::new_document(DocKind::Braille, name, &Shown::plain(&text));
+    app::with(|a| {
+        if let Some(i) = a.index_of(key) {
+            a.docs[i].dirty = false;
+            a.docs[i].path = Some(path.to_path_buf());
+            a.docs[i].saved = true;
+            app::child_set_title(&a.docs[i].frame, &a.docs[i].full_name());
+        }
+        a.set_title();
+    });
+    Some(key)
 }
 
 /// The command line's /brf and /prf: formatted braille or text with the first encoding or code page, which Save As

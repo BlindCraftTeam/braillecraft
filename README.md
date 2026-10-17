@@ -46,7 +46,7 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
 
 - **Documents.** Print documents and braille documents, each in its own window, with formatting codes and styles
   kept apart from the text. Opens and saves .dxp (print) and .dxb (braille) documents, and opens text and braille
-  files (.txt, .brf, .brl).
+  files (.txt, .brf, .brl) and PEF (.pef) files.
 - **Formatted and coded views.** A document opens in the formatted view: its laid-out page lines with the codes
   hidden and an empty row after each page, which is what a screen reader reads. You type, delete, cut, paste and undo
   there as anywhere; a code next to the caret is removed whole. View, Codes (Alt+F3) switches to the coded view,
@@ -64,8 +64,8 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   status line as page, line and column. Each document's styles (headings, lists, paragraphs) are laid out from its
   own style list. Running heads and feet are kept out of the body text; showing them at the top and bottom of later
   pages is still being built.
-- **Save As.** Formatted braille (BRF in a choice of braille encodings), formatted text in a choice of code pages,
-  coded braille, refreshable braille (.lbf), LaTeX, and the older document format.
+- **Save As.** Formatted braille (BRF in a choice of braille encodings), PEF (Portable Embosser Format), formatted
+  text in a choice of code pages, coded braille, refreshable braille (.lbf), LaTeX, and the older document format.
 - **Printing.** Print documents and braille (with interline print) through the system printer.
 - **Embossing.** Embosser setups for 139 embosser models, including Index and Enabling Technologies, with page ranges and
   copies, to a printer queue, a serial port or a file. Embossers on an FTDI USB connection (the EBrailler Cosmo) are
