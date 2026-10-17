@@ -22,7 +22,8 @@
 //! - [hdsN:L] ... [hde] centred heading: on a new page if fewer than N + 1 lines remain (braille 1, print 2), else
 //!   after L blank lines (braille 0, print 1); each heading line is centred on the whole line, (cells - length) / 2,
 //!   its words wrapping inside the right margin.
-//! - [fr] the next word flush right.
+//! - [fr;F~X] the next word flush right, [tabP:A:F~X] at cell P justified A, [run] at the runover margin, with a
+//!   fill from the pen; a tab or flush right behind the pen goes to the next line.
 //! - [es~name] ... [ee~name]: the style's begin and end codes from the document's styles, in place.
 //! - Braille page numbers: in the corner the document's page numbering names for even and odd pages, on the first
 //!   or last line beside the text, which keeps three cells clear of them; [pgN~X] numbers the next page.
@@ -244,6 +245,19 @@ fn page_number(n: usize, prefix: Option<char>, braille: bool) -> String {
     s
 }
 
+/// Where the next word goes (a tab, flush right, [run]): column `col` (1-based; for flush right the last cell before
+/// the page number's room), justified 'L' (starting there), 'R' (ending there), 'C' (centred on it) or 'D' (its
+/// decimal point on it), with a fill from the pen ('partial' keeps a space at each end of it); `may_wrap` ends the
+/// line first when the column is not after the pen and a space.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Place {
+    col: Option<i64>,
+    just: char,
+    fill: Option<char>,
+    partial: bool,
+    may_wrap: bool,
+}
+
 /// The side room a running head or foot keeps ([svrhsM:N:J], [svrfsM:N:J]): M cells at the left, N at the right, and
 /// where the line goes: 'l' after M, 'r' ending N before the end, else centred on the whole line.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -350,7 +364,8 @@ struct Formatter {
     level: i64,
     right: usize,
     blank_between: usize,
-    flush_right: bool,
+    /// Where the next word goes, set by [tab], [fr] or [run].
+    place: Option<Place>,
     heading: Option<(Vec<(String, Vec<Option<usize>>)>, i64, i64)>,
     /// The last thing done was a page break by [pg] (a second one gives a blank page).
     after_page_code: bool,
@@ -412,7 +427,7 @@ impl Formatter {
             level: 1,
             right: 0,
             blank_between: 0,
-            flush_right: false,
+            place: None,
             heading: None,
             after_page_code: false,
             running: None,
@@ -700,6 +715,54 @@ impl Formatter {
         self.start_col = self.left;
     }
 
+    /// Places a word where a tab, flush right or [run] put it: the column from the justification, within the line;
+    /// the line ends first when the word would be behind the pen (or in a page number's room) and the code may wrap;
+    /// the fill runs from the pen to the word.
+    fn placed_word(&mut self, cells: &[(char, Option<usize>)], place: Place) {
+        let width = self.layout.cells;
+        let len = cells.len();
+        let mut wrapped = false;
+        let col = loop {
+            let (room_left, room_right) = self.rooms();
+            let target = place.col.unwrap_or((width - room_right.min(width)) as i64);
+            let start = match place.just {
+                'R' => target + 1 - len as i64,
+                'C' => target + 1 - (len as i64 + 1) / 2,
+                'D' => target - cells.iter().position(|c| c.0 == '.').unwrap_or(len.saturating_sub(1)) as i64,
+                _ => target,
+            };
+            let col = (start.clamp(1, (width as i64 - len as i64 + 1).max(1)) - 1) as usize;
+            let used = self.line.text.chars().count();
+            let has_text = self.line_has_text();
+            let behind = col < used + usize::from(has_text);
+            let blocked = col < room_left || col + len > width.saturating_sub(room_right);
+            if place.may_wrap && has_text && (behind || blocked) && !wrapped {
+                wrapped = true;
+                self.touching = false;
+                self.end_line(self.runover());
+                continue;
+            }
+            break if behind { used + usize::from(has_text) } else { col };
+        };
+        let used = self.line.text.chars().count();
+        for at in used..col {
+            let edge = place.partial && (at == used || at + 1 == col);
+            let c = match place.fill {
+                Some(f) if !edge && self.line_has_text() => f,
+                _ => ' ',
+            };
+            self.put(c, None);
+        }
+        for (k, &(c, s)) in cells.iter().enumerate() {
+            let at = self.line.text.chars().count();
+            self.place_word_marks(k, at);
+            self.put(c, s);
+        }
+        let at = self.line.text.chars().count();
+        self.place_word_marks(len, at);
+        self.touching = false;
+    }
+
     /// Places one word (its cells and their sources), wrapping it to the runover margin when it does not fit.
     fn word(&mut self, cells: &[(char, Option<usize>)]) {
         if let Some((_, r)) = &mut self.running {
@@ -714,24 +777,8 @@ impl Formatter {
             return;
         }
         self.open_page();
-        if self.flush_right {
-            self.flush_right = false;
-            let len = cells.len();
-            let used = self.line.text.chars().count();
-            if used + 1 + len > self.layout.cells.saturating_sub(self.rooms().1) {
-                self.end_line(self.runover());
-            }
-            let used = self.line.text.chars().count();
-            for _ in used..self.layout.cells.saturating_sub(self.rooms().1).saturating_sub(len) {
-                self.put(' ', None);
-            }
-            for (k, &(c, s)) in cells.iter().enumerate() {
-                let col = self.line.text.chars().count();
-                self.place_word_marks(k, col);
-                self.put(c, s);
-            }
-            let col = self.line.text.chars().count();
-            self.place_word_marks(cells.len(), col);
+        if let Some(place) = self.place.take() {
+            self.placed_word(cells, place);
             return;
         }
         let mut rest = cells;
@@ -788,7 +835,23 @@ impl Formatter {
     }
 
     fn code(&mut self, code: &str) {
+        // [fr;F~X] the next word flush right (before a page number's room), with fill F ('p' partial) of the first
+        // character of X (the second in a print document).
+        if code == "fr" || code.starts_with("fr;") || code.starts_with("fr~") {
+            let rest = code[2..].trim_start_matches(';');
+            let (kind, x) = rest.split_once('~').map_or((rest, None), |(a, b)| (a, Some(b)));
+            let fill = x.and_then(|x| x.chars().nth(if self.layout.braille { 0 } else { 1 }).or_else(|| x.chars().next()));
+            self.place = Some(Place {
+                col: None,
+                just: 'R',
+                fill,
+                partial: kind.trim().chars().next().is_some_and(|k| k.eq_ignore_ascii_case(&'p')),
+                may_wrap: true,
+            });
+            return;
+        }
         let (name, n) = split_code(code);
+        let name = if name.starts_with("tab~") { "tab" } else { name };
         let first = n.first().copied();
         match name {
             "<" => {
@@ -927,7 +990,30 @@ impl Formatter {
                     self.new_page();
                 }
             }
-            "fr" => self.flush_right = true,
+            // [tabP:A:F~X] the next word at cell P (1 when not given; -1 the middle of the line), justified A (L, R,
+            // C or D), with fill F ('p' partial) of character X.
+            "tab" => {
+                let body = &code[3..];
+                let (params, x) = body.split_once('~').map_or((body, None), |(a, b)| (a, Some(b)));
+                let parts: Vec<&str> = params.split(':').collect();
+                let mut col = parts.first().and_then(|p| p.trim().parse::<i64>().ok()).unwrap_or(1);
+                if col == -1 {
+                    col = (self.layout.cells as i64 + 1) / 2;
+                }
+                let just = parts.get(1).and_then(|p| p.trim().chars().next()).map_or('L', |c| c.to_ascii_uppercase());
+                let kind = parts.get(2).and_then(|p| p.trim().chars().next());
+                self.place = Some(Place {
+                    col: Some(col),
+                    just,
+                    fill: x.and_then(|x| x.chars().next()),
+                    partial: kind.is_some_and(|k| k.eq_ignore_ascii_case(&'p')),
+                    may_wrap: true,
+                });
+            }
+            // [run] the next word at the runover margin, on this line.
+            "run" => {
+                self.place = Some(Place { col: Some(self.runover() as i64 + 1), just: 'L', fill: None, partial: false, may_wrap: false });
+            }
             // [kps] ... [kpe] keep a block together on a page (new lines at both ends); [kbs] ... [kbe] the same within
             // a line (spec 19 7.4). A block at the top of a page's body is not counted.
             "kps" | "kbs" => {
@@ -1274,10 +1360,10 @@ impl Formatter {
 }
 
 fn is_layout(code: &str) -> bool {
-    matches!(
+    code.starts_with("fr;") || code.starts_with("fr~") || code.starts_with("tab~") || matches!(
         split_code(code).0,
         "<" | "l" | "p" | "sk" | "ind" | "inm" | "ptys" | "ptye" | "rm" | "svsbl" | "pg" | "top" | "cp" | "fr" | "hds" | "hde"
-            | "kbs" | "kbe" | "kpf"
+            | "kbs" | "kbe" | "kpf" | "tab" | "run"
             | "svpnp" | "svpfd" | "hi" | "hl"
             | "tls" | "tle" | "tld" | "rfs" | "rfe" | "rfd" | "svrhp" | "svrfp" | "svrhs" | "svrfs" | "kps" | "kpe" | "sc"
     )
@@ -1897,6 +1983,23 @@ mod tests {
         assert_eq!(texts(&pages[0])[0], "abcde");
         let pages = format(&m("abc[x]de"), &Layout::braille(4, 3), None);
         assert_eq!(texts(&pages[0])[..2], ["abc", "de"]);
+    }
+
+    #[test]
+    fn tabs_and_flush_right_place_the_next_word() {
+        let pages = format(&m("[ind5][tab7]note"), &Layout::braille(20, 2), None);
+        assert_eq!(texts(&pages[0])[0], "      note");
+        // Flush right with partial leaders: a space, the fill, a space, the word at the end of the line.
+        let pages = format(&m("Chapter[fr;p~\".]5"), &Layout::braille(20, 2), None);
+        assert_eq!(texts(&pages[0])[0], format!("Chapter {} 5", "\"".repeat(10)));
+        let pages = format(&m("a [fr]b"), &Layout::braille(10, 2), None);
+        assert_eq!(texts(&pages[0])[0], "a        b");
+        // A tab behind the pen goes to the next line.
+        let pages = format(&m("abcdef [tab3]x"), &Layout::braille(10, 3), None);
+        assert_eq!(texts(&pages[0])[..2], ["abcdef", "  x"]);
+        // Right justified at a cell.
+        let pages = format(&m("a [tab8:R]xyz"), &Layout::braille(10, 2), None);
+        assert_eq!(texts(&pages[0])[0], "a    xyz");
     }
 
     #[test]
