@@ -426,8 +426,53 @@ pub fn formatted_key(a: &mut app::App, i: usize, code: i32, control: bool, alt: 
             let code = Shown::marked(&a.settings.shortcuts.new_line);
             type_in(a, i, &code);
         }
+        PAGE_UP | PAGE_DOWN => return page_move(a, i, code == PAGE_DOWN, control),
         _ => return false,
     }
+    true
+}
+
+const PAGE_UP: i32 = 366;
+const PAGE_DOWN: i32 = 367;
+
+/// Page Up and Page Down in the formatted view (spec 27 section 7): by the setting Shortcuts PageNav (without Control)
+/// or ControlPageNav (with it): a screen (the editing area's own move), a page (the same line and column on the
+/// previous or next page) or to the top of a page (its first cell that shows document text). True when moved here.
+fn page_move(a: &mut app::App, i: usize, down: bool, control: bool) -> bool {
+    let mode = if control { a.settings.shortcuts.control_page_nav } else { a.settings.shortcuts.page_nav };
+    if mode == 0 {
+        return false;
+    }
+    let d = &a.docs[i];
+    let Some(f) = d.formatted.as_ref() else { return false };
+    let Some((n, col)) = f.view.line_at(d.text.get_insertion_point().max(0) as usize) else { return true };
+    let (page, line, _) = f.view.lines[n];
+    let last = f.pages.len().saturating_sub(1);
+    let target = if down { (page + 1).min(last) } else { page.saturating_sub(1) };
+    let on_page: Vec<&(usize, usize, usize)> = f.view.lines.iter().filter(|l| l.0 == target).collect();
+    let place = if mode == 1 {
+        on_page.iter().find(|l| l.1 == line).or(on_page.last()).map(|l| {
+            let len = f.pages[target].lines[l.1].text.chars().count();
+            l.2 + col.min(len)
+        })
+    } else {
+        on_page
+            .iter()
+            .find_map(|l| f.pages[target].lines[l.1].sources.iter().position(|s| s.is_some()).map(|c| l.2 + c))
+            .or(on_page.first().map(|l| l.2))
+    };
+    let Some(place) = place else { return true };
+    let t = d.text;
+    t.set_insertion_point(place as i64);
+    t.show_position(place as i64);
+    // The editing area may carry out the key itself afterwards; the caret is set again once it has.
+    let key = d.key;
+    wxdragon::call_after(Box::new(move || {
+        t.set_insertion_point(place as i64);
+        t.show_position(place as i64);
+        caret_moved(key);
+    }));
+    a.update_status();
     true
 }
 

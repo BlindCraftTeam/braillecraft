@@ -47,18 +47,29 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
 - **Documents.** Print documents and braille documents, each in its own window, with formatting codes and styles
   kept apart from the text. Opens and saves .dxp (print) and .dxb (braille) documents, and opens text and braille
   files (.txt, .brf, .brl).
+- **Formatted and coded views.** A document opens in the formatted view: its laid-out page lines with the codes
+  hidden and an empty row after each page, which is what a screen reader reads. You type, delete, cut, paste and undo
+  there as anywhere; a code next to the caret is removed whole. View, Codes (Alt+F3) switches to the coded view,
+  the running text with every code in brackets, and back, with the caret kept in place. Control+Page Up and
+  Control+Page Down go to the same line on the previous or next page (Global, Shortcut Preferences sets what Page Up
+  and Page Down do).
 - **Translation.** Print to braille and braille to print with 657 translation tables for 188 languages and braille
   codes, chosen by region and language (Document, Translation Tables) or by learning course (Learning Tables).
   Language codes in the text switch tables in the middle of a document.
 - **Translated line.** Under the document, the braille (or the print) of the line you are on, updated as you write.
+- **View preferences.** A margin bell a chosen number of cells before the end of a braille line, which codes the
+  translated line shows, and the Cursor Locator: a rectangle that closes in on the caret when a document is opened
+  or translated, when the view changes, or when Shift is pressed alone.
 - **Braille pages.** Lines per page, cells per line, margins, page numbering and running heads, shown in the status
   line as page, line and column.
 - **Save As.** Formatted braille (BRF in a choice of braille encodings), formatted text in a choice of code pages,
   coded braille, refreshable braille (.lbf), LaTeX, and the older document format.
 - **Printing.** Print documents and braille (with interline print) through the system printer.
 - **Embossing.** Embosser setups for 139 embosser models, including Index and Enabling Technologies, with page ranges and
-  copies, to a printer queue, a serial port or a file. The web build embosses through Web Serial where the browser
-  has it, or to a downloaded file.
+  copies, to a printer queue, a serial port or a file. Embossers on an FTDI USB connection (the EBrailler Cosmo) are
+  listed and embossed to through FTDI's own driver library where it is installed. TranSend SE printers get their ink
+  pass, and manual interpoint embossers a second pass for the backs. The web build embosses through Web Serial where
+  the browser has it, or to a downloaded file.
 - **Screen readers.** The document area is the system's own text control on every platform. On Windows a set of JAWS
   scripts comes with the program, and BrailleCraft offers to install them when it starts.
 - **Command line.** `braillecraft-desktop file.dxp` opens a file. Options before a file act on the files after
@@ -68,7 +79,8 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
 
 ## Downloads
 
-Every push to main runs the Build workflow. Open the repository on GitHub, then **Actions**, then the newest run of
+The repository is [github.com/BlindCraftTeam/braillecraft](https://github.com/BlindCraftTeam/braillecraft). Every push
+to main runs the Build workflow. Open the repository on GitHub, then **Actions**, then the newest run of
 **Build**, then the **Artifacts** list at the end of the run summary:
 
 | Artifact | What it holds |
@@ -121,7 +133,7 @@ step does. The installers are made by the scripts in `packaging` (WiX 5 on Windo
 | `scripts/jaws` | The JAWS scripts. |
 | `packaging` | Icons and the installers for Windows, macOS and Linux. |
 | `tools` | The generators for menus, dialogs, fonts, icons, templates, language lists and the web tables. |
-| `vendor/wxdragon-sys` | wxDragon's wxWidgets binding with the printing functions BrailleCraft needs added. |
+| `vendor/wxdragon-sys` | wxDragon's wxWidgets binding with what BrailleCraft needs added: printing, the Cursor Locator, the page break row of the formatted view, and About box texts a screen reader reaches by Tab. The list is in `CHANGES-BrailleCraft.txt`. |
 | `crates/bc-shell`, `crates/bc-louis`, `ui` | An earlier desktop shell (Tauri) and its liblouis binding; not part of the downloads. |
 | `.github/workflows/build.yml` | Builds, tests and packages everything on every push to main. |
 
