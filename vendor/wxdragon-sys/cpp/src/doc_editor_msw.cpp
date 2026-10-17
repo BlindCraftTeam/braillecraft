@@ -576,7 +576,7 @@ Provider* ProviderOf(DocEditor* e)
     return static_cast<Provider*>(e->m_accessible);
 }
 
-void Raise(DocEditor* e, EVENTID id)
+void RaiseUiaEvent(DocEditor* e, EVENTID id)
 {
     Provider* p = ProviderOf(e);
     if (p && g_support && UiaClientsAreListening()) UiaRaiseAutomationEvent(p, id);
@@ -601,12 +601,12 @@ void DocEditor::AccessibleDone()
 
 void DocEditor::AccessibleTextChanged(int)
 {
-    Raise(this, UIA_Text_TextChangedEventId);
+    RaiseUiaEvent(this, UIA_Text_TextChangedEventId);
 }
 
 void DocEditor::AccessibleCaretMoved()
 {
-    Raise(this, UIA_Text_TextSelectionChangedEventId);
+    RaiseUiaEvent(this, UIA_Text_TextSelectionChangedEventId);
 }
 
 void DocEditor::AccessibleNameChanged()
