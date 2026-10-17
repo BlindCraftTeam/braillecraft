@@ -67,7 +67,7 @@ impl Corner {
 }
 
 /// The page a document is laid out on.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Layout {
     pub cells: usize,
     pub lines: usize,
@@ -112,14 +112,14 @@ pub struct Line {
 
 /// One laid-out page: all its lines (blank ones included, up to the lines per page) and the document position its
 /// text starts at.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Page {
     pub lines: Vec<Line>,
     pub start: usize,
 }
 
 /// A piece of the document: a character with its position (in characters), a space, or a code.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum Piece {
     Char(char, usize),
     Space,
@@ -222,8 +222,9 @@ fn braille_number(n: usize) -> String {
     s
 }
 
-struct Formatter<'a> {
-    layout: &'a Layout,
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Formatter {
+    layout: Layout,
     pages: Vec<Page>,
     /// Lines of the page being filled (text lines only; number lines are added when the page is finished).
     page: Vec<Line>,
@@ -249,10 +250,10 @@ struct Formatter<'a> {
     word_marks: Vec<(usize, usize)>,
 }
 
-impl<'a> Formatter<'a> {
-    fn new(layout: &'a Layout) -> Formatter<'a> {
+impl Formatter {
+    fn new(layout: &Layout) -> Formatter {
         Formatter {
-            layout,
+            layout: layout.clone(),
             pages: Vec::new(),
             page: Vec::new(),
             page_start: None,
@@ -636,34 +637,96 @@ impl<'a> Formatter<'a> {
         self.start_col = self.left;
     }
 
-    fn run(mut self, pieces: &[Piece]) -> Vec<Page> {
-        let mut word: Vec<(char, Option<usize>)> = Vec::new();
-        for p in pieces {
-            match p {
-                Piece::Char(c, at) => word.push((if *c == '\u{a0}' { ' ' } else { *c }, Some(*at))),
-                Piece::Space => {
-                    if !word.is_empty() {
-                        self.word(&std::mem::take(&mut word));
-                    }
+    /// Lays out one piece; `word` is the word being collected.
+    fn step(&mut self, p: &Piece, word: &mut Vec<(char, Option<usize>)>) {
+        match p {
+            Piece::Char(c, at) => word.push((if *c == '\u{a0}' { ' ' } else { *c }, Some(*at))),
+            Piece::Space => {
+                if !word.is_empty() {
+                    self.word(&std::mem::take(word));
                 }
-                Piece::Code(code) => {
-                    // Codes the formatter does not lay out take no room and do not break a word.
-                    if is_layout(code) {
-                        if !word.is_empty() {
-                            self.word(&std::mem::take(&mut word));
-                        }
-                        self.code(code);
-                    }
-                }
-                Piece::Mark(pos) => {
+            }
+            Piece::Code(code) => {
+                // Codes the formatter does not lay out take no room and do not break a word.
+                if is_layout(code) {
                     if !word.is_empty() {
-                        self.word_marks.push((*pos, word.len()));
-                    } else if self.heading.is_none() && self.running.is_none() {
-                        self.mark(*pos);
+                        self.word(&std::mem::take(word));
                     }
+                    self.code(code);
+                }
+            }
+            Piece::Mark(pos) => {
+                if !word.is_empty() {
+                    self.word_marks.push((*pos, word.len()));
+                } else if self.heading.is_none() && self.running.is_none() {
+                    self.mark(*pos);
                 }
             }
         }
+    }
+
+    /// The formatter as it stands with every document place in it moved by `map`; None when a place has nowhere to
+    /// go (it was in the text an edit replaced).
+    fn moved(&self, map: &impl Fn(usize) -> Option<usize>) -> Option<Formatter> {
+        let mut f = Formatter { pages: Vec::new(), ..self.clone() };
+        for line in f.page.iter_mut().chain(std::iter::once(&mut f.line)) {
+            move_line(line, map)?;
+        }
+        if let Some(s) = f.page_start {
+            f.page_start = Some(map(s)?);
+        }
+        if let Some(h) = &mut f.heading {
+            for (_, sources) in &mut h.0 {
+                for s in sources.iter_mut().flatten() {
+                    *s = map(*s)?;
+                }
+            }
+        }
+        for m in &mut f.word_marks {
+            m.0 = map(m.0)?;
+        }
+        Some(f)
+    }
+
+    /// The formatter with no pages, to keep beside the pages it has made.
+    fn snapshot(&self) -> Formatter {
+        Formatter { pages: Vec::new(), ..self.clone() }
+    }
+
+    /// Lays out `pieces` from piece `from`, `word` being the word collected so far. After each piece that finished a
+    /// page, the state is kept in `checkpoints`; with `join`, a state that matches the old layout's at the same page
+    /// past the edit takes the old layout's later pages and stops.
+    fn run_from(
+        mut self,
+        pieces: &[Piece],
+        from: usize,
+        mut word: Vec<(char, Option<usize>)>,
+        checkpoints: &mut Vec<Checkpoint>,
+        mut join: Option<Join>,
+    ) -> Vec<Page> {
+        let mut made = self.pages.len();
+        for (i, p) in pieces.iter().enumerate().skip(from) {
+            self.step(p, &mut word);
+            if self.pages.len() == made {
+                continue;
+            }
+            made = self.pages.len();
+            let at = i + 1;
+            checkpoints.push(Checkpoint { piece: at, pages: made, state: self.snapshot(), word: word.clone() });
+            if let Some(j) = &mut join {
+                if let Some(tail) = j.try_join(at, made, &self.snapshot(), &word) {
+                    let mut pages = self.pages;
+                    pages.extend(tail.0);
+                    checkpoints.extend(tail.1);
+                    return pages;
+                }
+            }
+        }
+        self.end(word)
+    }
+
+    /// Lays out the last word and what is still open, and gives the pages.
+    fn end(mut self, word: Vec<(char, Option<usize>)>) -> Vec<Page> {
         if !word.is_empty() {
             self.word(&word);
         }
@@ -703,7 +766,242 @@ fn is_layout(code: &str) -> bool {
 
 /// Lays out a document (in the editor's form) into pages, with the document's styles.
 pub fn format(doc: &Shown, layout: &Layout, styles: Option<&StyleTable>) -> Vec<Page> {
-    Formatter::new(layout).run(&pieces(doc, styles))
+    format_traced(doc, layout, styles).0
+}
+
+/// Moves every document place on a line by `map`; None when one has nowhere to go.
+fn move_line(line: &mut Line, map: &impl Fn(usize) -> Option<usize>) -> Option<()> {
+    for s in line.sources.iter_mut().flatten() {
+        *s = map(*s)?;
+    }
+    for m in &mut line.marks {
+        m.0 = map(m.0)?;
+    }
+    Some(())
+}
+
+/// The formatter's state after the piece that finished a page: the piece to go on from, the pages made, the state
+/// and the word being collected.
+#[derive(Debug, Clone)]
+struct Checkpoint {
+    piece: usize,
+    pages: usize,
+    state: Formatter,
+    word: Vec<(char, Option<usize>)>,
+}
+
+/// What a layout keeps so that it can be laid out again after an edit from the page the edit is on (spec 27 5d: the
+/// reference drops its pages from the edit on and lays them out again; the ones before are kept).
+#[derive(Debug, Clone, Default)]
+pub struct Trail {
+    pieces: Vec<Piece>,
+    checkpoints: Vec<Checkpoint>,
+    layout: Option<Layout>,
+}
+
+/// The old layout's pages and states after the edit, to take over once the new layout comes to the same state at
+/// the same page.
+struct Join {
+    /// Where the pieces after the edit start, in the new pieces; the new index less the old one.
+    same_from: usize,
+    shift: isize,
+    /// The old pages from `base` on, and the old checkpoints after the restart.
+    base: usize,
+    pages: Vec<Page>,
+    checkpoints: Vec<Checkpoint>,
+    total_pages: usize,
+    map: Box<dyn Fn(usize) -> Option<usize>>,
+}
+
+impl Join {
+    /// When the new layout, at piece `at` with `made` pages, stands where the old one stood: the old pages after
+    /// `made` and the old checkpoints after it, moved into the new document.
+    fn try_join(
+        &mut self,
+        at: usize,
+        made: usize,
+        state: &Formatter,
+        word: &[(char, Option<usize>)],
+    ) -> Option<(Vec<Page>, Vec<Checkpoint>)> {
+        // Only past the edit, and not at the old layout's last page (the end of the layout can still change it).
+        if at < self.same_from || made >= self.total_pages {
+            return None;
+        }
+        let k = self.checkpoints.iter().position(|c| c.pages == made)?;
+        let old = &self.checkpoints[k];
+        if old.piece as isize + self.shift != at as isize {
+            return None;
+        }
+        let map = &self.map;
+        if old.state.moved(map).as_ref() != Some(state) {
+            return None;
+        }
+        let old_word: Option<Vec<_>> = old.word.iter().map(|&(c, s)| Some((c, match s {
+            Some(s) => Some(map(s)?),
+            None => None,
+        }))).collect();
+        if old_word.as_deref() != Some(word) {
+            return None;
+        }
+        let mut pages: Vec<Page> = self.pages.split_off(made - self.base);
+        for page in &mut pages {
+            page.start = map(page.start)?;
+            for line in &mut page.lines {
+                move_line(line, map)?;
+            }
+        }
+        let mut later = self.checkpoints.split_off(k + 1);
+        for c in &mut later {
+            c.piece = (c.piece as isize + self.shift) as usize;
+            c.state = c.state.moved(map)?;
+            for w in c.word.iter_mut() {
+                if let Some(s) = w.1 {
+                    w.1 = Some(map(s)?);
+                }
+            }
+        }
+        Some((pages, later))
+    }
+}
+
+/// Whether document place `p` is inside a code (`codes` in order).
+fn in_code(codes: &[(usize, usize)], p: usize) -> bool {
+    let k = codes.partition_point(|c| c.0 <= p);
+    k > 0 && p < codes[k - 1].1
+}
+
+/// The index of the first piece at or after document place `pos`; a piece with no place of its own (a code, a
+/// space) counts at the place of the piece before it.
+fn first_at(pieces: &[Piece], pos: usize) -> usize {
+    let key = |mut i: usize| loop {
+        match pieces[i] {
+            Piece::Char(_, at) | Piece::Mark(at) => return at,
+            _ if i == 0 => return 0,
+            _ => i -= 1,
+        }
+    };
+    let (mut lo, mut hi) = (0, pieces.len());
+    while lo < hi {
+        let mid = (lo + hi) / 2;
+        if key(mid) < pos {
+            lo = mid + 1;
+        } else {
+            hi = mid;
+        }
+    }
+    lo
+}
+
+/// Lays out a document and keeps what lets it be laid out again quickly after an edit (reformat).
+pub fn format_traced(doc: &Shown, layout: &Layout, styles: Option<&StyleTable>) -> (Vec<Page>, Trail) {
+    let pieces = pieces(doc, styles);
+    let mut checkpoints = Vec::new();
+    let pages = Formatter::new(layout).run_from(&pieces, 0, Vec::new(), &mut checkpoints, None);
+    (pages, Trail { pieces, checkpoints, layout: Some(layout.clone()) })
+}
+
+/// Lays a document out again after an edit replaced its places `from` to `old_to` with what is now `from` to
+/// `new_to`: from the last page finished before the edit, the pages before it kept, and stopping at the first page
+/// after the edit where the layout stands as it stood before, the old pages after it kept with their places moved.
+/// The result is the same as format gives.
+pub fn reformat(
+    pages: Vec<Page>,
+    trail: Trail,
+    doc: &Shown,
+    layout: &Layout,
+    styles: Option<&StyleTable>,
+    from: usize,
+    old_to: usize,
+    new_to: usize,
+) -> (Vec<Page>, Trail) {
+    if trail.layout.as_ref() != Some(layout) || trail.pieces.is_empty() {
+        return format_traced(doc, layout, styles);
+    }
+    let delta = new_to as isize - old_to as isize;
+    // Only the stretch around the edit is cut into pieces again: from the last plain letter before the edit (the
+    // same letter in the old text) to the first plain letter at or after its end. A letter's piece does not depend
+    // on what came before it, so the pieces before and after that stretch are the old ones (those after it with
+    // their places moved).
+    let len = doc.text.chars().count();
+    let plain = |c: char, p: usize| c != ' ' && c != '\n' && !in_code(&doc.codes, p);
+    let lo = from.saturating_sub(64);
+    let before = |lo: usize| {
+        doc.text.chars().enumerate().skip(lo).take(from - lo).filter(|&(p, c)| plain(c, p)).last().map(|(p, _)| p)
+    };
+    let start = before(lo).or_else(|| before(0)).unwrap_or(0);
+    let end = doc.text.chars().enumerate().skip(new_to).find(|&(p, c)| plain(c, p)).map_or(len, |(p, _)| p);
+    let mut old = trail.pieces;
+    let cut_from = if start == 0 { 0 } else { first_at(&old, start) };
+    let cut_to = if end == len { old.len() } else { first_at(&old, (end as isize - delta) as usize) };
+    let mut mid = pieces(&doc.slice(start, end), styles);
+    if end < len {
+        mid.pop();
+    }
+    for p in &mut mid {
+        match p {
+            Piece::Char(_, at) | Piece::Mark(at) => *at += start,
+            _ => {}
+        }
+    }
+    let mid_len = mid.len();
+    old.splice(cut_from..cut_to, mid);
+    if delta != 0 {
+        for p in &mut old[cut_from + mid_len..] {
+            match p {
+                Piece::Char(_, at) | Piece::Mark(at) => *at = (*at as isize + delta) as usize,
+                _ => {}
+            }
+        }
+    }
+    let new = old;
+    let same_before = cut_from;
+    let same_from = cut_from + mid_len;
+    let shift = mid_len as isize - (cut_to - cut_from) as isize;
+    let map = move |p: usize| -> Option<usize> {
+        if p < from {
+            Some(p)
+        } else if p >= old_to {
+            Some((p as isize + delta) as usize)
+        } else {
+            None
+        }
+    };
+    // The last state kept before the first changed piece, never at the last page (the end of a layout changes it).
+    let restart = trail
+        .checkpoints
+        .iter()
+        .rposition(|c| c.piece <= same_before && c.pages < pages.len());
+    let mut checkpoints = trail.checkpoints;
+    let later = match restart {
+        Some(k) => checkpoints.split_off(k + 1),
+        None => std::mem::take(&mut checkpoints),
+    };
+    let total_pages = pages.len();
+    let (formatter, start, word, base) = match restart.map(|k| checkpoints[k].clone()) {
+        Some(c) => {
+            let mut f = c.state;
+            f.pages = pages;
+            (f, c.piece, c.word, c.pages)
+        }
+        None => {
+            let mut f = Formatter::new(layout);
+            f.pages = pages;
+            (f, 0, Vec::new(), 0)
+        }
+    };
+    let mut formatter = formatter;
+    let old_pages = formatter.pages.split_off(base);
+    let join = Join {
+        same_from,
+        shift,
+        base,
+        pages: old_pages,
+        checkpoints: later,
+        total_pages,
+        map: Box::new(map),
+    };
+    let pages = formatter.run_from(&new, start, word, &mut checkpoints, Some(join));
+    (pages, Trail { pieces: new, checkpoints, layout: Some(layout.clone()) })
 }
 
 /// The character position at page `page`, line `line`, column `column` (all 1-based): the cell there, else the
@@ -948,6 +1246,69 @@ mod tests {
         // [sc1] skips a line after text, none after a blank line or at the top.
         let pages = format(&m("[sc1]ab[sc1]cd[sk1][sc1]ef"), &Layout::braille(20, 8), None);
         assert_eq!(&texts(&pages[0])[..5], ["ab", "", "cd", "", "ef"]);
+    }
+
+    /// Edits laid out again from their page give the same pages as laying the whole document out.
+    fn check_edits(doc: &Shown, layout: &Layout, edits: usize) {
+        let (mut pages, mut trail) = format_traced(doc, layout, None);
+        let mut doc = doc.clone();
+        let puts = ["x", " ", "\n", "[p]\n", "[pg]", "word ", "[hds]Head[hde]", "", "  ", "[ind4]a b c d e f g"];
+        let mut seed: u64 = 12345;
+        for k in 0..edits {
+            seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            let len = doc.text.chars().count();
+            let from = (seed >> 33) as usize % (len + 1);
+            let take = if k % 3 == 0 { (seed >> 20) as usize % 6 } else { 0 };
+            let mut to = (from + take).min(len);
+            // Keep the codes whole, as the editor does.
+            let mut from = from;
+            for &(s, e) in &doc.codes {
+                if s < from && e > from {
+                    from = s;
+                }
+                if s < to && e > to {
+                    to = e;
+                }
+            }
+            let put = Shown::marked(puts[k % puts.len()]);
+            let mut next = doc.slice(0, from);
+            next.push(&put);
+            next.push(&doc.slice(to, len));
+            let new_to = from + put.text.chars().count();
+            let (p, t) = reformat(pages, trail, &next, layout, None, from, to, new_to);
+            let whole = format(&next, layout, None);
+            assert_eq!(t.pieces, pieces(&next, None), "edit {k}: {from}..{to} -> {:?}", put.text);
+            assert_eq!(p, whole, "edit {k}: {from}..{to} -> {:?}", put.text);
+            pages = p;
+            trail = t;
+            doc = next;
+        }
+    }
+
+    #[test]
+    fn an_edit_laid_out_from_its_page_gives_the_whole_layout() {
+        let text: String = (0..300)
+            .map(|i| match i % 17 {
+                0 => "[p]\n".to_string(),
+                5 => "[hds]Part[hde]".to_string(),
+                9 => "[sk1]".to_string(),
+                _ => format!("word{} ", i % 7),
+            })
+            .collect();
+        let mut layout = Layout::braille(20, 6);
+        layout.numbers_odd = Corner::LowerRight;
+        layout.numbers_even = Corner::UpperLeft;
+        check_edits(&m(&text), &layout, 300);
+        check_edits(&m(&text), &Layout::print(30, 8), 200);
+        let Ok(dir) = std::env::var("BC_DX_SAMPLES") else { return };
+        for entry in std::fs::read_dir(dir).unwrap().flatten().take(3) {
+            let p = entry.path();
+            if !p.extension().is_some_and(|e| e.eq_ignore_ascii_case("dxb") || e.eq_ignore_ascii_case("dxp")) {
+                continue;
+            }
+            let doc = crate::dxfile::read(&std::fs::read(&p).unwrap()).unwrap();
+            check_edits(&Shown::from_running(&doc.text), &Layout::braille(40, 25), 30);
+        }
     }
 
     #[test]

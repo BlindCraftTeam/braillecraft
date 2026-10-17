@@ -10,7 +10,7 @@
 
 use crate::doctext::Shown;
 use crate::engine::StyleTable;
-use crate::format::{format, locate, position_of, Layout, Page};
+use crate::format::{format_traced, locate, position_of, reformat, Layout, Page, Trail};
 use crate::fview::View;
 
 /// A caret movement (spec 27 5a).
@@ -64,6 +64,8 @@ pub struct Editor {
     /// The first screen row of each page (formatted view): its lines, then its page break row.
     page_rows: Vec<usize>,
     len: usize,
+    /// What lets the formatted view be laid out again from the page an edit is on.
+    trail: Trail,
 }
 
 impl Editor {
@@ -81,6 +83,7 @@ impl Editor {
             want: None,
             page_rows: Vec::new(),
             len: 0,
+            trail: Trail::default(),
         };
         e.relayout();
         e
@@ -88,13 +91,34 @@ impl Editor {
 
     /// Lays the document out again (or its coded rows) after a change.
     pub fn relayout(&mut self) {
+        self.relayout_edit(None);
+    }
+
+    /// Lays the document out again; after an edit that replaced places `from` to `old_to` with `from` to `new_to`,
+    /// from the page the edit is on (spec 27 5d).
+    fn relayout_edit(&mut self, edit: Option<(usize, usize, usize)>) {
         self.len = self.doc.text.chars().count();
         if self.coded {
             self.pages = Vec::new();
+            self.trail = Trail::default();
             self.view = View::coded(&self.doc, self.coded_width);
             self.page_rows = Vec::new();
         } else {
-            self.pages = format(&self.doc, &self.layout, self.styles.as_ref());
+            let (pages, trail) = match edit {
+                Some((from, old_to, new_to)) => reformat(
+                    std::mem::take(&mut self.pages),
+                    std::mem::take(&mut self.trail),
+                    &self.doc,
+                    &self.layout,
+                    self.styles.as_ref(),
+                    from,
+                    old_to,
+                    new_to,
+                ),
+                None => format_traced(&self.doc, &self.layout, self.styles.as_ref()),
+            };
+            self.pages = pages;
+            self.trail = trail;
             self.view = View::new(&self.pages);
             let mut at = 0;
             self.page_rows = self
@@ -421,7 +445,7 @@ impl Editor {
         doc.push(put);
         doc.push(&self.doc.slice(to, self.len));
         self.doc = doc;
-        self.relayout();
+        self.relayout_edit(Some((from, to, from + put.text.chars().count())));
         self.caret = from + put.text.chars().count();
         self.anchor = self.caret;
         self.want = None;
