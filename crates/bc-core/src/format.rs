@@ -416,9 +416,12 @@ impl Formatter {
             line.sources.pop();
         }
         self.push_line(line);
-        // Line spacing follows every line end, a blank line's too.
-        for _ in 0..self.blank_between {
-            self.push_line(Line::default());
+        // Line spacing follows every line end, a blank line's too, but never past the end of the page.
+        if !self.page.is_empty() {
+            let room = self.capacity() - self.page.len();
+            for _ in 0..self.blank_between.min(room) {
+                self.push_line(Line::default());
+            }
         }
         self.start_col = next_col;
         self.after_page_code = false;
@@ -428,12 +431,7 @@ impl Formatter {
         if self.page.len() >= self.capacity() {
             self.finish_page();
         }
-        // Blank lines at the top of a page are left out.
-        if line.text.is_empty() && self.page.is_empty() && !self.pages.is_empty() && !self.after_page_code {
-            // Its marks go to the line that takes its place.
-            self.line.marks.extend(line.marks);
-            return;
-        }
+        // Blank lines are kept at the top of a page too: skips that do not fit on a page go on at the top of the next.
         self.page.push(line);
         if self.page.len() >= self.capacity() {
             self.finish_page();
@@ -578,7 +576,8 @@ impl Formatter {
                 if self.line_has_text() {
                     self.end_line(self.left);
                 }
-                if !self.layout.braille && self.page_has_text() {
+                // Print documents skip a line before every paragraph, at the top of a page too.
+                if !self.layout.braille {
                     self.push_line(Line::default());
                 }
                 // The paragraph column (spec 19 F0b, the braille and print formatting files): the third cell in
@@ -662,8 +661,9 @@ impl Formatter {
             }
             // [svpfdN] the first page whose number is shown, from the next page.
             "svpfd" => self.next_first_shown = Some(first.unwrap_or(1).max(1) as usize),
+            // [top] a new page once the page has been started (blank lines start it too).
             "top" => {
-                if self.page_has_text() {
+                if !self.page.is_empty() || self.line_has_text() {
                     self.new_page();
                 }
             }
@@ -676,15 +676,17 @@ impl Formatter {
                 }
             }
             // [scL] skip L lines (1 when not given), only after a line that is not blank (spec 19, Lines).
+            // [scL:M:N:P]: L lines (1 when not given) after a line with text; P lines (0 when not given) after a blank
+            // line or at the top of a page. (M after a print page change line and N after a running head wait for
+            // those to be laid out.)
             "sc" => {
                 if self.line_has_text() {
                     self.end_line(self.left);
                 }
-                let previous = self.page.last().or_else(|| self.pages.last().and_then(|p| p.lines.last()));
-                if previous.is_some_and(|l| l.sources.iter().any(Option::is_some)) {
-                    for _ in 0..first.unwrap_or(1).max(0) {
-                        self.push_line(Line::default());
-                    }
+                let after_text = self.page.last().is_some_and(|l| l.sources.iter().any(Option::is_some));
+                let count = if after_text { first.unwrap_or(1) } else { n.get(3).copied().unwrap_or(0) };
+                for _ in 0..count.clamp(0, 3 * self.layout.lines as i64) {
+                    self.push_line(Line::default());
                 }
             }
             "tls" | "rfs" => self.running = Some(Vec::new()),
@@ -735,10 +737,11 @@ impl Formatter {
         if !line.text.is_empty() {
             lines.push(line);
         }
+        // A new page when fewer than need + 1 lines remain; else the skip lines, at the top of a page too.
         let remaining = self.capacity().saturating_sub(self.page.len()) as i64;
         if remaining < need + 1 && !self.page.is_empty() {
             self.finish_page();
-        } else if !self.page.is_empty() {
+        } else {
             for _ in 0..skip.max(0) {
                 self.push_line(Line::default());
             }
@@ -1467,6 +1470,25 @@ mod tests {
             let doc = crate::dxfile::read(&std::fs::read(&p).unwrap()).unwrap();
             check_edits(&Shown::from_running(&doc.text), &Layout::braille(40, 25), 30);
         }
+    }
+
+    #[test]
+    fn blank_lines_are_kept_at_the_top_of_a_page() {
+        // A blank line that does not fit on a page starts the next one.
+        let pages = format(&m("a\nb\n\nc"), &Layout::braille(10, 2), None);
+        assert_eq!(texts(&pages[1]), ["", "c"]);
+        // A print paragraph skips a line at the top of a page too.
+        let pages = format(&m("[p]\na"), &Layout::print(10, 3), None);
+        assert_eq!(texts(&pages[0]), ["", "a", ""]);
+        // [sc] at the top of a page skips its fourth value, 0 when not given.
+        let pages = format(&m("a\nb[sc1]c"), &Layout::braille(10, 2), None);
+        assert_eq!(texts(&pages[1]), ["c", ""]);
+        let pages = format(&m("a\nb[sc1:0:0:1]c"), &Layout::braille(10, 2), None);
+        assert_eq!(texts(&pages[1]), ["", "c"]);
+        // Line spacing stops at the end of the page.
+        let pages = format(&m("[svsbl]a\nb\nc\nd"), &Layout::braille(10, 6), None);
+        assert_eq!(texts(&pages[0]), ["a", "", "b", "", "c", ""]);
+        assert_eq!(texts(&pages[1])[0], "d");
     }
 
     #[test]
