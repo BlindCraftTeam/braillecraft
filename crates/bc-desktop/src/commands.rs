@@ -1906,7 +1906,7 @@ pub fn emboss_with(skip: Option<u32>) {
         }
     };
     let (shown_setup, shown_form) = (setup.shown_name(), emb::form_name(&layout.form));
-    match check(&model, &layout, cells, lines) {
+    match check(&setup, &model, &layout, cells, lines) {
         Check::FormNotDefined => {
             message(&form_not_defined_message(&shown_setup, &shown_form, cells, lines));
             return;

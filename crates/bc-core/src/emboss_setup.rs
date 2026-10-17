@@ -10,7 +10,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::emboss::{enabling_start, index_start, parse_codes, EnablingStart, IndexStart, LineEnd, Options};
-use crate::embossers::{Catalog, Form, Model};
+use crate::embossers::{Catalog, Model};
 
 /// Where a setup's output goes.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -519,13 +519,56 @@ pub struct Layout {
     pub interline: u32,
 }
 
-/// Whether a layout of `cells` by `lines` fits `form`. INFERENCE: the reference's fit test
-/// (dxemb_form_validate_settings) was not decoded; this is the rule the Embosser Setup dialog keeps: cells and binding
-/// margin share the form's line, lines and top margin its page, on the interline page when interline print is on
-/// and the form gives one.
-pub fn fits(form: &Form, layout: &Layout, cells: u32, lines: u32) -> bool {
-    let (max_cells, max_lines) = if layout.interline != 0 { form.interline.map(|i| i.0).unwrap_or(form.maximum) } else { form.maximum };
-    cells + layout.binding <= max_cells && lines + layout.top_margin <= max_lines
+/// Whether the setup is "automated" as the reference's drivers count it: escape codes allowed, the model uses escape
+/// codes, or an Index at level 4 or above.
+pub fn automated(s: &Setup, model: &Model) -> bool {
+    s.escape_codes || model.flag("UsingEscapeCodes") || (model.driver().contains("Index") && index_level(s) >= 4)
+}
+
+/// What the reference's form check finds for a layout of `cells` by `lines` (its three flag words): for the layout,
+/// 4 interpoint asked for and not allowed, 1 interline print asked for and not allowed; for the lines and the cells
+/// each, 8 the margin below the embosser's own margin (16 when equal, not a fault), 4 the margin past the form's
+/// maximum, 2 margin and text past it, 1 the text alone past it. None when the form is not one of the model's (its
+/// id compared without regard to case). The interline maximums apply when interline print is on; with interpoint on
+/// and allowed the model's LessLinesInterpoint comes off the lines.
+pub fn fit_flags(s: &Setup, model: &Model, layout: &Layout, cells: u32, lines: u32) -> Option<(u32, u32, u32)> {
+    let form = model.forms.iter().find(|f| f.id.eq_ignore_ascii_case(&layout.form))?;
+    let auto = automated(s, model);
+    let can = model.flag("CanDoInterpoint");
+    let interpoint_ok = (auto && can) || (can && s.interpoint_enabled);
+    let interline_ok = model.flag("Interline") || (model.flag("TranSend") && !s.ink_printer.trim().is_empty());
+    let (left, top) = if auto { (0, 0) } else { (s.device_number(27), s.device_number(33)) };
+    let mut whole = if layout.interpoint && !interpoint_ok { 4 } else { 0 };
+    let (mut max_cells, mut max_lines) = form.maximum;
+    if layout.interline != 0 {
+        if !interline_ok {
+            whole |= 1;
+        }
+        if let Some((pair, _)) = form.interline {
+            (max_cells, max_lines) = pair;
+        }
+    }
+    if layout.interpoint && interpoint_ok {
+        max_lines = max_lines.saturating_sub(model.number("LessLinesInterpoint").unwrap_or(0).max(0) as u32);
+    }
+    let flags = |margin: u32, device: u32, text: u32, max: u32| {
+        let mut f = match margin.cmp(&device) {
+            std::cmp::Ordering::Less => 8,
+            std::cmp::Ordering::Equal => 16,
+            std::cmp::Ordering::Greater => 0,
+        };
+        if max < margin {
+            f |= 4;
+        }
+        if max < margin + text {
+            f |= 2;
+        }
+        if max < text {
+            f |= 1;
+        }
+        f
+    };
+    Some((whole, flags(layout.top_margin, top, lines, max_lines), flags(layout.binding, left, cells, max_cells)))
 }
 
 /// What the checks before an embossing job found (spec 25 9.1), in the reference's order.
@@ -538,11 +581,12 @@ pub enum Check {
     DoesNotFit,
 }
 
-/// The checks after a setup has been found (message 2892 is the caller's: no setup chosen).
-pub fn check(model: &Model, layout: &Layout, cells: u32, lines: u32) -> Check {
-    match model.forms.iter().find(|f| f.id == layout.form) {
+/// The checks after a setup has been found (message 2892 is the caller's: no setup chosen): the form not the model's
+/// (2364), or any of the low four bits of the form check's flags (2362).
+pub fn check(s: &Setup, model: &Model, layout: &Layout, cells: u32, lines: u32) -> Check {
+    match fit_flags(s, model, layout, cells, lines) {
         None => Check::FormNotDefined,
-        Some(form) if !fits(form, layout, cells, lines) => Check::DoesNotFit,
+        Some((a, b, c)) if (a | b | c) & 0xf != 0 => Check::DoesNotFit,
         Some(_) => Check::Ready,
     }
 }
@@ -660,7 +704,7 @@ pub fn job_options(s: &Setup, model: &Model, layout: &Layout, cells: u32, lines:
         binding,
         interpoint,
         booklet,
-        automated: s.escape_codes || model.flag("UsingEscapeCodes") || (index && level >= 4),
+        automated: automated(s, model),
         no_pad: (index && level >= 5) || (booklet && index && level >= 4) || driver.contains("ThielAdvanced"),
         device_left: s.device_number(27),
         device_right: s.device_number(30),
@@ -733,11 +777,15 @@ mod tests {
     fn the_checks_before_a_job_come_in_the_reference_order() {
         let cat = catalog();
         let model = find_model(&cat, "Index Everest-D V5").unwrap();
-        let mut layout = Layout { form: "11_w".into(), ..Layout::default() };
-        assert_eq!(check(model, &layout, 40, 25), Check::Ready);
-        assert_eq!(check(model, &layout, 60, 25), Check::DoesNotFit);
+        let setup = Setup::for_model(&cat, "Index Everest-D V5", false);
+        let mut layout = Layout { form: "11_W".into(), ..Layout::default() };
+        assert_eq!(check(&setup, model, &layout, 40, 25), Check::Ready);
+        assert_eq!(check(&setup, model, &layout, 60, 25), Check::DoesNotFit);
+        // The margin past the form's line is flag 4, margin and text 2, the text alone 1 (this 11_w: 47 cells).
+        let (_, _, cells) = fit_flags(&setup, model, &Layout { binding: 8, ..layout.clone() }, 40, 25).unwrap();
+        assert_eq!(cells & 0xf, 2);
         layout.form = "zz".into();
-        assert_eq!(check(model, &layout, 40, 25), Check::FormNotDefined);
+        assert_eq!(check(&setup, model, &layout, 40, 25), Check::FormNotDefined);
     }
 
     #[test]

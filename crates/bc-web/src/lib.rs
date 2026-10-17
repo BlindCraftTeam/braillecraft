@@ -1449,7 +1449,7 @@ impl Embossers {
         let (s, l) = parse(setup, layout)?;
         let Some(model) = find_model(&self.0, &s.model) else { return Ok("stop:Embosser not found.".into()) };
         let (setup_name, form) = (s.shown_name(), form_name(&l.form));
-        Ok(match check(model, &l, cells, lines) {
+        Ok(match check(&s, model, &l, cells, lines) {
             Check::Ready => String::new(),
             Check::FormNotDefined => format!("stop:{}", form_not_defined_message(&setup_name, &form, cells, lines)),
             Check::DoesNotFit => format!("ask:{}", does_not_fit_message(&setup_name, &form, cells, lines)),
