@@ -112,6 +112,13 @@ private:
     int m_locatorOut = -1;
     bool m_locatorShown = false;
 
+    // macOS: the caret is drawn by the window itself, blinking while it has focus (the system caret wxWidgets gives
+    // there is drawn outside painting, which macOS does not show).
+    wxTimer m_blink;
+    bool m_blinkOn = true;
+    bool m_hasFocus = false;
+    wxRect CaretRect();
+
 public:
     void ShowCursorLocator();
 };

@@ -24,8 +24,10 @@ DocEditor::DocEditor(wxWindow* parent, void* data, wxd_DocEditor_KeyFn key, wxd_
 {
     SetBackgroundStyle(wxBG_STYLE_PAINT);
     SetFont(GetFont());
+#ifndef __WXOSX__
     SetCaret(new wxCaret(this, 2, m_rowHeight));
     GetCaret()->Show();
+#endif
     Bind(wxEVT_PAINT, &DocEditor::OnPaint, this);
     Bind(wxEVT_KEY_DOWN, &DocEditor::OnKeyDown, this);
     Bind(wxEVT_CHAR, &DocEditor::OnChar, this);
@@ -63,7 +65,12 @@ DocEditor::DocEditor(wxWindow* parent, void* data, wxd_DocEditor_KeyFn key, wxd_
             PlaceCaret();
         }
     });
-    m_locator.SetOwner(this);
+    m_locator.SetOwner(this, 1);
+    m_blink.SetOwner(this, 2);
+    Bind(wxEVT_TIMER, [this](wxTimerEvent&) {
+        m_blinkOn = !m_blinkOn;
+        RefreshRect(CaretRect());
+    }, 2);
     Bind(wxEVT_TIMER, [this](wxTimerEvent&) {
         // One step: show the rectangle at the current size, or take it away and close in by half a row.
         if (m_locatorShown) {
@@ -77,8 +84,17 @@ DocEditor::DocEditor(wxWindow* parent, void* data, wxd_DocEditor_KeyFn key, wxd_
             m_locatorShown = true;
         }
         Refresh();
-    });
+    }, 1);
     AccessibleInit();
+}
+
+// The caret's rectangle in the window (scrolled): a tenth of the row wide (1 to 5 pixels), the row less a twentieth
+// above and below (spec 30).
+wxRect DocEditor::CaretRect()
+{
+    int x = 0, y = 0;
+    CalcScrolledPosition(ColumnX(m_caretRow, m_caretCol), m_caretRow * m_rowHeight + m_rowHeight / 20, &x, &y);
+    return wxRect(x, y, wxClip(m_rowHeight / 10, 1, 5), wxMax(m_rowHeight - 2 * (m_rowHeight / 20), 1));
 }
 
 // The Cursor Locator (spec 24 2d.2): around a square one row high at the caret, rectangles from three rows out closing
@@ -236,6 +252,15 @@ void DocEditor::ShowRow(int row, int keepFromTop)
 
 void DocEditor::PlaceCaret()
 {
+#ifdef __WXOSX__
+    // The drawn caret: shown at once at its new place, the blink starting again.
+    m_blinkOn = true;
+    Refresh();
+    if (m_hasFocus) {
+        int blink = wxCaret::GetBlinkTime();
+        m_blink.Start(blink > 0 ? blink : 500);
+    }
+#endif
     wxCaret* caret = GetCaret();
     if (!caret) return;
     int x = 0, y = 0;
@@ -323,6 +348,15 @@ void DocEditor::OnPaint(wxPaintEvent&)
         dc.DrawRectangle(x, y, pen, w);
         dc.DrawRectangle(x + w - pen, y, pen, w);
     }
+#ifdef __WXOSX__
+    // The caret, drawn here on macOS while the window has focus, in the window text colour.
+    if (m_hasFocus && m_blinkOn && m_caretRow < (int)m_rows.size()) {
+        dc.SetPen(*wxTRANSPARENT_PEN);
+        dc.SetBrush(wxBrush(fore));
+        const int w = wxClip(m_rowHeight / 10, 1, 5), h = wxMax(m_rowHeight - 2 * (m_rowHeight / 20), 1);
+        dc.DrawRectangle(ColumnX(m_caretRow, m_caretCol), m_caretRow * m_rowHeight + m_rowHeight / 20, w, h);
+    }
+#endif
     // The line number column, on the left of what is shown, over the text scrolled under it.
     if (m_gutter > 0) {
         int vx = 0, vy = 0;
@@ -396,6 +430,11 @@ void DocEditor::OnMouse(wxMouseEvent& e)
 void DocEditor::OnFocus(wxFocusEvent& e)
 {
     const bool got = e.GetEventType() == wxEVT_SET_FOCUS;
+    m_hasFocus = got;
+    if (!got) {
+        m_blink.Stop();
+        Refresh();
+    }
     if (got) PlaceCaret();
     if (m_focus) m_focus(m_data, got);
     e.Skip();

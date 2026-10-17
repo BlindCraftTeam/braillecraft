@@ -125,13 +125,25 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
     // On macOS each document is a window of its own, and the system gives activation back to the window that had it
     // before the dialog (the untitled document of a plain start), whose activation would make it the active document;
     // the new document's window is brought to the front, as the View menu's list does.
+    let _ = area;
     wxdragon::call_after(Box::new(move || {
+        // The document may have been closed before this runs: its windows are then gone.
+        let Some((child, area)) = live_windows(key) else { return };
         child.raise();
         child_maximize(&child);
         area.set_focus();
         activate_key(key);
     }));
     key
+}
+
+/// The document window and editing area of the document with this key, while it is open. A call put off until later
+/// (wxdragon::call_after) looks them up here, never keeps them: on macOS closing a document window activates it while
+/// it is being destroyed, and a window kept from then is gone when the call runs.
+fn live_windows(key: u64) -> Option<(MDIChildFrame, editor_view::Area)> {
+    let mut found = None;
+    app::try_with(|a| found = a.index_of(key).map(|i| (a.docs[i].frame, a.docs[i].area)));
+    found
 }
 
 /// The key code of the Shift key (WXK_SHIFT).
@@ -204,7 +216,12 @@ fn wire(key: u64, child: &MDIChildFrame, area: editor_view::Area) {
                 activate_key(key);
                 // The editing area takes the keyboard when its document becomes active. On Linux the documents are
                 // pages of a notebook, which takes focus as it switches pages; focus is given once that is done.
-                wxdragon::call_after(Box::new(move || area.set_focus()));
+                let _ = area;
+                wxdragon::call_after(Box::new(move || {
+                    if let Some((_, area)) = live_windows(key) {
+                        area.set_focus();
+                    }
+                }));
             }
             a.event.skip(true);
         }
