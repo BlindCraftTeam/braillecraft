@@ -36,5 +36,19 @@ included from cpp/include/wxdragon.h):
 - wxd_LineGutter_Create and wxd_LineGutter_SetMarks: a narrow drawn column beside a multi-line text control showing
   labels (line numbers) at the height of given text positions, repainted when the control scrolls or is resized.
 
+Also added, in cpp/include/core/wxd_doc_editor.h, cpp/src/doc_editor.cpp, cpp/src/doc_editor_internal.h,
+cpp/src/doc_editor_gtk.cpp (Linux), cpp/src/doc_editor_msw.cpp (Windows) and cpp/src/doc_editor_osx.mm (macOS; all
+listed in cpp/CMakeLists.txt and the header included from cpp/include/wxdragon.h):
+- wxd_DocEditor_Create and the other wxd_DocEditor_ functions: the document editing window, drawn by the program (a
+  wxScrolledCanvas): rows of text and page break rows (a line across), the selection, the system caret, a line
+  number column, the Cursor Locator drawn in the window; keys, typed characters (and keys let go), clicks and focus
+  handed to the program through callbacks; one row per wheel notch; the scroll box takes effect when let go.
+- Its text for screen readers: on Linux an ATK object with the text interface given out through the widget class's
+  get_accessible; on Windows a UI Automation provider (element, Text pattern, text ranges) answering WM_GETOBJECT,
+  with UiaReturnRawElementProvider and the text changed and selection changed events, while
+  wxd_DocEditor_SetSupportUIAutomation is on; on macOS the accessibility text area methods added to the window's view
+  by a subclass made at run time, with the value changed and selected text changed notifications.
+- build.rs links uiautomationcore on Windows for it.
+
 The Rust bindings are generated from the header when the crate builds, so no Rust file changed.
 The workspace Cargo.toml uses this copy through [patch.crates-io].

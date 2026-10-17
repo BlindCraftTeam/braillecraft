@@ -2,6 +2,12 @@
 native dialogs, positioned exactly as the layouts give them.
 
 Usage: python3 -I dialogs_to_xrc.py <dialogs-layout.json>[,<more-layouts.json>...] <out.xrc> [<out dialog_table.rs>]
+          [--xrc <program.xrc> <xrc-dialogs.json>]
+
+With --xrc, dialogs the program defines in its own XRC file (sizer layouts, not dialog templates) are added as they
+are. xrc-dialogs.json (kept with the decoded resource data, outside the repository) gives {"prefix": the prefix of the
+program's control names, "dialogs": {name in the XRC file: menu command id}}: each dialog takes the name
+dlg<menu command id>, and the prefix is dropped from its control names (controls are then found by name).
 
 Several layout files (the program's and the embosser setup's) are read in order; from each only the English
 dialogs are taken (language 1033 or 9), and a resource id already taken from an earlier file is skipped.
@@ -14,7 +20,33 @@ client-area sizes (DLGTEMPLATE cx, cy); the program sets each dialog's client si
 """
 import json
 import sys
+import xml.etree.ElementTree as ET
 from xml.sax.saxutils import escape
+
+XRC_NS = "{http://www.wxwidgets.org/wxxrc}"
+
+
+def xrc_dialogs(path, mapping_path):
+    """The mapped dialogs of the program's XRC file as XRC text, renamed."""
+    mapping = json.load(open(mapping_path, encoding="utf-8"))
+    prefix, wanted = mapping["prefix"], mapping["dialogs"]
+    root = ET.parse(path).getroot()
+    out = []
+    for obj in root:
+        name = obj.get("name")
+        if obj.tag != XRC_NS + "object" or name not in wanted:
+            continue
+        for e in obj.iter():
+            e.tag = e.tag.replace(XRC_NS, "")
+            n = e.get("name")
+            if n and n.startswith(prefix):
+                e.set("name", n[len(prefix):])
+        obj.set("name", "dlg%d" % wanted[name])
+        ET.indent(obj, space="  ", level=1)
+        out.append("  " + ET.tostring(obj, encoding="unicode").rstrip())
+    if len(out) != len(wanted):
+        raise SystemExit("XRC dialogs not found in %s" % path)
+    return out
 
 # Licensing, activation, registration and vendor-specific prompts are not part of BrailleCraft.
 SKIP = {1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009, 1010, 1011, 1012, 1013, 1014, 1015,
@@ -197,6 +229,13 @@ def control(c, out, group_start, rid=None):
 
 
 def main():
+    args = sys.argv[1:]
+    xrc = None
+    if "--xrc" in args:
+        i = args.index("--xrc")
+        xrc = (args[i + 1], args[i + 2])
+        del args[i:i + 3]
+    sys.argv[1:] = args
     dialogs, seen = [], set()
     for path in sys.argv[1].split(","):
         for d in json.load(open(path, encoding="utf-8")):
@@ -250,6 +289,8 @@ def main():
         out.append('  </object>')
         written += 1
         table.append((rid, d["width"], d["height"], [(c["id"], kind_of(c)) for c in controls]))
+    added = xrc_dialogs(*xrc) if xrc else []
+    out.extend(added)
     out.append('</resource>')
     open(sys.argv[2], "w", encoding="utf-8").write("\n".join(out) + "\n")
     if len(sys.argv) > 3:
@@ -262,7 +303,8 @@ def main():
             rs.append("    (%d, %d, %d, &[%s])," % (rid, w, h, ", ".join("(%d, Ctl::%s)" % c for c in ctls)))
         rs.append("];")
         open(sys.argv[3], "w", encoding="utf-8").write("\n".join(rs) + "\n")
-    print(written, "dialogs written,", len(dialogs) - written, "left out (licensing, activation, vendor prompts)")
+    print(written, "dialogs written,", len(dialogs) - written, "left out (licensing, activation, vendor prompts),",
+          len(added), "added from the program's XRC file")
 
 
 if __name__ == "__main__":

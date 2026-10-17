@@ -103,6 +103,11 @@ impl Layout {
 pub struct Line {
     pub text: String,
     pub sources: Vec<Option<usize>>,
+    /// Document positions that have no cell (a space, a line break, a code, the end of the document), each with the
+    /// column (0-based) where the formatter's pen stood when it came to it: the reference's formatter records the
+    /// same for a position it is asked about (spec 27 5b), so a caret can stand after the last letter
+    /// of a line on a space the line does not show, or on an empty last line.
+    pub marks: Vec<(usize, usize)>,
 }
 
 /// One laid-out page: all its lines (blank ones included, up to the lines per page) and the document position its
@@ -119,6 +124,8 @@ enum Piece {
     Char(char, usize),
     Space,
     Code(String),
+    /// A document position that gets no cell: where the formatter's pen stands there is recorded (Line::marks).
+    Mark(usize),
 }
 
 /// The document in pieces: its codes (the ranges the document marks as codes; a bracket elsewhere is text), with
@@ -136,10 +143,17 @@ fn pieces(doc: &Shown, styles: Option<&StyleTable>) -> Vec<Piece> {
             let code: String = chars[(start + 1).min(end)..end.saturating_sub(1).max(start + 1).min(end)].iter().collect();
             after_break_code = crate::doctext::breaks_line(&code);
             expand(&code, styles, &mut out, 0);
+            // A code's place is where the pen stands once the code has done its work (a [p] at the start stands
+            // where the paragraph's text starts). INFERENCE: the reference records a place when its input reaches it
+            // (spec 27 5b); whether that is before or after a code's own effect is not traced.
+            out.push(Piece::Mark(start));
             i = end;
             continue;
         }
         let c = chars[i];
+        if c == '\n' || c == ' ' {
+            out.push(Piece::Mark(i));
+        }
         match c {
             '\n' => {
                 if !after_break_code {
@@ -160,6 +174,7 @@ fn pieces(doc: &Shown, styles: Option<&StyleTable>) -> Vec<Piece> {
             }
         }
     }
+    out.push(Piece::Mark(chars.len()));
     out
 }
 
@@ -229,6 +244,9 @@ struct Formatter<'a> {
     /// (spec 19 section 4 UNKNOWN), so it is kept and not shown.
     running: Option<Vec<String>>,
     pub running_head: Option<String>,
+    /// Marks met while a word was being collected, each with the index in the word of the cell after it: they are
+    /// placed with the word (Formatter::word).
+    word_marks: Vec<(usize, usize)>,
 }
 
 impl<'a> Formatter<'a> {
@@ -249,6 +267,28 @@ impl<'a> Formatter<'a> {
             after_page_code: false,
             running: None,
             running_head: None,
+            word_marks: Vec::new(),
+        }
+    }
+
+    /// Records document position `pos` at the pen: after the line's last cell, or where the line's text will start.
+    fn mark(&mut self, pos: usize) {
+        let used = self.line.text.chars().count();
+        let col = if self.line_has_text() { used } else { self.start_col.max(used) };
+        self.line.marks.push((pos, col));
+    }
+
+    /// Places the marks of the word being placed whose cell index is `k`, at column `col`.
+    fn place_word_marks(&mut self, k: usize, col: usize) {
+        let marks = &mut self.word_marks;
+        let mut i = 0;
+        while i < marks.len() {
+            if marks[i].1 == k {
+                let (pos, _) = marks.remove(i);
+                self.line.marks.push((pos, col));
+            } else {
+                i += 1;
+            }
         }
     }
 
@@ -315,6 +355,8 @@ impl<'a> Formatter<'a> {
         }
         // Blank lines at the top of a page are left out.
         if line.text.is_empty() && self.page.is_empty() && !self.pages.is_empty() && !self.after_page_code {
+            // Its marks go to the line that takes its place.
+            self.line.marks.extend(line.marks);
             return;
         }
         self.page.push(line);
@@ -334,7 +376,7 @@ impl<'a> Formatter<'a> {
             let pad = if corner.right() { self.layout.cells.saturating_sub(text.chars().count()) } else { 0 };
             let text = format!("{}{text}", " ".repeat(pad));
             let sources = vec![None; text.chars().count()];
-            Line { text, sources }
+            Line { text, sources, marks: Vec::new() }
         };
         if corner.top() {
             lines.insert(0, number_line());
@@ -358,10 +400,13 @@ impl<'a> Formatter<'a> {
     fn word(&mut self, cells: &[(char, Option<usize>)]) {
         if let Some(r) = &mut self.running {
             r.push(cells.iter().map(|c| c.0).collect());
+            self.word_marks.clear();
             return;
         }
         if let Some(h) = &mut self.heading {
+            // The heading's words are centred later; places in them with no cell fall back to the cell before.
             h.0.push((cells.iter().map(|c| c.0).collect(), cells.iter().map(|c| c.1).collect()));
+            self.word_marks.clear();
             return;
         }
         let width = self.width();
@@ -376,12 +421,17 @@ impl<'a> Formatter<'a> {
             for _ in used..self.layout.cells.saturating_sub(len) {
                 self.put(' ', None);
             }
-            for &(c, s) in cells {
+            for (k, &(c, s)) in cells.iter().enumerate() {
+                let col = self.line.text.chars().count();
+                self.place_word_marks(k, col);
                 self.put(c, s);
             }
+            let col = self.line.text.chars().count();
+            self.place_word_marks(cells.len(), col);
             return;
         }
         let mut rest = cells;
+        let mut k = 0;
         while !rest.is_empty() {
             let used = self.line.text.chars().count();
             let has_text = self.line_has_text();
@@ -400,13 +450,18 @@ impl<'a> Formatter<'a> {
             }
             let (now, later) = rest.split_at(rest.len().min(fits));
             for &(c, s) in now {
+                let col = self.line.text.chars().count();
+                self.place_word_marks(k, col);
                 self.put(c, s);
+                k += 1;
             }
             rest = later;
             if !rest.is_empty() {
                 self.end_line(self.left + self.runover_offset);
             }
         }
+        let col = self.line.text.chars().count();
+        self.place_word_marks(k, col);
     }
 
     fn code(&mut self, code: &str) {
@@ -568,7 +623,7 @@ impl<'a> Formatter<'a> {
             let len = l.text.chars().count();
             // A centred line starts at (width - length + 1) / 2 (spec 19 F0b).
             let pad = (width + 1).saturating_sub(len) / 2;
-            let mut centred = Line { text: " ".repeat(pad), sources: vec![None; pad] };
+            let mut centred = Line { text: " ".repeat(pad), sources: vec![None; pad], marks: Vec::new() };
             centred.text.push_str(&l.text);
             centred.sources.extend(l.sources);
             if let Some(s) = centred.sources.iter().flatten().next() {
@@ -600,6 +655,13 @@ impl<'a> Formatter<'a> {
                         self.code(code);
                     }
                 }
+                Piece::Mark(pos) => {
+                    if !word.is_empty() {
+                        self.word_marks.push((*pos, word.len()));
+                    } else if self.heading.is_none() && self.running.is_none() {
+                        self.mark(*pos);
+                    }
+                }
             }
         }
         if !word.is_empty() {
@@ -608,7 +670,20 @@ impl<'a> Formatter<'a> {
         if let Some((words, need, skip)) = self.heading.take() {
             self.heading_lines(&words, need, skip);
         }
-        if self.line_has_text() || !self.line.text.is_empty() {
+        // A line holding only marks is kept too (the end of a document whose last line is empty), but never so as to
+        // start a page: marks do not change the pages. On a page not yet started they go on the last line before it.
+        if !self.line_has_text() && self.line.text.is_empty() && self.page.is_empty() && !self.pages.is_empty() {
+            let marks = std::mem::take(&mut self.line.marks);
+            // The last line of the last page that has text (or the page's first line).
+            if let Some(page) = self.pages.last_mut() {
+                let at = page.lines.iter().rposition(|l| l.sources.iter().any(Option::is_some)).unwrap_or(0);
+                if let Some(last) = page.lines.get_mut(at) {
+                    let col = last.text.chars().count();
+                    last.marks.extend(marks.into_iter().map(|(pos, _)| (pos, col)));
+                }
+            }
+        }
+        if self.line_has_text() || !self.line.text.is_empty() || !self.line.marks.is_empty() {
             self.end_line(self.left);
         }
         if !self.page.is_empty() || self.pages.is_empty() {
@@ -640,6 +715,12 @@ pub fn position_of(pages: &[Page], page: usize, line: usize, column: usize) -> O
     if let Some(s) = ln.sources.iter().skip(column.saturating_sub(1)).flatten().next() {
         return Some(*s);
     }
+    // A place with no cell where the pen stood at or after the column (the first such), else the line's last.
+    let col = column.saturating_sub(1);
+    let mark = ln.marks.iter().filter(|m| m.1 >= col).min_by_key(|m| (m.1, m.0)).or_else(|| ln.marks.iter().max_by_key(|m| (m.1, m.0)));
+    if let Some(m) = mark {
+        return Some(m.0);
+    }
     if let Some(s) = ln.sources.iter().flatten().last() {
         return Some(s + 1);
     }
@@ -648,13 +729,17 @@ pub fn position_of(pages: &[Page], page: usize, line: usize, column: usize) -> O
 }
 
 /// The page, line and column (all 1-based, the line counted on its page) of a character position in the document:
-/// the cell that came from that position; for a position that is no cell (a space, a line end, a code), the place
-/// just after the last cell before it, as a caret at the end of a line stands after its last cell; before any cell,
-/// the first cell.
+/// the cell that came from that position; for a position that is no cell (a space, a line end, a code, the end), where
+/// the formatter's pen stood at it (Line::marks); failing both, the place just after the last cell before it, as a
+/// caret at the end of a line stands after its last cell; before any cell, the first cell.
 pub fn locate(pages: &[Page], pos: usize) -> (usize, usize, usize) {
     let mut before: Option<(usize, usize, usize)> = None;
     for (p, page) in pages.iter().enumerate() {
         for (l, line) in page.lines.iter().enumerate() {
+            // A place with no cell: where the formatter's pen stood (spec 27 5b).
+            if let Some(&(_, col)) = line.marks.iter().find(|m| m.0 == pos) {
+                return (p + 1, l + 1, col + 1);
+            }
             for (c, s) in line.sources.iter().enumerate() {
                 match s {
                     Some(s) if *s == pos => return (p + 1, l + 1, c + 1),
@@ -697,6 +782,33 @@ mod tests {
     /// A document whose bracketed runs are codes.
     fn m(text: &str) -> Shown {
         Shown::marked(text)
+    }
+
+    #[test]
+    fn places_with_no_cell_stand_where_the_pen_was() {
+        // A space at the end of a line (the line does not show it) stands after the line's last letter; so does a
+        // second space; the next word is on the next line.
+        let pages = format(&m("one  two"), &Layout::braille(5, 4), None);
+        assert_eq!(texts(&pages[0]), ["one", "two", "", ""]);
+        assert_eq!(locate(&pages, 3), (1, 1, 4));
+        assert_eq!(locate(&pages, 4), (1, 1, 4));
+        assert_eq!(locate(&pages, 5), (1, 2, 1));
+        assert_eq!(position_of(&pages, 1, 1, 4), Some(3));
+        // The end of a document whose last line is empty stands on that empty line, and back.
+        let pages = format(&m("abc\n"), &Layout::braille(10, 3), None);
+        assert_eq!(texts(&pages[0]), ["abc", "", ""]);
+        assert_eq!(locate(&pages, 3), (1, 1, 4));
+        assert_eq!(locate(&pages, 4), (1, 2, 1));
+        assert_eq!(position_of(&pages, 1, 2, 1), Some(4));
+        // A code inside a word stands before the letter after it.
+        let pages = format(&m("ab[x]cd"), &Layout::braille(10, 3), None);
+        assert_eq!(texts(&pages[0])[0], "abcd");
+        assert_eq!(locate(&pages, 2), (1, 1, 3));
+        assert_eq!(locate(&pages, 7), (1, 1, 5));
+        // Marks never add a page: a document ending at a page code keeps its one page.
+        let pages = format(&m("a[pg]"), &Layout::braille(10, 3), None);
+        assert_eq!(pages.len(), 1);
+        assert_eq!(locate(&pages, 5), (1, 1, 2));
     }
 
     #[test]

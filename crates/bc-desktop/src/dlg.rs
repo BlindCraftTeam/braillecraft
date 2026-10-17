@@ -149,6 +149,18 @@ impl Dlg {
         d
     }
 
+    /// Opens a dialog taken from the program's own XRC file (sizer layout, controls found by name): its sizers lay
+    /// it out at its best size, with no fitting of fixed positions.
+    pub fn open_xrc(parent: &dyn WxWidget, id: i32) -> Dlg {
+        let dialog = XmlResource::get()
+            .load_dialog(Some(parent), &format!("dlg{id}"))
+            .unwrap_or_else(|| panic!("dialog dlg{id} is missing from dialogs.xrc"));
+        dialog.fit();
+        dialog.layout();
+        dialog.centre();
+        Dlg { id, dialog, page: None }
+    }
+
     /// A property sheet: dialog `shell` (its OK and Cancel buttons and its text) holding `pages` (panels, by resource
     /// id, with their tab names) as tabs. Returns the sheet and its pages; the pages' controls are read and set
     /// through them, and the sheet is shown and destroyed as a dialog.

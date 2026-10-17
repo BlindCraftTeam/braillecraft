@@ -73,7 +73,7 @@ fn yes_no_cancel(text: &str) -> Option<bool> {
     }
 }
 
-fn open_dialog(id: i32, title: Option<&str>) -> Dlg {
+pub fn open_dialog(id: i32, title: Option<&str>) -> Dlg {
     Dlg::open(&app::frame(), id, title)
 }
 
@@ -134,8 +134,9 @@ fn settings_dialog(id: i32, key: &'static str, title: Option<&str>, setup: impl 
 
 // ------------------------------------------------------------------ editing helpers
 
-fn active_text() -> Option<TextCtrl> {
-    app::with(|a| a.doc().map(|d| d.text))
+/// The active document's editing area.
+fn active_area() -> Option<crate::editor_view::Area> {
+    app::with(|a| a.doc().map(|d| d.area))
 }
 
 fn insert_text(text: &str) {
@@ -144,75 +145,41 @@ fn insert_text(text: &str) {
 
 /// Puts `s` (text and codes) in place of the selection, its codes known as codes; the caret goes after it.
 fn insert_shown(s: &Shown) {
-    // In the formatted view the document itself takes it, at the caret's place in it.
-    let formatted = app::with(|a| {
-        let i = a.active.filter(|&i| a.docs[i].formatted.is_some())?;
+    let area = app::with(|a| {
+        let i = a.active?;
         documents::type_in(a, i, s);
-        Some(a.docs[i].text)
+        Some(a.docs[i].area)
     });
-    if let Some(t) = formatted {
-        t.set_focus();
-        return;
+    if let Some(area) = area {
+        area.set_focus();
     }
-    if let Some(t) = active_text() {
-        let (from, to) = t.get_selection();
-        put_at(t, from, to, s);
-        t.set_insertion_point(from + s.text.chars().count() as i64);
-        t.set_focus();
-    }
-}
-
-/// Replaces characters `from` to `to` with `s`, and marks its codes in the document.
-fn put_at(t: TextCtrl, from: i64, to: i64, s: &Shown) {
-    t.replace(from, to, &s.text);
-    let at = from.max(0) as usize;
-    app::with(|a| {
-        if let Some(d) = a.doc_mut() {
-            d.codes.extend(s.codes.iter().map(|c| (c.0 + at, c.1 + at)));
-            d.inner.extend(s.inner.iter().map(|c| (c.0 + at, c.1 + at)));
-            d.codes.sort_unstable();
-            d.codes.dedup();
-            d.inner.sort_unstable();
-            d.inner.dedup();
-            d.pages = None;
-            d.last_line_key.clear();
-        }
-        a.update_status();
-    });
 }
 
 /// Puts `before` at the start of the selection and `after` at its end (codes, as a pair); the selection itself is
 /// left as it is.
 fn wrap_selection(before: &Shown, after: &Shown) {
-    let formatted = app::with(|a| {
-        let i = a.active.filter(|&i| a.docs[i].formatted.is_some())?;
+    let area = app::with(|a| {
+        let i = a.active?;
         let (from, to) = a.docs[i].selection();
-        a.edit_formatted(i, to, to, after);
-        a.edit_formatted(i, from, from, before);
+        a.edit(i, to, to, after);
+        a.edit(i, from, from, before);
         let caret = to + before.text.chars().count();
         a.docs[i].select_doc(caret, caret);
-        Some(a.docs[i].text)
+        a.show_area(i, None);
+        Some(a.docs[i].area)
     });
-    if let Some(t) = formatted {
-        t.set_focus();
-        return;
-    }
-    if let Some(t) = active_text() {
-        let (from, to) = t.get_selection();
-        put_at(t, to, to, after);
-        put_at(t, from, from, before);
-        let caret = to + before.text.chars().count() as i64;
-        t.set_insertion_point(caret);
-        t.set_focus();
+    if let Some(area) = area {
+        area.set_focus();
     }
 }
 
 /// Selects document places `from` to `to` in the active document.
 fn select_range(from: i64, to: i64) {
     app::with(|a| {
-        if let Some(d) = a.doc() {
-            d.select_doc(from.max(0) as usize, to.max(0) as usize);
-            d.text.set_focus();
+        if let Some(i) = a.active {
+            a.docs[i].select_doc(from.max(0) as usize, to.max(0) as usize);
+            a.show_area(i, None);
+            a.docs[i].area.set_focus();
         }
         a.update_status();
     });
@@ -385,7 +352,7 @@ pub fn run(id: i32, checked: bool) {
                 );
             });
         }
-        3116 => message("The PDF importer and its options are built in step 9 of the plan."),
+        3116 => crate::pdf_options::dialog(),
         3117 => {
             settings_dialog(1045, "", None, |d| {
                 d.set_radio(&[8, 9, 10, 11, 12], 2);
@@ -762,7 +729,7 @@ pub fn open_path(path: &Path) -> Option<u64> {
 }
 
 fn insert_file() {
-    if active_text().is_none() {
+    if active_area().is_none() {
         return;
     }
     let Some(path) = pick_file("Insert File") else { return };
@@ -1195,7 +1162,7 @@ fn open_pdf(path: &Path) -> Option<u64> {
         }
     };
     let styles: Vec<String> = translation::template_style_list(&translation::default_template()).into_iter().map(|s| s.name).collect();
-    let running = match bc_core::pdf_import::import(&bytes, &bc_core::pdf_import::PdfOptions::default(), &styles) {
+    let running = match bc_core::pdf_import::import(&bytes, &crate::pdf_options::PdfSettings::load().options(), &styles) {
         Ok(t) => t,
         Err(e) => {
             message(&e);
@@ -1854,35 +1821,13 @@ pub fn translate_active() -> Result<u64, String> {
 // ------------------------------------------------------------------ Edit
 
 fn edit_standard(id: i32) {
-    // In the formatted view these act on the document (Select All excepted, which selects in the editing area). A
-    // text control that also carries out the key afterwards has its change put back (Formatted::echo).
-    let formatted = app::with(|a| {
-        let i = a.active.filter(|&i| a.docs[i].formatted.is_some() && id != 1207)?;
-        documents::formatted_command(a, i, id);
-        let caret = a.docs[i].text.get_insertion_point();
-        if let Some(f) = a.docs[i].formatted.as_mut() {
-            f.echo = Some(caret);
-        }
-        Some(a.docs[i].text)
+    let area = app::with(|a| {
+        let i = a.active?;
+        documents::edit_command(a, i, id);
+        Some(a.docs[i].area)
     });
-    if let Some(t) = formatted {
-        t.set_focus();
-        return;
-    }
-    // The native text control carries out undo, redo and the clipboard commands itself. Copy and cut keep the
-    // selection with its codes, so pasting it brings them back.
-    if let Some(t) = active_text() {
-        // Edit, Cut and Edit, Copy.
-        if matches!(id, 1203 | 1204) {
-            let (from, to) = t.get_selection();
-            app::with(|a| {
-                if let Some(part) = a.doc().map(|d| d.shown().slice(from.max(0) as usize, to.max(0) as usize)) {
-                    a.remember(part);
-                }
-            });
-        }
-        t.process_menu_command(crate::menu::menu_id(id));
-        t.set_focus();
+    if let Some(area) = area {
+        area.set_focus();
     }
 }
 
@@ -1890,7 +1835,7 @@ fn toggle_highlight() {
     app::with(|a| {
         if let Some(d) = a.doc_mut() {
             d.highlight_anchor = match d.highlight_anchor {
-                None => Some(d.text.get_insertion_point()),
+                None => Some(d.caret()),
                 Some(_) => None,
             };
         }
@@ -1902,18 +1847,11 @@ fn toggle_highlight() {
 /// Replaces document places `from` to `to` of the active document with plain `text`: in the formatted view in the
 /// document itself, else in the editing area.
 fn replace_plain(from: usize, to: usize, text: &str) {
-    let coded = app::with(|a| {
-        let i = a.active?;
-        if a.docs[i].formatted.is_some() {
-            a.edit_formatted(i, from, to, &Shown::plain(text));
-            None
-        } else {
-            Some(a.docs[i].text)
+    app::with(|a| {
+        if let Some(i) = a.active {
+            a.edit(i, from, to, &Shown::plain(text));
         }
     });
-    if let Some(t) = coded {
-        t.replace(from as i64, to as i64, text);
-    }
 }
 
 fn change_case() {
@@ -2221,7 +2159,7 @@ fn set_page_number() {
 
 /// Layout, Header and Footer: the text between the start and end codes, or the code that discontinues it.
 fn header_footer(dialog: i32, start: &str, end: &str, none: &str) {
-    if active_text().is_none() {
+    if active_area().is_none() {
         return;
     }
     let d = open_dialog(dialog, None);
@@ -2242,7 +2180,7 @@ fn header_footer(dialog: i32, start: &str, end: &str, none: &str) {
 }
 
 fn code_list() {
-    if active_text().is_none() {
+    if active_area().is_none() {
         return;
     }
     let d = open_dialog(1041, None);
@@ -2826,7 +2764,7 @@ fn set_hyphen(id: i32) {
 }
 
 fn add_style() {
-    if active_text().is_none() {
+    if active_area().is_none() {
         return;
     }
     let names = style_names();
@@ -3047,6 +2985,8 @@ fn internationalization() {
     let uia = d.checked(14);
     d.destroy();
     app::with(|a| a.settings.reader.uia = uia);
+    // The editing windows answer UI Automation clients only while it is on (spec 15).
+    unsafe { wxdragon_sys::wxd_DocEditor_SetSupportUIAutomation(uia) };
     settings_store::save_internationalization(chosen.as_deref().unwrap_or(&current), uia);
     let Some(new) = chosen else { return };
     if new == current {

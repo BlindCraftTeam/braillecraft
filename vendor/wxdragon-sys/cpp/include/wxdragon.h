@@ -138,6 +138,8 @@ extern "C" {
 #include "core/wxd_cursor_locator.h"
 #include "core/wxd_space_after.h"
 #include "core/wxd_line_gutter.h"
+// Added for BrailleCraft: the drawn document editing window
+#include "core/wxd_doc_editor.h"
 
 // Sound support
 #include "core/wxd_sound.h"

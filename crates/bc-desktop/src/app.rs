@@ -70,7 +70,8 @@ pub struct View {
 pub struct Doc {
     pub key: u64,
     pub frame: MDIChildFrame,
-    pub text: TextCtrl,
+    /// The editing area: the program-drawn editing window (editor_view), showing `ed`.
+    pub area: crate::editor_view::Area,
     /// The document's status line, the window after the editing area (as in the reference program, where screen
     /// reader scripts find it there): current style, Page, Line, Column, the character at the caret, Keys.
     pub status: StaticText,
@@ -97,14 +98,19 @@ pub struct Doc {
     /// The document laid out into pages, with what it was laid out from (a hash of the text, page size, numbering
     /// and styles); laid out again when any of them changes.
     pub pages: Option<(u64, std::rc::Rc<Vec<bc_core::format::Page>>)>,
-    /// Which bracketed runs of the text are codes (bc_core::doctext::Shown): a code comes only from a program
-    /// command (a menu, a style, the code list, a file), as in the reference program; brackets typed are text.
-    pub codes: Vec<(usize, usize)>,
-    pub inner: Vec<(usize, usize)>,
-    /// The text as it was when the codes were last brought up to date.
-    pub last_value: String,
-    /// Codes that have gone, with their places, so that an undo putting their text back brings them back.
-    pub taken: Vec<(usize, Shown)>,
+    /// The document and its caret (bc_core::editor): its text with the ranges that are codes (a code comes only
+    /// from a program command: a menu, a style, the code list, a file, as in the reference program; brackets typed
+    /// are text), laid out as the formatted view or the coded view shows it.
+    pub ed: bc_core::editor::Editor,
+    /// What the editor was laid out by (page size, numbering, styles); laid out again when it changes.
+    pub ed_layout: u64,
+    /// Document states to go back to (Edit, Undo) and forward to (Edit, Redo), each with its caret; at most 100 are
+    /// kept, one per edit (spec 30).
+    pub undo: Vec<(Shown, usize)>,
+    pub redo: Vec<(Shown, usize)>,
+    /// What the editing window was last given; the document changed from outside an edit (`area_stale`).
+    pub area_rows: crate::editor_view::ShownRows,
+    pub area_stale: bool,
     pub view: View,
     pub hyphen: Hyphen,
     pub styles: Vec<Style>,
@@ -113,7 +119,8 @@ pub struct Doc {
     pub file_settings: Vec<u8>,
     pub file_styles: Vec<(String, u16)>,
     pub last_style: Option<Style>,
-    pub highlight_anchor: Option<i64>,
+    /// Edit, Highlight: while on, caret moves extend the selection from where it was turned on.
+    pub highlight_anchor: Option<usize>,
     pub last_line_key: String,
     pub six_down: HashSet<usize>,
     pub chord: usize,
@@ -126,99 +133,37 @@ pub struct Doc {
     /// The optional sections of the document file it was read from that BrailleCraft does not use itself, written
     /// back as they were (their descriptor's place, kind and bytes).
     pub file_sections: Vec<(usize, u16, Vec<u8>)>,
-    /// The formatted view (re/spec/27-formatted-view.md), while the document shows it.
-    pub formatted: Option<Formatted>,
-    /// The drawn column of line numbers beside the editing area (App::update_gutter); null when it could not be made.
-    pub gutter: *mut ffi::wxd_Window_t,
-}
-
-/// A document in the formatted view: the editing area shows its laid-out page lines, so the document's own text is
-/// kept here; edits are made to it and the lines are shown again (spec 27 sections 3 and 5).
-pub struct Formatted {
-    pub model: Shown,
-    pub pages: std::rc::Rc<Vec<bc_core::format::Page>>,
-    pub view: bc_core::fview::View,
-    /// The lines shown are out of date (the text was set from outside an edit).
-    pub stale: bool,
-    /// Document states to go back to (Edit, Undo) and forward to (Edit, Redo), each with its caret.
-    pub undo: Vec<(Shown, usize)>,
-    pub redo: Vec<(Shown, usize)>,
-    /// A key the program has just carried out itself (Backspace, Delete, Enter, the clipboard and undo keys), with
-    /// the caret it left: on systems whose text control then carries the key out as well, that change is put back.
-    pub echo: Option<i64>,
-    /// The coded view (View, Codes): the document's text with its codes, in rows (spec 27 section 4).
-    pub coded: bool,
 }
 
 impl Doc {
     /// The document: its text and which runs are codes.
     pub fn shown(&self) -> Shown {
-        match &self.formatted {
-            Some(f) => f.model.clone(),
-            None => Shown { text: self.text.get_value(), codes: self.codes.clone(), inner: self.inner.clone() },
-        }
+        self.ed.doc.clone()
     }
 
-    /// Puts `shown` in the document, codes and all: in the editing area, or in the formatted view's text, whose
-    /// lines are then shown again (App::refresh_formatted).
+    /// Puts `shown` in the document, codes and all (a translation, a file, a style renamed): the caret stays at its
+    /// place where it can, and the editing window is given the new rows (App::show_area).
     pub fn set_shown(&mut self, shown: &Shown) {
-        // The codes are set first: the change handler then finds nothing changed.
-        self.codes = shown.codes.clone();
-        self.inner = shown.inner.clone();
-        self.last_value = shown.text.clone();
-        self.taken.clear();
-        match &mut self.formatted {
-            Some(f) => {
-                f.model = shown.clone();
-                f.stale = true;
-            }
-            None => self.text.set_value(&shown.text),
-        }
+        let caret = self.ed.caret;
+        self.ed.set_doc(shown.clone(), caret);
+        self.area_stale = true;
     }
 
-    /// The caret's place in the document (in the formatted view, the place its cell came from, spec 27 5c).
+    /// The caret's place in the document.
     pub fn caret(&self) -> usize {
-        let at = self.text.get_insertion_point().max(0) as usize;
-        match &self.formatted {
-            Some(f) => f.view.to_document(&f.pages, at),
-            None => at,
-        }
+        self.ed.caret
     }
 
     /// The selection's start and end in the document.
     pub fn selection(&self) -> (usize, usize) {
-        let (from, to) = self.text.get_selection();
-        let (from, to) = (from.max(0) as usize, to.max(0) as usize);
-        match &self.formatted {
-            Some(f) if from != to => {
-                let (a, b) = (f.view.to_document(&f.pages, from), f.view.to_document(&f.pages, to));
-                (a.min(b), a.max(b))
-            }
-            Some(f) => {
-                let p = f.view.to_document(&f.pages, from);
-                (p, p)
-            }
-            None => (from, to),
-        }
+        self.ed.selection()
     }
 
-    /// Where document place `pos` stands in the editing area.
-    pub fn view_pos(&self, pos: usize) -> i64 {
-        match &self.formatted {
-            Some(f) => f.view.to_view(&f.pages, pos) as i64,
-            None => pos as i64,
-        }
-    }
-
-    /// Selects document places `from` to `to` (the caret at `to` when they are equal) and shows them.
-    pub fn select_doc(&self, from: usize, to: usize) {
-        let (a, b) = (self.view_pos(from), self.view_pos(to));
-        if a == b {
-            self.text.set_insertion_point(a);
-        } else {
-            self.text.set_selection(a, b);
-        }
-        self.text.show_position(a);
+    /// Selects document places `from` to `to` (the caret at `to`; no selection when they are equal); the editing
+    /// window shows it at the next App::show_area.
+    pub fn select_doc(&mut self, from: usize, to: usize) {
+        self.ed.select(from, to);
+        self.area_stale = true;
     }
 
     /// The window name: "Untitled Print Document 1"; "name -- New Braille Document" for a translated or opened
@@ -522,23 +467,13 @@ impl App {
         let d = &self.docs[i];
         if d.view.full_page {
             // Full-Page: the font is sized so one whole page (lines by cells) fits the window.
-            let area = d.text.get_client_size();
+            let area = d.area.get_client_size();
             let by_height = area.height * 72 / 96 / (d.lines as i32 + 1);
             let by_width = area.width * 72 / 96 * 10 / 6 / (d.cells as i32 + 1);
             size = by_height.min(by_width).max(4);
         }
         if let Some(f) = font(&face, size) {
-            // wxGTK applies a font to a multi-line control by setting its whole text again, which moves the caret
-            // to the end; the caret and selection are kept across the change.
-            let (from, to) = d.text.get_selection();
-            let caret = d.text.get_insertion_point();
-            d.text.set_font(&f);
-            if from != to {
-                d.text.set_selection(from, to);
-            } else {
-                d.text.set_insertion_point(caret);
-            }
-            d.text.show_position(caret);
+            d.area.set_font(&f);
         }
         let (lface, lsize) = self.face(if d.kind == DocKind::Print { self.settings.default_views.translated_font } else { ViewFont::Print });
         if let Some(f) = font(&lface, lsize) {
@@ -546,7 +481,7 @@ impl App {
         }
         d.line.show(d.view.translated);
         d.frame.layout();
-        self.update_gutter(i);
+        self.show_area(i, None);
         self.refresh_menus();
         self.docs[i].last_line_key.clear();
         self.update_status();
@@ -620,30 +555,24 @@ impl App {
     /// then its translated line.
     pub fn update_status(&mut self) {
         let Some(i) = self.active else { return };
-        // The formatted lines are shown again when the text was set from outside an edit, or when what the
+        // The editing window is given the document again when it was set from outside an edit, or when what the
         // document is laid out by (page size, numbering, styles) changed.
-        if let Some((model, coded, stale)) = self.docs[i].formatted.as_ref().map(|f| (f.model.clone(), f.coded, f.stale)) {
-            let moved = !coded && {
-                let pages = self.laid_out(i, &model);
-                self.docs[i].formatted.as_ref().is_some_and(|f| !std::rc::Rc::ptr_eq(&f.pages, &pages))
-            };
-            if stale || moved {
-                self.refresh_formatted(i, None);
-            }
+        if self.docs[i].area_stale || self.docs[i].ed_layout != self.page_layout(i).0 {
+            self.show_area(i, None);
         }
         let shown = self.docs[i].shown();
         let pos = self.docs[i].caret() as i64;
-        // Page, line and column of the caret on the laid-out pages (spec 19 section 4): the ordinal page, the line on
-        // that page and the cell on that line.
-        // In the formatted view, the row the caret stands on (spec 27 1b: the caret's page, line and column).
-        let row = self.docs[i].formatted.as_ref().filter(|f| !f.coded).and_then(|f| {
-            let (n, col) = f.view.line_at(self.docs[i].text.get_insertion_point().max(0) as usize)?;
-            let (p, l, _) = f.view.lines[n];
-            Some((p + 1, l + 1, col + 1))
-        });
-        let location = match row {
-            Some(r) => Some(r),
-            None => (!self.docs[i].view.codes).then(|| bc_core::format::locate(&self.laid_out(i, &shown), pos.max(0) as usize)),
+        // In the formatted view, the caret's page, line on the page and column (spec 27 1b; spec 19 section 4); the
+        // coded view shows none.
+        let ed = &self.docs[i].ed;
+        let location = if ed.coded {
+            None
+        } else {
+            let (row, col) = ed.caret_place();
+            match ed.row(row) {
+                Some(bc_core::editor::Row::Line { page, line }) => Some((page + 1, line + 1, col + 1)),
+                _ => None,
+            }
         };
         let d = &self.docs[i];
         let style = bc_core::status::style_text(&shown, pos);
@@ -671,10 +600,8 @@ impl App {
         if bell <= 0 || self.docs[i].view.codes {
             return;
         }
-        let shown = self.docs[i].shown();
-        let pos = self.docs[i].caret();
-        let (_, _, column) = bc_core::format::locate(&self.laid_out(i, &shown), pos);
-        if column as i64 == i64::from(self.docs[i].cells) - bell {
+        let (_, col) = self.docs[i].ed.caret_place();
+        if col as i64 + 1 == i64::from(self.docs[i].cells) - bell {
             crate::bell::ring();
         }
     }
@@ -738,33 +665,6 @@ impl App {
         .unwrap_or_else(|e| e)
     }
 
-    /// Brings document `i`'s codes up to date with its text after an edit (bc_core::doctext::after_edit). Returns
-    /// what is left of codes the edit broke, to be removed (last first).
-    pub fn sync_codes(&mut self, i: usize) -> Vec<(usize, usize)> {
-        let d = &mut self.docs[i];
-        // In the formatted view the editing area holds the laid-out lines, not the document; edits are made to the
-        // document itself (App::edit_formatted).
-        if d.formatted.is_some() {
-            return Vec::new();
-        }
-        let text = d.text.get_value();
-        if text == d.last_value {
-            return Vec::new();
-        }
-        let before = Shown { text: std::mem::take(&mut d.last_value), codes: std::mem::take(&mut d.codes), inner: std::mem::take(&mut d.inner) };
-        let taken = std::mem::take(&mut d.taken);
-        let e = bc_core::doctext::after_edit(&before, &text, &self.known, &taken);
-        let d = &mut self.docs[i];
-        d.codes = e.shown.codes;
-        d.inner = e.shown.inner;
-        d.taken = e.taken;
-        d.last_value = text;
-        if let Some(r) = e.removed {
-            self.remember(r);
-        }
-        e.remains
-    }
-
     /// Keeps text taken out or copied, with its codes (the last few).
     pub fn remember(&mut self, s: Shown) {
         if s.codes.is_empty() {
@@ -781,15 +681,33 @@ impl App {
     /// document its braille page numbers. Kept until the text, its codes or any of those changes.
     pub fn laid_out(&mut self, i: usize, value: &Shown) -> std::rc::Rc<Vec<bc_core::format::Page>> {
         use std::hash::{Hash, Hasher};
-        let d = &self.docs[i];
+        let (layout_key, layout, styles) = self.page_layout(i);
         let mut h = std::collections::hash_map::DefaultHasher::new();
-        (&value.text, &value.codes, d.cells, d.lines, d.page_numbers, d.kind == DocKind::Braille, &d.styles).hash(&mut h);
+        (&value.text, &value.codes, layout_key).hash(&mut h);
         let key = h.finish();
+        let d = &self.docs[i];
         if let Some((k, pages)) = &d.pages {
             if *k == key {
                 return pages.clone();
             }
         }
+        // The editor's own pages, when it shows this document laid out the same way.
+        let pages = if !d.ed.coded && d.ed_layout == layout_key && d.ed.doc == *value {
+            std::rc::Rc::new(d.ed.pages.clone())
+        } else {
+            std::rc::Rc::new(bc_core::format::format(value, &layout, Some(&styles)))
+        };
+        self.docs[i].pages = Some((key, pages.clone()));
+        pages
+    }
+
+    /// What document `i` is laid out by: its cells per line and lines per page, its braille page numbers (a braille
+    /// document), the first page whose number is shown, and its styles; with a key that changes when any of them does.
+    pub fn page_layout(&self, i: usize) -> (u64, bc_core::format::Layout, bc_core::engine::StyleTable) {
+        use std::hash::{Hash, Hasher};
+        let d = &self.docs[i];
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        (d.cells, d.lines, d.page_numbers, d.kind == DocKind::Braille, &d.styles).hash(&mut h);
         let braille = d.kind == DocKind::Braille;
         let (cells, lines) = (d.cells.max(1) as usize, d.lines.max(1) as usize);
         let mut layout = if braille {
@@ -803,163 +721,84 @@ impl App {
             layout.numbers_odd = bc_core::format::Corner::from_code(d.page_numbers[1]);
         }
         layout.first_number_shown = d.page_numbers[4].max(1) as usize;
-        let styles = crate::translation::style_table(&d.styles);
-        let pages = std::rc::Rc::new(bc_core::format::format(value, &layout, Some(&styles)));
-        self.docs[i].pages = Some((key, pages.clone()));
-        pages
+        (h.finish(), layout, crate::translation::style_table(&d.styles))
     }
 
-    /// Shows document `i`'s formatted lines again from its text (laid out again when the text changed), with the
-    /// caret at document place `caret` (where it stood, when None).
-    pub fn refresh_formatted(&mut self, i: usize, caret: Option<usize>) {
-        let Some(model) = self.docs[i].formatted.as_ref().map(|f| f.model.clone()) else { return };
-        let caret = caret.unwrap_or_else(|| self.docs[i].caret());
-        let coded = self.docs[i].formatted.as_ref().is_some_and(|f| f.coded);
-        // The coded view: the text with its codes in rows 65 characters wide for a print document, 42 for a braille
-        // one (spec 27 4b); the formatted view: the laid-out page lines.
-        let (pages, view) = if coded {
-            let width = if self.docs[i].kind == DocKind::Braille { 42 } else { 65 };
-            (std::rc::Rc::new(Vec::new()), bc_core::fview::View::coded(&model, width))
-        } else {
-            let pages = self.laid_out(i, &model);
-            let view = bc_core::fview::View::new(&pages);
-            (pages, view)
-        };
+    /// Gives document `i`'s editing window its rows, line numbers and caret; the document is laid out again first
+    /// when what it is laid out by has changed. `keep_from_top` keeps the caret row that many rows from the top.
+    pub fn show_area(&mut self, i: usize, keep_from_top: Option<usize>) {
+        let (key, layout, styles) = self.page_layout(i);
+        // Line numbers beside the formatted lines of a braille document, when Global, View Preferences asks for
+        // them (spec 24 2d.2, spec 27 3b).
+        let line_numbers =
+            self.docs[i].kind == DocKind::Braille && self.settings.view_prefs.line_numbers && !self.docs[i].view.codes;
         let d = &mut self.docs[i];
-        let Some(f) = d.formatted.as_mut() else { return };
-        let changed = f.view.text != view.text || f.view.lines.is_empty() || f.view.coded != view.coded;
-        f.pages = pages;
-        f.view = view;
-        f.stale = false;
-        if changed {
-            let text = f.view.text.clone();
-            // The last line of each page: the page break follows it (spec 27 3a).
-            let ends: Vec<(i64, i64)> = f
-                .view
-                .lines
-                .iter()
-                .enumerate()
-                .filter(|(n, l)| !coded && f.view.lines.get(n + 1).is_none_or(|next| next.0 != l.0))
-                .map(|(n, l)| (l.2 as i64, f.view.lines.get(n + 1).map_or(text.chars().count(), |next| next.2) as i64))
-                .collect();
-            d.text.set_value(&text);
-            // The reference gives each page break a row of its own after the page's lines, with no text in it; here
-            // that row is the space after the page's last line, so screen readers read the lines alone, as the
-            // reference's text for them is. The reference also draws a line across that row; the system text
-            // control draws none.
-            // One row: the font's size in pixels and its line spacing.
-            let size = self.face(self.docs[i].view.font).1.max(4);
-            let row = size * 4 / 3 * 6 / 5;
-            let t = self.docs[i].text.handle_ptr() as *mut ffi::wxd_Window_t;
-            for (from, to) in ends {
-                unsafe { ffi::wxd_TextCtrl_SetSpaceAfter(t, from as std::os::raw::c_long, to as std::os::raw::c_long, row) };
-            }
+        if d.ed_layout != key {
+            d.ed.layout = layout;
+            d.ed.styles = Some(styles);
+            d.ed.relayout();
+            d.ed_layout = key;
         }
-        let d = &mut self.docs[i];
-        d.select_doc(caret, caret);
-        if changed {
-            self.update_gutter(i);
-        }
+        d.area_stale = false;
+        let area = d.area;
+        area.show(&d.ed, &mut d.area_rows, line_numbers, keep_from_top);
     }
 
-    /// Shows or hides document `i`'s line numbers: a braille document in the formatted view with Global, View
-    /// Preferences, line numbers on (spec 24 2d.2) shows the number of each page line beside it, separator rows and
-    /// the coded view none (spec 27 3b).
-    pub fn update_gutter(&mut self, i: usize) {
-        let d = &self.docs[i];
-        if d.gutter.is_null() {
+    /// Edits document `i` by `change` on its editor (typing, Backspace, Delete, a code put in): the document before
+    /// it is kept for Edit, Undo (one step per edit, at most 100, spec 30), what it took out is kept with its codes
+    /// for pasting, and the editing window shows the result.
+    pub fn edit_by(&mut self, i: usize, change: impl FnOnce(&mut bc_core::editor::Editor) -> Shown) {
+        let d = &mut self.docs[i];
+        let before = (d.ed.doc.clone(), d.ed.caret);
+        let removed = change(&mut d.ed);
+        if d.ed.doc == before.0 {
+            self.show_area(i, None);
             return;
         }
-        let shown = d.kind == DocKind::Braille && self.settings.view_prefs.line_numbers && d.formatted.as_ref().is_some_and(|f| !f.coded);
-        if shown {
-            if let Some(f) = d.formatted.as_ref() {
-                let positions: Vec<std::os::raw::c_long> = f.view.lines.iter().map(|l| l.2 as std::os::raw::c_long).collect();
-                let labels: Vec<std::ffi::CString> =
-                    f.view.lines.iter().map(|l| std::ffi::CString::new((l.1 + 1).to_string()).unwrap_or_default()).collect();
-                let pointers: Vec<*const std::os::raw::c_char> = labels.iter().map(|c| c.as_ptr()).collect();
-                unsafe { ffi::wxd_LineGutter_SetMarks(d.gutter, positions.as_ptr(), pointers.as_ptr(), positions.len() as i32) };
-            }
+        if d.undo.len() >= 100 {
+            d.undo.remove(0);
         }
-        unsafe { ffi::wxd_Window_Show(d.gutter, shown) };
-        d.frame.layout();
-    }
-
-    /// Edits document `i` in the formatted view: document places `from` to `to` become `put`, a code the range
-    /// cuts into going as a whole (spec 27 5a); the lines are then shown again with the caret after `put`.
-    pub fn edit_formatted(&mut self, i: usize, from: usize, to: usize, put: &Shown) {
-        let caret = self.docs[i].caret();
-        let Some(f) = self.docs[i].formatted.as_mut() else { return };
-        let len = f.model.text.chars().count();
-        let (mut from, mut to) = (from.min(len), to.min(len));
-        for &(s, e) in &f.model.codes {
-            if s < from && e > from {
-                from = s;
-            }
-            if s < to && e > to {
-                to = e;
-            }
-        }
-        let removed = f.model.slice(from, to);
-        let mut model = f.model.slice(0, from);
-        model.push(put);
-        model.push(&f.model.slice(to, len));
-        f.undo.push((std::mem::replace(&mut f.model, model.clone()), caret));
-        f.redo.clear();
-        let d = &mut self.docs[i];
-        d.codes = model.codes.clone();
-        d.inner = model.inner.clone();
-        d.last_value = model.text;
+        d.undo.push(before);
+        d.redo.clear();
         d.dirty = true;
         d.last_line_key.clear();
         self.remember(removed);
-        self.refresh_formatted(i, Some(from + put.text.chars().count()));
+        self.show_area(i, None);
         if self.active == Some(i) {
             self.update_status();
         }
     }
 
-    /// Edit, Undo (or Redo with `redo`) in the formatted view: the document as it was before the last edit (or
-    /// after the last one undone). False when there is none.
-    pub fn undo_formatted(&mut self, i: usize, redo: bool) -> bool {
-        let caret = self.docs[i].caret();
-        let Some(f) = self.docs[i].formatted.as_mut() else { return false };
-        let Some((model, at)) = (if redo { f.redo.pop() } else { f.undo.pop() }) else { return false };
-        let current = (std::mem::replace(&mut f.model, model.clone()), caret);
-        if redo { f.undo.push(current) } else { f.redo.push(current) }
+    /// Edits document `i`: document places `from` to `to` become `put` (a code the range cuts into goes as a whole,
+    /// spec 27 5a); the caret goes after `put`.
+    pub fn edit(&mut self, i: usize, from: usize, to: usize, put: &Shown) {
+        let put = put.clone();
+        self.edit_by(i, move |e| e.replace(from, to, &put));
+    }
+
+    /// Edit, Undo (or Redo with `redo`): the document as it was before the last edit (or after the last one undone).
+    /// False when there is none.
+    pub fn undo(&mut self, i: usize, redo: bool) -> bool {
         let d = &mut self.docs[i];
-        d.codes = model.codes.clone();
-        d.inner = model.inner.clone();
-        d.last_value = model.text;
+        let Some((model, at)) = (if redo { d.redo.pop() } else { d.undo.pop() }) else { return false };
+        let current = (d.ed.doc.clone(), d.ed.caret);
+        if redo { d.undo.push(current) } else { d.redo.push(current) }
+        d.ed.set_doc(model, at);
         d.dirty = true;
         d.last_line_key.clear();
-        self.refresh_formatted(i, Some(at));
+        self.show_area(i, None);
         self.update_status();
         true
     }
 
-    /// View, Codes for document `i` (spec 27 2c): the coded view shows the document's text with its codes in the
-    /// editing area; the formatted view shows its laid-out lines. The caret keeps its place in the document.
+    /// View, Codes for document `i` (spec 27 2c): the coded view shows the document's text with its codes in rows,
+    /// the formatted view its laid-out lines. The caret keeps its place in the document and its row on the screen.
     pub fn set_view_codes(&mut self, i: usize, codes: bool) {
-        let caret = self.docs[i].caret();
+        let keep = self.docs[i].area.caret_screen_row();
         let d = &mut self.docs[i];
         d.view.codes = codes;
-        match d.formatted.as_mut() {
-            Some(f) => f.coded = codes,
-            None => {
-                let model = d.shown();
-                d.formatted = Some(Formatted {
-                    model,
-                    pages: std::rc::Rc::new(Vec::new()),
-                    view: bc_core::fview::View::default(),
-                    stale: true,
-                    undo: Vec::new(),
-                    redo: Vec::new(),
-                    echo: None,
-                    coded: codes,
-                });
-            }
-        }
-        self.refresh_formatted(i, Some(caret));
+        d.ed.set_view(codes);
+        self.show_area(i, Some(keep));
         self.docs[i].last_line_key.clear();
     }
 

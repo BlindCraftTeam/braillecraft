@@ -1,19 +1,24 @@
-//! Document windows: each open document is a child window holding the editing area (a native multi-line text
-//! control), under it the one-line translated line on yellow, and at the bottom the document's status line. The
-//! child windows sit maximized in the main window, as in the reference screenshots.
+//! Document windows: each open document is a child window holding the editing area (the program-drawn editing
+//! window, editor_view, as the reference program draws its own), under it the one-line translated line on yellow,
+//! and at the bottom the document's status line. The child windows sit maximized in the main window, as in the
+//! reference screenshots.
+//!
+//! Every key, typed character and click in the editing area comes here and is carried out on the document's editor
+//! model (bc_core::editor), as the reference program's key handler does (spec 27 section 5, spec 30).
 
 use std::collections::HashSet;
 
 use bc_core::doctext::Shown;
+use bc_core::editor::{Editor, Move, Row};
 use wxdragon::prelude::*;
 
 use crate::app::{self, child_maximize, child_set_title, Doc, DocKind, Hyphen, View};
+use crate::editor_view;
 use crate::speech;
 
 /// Opens a new document window with `shown` (its text and codes). `name` None makes an untitled one ("Untitled
 /// Print Document 1").
 pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
-    let text = shown.text.as_str();
     let (frame, key, name, untitled, view) = app::with(|a| {
         a.next_key += 1;
         let untitled = name.is_none();
@@ -35,33 +40,7 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
     });
 
     let child = MDIChildFrame::builder(&frame).with_title(&name).build();
-    // The rich text style on Windows makes positions count a line break as one character, as on the other systems.
-    // Lines are not wrapped by the control: both views end their lines themselves, and the reference scrolls
-    // sideways instead (spec 27 5d).
-    let style = if cfg!(windows) {
-        TextCtrlStyle::MultiLine | TextCtrlStyle::Rich2 | TextCtrlStyle::DontWrap
-    } else {
-        TextCtrlStyle::MultiLine | TextCtrlStyle::DontWrap
-    };
-    // Control id 0, as the reference program's editing area has: screen reader scripts read the last line of the
-    // document window (the status line) directly when the focused window has id 0.
-    let text_ctrl = TextCtrl::builder(&child).with_id(0).with_style(style).build();
-    // Line numbers beside the formatted lines of a braille document (spec 24 2d, spec 27 3b): a drawn column, shown
-    // when Global, View Preferences asks for them (App::update_gutter). The reference's column is 20 pixels; it is
-    // widened here to hold two digits in the braille font size.
-    let gutter_width = app::with(|a| (a.settings.fonts.braille_size * 4 / 3 * 6 / 5 + 4).max(20));
-    let gutter = unsafe {
-        wxdragon_sys::wxd_LineGutter_Create(
-            child.handle_ptr() as *mut wxdragon_sys::wxd_Window_t,
-            text_ctrl.handle_ptr() as *mut wxdragon_sys::wxd_Window_t,
-            gutter_width,
-        )
-    };
-    text_ctrl.set_value(text);
-    // A document opens at its start (GTK leaves the caret after the text).
-    text_ctrl.set_insertion_point(0);
-    text_ctrl.show_position(0);
-    text_ctrl.set_modified(false);
+    let area = editor_view::create(&child, key);
     // The status line is made right after the editing area and the translated line after it: screen reader scripts
     // find them as the next window and the one after (spec 17).
     let status = StaticText::builder(&child).with_label("Current Style: None").build();
@@ -72,30 +51,25 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
     line.set_accessibility_label("Translated line");
     speech::set_name(line.get_handle(), "Translated line");
     // The name the reference program's document provider gives its editing area.
-    text_ctrl.set_accessibility_label("Document Editing Window");
-    speech::set_name(text_ctrl.get_handle(), "Document Editing Window");
+    area.set_accessible_name("Document Editing Window");
     line.show(view.translated);
 
     let sizer = BoxSizer::builder(Orientation::Vertical).build();
-    let row = BoxSizer::builder(Orientation::Horizontal).build();
-    if !gutter.is_null() {
-        unsafe {
-            wxdragon_sys::wxd_Sizer_AddWindow(row.as_sizer_ptr(), gutter, 0, SizerFlag::Expand.bits() as i32, 0);
-            wxdragon_sys::wxd_Window_Show(gutter, false);
-        }
-    }
-    row.add(&text_ctrl, 1, SizerFlag::Expand, 0);
-    sizer.add_sizer(&row, 1, SizerFlag::Expand, 0);
+    sizer.add(&area, 1, SizerFlag::Expand, 0);
     sizer.add(&line, 0, SizerFlag::Expand, 0);
     sizer.add(&status, 0, SizerFlag::Expand | SizerFlag::All, 2);
     child.set_sizer(sizer, true);
 
-    wire(key, &child, &text_ctrl);
+    wire(key, &child, area);
 
+    let braille = kind == DocKind::Braille;
+    // The coded view's rows are 42 characters for a braille document and 65 for a print one (spec 27 4b); the page
+    // size is set from the document's own when it is first shown (App::show_area).
+    let ed = Editor::new(shown.clone(), bc_core::format::Layout::braille(40, 25), None, view.codes, if braille { 42 } else { 65 });
     let doc = Doc {
         key,
         frame: child,
-        text: text_ctrl,
+        area,
         status,
         line,
         name,
@@ -109,14 +83,16 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
             .unwrap_or_else(|| crate::translation::DEFAULT_TABLES.map(str::to_string)),
         initial_codes: String::new(),
         template: crate::translation::default_template(),
-        cells: if kind == DocKind::Braille { 40 } else { 80 },
-        lines: if kind == DocKind::Braille { 25 } else { 50 },
+        cells: if braille { 40 } else { 80 },
+        lines: if braille { 25 } else { 50 },
         page_numbers: crate::translation::template_page_numbers(&crate::translation::default_template()),
         pages: None,
-        codes: shown.codes.clone(),
-        inner: shown.inner.clone(),
-        last_value: shown.text.clone(),
-        taken: Vec::new(),
+        ed,
+        ed_layout: 0,
+        undo: Vec::new(),
+        redo: Vec::new(),
+        area_rows: editor_view::ShownRows::default(),
+        area_stale: true,
         view,
         hyphen: Hyphen::Dashes,
         styles: crate::translation::template_style_list(&crate::translation::default_template()),
@@ -131,22 +107,20 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
         embosser: crate::embosser::default_setup().unwrap_or_default(),
         layout: crate::embosser::default_layout().0,
         file_sections: Vec::new(),
-        formatted: None,
-        gutter,
     };
     app::with(|a| {
         child_set_title(&doc.frame, &doc.full_name());
         a.docs.push(doc);
-        // The document opens in the view Global, Default Views sets: the formatted view with View, Codes off, else
-        // the coded view (spec 27 2a).
+        // The document opens at its start, in the view Global, Default Views sets: the formatted view with View,
+        // Codes off, else the coded view (spec 27 2a).
         let i = a.docs.len() - 1;
-        a.set_view_codes(i, view.codes);
         a.docs[i].select_doc(0, 0);
+        a.set_view_codes(i, view.codes);
     });
     child_maximize(&child);
     child.show(true);
     activate_key(key);
-    text_ctrl.set_focus();
+    area.set_focus();
     // A dialog that was open (File, Open) gives focus back to the control it came from when it finishes closing;
     // the new document takes it once that is done.
     // On macOS each document is a window of its own, and the system gives activation back to the window that had it
@@ -155,7 +129,7 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
     wxdragon::call_after(Box::new(move || {
         child.raise();
         child_maximize(&child);
-        text_ctrl.set_focus();
+        area.set_focus();
         activate_key(key);
     }));
     key
@@ -166,10 +140,10 @@ const SHIFT_KEY: i32 = 306;
 
 /// Shows the Cursor Locator over document `key`'s editing area (spec 24 2d.2): a rectangle closing in on the caret.
 pub fn show_cursor_locator(key: u64) {
-    let mut text = None;
-    app::try_with(|a| text = a.index_of(key).map(|i| a.docs[i].text));
-    if let Some(t) = text {
-        unsafe { wxdragon_sys::wxd_TextCtrl_ShowCursorLocator(t.handle_ptr() as *mut wxdragon_sys::wxd_Window_t) };
+    let mut area = None;
+    app::try_with(|a| area = a.index_of(key).map(|i| a.docs[i].area));
+    if let Some(area) = area {
+        area.show_cursor_locator();
     }
 }
 
@@ -186,11 +160,11 @@ pub fn activate_key(key: u64) {
 
 /// Brings document `index` to the front (View menu list).
 pub fn bring_to_front(index: usize) {
-    let target = app::with(|a| a.docs.get(index).map(|d| (d.frame, d.text, d.key)));
-    if let Some((frame, text, key)) = target {
+    let target = app::with(|a| a.docs.get(index).map(|d| (d.frame, d.area, d.key)));
+    if let Some((frame, area, key)) = target {
         frame.raise();
         child_maximize(&frame);
-        text.set_focus();
+        area.set_focus();
         activate_key(key);
     }
 }
@@ -209,158 +183,29 @@ pub fn destroy(key: u64) {
     app::with(|a| {
         a.set_title();
         if let Some(d) = a.doc() {
-            let (f, t) = (d.frame, d.text);
+            let (f, area) = (d.frame, d.area);
             child_maximize(&f);
-            t.set_focus();
+            area.set_focus();
         }
         a.refresh_menus();
         a.update_status();
     });
 }
 
-fn wire(key: u64, child: &MDIChildFrame, text: &TextCtrl) {
-    let edited = *text;
-    text.on_text_updated(move |_| {
-        app::try_with(|a| {
-            if let Some(i) = a.index_of(key) {
-                // In the formatted view the area's text is the laid-out lines: what was typed or pasted into them is
-                // put in the document at the place it shows, and the lines are shown again (formatted_typed).
-                if a.docs[i].formatted.is_some() {
-                    formatted_typed(a, i);
-                    return;
-                }
-                // The codes follow the edit; a code that lost a bracket goes as a whole, as codes do in the
-                // reference program, once this change has been handled.
-                let before = a.docs[i].last_value.chars().count();
-                let remains = a.sync_codes(i);
-                // One character more: typed (or one pasted), which is when the reference rings the margin bell.
-                let typed = remains.is_empty() && a.docs[i].last_value.chars().count() == before + 1;
-                if !remains.is_empty() {
-                    wxdragon::call_after(Box::new(move || {
-                        for (from, to) in remains {
-                            edited.replace(from as i64, to as i64, "");
-                        }
-                    }));
-                }
-                a.docs[i].dirty = true;
-                if a.active == Some(i) {
-                    a.update_status();
-                    if typed {
-                        a.margin_bell(i);
-                    }
-                }
-            }
-        });
-    });
+thread_local! {
+    /// Shift was pressed with no other key since: letting it go shows the Cursor Locator when Global, View
+    /// Preferences asks for it (spec 24 2d.2).
+    static SHIFT_ALONE: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
 
-    let t = *text;
-    // Shift pressed and let go with no other key between: the Cursor Locator, when Global, View Preferences asks for
-    // it (spec 24 2d.2).
-    let shift_alone = std::rc::Rc::new(std::cell::Cell::new(false));
-    let shift_down = shift_alone.clone();
-    text.on_key_down(move |e| {
-        let mut consumed = false;
-        if let WindowEventData::Keyboard(k) = &e {
-            shift_down.set(k.get_key_code() == Some(SHIFT_KEY));
-            app::try_with(|a| {
-                let Some(i) = a.index_of(key) else { return };
-                // Copy and cut keep the selection with its codes, so pasting it brings them back.
-                let code = k.get_key_code().unwrap_or(0);
-                if let Some(f) = a.docs[i].formatted.as_mut() {
-                    f.echo = None;
-                }
-                if a.docs[i].formatted.is_some() && formatted_key(a, i, code, k.control_down(), k.alt_down() || k.meta_down()) {
-                    let caret = a.docs[i].text.get_insertion_point();
-                    if let Some(f) = a.docs[i].formatted.as_mut() {
-                        f.echo = Some(caret);
-                    }
-                    consumed = true;
-                    return;
-                }
-                if k.control_down() && (code == 'C' as i32 || code == 'X' as i32 || code == 'c' as i32 || code == 'x' as i32) {
-                    let (from, to) = a.docs[i].selection();
-                    let part = a.docs[i].shown().slice(from, to);
-                    a.remember(part);
-                }
-                let d = &mut a.docs[i];
-                if d.kind != DocKind::Braille || !d.view.six_key || k.control_down() || k.alt_down() || k.meta_down() {
-                    return;
-                }
-                if let Some(dot) = six_key_dot(&a.settings.six_key_set, k.get_key_code()) {
-                    let d = &mut a.docs[i];
-                    d.six_down.insert(dot);
-                    d.chord |= 1 << dot;
-                    let caret = d.text.get_insertion_point();
-                    if let Some(f) = d.formatted.as_mut() {
-                        f.echo = Some(caret);
-                    }
-                    consumed = true;
-                }
-            });
-            if !consumed {
-                k.event.skip(true);
-            }
-        }
-    });
-
-    text.on_key_up(move |e| {
-        if let WindowEventData::Keyboard(k) = &e {
-            let mut insert: Option<char> = None;
-            app::try_with(|a| {
-                let Some(i) = a.index_of(key) else { return };
-                let set = a.settings.six_key_set.clone();
-                let enc = a.encoding();
-                let d = &mut a.docs[i];
-                if d.kind == DocKind::Braille && d.view.six_key {
-                    if let Some(dot) = six_key_dot(&set, k.get_key_code()) {
-                        d.six_down.remove(&dot);
-                        // The cell is entered when the last key of the chord is released.
-                        if d.six_down.is_empty() && d.chord != 0 {
-                            insert = Some(enc.cell_char(d.chord));
-                            d.chord = 0;
-                        }
-                    }
-                }
-            });
-            if let Some(c) = insert {
-                let mut done = false;
-                app::try_with(|a| {
-                    if let Some(i) = a.index_of(key).filter(|&i| a.docs[i].formatted.is_some()) {
-                        type_in(a, i, &Shown::plain(&c.to_string()));
-                        done = true;
-                    }
-                });
-                if !done {
-                    t.write_text(&c.to_string());
-                }
-            }
-            k.event.skip(true);
-            caret_moved(key);
-            if k.get_key_code() == Some(SHIFT_KEY) && shift_alone.replace(false) {
-                let mut on = false;
-                app::try_with(|a| on = a.settings.view_prefs.locator_on_shift);
-                if on {
-                    wxdragon::call_after(Box::new(move || show_cursor_locator(key)));
-                }
-            }
-        }
-    });
-
-    text.on_mouse_left_up(move |e| {
-        if let WindowEventData::MouseButton(m) = &e {
-            m.event.skip(true);
-        }
-        caret_moved(key);
-    });
-
-    let editor = *text;
+fn wire(key: u64, child: &MDIChildFrame, area: editor_view::Area) {
     child.on_activate(move |e| {
         if let WindowEventData::Activate(a) = &e {
             if a.is_active() {
                 activate_key(key);
                 // The editing area takes the keyboard when its document becomes active. On Linux the documents are
                 // pages of a notebook, which takes focus as it switches pages; focus is given once that is done.
-                wxdragon::call_after(Box::new(move || editor.set_focus()));
+                wxdragon::call_after(Box::new(move || area.set_focus()));
             }
             a.event.skip(true);
         }
@@ -377,133 +222,257 @@ fn wire(key: u64, child: &MDIChildFrame, text: &TextCtrl) {
     });
 }
 
-/// Highlight mode and the status line follow the caret.
-fn caret_moved(key: u64) {
+// wxWidgets key codes and modifier bits.
+const BACK: i32 = 8;
+const TAB: i32 = 9;
+const ENTER: i32 = 13;
+const ESCAPE: i32 = 27;
+const DELETE: i32 = 127;
+const END: i32 = 312;
+const HOME: i32 = 313;
+const LEFT: i32 = 314;
+const UP: i32 = 315;
+const RIGHT: i32 = 316;
+const DOWN: i32 = 317;
+const INSERT: i32 = 324;
+const PAGE_UP: i32 = 366;
+const PAGE_DOWN: i32 = 367;
+const NUMPAD_ENTER: i32 = 370;
+const NUMPAD_HOME: i32 = 375;
+const NUMPAD_LEFT: i32 = 376;
+const NUMPAD_UP: i32 = 377;
+const NUMPAD_RIGHT: i32 = 378;
+const NUMPAD_DOWN: i32 = 379;
+const NUMPAD_PAGE_UP: i32 = 380;
+const NUMPAD_PAGE_DOWN: i32 = 381;
+const NUMPAD_END: i32 = 382;
+const NUMPAD_INSERT: i32 = 384;
+const NUMPAD_DELETE: i32 = 385;
+const MOD_ALT: i32 = 1;
+const MOD_CONTROL: i32 = 2;
+const MOD_SHIFT: i32 = 4;
+const MOD_META: i32 = 8;
+
+/// A key in the editing area of document `key` (spec 27 5a, spec 30): pressed (`code` above 0) or let go (`code`
+/// negated). True when it was carried out here; the others go on to the menus and the window.
+pub fn area_key(key: u64, code: i32, _unicode: i32, mods: i32) -> bool {
+    if code < 0 {
+        key_up(key, -code);
+        return false;
+    }
+    SHIFT_ALONE.with(|s| s.set(code == SHIFT_KEY));
+    let control = mods & MOD_CONTROL != 0;
+    let alt = mods & (MOD_ALT | MOD_META) != 0;
+    let shift = mods & MOD_SHIFT != 0;
+    let mut done = false;
     app::try_with(|a| {
         let Some(i) = a.index_of(key) else { return };
-        let d = &a.docs[i];
-        if let Some(anchor) = d.highlight_anchor {
-            let (from, to) = d.text.get_selection();
-            if from == to && from != anchor {
-                d.text.set_selection(from.min(anchor), from.max(anchor));
+        // Six-key entry: the six keys make a braille cell, entered when the last of them is let go.
+        let d = &mut a.docs[i];
+        if d.kind == DocKind::Braille && d.view.six_key && !control && !alt {
+            if let Some(dot) = six_key_dot(&a.settings.six_key_set, code) {
+                let d = &mut a.docs[i];
+                d.six_down.insert(dot);
+                d.chord |= 1 << dot;
+                done = true;
+                return;
             }
         }
-        if a.active == Some(i) {
-            a.update_status();
+        // Alt with a key belongs to the menus (Alt with the arrows moves between table cells in the reference, not
+        // built: BrailleCraft has no tables yet).
+        if alt && !control {
+            return;
+        }
+        let extend = shift || a.docs[i].highlight_anchor.is_some();
+        let moved = |m: Move| Some((m, extend));
+        let movement = match code {
+            LEFT | NUMPAD_LEFT => moved(if control { Move::WordLeft } else { Move::Left }),
+            RIGHT | NUMPAD_RIGHT => moved(if control { Move::WordRight } else { Move::Right }),
+            UP | NUMPAD_UP => moved(if control { Move::ParagraphUp } else { Move::Up }),
+            DOWN | NUMPAD_DOWN => moved(if control { Move::ParagraphDown } else { Move::Down }),
+            HOME | NUMPAD_HOME => moved(if control { Move::DocStart } else { Move::Home }),
+            END | NUMPAD_END => moved(if control { Move::DocEnd } else { Move::End }),
+            _ => None,
+        };
+        if let Some((m, extend)) = movement {
+            a.docs[i].ed.move_caret(m, extend);
+            caret_moved(a, i);
+            done = true;
+            return;
+        }
+        done = match code {
+            PAGE_UP | PAGE_DOWN | NUMPAD_PAGE_UP | NUMPAD_PAGE_DOWN => {
+                page_move(a, i, matches!(code, PAGE_DOWN | NUMPAD_PAGE_DOWN), control, extend);
+                true
+            }
+            BACK => {
+                a.edit_by(i, |e| e.backspace(control));
+                true
+            }
+            DELETE | NUMPAD_DELETE => {
+                a.edit_by(i, |e| e.delete(control));
+                true
+            }
+            // Enter puts in the New Line shortcut code (spec 27 5a).
+            ENTER | NUMPAD_ENTER if !control => {
+                let code = Shown::marked(&a.settings.shortcuts.new_line);
+                type_in(a, i, &code);
+                true
+            }
+            // Insert does nothing in the editing area; there is no overwrite mode (spec 30).
+            INSERT | NUMPAD_INSERT => true,
+            TAB | ESCAPE => false,
+            _ => false,
+        };
+    });
+    done
+}
+
+/// A key let go: the end of a six-key chord enters its cell; Shift let go alone shows the Cursor Locator.
+fn key_up(key: u64, code: i32) {
+    let mut cell: Option<char> = None;
+    let mut locator = false;
+    app::try_with(|a| {
+        let Some(i) = a.index_of(key) else { return };
+        let set = a.settings.six_key_set.clone();
+        let enc = a.encoding();
+        let d = &mut a.docs[i];
+        if d.kind == DocKind::Braille && d.view.six_key {
+            if let Some(dot) = six_key_dot(&set, code) {
+                d.six_down.remove(&dot);
+                // The cell is entered when the last key of the chord is released.
+                if d.six_down.is_empty() && d.chord != 0 {
+                    cell = Some(enc.cell_char(d.chord));
+                    d.chord = 0;
+                }
+            }
+        }
+        if let Some(c) = cell {
+            type_in(a, i, &Shown::plain(&c.to_string()));
+        }
+        locator = code == SHIFT_KEY && SHIFT_ALONE.with(|s| s.replace(false)) && a.settings.view_prefs.locator_on_shift;
+    });
+    if locator {
+        wxdragon::call_after(Box::new(move || show_cursor_locator(key)));
+    }
+}
+
+/// A character typed in the editing area: put in at the caret, over the selection.
+pub fn area_char(key: u64, unicode: i32, _mods: i32) {
+    let Some(c) = char::from_u32(unicode as u32) else { return };
+    SHIFT_ALONE.with(|s| s.set(false));
+    app::try_with(|a| {
+        if let Some(i) = a.index_of(key) {
+            type_in(a, i, &Shown::plain(&c.to_string()));
         }
     });
 }
 
-/// Puts `s` in place of the selection of document `i`, which shows the formatted view.
+/// The mouse in the editing area (spec 27 5c): a click puts the caret at the place under it (Shift extends the
+/// selection to it), a drag selects, a double click selects the word.
+pub fn area_mouse(key: u64, kind: i32, row: usize, col: usize, mods: i32) {
+    app::try_with(|a| {
+        let Some(i) = a.index_of(key) else { return };
+        let ed = &mut a.docs[i].ed;
+        let rows = ed.rows();
+        let pos = ed.pos_at(row.min(rows.saturating_sub(1)), col);
+        match kind {
+            0 if mods & MOD_SHIFT != 0 => ed.select(ed.anchor, pos),
+            0 => ed.set_caret(pos),
+            1 => ed.select(ed.anchor, pos),
+            3 => {
+                // INFERENCE (spec 27 5c: the double click sets the reference's word select, not traced further).
+                ed.set_caret(pos);
+                ed.move_caret(Move::WordLeft, false);
+                let start = ed.caret;
+                ed.move_caret(Move::WordRight, true);
+                ed.anchor = start;
+            }
+            _ => return,
+        }
+        caret_moved(a, i);
+    });
+}
+
+/// The editing area got or lost the keyboard focus.
+pub fn area_focus(key: u64, focused: bool) {
+    if focused {
+        app::try_with(|a| {
+            if let Some(i) = a.index_of(key) {
+                if a.active == Some(i) {
+                    a.update_status();
+                }
+            }
+        });
+    }
+}
+
+/// After the caret moved in document `i`: the editing window shows it, and the status line follows it.
+fn caret_moved(a: &mut app::App, i: usize) {
+    a.show_area(i, None);
+    if a.active == Some(i) {
+        a.update_status();
+    }
+}
+
+/// Puts `s` in place of the selection of document `i`; the margin bell rings for a character typed (spec 24 2d.2).
 pub fn type_in(a: &mut app::App, i: usize, s: &Shown) {
-    let (from, to) = a.docs[i].selection();
-    a.edit_formatted(i, from, to, s);
-    if s.codes.is_empty() && s.text.chars().count() == 1 {
+    let s = s.clone();
+    let typed = s.codes.is_empty() && s.text.chars().count() == 1;
+    a.edit_by(i, move |e| e.insert(&s));
+    if typed {
         a.margin_bell(i);
     }
 }
 
-/// A key pressed in the formatted view that edits the document (spec 27 5a): Backspace and Delete (a code next to
-/// the caret, which the view does not show, goes as a whole; with Control, a word), Enter (the New Line shortcut
-/// code), and the clipboard, undo and redo keys. True when the key was used.
-pub fn formatted_key(a: &mut app::App, i: usize, code: i32, control: bool, alt: bool) -> bool {
-    const BACK: i32 = 8;
-    const ENTER: i32 = 13;
-    const NUMPAD_ENTER: i32 = 370;
-    const DELETE: i32 = 127;
-    const NUMPAD_DELETE: i32 = 385;
-    // In the coded view the editing area carries these keys out itself and the change is read back (formatted_typed).
-    if alt || a.docs[i].formatted.as_ref().is_none_or(|f| f.coded) {
-        return false;
-    }
-    let model = a.docs[i].shown();
-    let chars: Vec<char> = model.text.chars().collect();
-    let (from, to) = a.docs[i].selection();
-    match code {
-        BACK | DELETE | NUMPAD_DELETE if from != to => a.edit_formatted(i, from, to, &Shown::default()),
-        BACK => {
-            let start = if control {
-                word_start(&chars, from)
-            } else if let Some(c) = model.codes.iter().find(|c| c.1 == from) {
-                c.0
-            } else if from > 0 && model.is_own_break(from - 1) {
-                model.codes.iter().find(|c| c.1 == from - 1).map_or(from - 1, |c| c.0)
-            } else {
-                from.saturating_sub(1)
-            };
-            if start < from {
-                a.edit_formatted(i, start, from, &Shown::default());
-            }
-        }
-        DELETE | NUMPAD_DELETE => {
-            let end = if control {
-                word_end(&chars, from)
-            } else if let Some(c) = model.codes.iter().find(|c| c.0 == from) {
-                if model.is_own_break(c.1) { c.1 + 1 } else { c.1 }
-            } else {
-                (from + 1).min(chars.len())
-            };
-            if end > from {
-                a.edit_formatted(i, from, end, &Shown::default());
-            }
-        }
-        ENTER | NUMPAD_ENTER if !control => {
-            let code = Shown::marked(&a.settings.shortcuts.new_line);
-            type_in(a, i, &code);
-        }
-        PAGE_UP | PAGE_DOWN => return page_move(a, i, code == PAGE_DOWN, control),
-        _ => return false,
-    }
-    true
-}
-
-const PAGE_UP: i32 = 366;
-const PAGE_DOWN: i32 = 367;
-
-/// Page Up and Page Down in the formatted view (spec 27 section 7): by the setting Shortcuts PageNav (without Control)
-/// or ControlPageNav (with it): a screen (the editing area's own move), a page (the same line and column on the
-/// previous or next page) or to the top of a page (its first cell that shows document text). True when moved here.
-fn page_move(a: &mut app::App, i: usize, down: bool, control: bool) -> bool {
+/// Page Up and Page Down (spec 27 section 7): by the setting Shortcuts PageNav (without Control) or ControlPageNav
+/// (with it): a screen (the caret moves up or down line by line until its row has moved by the window's rows less
+/// one), a page (the same line and column on the previous or next page) or to the top of a page (its first cell that
+/// shows document text). In the coded view, a screen.
+fn page_move(a: &mut app::App, i: usize, down: bool, control: bool, extend: bool) {
     let mode = if control { a.settings.shortcuts.control_page_nav } else { a.settings.shortcuts.page_nav };
-    if mode == 0 {
-        return false;
-    }
-    let d = &a.docs[i];
-    let Some(f) = d.formatted.as_ref() else { return false };
-    let Some((n, col)) = f.view.line_at(d.text.get_insertion_point().max(0) as usize) else { return true };
-    let (page, line, _) = f.view.lines[n];
-    let last = f.pages.len().saturating_sub(1);
-    let target = if down { (page + 1).min(last) } else { page.saturating_sub(1) };
-    let on_page: Vec<&(usize, usize, usize)> = f.view.lines.iter().filter(|l| l.0 == target).collect();
-    let place = if mode == 1 {
-        on_page.iter().find(|l| l.1 == line).or(on_page.last()).map(|l| {
-            let len = f.pages[target].lines[l.1].text.chars().count();
-            l.2 + col.min(len)
-        })
-    } else {
-        on_page
-            .iter()
-            .find_map(|l| f.pages[target].lines[l.1].sources.iter().position(|s| s.is_some()).map(|c| l.2 + c))
-            .or(on_page.first().map(|l| l.2))
+    let area = a.docs[i].area;
+    let ed = &mut a.docs[i].ed;
+    let (row, col) = ed.caret_place();
+    let target = match ed.row(row) {
+        Some(Row::Line { page, line }) if mode != 0 && !ed.coded => {
+            let last = ed.pages.len().saturating_sub(1);
+            let p = if down { (page + 1).min(last) } else { page.saturating_sub(1) };
+            if mode == 1 {
+                let lines = ed.pages[p].lines.len();
+                Some(ed.pos_at(ed.page_row(p) + line.min(lines.saturating_sub(1)), col))
+            } else {
+                let first = ed.pages[p].lines.iter().flat_map(|l| l.sources.iter().flatten()).next().copied();
+                Some(first.unwrap_or_else(|| ed.pos_at(ed.page_row(p), 0)))
+            }
+        }
+        _ => None,
     };
-    let Some(place) = place else { return true };
-    let t = d.text;
-    t.set_insertion_point(place as i64);
-    t.show_position(place as i64);
-    // The editing area may carry out the key itself afterwards; the caret is set again once it has.
-    let key = d.key;
-    wxdragon::call_after(Box::new(move || {
-        t.set_insertion_point(place as i64);
-        t.show_position(place as i64);
-        caret_moved(key);
-    }));
-    a.update_status();
-    true
+    match target {
+        Some(pos) => {
+            if extend {
+                ed.select(ed.anchor, pos);
+            } else {
+                ed.set_caret(pos);
+            }
+        }
+        None => {
+            let rows = area.visible_rows().saturating_sub(1).max(1);
+            for _ in 0..rows {
+                let before = ed.caret_place().0;
+                ed.move_caret(if down { Move::Down } else { Move::Up }, extend);
+                if ed.caret_place().0 == before {
+                    break;
+                }
+            }
+        }
+    }
+    caret_moved(a, i);
 }
 
-/// Edit, Undo, Redo, Cut, Copy and Paste in the formatted view, on the document (their keys reach them through
-/// the Edit menu). True when done.
-pub fn formatted_command(a: &mut app::App, i: usize, id: i32) -> bool {
+/// Edit, Undo, Redo, Cut, Copy, Paste, Clear and Select All, on the document (their keys reach them through the Edit
+/// menu). Copy and Cut keep the selection with its codes, so pasting it brings them back. True when done.
+pub fn edit_command(a: &mut app::App, i: usize, id: i32) -> bool {
     let model = a.docs[i].shown();
     let (from, to) = a.docs[i].selection();
     match id {
@@ -512,84 +481,30 @@ pub fn formatted_command(a: &mut app::App, i: usize, id: i32) -> bool {
             Clipboard::get().set_text(&part.text);
             a.remember(part);
             if id == 1203 && from != to {
-                a.edit_formatted(i, from, to, &Shown::default());
+                a.edit(i, from, to, &Shown::default());
             }
         }
         1205 => {
             let Some(text) = Clipboard::get().get_text() else { return true };
             let s = a.known.iter().find(|k| k.text == text).cloned().unwrap_or_else(|| Shown::plain(&text));
-            a.edit_formatted(i, from, to, &s);
+            a.edit(i, from, to, &s);
         }
-        1206 if from != to => a.edit_formatted(i, from, to, &Shown::default()),
+        1206 if from != to => a.edit(i, from, to, &Shown::default()),
+        1206 => {}
         1201 | 1202 => {
-            a.undo_formatted(i, id == 1202);
+            a.undo(i, id == 1202);
+        }
+        1207 => {
+            let len = a.docs[i].ed.len();
+            a.docs[i].ed.select(0, len);
+            caret_moved(a, i);
         }
         _ => return false,
     }
     true
 }
 
-/// The editing area of document `i`, in the formatted view, no longer holds the lines it was given: the stretch
-/// that changed (characters typed or pasted, replacing what was selected) is made in the document at the places the
-/// lines show (spec 27 5a and 5c), and the lines are shown again. The area inserts typed characters itself on every
-/// system, so they are taken from it here rather than from the key events.
-fn formatted_typed(a: &mut app::App, i: usize) {
-    let now = a.docs[i].text.get_value();
-    let d = &mut a.docs[i];
-    let Some(f) = d.formatted.as_mut() else { return };
-    if now == f.view.text {
-        return;
-    }
-    // The control carried out a key the program had already carried out: its change is put back.
-    if let Some(caret) = f.echo.take() {
-        let text = f.view.text.clone();
-        let t = d.text;
-        t.set_value(&text);
-        t.set_insertion_point(caret);
-        wxdragon::call_after(Box::new(move || t.set_insertion_point(caret)));
-        return;
-    }
-    let Some(f) = d.formatted.as_ref() else { return };
-    let old: Vec<char> = f.view.text.chars().collect();
-    let new: Vec<char> = now.chars().collect();
-    let p = old.iter().zip(&new).take_while(|(x, y)| x == y).count();
-    let s = old.iter().rev().zip(new.iter().rev()).take(old.len().min(new.len()) - p).take_while(|(x, y)| x == y).count();
-    let (old_end, new_end) = (old.len() - s, new.len() - s);
-    let put: String = new[p..new_end].iter().collect();
-    let from = f.view.to_document(&f.pages, p);
-    let to = if old_end > p { f.view.to_document(&f.pages, old_end).max(from) } else { from };
-    a.edit_formatted(i, from, to, &Shown::plain(&put));
-    if old_end == p && put.chars().count() == 1 {
-        a.margin_bell(i);
-    }
-}
-
-/// The start of the word before character `at` (spaces before it included), for Control+Backspace.
-fn word_start(chars: &[char], at: usize) -> usize {
-    let mut p = at.min(chars.len());
-    while p > 0 && chars[p - 1].is_whitespace() {
-        p -= 1;
-    }
-    while p > 0 && !chars[p - 1].is_whitespace() {
-        p -= 1;
-    }
-    p
-}
-
-/// The end of the word at character `at` (the spaces after it included), for Control+Delete.
-fn word_end(chars: &[char], at: usize) -> usize {
-    let mut p = at;
-    while p < chars.len() && !chars[p].is_whitespace() {
-        p += 1;
-    }
-    while p < chars.len() && chars[p].is_whitespace() {
-        p += 1;
-    }
-    p
-}
-
-fn six_key_dot(set: &str, key_code: Option<i32>) -> Option<usize> {
-    let code = key_code?;
+fn six_key_dot(set: &str, code: i32) -> Option<usize> {
     let c = char::from_u32(code as u32)?.to_ascii_lowercase();
     set.chars().position(|k| k == c)
 }

@@ -9,6 +9,7 @@ mod command_line;
 mod commands;
 mod dialog_table;
 mod dlg;
+mod editor_view;
 mod documents;
 mod embosser;
 mod encodings;
@@ -18,6 +19,7 @@ mod jaws_install;
 mod menu;
 mod menu_table;
 mod page_sample;
+mod pdf_options;
 mod print;
 mod settings_store;
 mod speech;
@@ -171,6 +173,8 @@ fn main() {
         // The settings kept from earlier runs, before the menus are built from them.
         let mut settings = app::Settings::default();
         settings_store::load(&mut settings);
+        // Global, Internationalization, Support UI Automation, for the editing windows (spec 15).
+        unsafe { wxdragon_sys::wxd_DocEditor_SetSupportUIAutomation(settings.reader.uia) };
         if let Some(region) = settings_store::load_region() {
             translation::set_region(region);
         }

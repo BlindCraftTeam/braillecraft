@@ -962,6 +962,8 @@ fn build_wxdragon_wrapper(
         println!("cargo:rustc-link-lib=ws2_32");
         println!("cargo:rustc-link-lib=wininet");
         println!("cargo:rustc-link-lib=oleacc");
+        // Added for BrailleCraft: the editing window's UI Automation provider (cpp/src/doc_editor_msw.cpp).
+        println!("cargo:rustc-link-lib=uiautomationcore");
         println!("cargo:rustc-link-lib=uxtheme");
         println!("cargo:rustc-link-lib=imm32"); // Add IME library for Scintilla support
     } else {

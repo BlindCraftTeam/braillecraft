@@ -49,9 +49,12 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   files (.txt, .brf, .brl), PEF (.pef) files and PDF files. A PDF becomes a print document: a tagged PDF through
   its structure (headings, paragraphs, lists, tables as styles and codes), any other PDF from its page layout
   (paragraphs, line breaks, and ledger tables of dates, text and amounts).
-- **Formatted and coded views.** A document opens in the formatted view: its laid-out page lines with the codes
-  hidden and an empty row after each page, which is what a screen reader reads. You type, delete, cut, paste and undo
-  there as anywhere; a code next to the caret is removed whole. View, Codes (Alt+F3) switches to the coded view,
+- **Formatted and coded views.** The editing area is drawn by BrailleCraft itself, as in the original program, and
+  its caret is a place in the document, not in the text on the screen. A document opens in the formatted view: its
+  laid-out page lines with the codes hidden and a line across after each page. The caret can stand on a space the
+  line does not show (at the end of a line) or on an empty last line, and what you type goes in there. You type,
+  delete, cut, paste and undo (100 steps) there as anywhere; a code next to the caret is removed whole, and the caret
+  goes over a code at once. View, Codes (Alt+F3) switches to the coded view,
   the running text with every code in brackets in rows of 42 characters (65 in a print document), and back, with the caret kept in place. Control+Page Up and
   Control+Page Down go to the same line on the previous or next page (Global, Shortcut Preferences sets what Page Up
   and Page Down do).
@@ -77,8 +80,13 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   listed and embossed to through FTDI's own driver library where it is installed. TranSend SE printers get their ink
   pass, and manual interpoint embossers a second pass for the backs. The web build embosses through Web Serial where
   the browser has it, or to a downloaded file.
-- **Screen readers.** The document area is the system's own text control on every platform. On Windows a set of JAWS
-  scripts comes with the program, and BrailleCraft offers to install them when it starts.
+- **Screen readers.** The editing area gives screen readers its text (the formatted lines or the coded rows, one
+  line each), the caret, the selection and every change: through UI Automation on Windows while Global,
+  Internationalization, Support UI Automation is on, as the original program does; through the macOS accessibility
+  interface for VoiceOver; through ATK and AT-SPI for Orca on Linux. On Windows a set of JAWS scripts comes with the
+  program, and BrailleCraft offers to install them when it starts.
+- **PDF import settings.** Global, PDF Importer: whether the dialog shows for each import, PDF/A markup, ledger
+  tables, leader dots, a custom script, header and footer heights, font hints and the layout analysis values.
 - **Command line.** `braillecraft-desktop file.dxp` opens a file. Options before a file act on the files after
   them: `/print`, `/braille[:setup]`, `/simulate`, `/brf:<file>`, `/prf:<file>`, `/lbf:<file>`, with the settings
   `/copies:<n>`, `/pagesize:<lines>x<cells>` and `/template:<name>`. When every file has an option, BrailleCraft does
@@ -140,7 +148,7 @@ step does. The installers are made by the scripts in `packaging` (WiX 5 on Windo
 | `scripts/jaws` | The JAWS scripts. |
 | `packaging` | Icons and the installers for Windows, macOS and Linux. |
 | `tools` | The generators for menus, dialogs, fonts, icons, templates, language lists and the web tables. |
-| `vendor/wxdragon-sys` | wxDragon's wxWidgets binding with what BrailleCraft needs added: printing, the Cursor Locator, the page break row and the line number column of the formatted view, and About box texts a screen reader reaches by Tab. The list is in `CHANGES-BrailleCraft.txt`. |
+| `vendor/wxdragon-sys` | wxDragon's wxWidgets binding with what BrailleCraft needs added: printing, the drawn editing window with its text for screen readers on each system (UI Automation, the macOS accessibility interface, ATK), the Cursor Locator, and About box texts a screen reader reaches by Tab. The list is in `CHANGES-BrailleCraft.txt`. |
 | `vendor/pdf-extract` | The PDF text reader, with marked content, font descent and figures reported for PDF import. The list is in `CHANGES-BrailleCraft.txt`. |
 | `crates/bc-shell`, `crates/bc-louis`, `ui` | An earlier desktop shell (Tauri) and its liblouis binding; not part of the downloads. |
 | `.github/workflows/build.yml` | Builds, tests and packages everything on every push to main. |
