@@ -1975,6 +1975,41 @@ async function northAmerican(bytes, encodingId) {
   });
 }
 
+// A file as the import dialog's choice says to read it: { braille, running } (text with codes) or { braille, plain },
+// with the template chosen; null after saying why it cannot be read. A PDF becomes print with codes, its styles named
+// as the template names them; coded text, coded braille, formatted braille and Orbit braille go through the import
+// chain of their kind; formatted text is read as UTF-8 whatever the code page box says, as the original program's
+// formatted text importer reads it; the kinds BrailleCraft cannot import say so.
+async function readImport(bytes, choice) {
+  const template = choice.template;
+  if (choice.kind === "Pdf") {
+    try {
+      return { braille: false, running: core.import_pdf(bytes, (await styleNames()).join("\n")), template };
+    } catch (err) {
+      statusLine.textContent = String(err.message ?? err);
+      return null;
+    }
+  }
+  if (CHAIN_KINDS.includes(choice.kind)) {
+    let imported;
+    try {
+      imported = await importChain(bytes, choice);
+    } catch (err) {
+      statusLine.textContent = String(err.message ?? err);
+      return null;
+    }
+    if (imported.long_page) await message("Page depth exceeded.");
+    if (imported.wide_line) await message("Page width exceeded.");
+    if (imported.errors) await message(imported.errors);
+    return { braille: choice.braille, running: imported.running, template };
+  }
+  if (choice.kind !== "FormattedText") {
+    await message(importRefusal(choice));
+    return null;
+  }
+  return { braille: false, plain: new TextDecoder("utf-8").decode(bytes).replace(/\r\n?/g, "\n"), template };
+}
+
 // A file through the import chain of its kind, the chain's tables fetched once.
 let importFilesLoaded = false;
 async function importChain(bytes, choice) {
@@ -1999,90 +2034,66 @@ fileInput.addEventListener("change", async () => {
   }
   const bytes = new Uint8Array(await file.arrayBuffer());
   const ext = file.name.split(".").pop().toLowerCase();
+  // The file's kind from its name and first bytes, as the desktop program finds it; a file that is not a document
+  // file goes through the import dialog. The open document is left as it is until the file has been read.
+  const detected = core ? core.detect_file(file.name, bytes) : "";
+  let d = null;
+  let read = null;
+  if (detected === "Document") {
+    try {
+      d = core.read_document(bytes);
+    } catch (err) {
+      statusLine.textContent = String(err.message ?? err);
+      return;
+    }
+  } else if (core) {
+    const choice = await importDialog(detected);
+    if (!choice) return;
+    read = await readImport(bytes, choice);
+    if (!read) return;
+  } else {
+    // With no core, any file as text, a braille one by its name.
+    read = { braille: /^(brf|brl|bru)$/.test(ext), plain: decodeTextFile(bytes).replaceAll("\f", "\n") };
+  }
   embosserDefaults();
   doc.printer = null;
   doc.hyphen = 2902;
   doc.initialCodes = "";
   doc.template = null;
   doc.dirty = false;
-  // The file's kind from its name and first bytes, as the desktop program finds it; a file that is not a document
-  // file goes through the import dialog.
-  const detected = core ? core.detect_file(file.name, bytes) : ext === "dxp" || ext === "dxb" ? "Document" : "";
-  let choice = null;
-  if (core && detected !== "Document") {
-    choice = await importDialog(detected);
-    if (!choice) return;
-  }
-  if (detected === "Document" && core) {
-    try {
-      const d = core.read_document(bytes);
-      doc.kind = d.braille ? "braille" : "print";
-      // The editor takes the file's codes as codes; brackets in its text stay text.
-      const text = core.editor_load(d.running);
-      editor.value = d.braille ? fromNA(text) : text;
-      if (d.braille) core.editor_convert(editor.value);
-      doc.file = d;
-      doc.saved = true;
-      // The document's own embosser setup and page layout, as the file keeps them (spec 25 section 10); cells and
-      // lines are taken by a braille document.
-      if (d.embosser) doc.embosser = d.embosser;
-      if (d.embosser_layout) {
-        const l = JSON.parse(d.embosser_layout);
-        doc.layout = l.layout;
-        if (d.braille) {
-          doc.cells = l.cells;
-          doc.lines = l.lines;
-        }
+  if (d) {
+    doc.kind = d.braille ? "braille" : "print";
+    // The editor takes the file's codes as codes; brackets in its text stay text.
+    const text = core.editor_load(d.running);
+    editor.value = d.braille ? fromNA(text) : text;
+    if (d.braille) core.editor_convert(editor.value);
+    doc.file = d;
+    doc.saved = true;
+    // The document's own embosser setup and page layout, as the file keeps them; cells and lines are taken by a
+    // braille document.
+    if (d.embosser) doc.embosser = d.embosser;
+    if (d.embosser_layout) {
+      const l = JSON.parse(d.embosser_layout);
+      doc.layout = l.layout;
+      if (d.braille) {
+        doc.cells = l.cells;
+        doc.lines = l.lines;
       }
-    } catch (err) {
-      statusLine.textContent = String(err.message ?? err);
-      return;
     }
-  } else if (choice && choice.kind === "Pdf") {
-    // A PDF becomes a print document with codes, its styles named as the template names them.
-    doc.kind = "print";
-    doc.file = null;
-    try {
-      const running = core.import_pdf(bytes, (await styleNames()).join("\n"));
-      editor.value = core.editor_load(running);
-    } catch (err) {
-      statusLine.textContent = String(err.message ?? err);
-      return;
-    }
-    doc.saved = false;
-  } else if (choice && CHAIN_KINDS.includes(choice.kind)) {
-    // Coded text, coded braille, formatted braille and Orbit braille through the import chain of their kind.
-    let imported;
-    try {
-      imported = await importChain(bytes, choice);
-    } catch (err) {
-      statusLine.textContent = String(err.message ?? err);
-      return;
-    }
-    if (imported.long_page) await message("Page depth exceeded.");
-    if (imported.wide_line) await message("Page width exceeded.");
-    if (imported.errors) await message(imported.errors);
-    doc.kind = choice.braille ? "braille" : "print";
-    const text = core.editor_load(imported.running);
-    editor.value = doc.kind === "braille" ? fromNA(text) : text;
-    if (doc.kind === "braille") core.editor_convert(editor.value);
-    doc.file = null;
-    doc.saved = false;
-    doc.template = choice.template;
-  } else if (choice && choice.kind !== "FormattedText") {
-    await message(importRefusal(choice));
-    return;
   } else {
-    // Formatted text, read as UTF-8 whatever the code page box says, as the original program's formatted text
-    // importer reads it; with no core, any file as text.
-    doc.kind = !core && /^(brf|brl|bru)$/.test(ext) ? "braille" : "print";
-    const read = core ? new TextDecoder("utf-8").decode(bytes).replace(/\r\n?/g, "\n") : decodeTextFile(bytes);
-    // A text file holds no codes: all of it is text.
-    editor.value = doc.kind === "braille" ? fromNA(read.replaceAll("\f", "\n")) : read;
-    core?.editor_load_plain(editor.value);
+    doc.kind = read.braille ? "braille" : "print";
+    if (read.running !== undefined) {
+      const text = core.editor_load(read.running);
+      editor.value = read.braille ? fromNA(text) : text;
+      if (read.braille) core.editor_convert(editor.value);
+    } else {
+      // A text file holds no codes: all of it is text.
+      editor.value = read.braille ? fromNA(read.plain) : read.plain;
+      core?.editor_load_plain(editor.value);
+    }
     doc.file = null;
     doc.saved = false;
-    doc.template = choice?.template ?? null;
+    doc.template = read.template ?? null;
   }
   doc.name = file.name;
   // A document opens in its kind's default view; a document file keeps whether its translated line shows.
@@ -2648,14 +2659,52 @@ function decodeTextFile(bytes) {
   }
 }
 
-// Edit, Insert File: a file's text put in at the caret.
+// Edit, Insert File: a document file with its codes, or any other file through the import dialog, put in at the
+// caret; braille is refused in a print document and print in a braille one.
 function insertFile() {
   const input = document.createElement("input");
   input.type = "file";
   input.addEventListener("change", async () => {
     const file = input.files[0];
     if (!file) return;
-    insertText(decodeTextFile(new Uint8Array(await file.arrayBuffer())));
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    if (!core) {
+      insertText(decodeTextFile(bytes));
+      return;
+    }
+    let read;
+    if (core.detect_file(file.name, bytes) === "Document") {
+      try {
+        const d = core.read_document(bytes);
+        read = { braille: d.braille, running: d.running };
+      } catch {
+        await message("This document cannot be imported into BrailleCraft.  It appears to be in an unsupported file format.");
+        return;
+      }
+    } else {
+      const choice = await importDialog(core.detect_file(file.name, bytes));
+      if (!choice) return;
+      read = await readImport(bytes, choice);
+      if (!read) return;
+    }
+    const braille = doc.kind === "braille";
+    if (read.braille && !braille) {
+      await message("You cannot insert a Braille document into a print document.");
+      return;
+    }
+    if (!read.braille && braille) {
+      await message("You cannot insert a print document into a Braille document.");
+      return;
+    }
+    if (read.running !== undefined) {
+      const text = core.running_text(read.running);
+      const shown = braille ? fromNA(text) : text;
+      const at = editor.selectionStart;
+      insertText(shown);
+      core.editor_mark_running(at, read.running, shown);
+    } else {
+      insertText(braille ? fromNA(read.plain) : read.plain);
+    }
   });
   input.click();
 }

@@ -363,6 +363,32 @@ pub fn editor_edit(text: &str) -> Vec<u32> {
     })
 }
 
+/// Text put in at UTF-16 position `at` from running text (an inserted file): `shown` is what the editor got (the
+/// running text's editor form, converted cell for cell for a braille display), and the running text's codes become
+/// codes at the same places. Nothing is marked when the editor does not hold `shown` there.
+#[wasm_bindgen]
+pub fn editor_mark_running(at: u32, running: &str, shown: &str) {
+    EDITOR.with(|e| {
+        let mut e = e.borrow_mut();
+        let from = char_pos(&e.shown.text, at);
+        let put = Shown::from_running(running);
+        let len = shown.chars().count();
+        if put.text.chars().count() != len || e.shown.text.chars().skip(from).take(len).ne(shown.chars()) {
+            return;
+        }
+        let codes: Vec<(usize, usize)> = put.codes.iter().map(|c| (c.0 + from, c.1 + from)).collect();
+        let inner: Vec<(usize, usize)> = put.inner.iter().map(|c| (c.0 + from, c.1 + from)).collect();
+        e.shown.codes.extend(codes);
+        e.shown.inner.extend(inner);
+        e.shown.codes.sort_unstable();
+        e.shown.codes.dedup();
+        e.shown.inner.sort_unstable();
+        e.shown.inner.dedup();
+        e.alias = None;
+        e.derived.clear();
+    })
+}
+
 /// The text the program put in at UTF-16 position `at` (editor form, `marked`: its bracketed runs are codes) is
 /// known as codes; the editor's text already holds it.
 #[wasm_bindgen]

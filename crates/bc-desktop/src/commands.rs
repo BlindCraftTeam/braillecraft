@@ -624,18 +624,44 @@ fn file_new() {
     }
 }
 
-fn pick_file(message_text: &str) -> Option<std::path::PathBuf> {
-    let f = app::frame();
-    let dialog = FileDialog::builder(&f)
-        .with_message(message_text)
-        .with_wildcard("All supported files|*.txt;*.brf;*.brl;*.bru;*.pef;*.pdf;*.dxp;*.dxb|Print and braille documents (*.dxp, *.dxb)|*.dxp;*.dxb|Braille files (*.brf, *.brl, *.bru)|*.brf;*.brl;*.bru|Portable Embosser Format (*.pef)|*.pef|PDF documents (*.pdf)|*.pdf|Text files (*.txt)|*.txt|All files|*")
-        .with_style(FileDialogStyle::Open | FileDialogStyle::FileMustExist)
-        .build();
-    if dialog.show_modal() == wxdragon::id::ID_OK {
-        dialog.get_path().map(Into::into)
+/// The file dialog of File, Open (`insert` false) and Edit, Insert File (`insert` true), with the original program's
+/// type lists in its order, the last (All Files) chosen; the type does not limit what opens, the file's content
+/// decides. PEF is BrailleCraft's addition, before All Files. The dialog starts in the folder last opened from
+/// (AutoSave, openPath) and keeps the new one.
+fn pick_file(insert: bool) -> Option<std::path::PathBuf> {
+    const DOCUMENTS: &str = "BrailleCraft Files (*.dxp; *.dxb)|*.dxp;*.dxb";
+    const BRF: &str = "Formatted Braille Files (*.brf)|*.brf";
+    const PDF: &str = "Portable Document Format (*.pdf)|*.pdf";
+    const GRAPHICS: &str = "Braille Graphics Files (*.bpx; *.brg; *.sig; *.vim)|*.bpx;*.brg;*.sig;*.vim";
+    const MUSIC: &str = "Music Files (*.lim; *.mid; *.mus)|*.lim;*.mid;*.mus";
+    const WORD: &str = "Word Documents (*.doc; *.docx)|*.doc;*.docx";
+    const WORDPERFECT: &str = "WordPerfect Files (*.wp; *.wpd; *.wp5; *.wp6)|*.wp;*.wpd;*.wp5;*.wp6";
+    const PEF: &str = "PEF Files (*.pef)|*.pef";
+    const ALL: &str = "All Files (*.*)|*";
+    let (title, types): (&str, &[&str]) = if insert {
+        ("Select file to insert\u{2026}", &[DOCUMENTS, BRF, GRAPHICS, MUSIC, WORD, WORDPERFECT, PEF, ALL])
     } else {
-        None
+        ("Open", &[DOCUMENTS, BRF, PDF, WORD, WORDPERFECT, PEF, ALL])
+    };
+    let folder = settings_store::get("AutoSave", "openPath").filter(|f| std::path::Path::new(f).is_dir());
+    let f = app::frame();
+    let mut builder = FileDialog::builder(&f)
+        .with_message(title)
+        .with_wildcard(&types.join("|"))
+        .with_style(FileDialogStyle::Open | FileDialogStyle::FileMustExist);
+    if let Some(folder) = &folder {
+        builder = builder.with_default_dir(folder);
     }
+    let dialog = builder.build();
+    dialog.set_filter_index(types.len() as i32 - 1);
+    if dialog.show_modal() != wxdragon::id::ID_OK {
+        return None;
+    }
+    let path: std::path::PathBuf = dialog.get_path()?.into();
+    if let Some(dir) = path.parent() {
+        settings_store::set("AutoSave", "openPath", &dir.to_string_lossy());
+    }
+    Some(path)
 }
 
 /// A .dxp (print) or .dxb (braille) document; its key.
@@ -724,18 +750,14 @@ fn open_dx_document(path: &Path) -> Option<u64> {
             d.page_numbers = doc.page_numbering;
             // A document read from its file is a saved one: its title loses "New".
             app::child_set_title(&d.frame, &d.full_name());
-            // The document's own tables, as the file names them, matched to the table list: a set the list holds
-            // stays; when only the print-to-braille rules table (or a learning step) is listed, the other three are
-            // that language's; a table the list does not hold gives the tables of a new document.
-            let stored: [String; 4] = doc.tables.clone().map(|t| t.to_lowercase());
-            d.tables = match translation::with_list(|l| l.entry_for(&stored).map(|(e, _)| l.entries[e].tables.clone())) {
-                Some(listed) => {
-                    let mut t = stored.clone();
-                    t[1..].clone_from_slice(&listed[1..]);
-                    t
-                }
-                None => translation::DEFAULT_TABLES.map(str::to_string),
-            };
+            // The document's own tables, kept as the file names them, as the original program keeps them; only a
+            // name the file leaves empty takes a new document's table. A table the shipped set does not have stays
+            // named, and translating with it says so.
+            let defaults = translation::DEFAULT_TABLES;
+            d.tables = std::array::from_fn(|k| {
+                let name = doc.tables[k].trim().to_lowercase();
+                if name.is_empty() { defaults[k].to_string() } else { name }
+            });
         }
         a.apply_view();
         a.set_title();
@@ -744,7 +766,7 @@ fn open_dx_document(path: &Path) -> Option<u64> {
 }
 
 fn open_file() {
-    let Some(path) = pick_file("Open") else { return };
+    let Some(path) = pick_file(false) else { return };
     if let Some(key) = open_path_asking(&path, true) {
         locator_after_open(key);
     }
@@ -1025,7 +1047,7 @@ fn insert_file() {
     if active_area().is_none() {
         return;
     }
-    let Some(path) = pick_file("Insert File") else { return };
+    let Some(path) = pick_file(true) else { return };
     let bytes = match std::fs::read(&path) {
         Ok(b) => b,
         Err(e) => {
