@@ -4263,6 +4263,9 @@ function setHyphen(id) {
 // Gives the core the active document's hyphenation table (Document, Hyphen Table; French in a print document
 // takes Dashes and Hyphens), each table file read once from tables/hyphenation beside the page.
 const hyphenTables = new Map();
+// The table text the core holds now: it is given again only when the choice changes (the status line refresh calls
+// here on every change, and this is what refreshes it after a table is fetched).
+let hyphenGiven = null;
 async function syncHyphenation() {
   if (!core) return;
   const d = doc;
@@ -4275,7 +4278,10 @@ async function syncHyphenation() {
     }
   }
   if (d !== doc) return;
-  core.set_hyphenation(hyphenTables.get(file));
+  const text = hyphenTables.get(file);
+  if (text === hyphenGiven) return;
+  hyphenGiven = text;
+  core.set_hyphenation(text);
   showStatus();
 }
 
