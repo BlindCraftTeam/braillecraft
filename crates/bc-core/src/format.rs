@@ -29,6 +29,8 @@
 //! - A word that does not fit breaks after its last hyphen that does; one longer than a line starts on the line.
 //! - [tls] ... [tle] a running head on the first lines of later pages, [rfs] ... [rfe] a running foot on the last
 //!   line (spec 19 7.1, 7.2).
+//! - [kps] ... [kpeL:M] a block kept on one page (with L lines after it): a page that fills inside a block that
+//!   started on it is laid out again, ending before the block (spec 19 7.4); [hi] and [hlN] level margins (7.3).
 //! Codes this formatter does not lay out take no room.
 
 use crate::doctext::Shown;
@@ -373,6 +375,17 @@ struct Formatter {
     word_marks: Vec<(usize, usize)>,
     /// A code ended the last word: the next one follows it with no space (a line may still end between them).
     touching: bool,
+    /// Keep blocks (spec 19 7.4), kept per page: how deep in blocks, the piece the outermost block on this page
+    /// started at (and that one just opened), the line a block opened up to which is attached to the last one, and the
+    /// second pass of the page that ends it before its block.
+    keep_depth: usize,
+    keep_start: Option<usize>,
+    keep_opened: bool,
+    attach_until: Option<usize>,
+    retried: bool,
+    keep_stop: Option<usize>,
+    /// The page just finished filled inside a block that started on it: the piece the block started at.
+    keep_overflow: Option<usize>,
 }
 
 impl Formatter {
@@ -415,6 +428,13 @@ impl Formatter {
             page_foot: None,
             word_marks: Vec::new(),
             touching: false,
+            keep_depth: 0,
+            keep_start: None,
+            keep_opened: false,
+            attach_until: None,
+            retried: false,
+            keep_stop: None,
+            keep_overflow: None,
         }
     }
 
@@ -649,6 +669,12 @@ impl Formatter {
         self.opened = false;
         self.head_rows = 0;
         self.odd = !self.odd;
+        // A page that filled inside a block that started on it is laid out again, once (Formatter::run_from).
+        self.keep_overflow = self.keep_start.filter(|_| self.keep_depth > 0 && !self.retried);
+        self.keep_depth = 0;
+        self.keep_start = None;
+        self.attach_until = None;
+        self.retried = false;
         let start = self.page_start.take().unwrap_or(self.last_start);
         self.last_start = start;
         self.pages.push(Page { lines, start });
@@ -796,7 +822,7 @@ impl Formatter {
                     self.end_line(self.left);
                 }
                 let remaining = self.capacity().saturating_sub(self.page.len()) as i64;
-                if remaining < need + 1 && !self.page.is_empty() {
+                if remaining < need + 1 && !self.page.is_empty() && self.keep_depth == 0 {
                     self.finish_page();
                 } else if !self.page.is_empty() {
                     for _ in 0..skip.max(0) {
@@ -902,10 +928,51 @@ impl Formatter {
                 }
             }
             "fr" => self.flush_right = true,
-            // [kps] ... [kpe] keep a block together, with a new line implied at both ends (spec 19, Pages).
-            // INTERIM: moving a block that would cross a page to the next page is not done yet (queue line F6).
-            "kps" | "kpe" => {
-                if self.line_has_text() {
+            // [kps] ... [kpe] keep a block together on a page (new lines at both ends); [kbs] ... [kbe] the same within
+            // a line (spec 19 7.4). A block at the top of a page's body is not counted.
+            "kps" | "kbs" => {
+                if name == "kps" && self.line_has_text() {
+                    self.end_line(self.left);
+                }
+                let at_top = self.page.len() == self.head_rows && !self.line_has_text();
+                if !at_top {
+                    self.keep_depth += 1;
+                    if self.keep_depth == 1 {
+                        // Opened within the lines the last block keeps after it: kept with that one.
+                        let attached = self.attach_until.is_some_and(|u| self.page.len() <= u);
+                        self.keep_opened = !attached;
+                        self.attach_until = None;
+                    }
+                }
+            }
+            // [kpeL:M] (or [kbe], [kpf] closing every block): the block keeps L lines after it on its page, and a
+            // block opened within M lines is kept with it.
+            "kpe" | "kbe" | "kpf" => {
+                if self.keep_depth > 0 {
+                    if self.keep_depth == 1 || name == "kpf" {
+                        let (mut l, mut m) = (first.unwrap_or(0), n.get(1).copied().unwrap_or(0));
+                        if !self.line_has_text() {
+                            l -= 1;
+                            m -= 1;
+                        }
+                        let m = m.min(l);
+                        let remaining = self.capacity() as i64 - self.page.len() as i64;
+                        if remaining < l {
+                            if self.line_has_text() {
+                                self.end_line(self.left);
+                            }
+                            if !self.page.is_empty() {
+                                self.finish_page();
+                            }
+                        } else if m >= 1 {
+                            self.attach_until = Some(self.page.len() + m as usize);
+                        }
+                        self.keep_depth = 0;
+                    } else {
+                        self.keep_depth -= 1;
+                    }
+                }
+                if name != "kbe" && self.line_has_text() {
                     self.end_line(self.left);
                 }
             }
@@ -1021,7 +1088,7 @@ impl Formatter {
         }
         // A new page when fewer than need + 1 lines remain; else the skip lines, at the top of a page too.
         let remaining = self.capacity().saturating_sub(self.page.len()) as i64;
-        if remaining < need + 1 && !self.page.is_empty() {
+        if remaining < need + 1 && !self.page.is_empty() && self.keep_depth == 0 {
             self.finish_page();
         } else {
             for _ in 0..skip.max(0) {
@@ -1083,7 +1150,9 @@ impl Formatter {
     /// The formatter as it stands with every document place in it moved by `map`; None when a place has nowhere to
     /// go (it was in the text an edit replaced).
     fn moved(&self, map: &impl Fn(usize) -> Option<usize>) -> Option<Formatter> {
-        let mut f = Formatter { pages: Vec::new(), ..self.clone() };
+        // Kept states have no pages, so the copy is small.
+        let mut f = self.clone();
+        f.pages = Vec::new();
         for line in f.page.iter_mut().chain(std::iter::once(&mut f.line)) {
             move_line(line, map)?;
         }
@@ -1105,8 +1174,11 @@ impl Formatter {
     }
 
     /// The formatter with no pages, to keep beside the pages it has made.
-    fn snapshot(&self) -> Formatter {
-        Formatter { pages: Vec::new(), ..self.clone() }
+    fn snapshot(&mut self) -> Formatter {
+        let pages = std::mem::take(&mut self.pages);
+        let copy = self.clone();
+        self.pages = pages;
+        copy
     }
 
     /// Lays out `pieces` from piece `from`, `word` being the word collected so far. After each piece that finished a
@@ -1121,13 +1193,42 @@ impl Formatter {
         mut join: Option<Join>,
     ) -> Vec<Page> {
         let mut made = self.pages.len();
-        for (i, p) in pieces.iter().enumerate().skip(from) {
-            self.step(p, &mut word);
+        // Where the page being filled started, to lay it out again when it fills inside a keep block.
+        let mut page_from = (from, self.snapshot(), word.clone(), made);
+        let mut i = from;
+        while i < pieces.len() {
+            if self.keep_stop == Some(i) {
+                // The second pass of a page ends it before its keep block, which goes to the next page (after the word
+                // the block's code ended).
+                self.keep_stop = None;
+                if !word.is_empty() {
+                    self.word(&std::mem::take(&mut word));
+                }
+                self.new_page();
+            }
+            self.step(&pieces[i], &mut word);
+            if std::mem::take(&mut self.keep_opened) {
+                self.keep_start = Some(i);
+            }
+            i += 1;
             if self.pages.len() == made {
                 continue;
             }
+            if let Some(block) = self.keep_overflow.take() {
+                let (at, state, w, n) = page_from.clone();
+                let mut pages = std::mem::take(&mut self.pages);
+                pages.truncate(n);
+                self = Formatter { pages, ..state };
+                self.retried = true;
+                self.keep_stop = Some(block);
+                word = w;
+                i = at;
+                made = n;
+                continue;
+            }
             made = self.pages.len();
-            let at = i + 1;
+            let at = i;
+            page_from = (at, self.snapshot(), word.clone(), made);
             checkpoints.push(Checkpoint { piece: at, pages: made, state: self.snapshot(), word: word.clone() });
             if let Some(j) = &mut join {
                 if let Some(tail) = j.try_join(at, made, &self.snapshot(), &word) {
@@ -1176,6 +1277,7 @@ fn is_layout(code: &str) -> bool {
     matches!(
         split_code(code).0,
         "<" | "l" | "p" | "sk" | "ind" | "inm" | "ptys" | "ptye" | "rm" | "svsbl" | "pg" | "top" | "cp" | "fr" | "hds" | "hde"
+            | "kbs" | "kbe" | "kpf"
             | "svpnp" | "svpfd" | "hi" | "hl"
             | "tls" | "tle" | "tld" | "rfs" | "rfe" | "rfd" | "svrhp" | "svrfp" | "svrhs" | "svrfs" | "kps" | "kpe" | "sc"
     )
@@ -1795,6 +1897,23 @@ mod tests {
         assert_eq!(texts(&pages[0])[0], "abcde");
         let pages = format(&m("abc[x]de"), &Layout::braille(4, 3), None);
         assert_eq!(texts(&pages[0])[..2], ["abc", "de"]);
+    }
+
+    #[test]
+    fn a_keep_block_that_would_cross_a_page_starts_the_next_page() {
+        let pages = format(&m("a\nb\n[kps]c\nd\ne[kpe]f"), &Layout::braille(10, 4), None);
+        assert_eq!(texts(&pages[0]), ["a", "b", "", ""]);
+        assert_eq!(texts(&pages[1]), ["c", "d", "e", "f"]);
+        // [kpe2:2]: a heading kept with the two lines after it.
+        let pages = format(&m("a\nb\nc[kps]H[kpe2:2]d\ne"), &Layout::braille(10, 4), None);
+        assert_eq!(texts(&pages[0]), ["a", "b", "c", ""]);
+        assert_eq!(texts(&pages[1])[..3], ["H", "d", "e"]);
+        // A block at the top of a page is not moved; one longer than a page flows on.
+        let pages = format(&m("[kps]a\nb\nc\nd\ne[kpe]"), &Layout::braille(10, 3), None);
+        assert_eq!(texts(&pages[0]), ["a", "b", "c"]);
+        // A block that fits stays.
+        let pages = format(&m("a[kps]b[kpe]c"), &Layout::braille(10, 4), None);
+        assert_eq!(texts(&pages[0]), ["a", "b", "c", ""]);
     }
 
     #[test]
