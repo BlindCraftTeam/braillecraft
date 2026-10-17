@@ -230,7 +230,28 @@ const store = {
       return fallback;
     }
   },
+  // Every key of `section` (keys named "section.key") taken out.
+  clearSection(section) {
+    const prefix = `${section}.`;
+    for (const k of [...memory.keys()]) if (k.startsWith(prefix)) memory.delete(k);
+    try {
+      const full = `braillecraft.${prefix}`;
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (k?.startsWith(full)) localStorage.removeItem(k);
+      }
+    } catch {
+      // Kept in memory only.
+    }
+  },
 };
+
+// Global, Notification Settings, OK: every kept "do not show this again" answer is forgotten, as the original empties
+// these sections.
+async function notificationSettings() {
+  const { result } = await showDialog(1023);
+  if (result === "ok") for (const s of ["Mutable", "AddIns", "EmbossTV", "EmbossTVTemp"]) store.clearSection(s);
+}
 
 // Embosser setups, as the desktop program keeps them: the list of names, one value per setup, the default setup,
 // and the layout new documents take with its cells and lines.
@@ -2504,6 +2525,24 @@ async function viewPreferences() {
   store.set("sixkey.set", settings.sixKeySet);
 }
 
+// What the original says about a shortcut code field, or null when it is accepted: empty, longer than 99, or codes
+// not properly started or ended (a code started inside a code, ended outside one, or left open).
+function shortcutFieldProblem(text) {
+  if (text.length === 0) return "The shortcut string is empty.";
+  if (text.length > 99) return "The shortcut string must not be longer than 99 characters.";
+  let open = false;
+  for (const c of text) {
+    if (c === "[") {
+      if (open) return "Some codes are not properly started or terminated.";
+      open = true;
+    } else if (c === "]") {
+      if (!open) return "Some codes are not properly started or terminated.";
+      open = false;
+    }
+  }
+  return open ? "Some codes are not properly started or terminated." : null;
+}
+
 // Global, Shortcut Preferences (dialog 1022): the codes the editor's shortcut keys insert and the page keys' moves.
 async function shortcutPreferences() {
   const s = settings.shortcuts;
@@ -2519,7 +2558,18 @@ async function shortcutPreferences() {
       d.setRadio([19, 20, 21], Math.min(s.page_nav, 2));
       d.setRadio([23, 24, 25], Math.min(s.control_page_nav, 2));
     },
-    onOk(d) {
+    async onOk(d) {
+      // Each code field is checked in order, as the original checks them: not empty, at most 99 characters, codes
+      // properly started and ended.
+      for (const field of [7, 9, 11, 13, 15, 17]) {
+        const problem = shortcutFieldProblem(d.text(field));
+        if (problem) {
+          await message(problem);
+          d.get(field)?.focus();
+          d.get(field)?.select?.();
+          return false;
+        }
+      }
       chosen = {
         grade0: d.text(7),
         flush_right_leader: d.text(9),
@@ -3426,7 +3476,7 @@ const COMMANDS = {
   3107: globalFonts,
   3108: viewPreferences,
   3109: shortcutPreferences,
-  3111: () => showDialog(1023),
+  3111: notificationSettings,
   3113: () =>
     showDialog(1037, {
       memory: "",

@@ -39,7 +39,7 @@ pub enum ViewFont {
     SimBraille,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum Hyphen {
     None,
     Dashes,
@@ -706,7 +706,7 @@ impl App {
         use std::hash::{Hash, Hasher};
         let d = &self.docs[i];
         let mut h = std::collections::hash_map::DefaultHasher::new();
-        (d.cells, d.lines, d.page_numbers, d.kind == DocKind::Braille, &d.styles).hash(&mut h);
+        (d.cells, d.lines, d.page_numbers, d.kind == DocKind::Braille, &d.styles, d.hyphen).hash(&mut h);
         let braille = d.kind == DocKind::Braille;
         let (cells, lines) = (d.cells.max(1) as usize, d.lines.max(1) as usize);
         let mut layout = if braille {

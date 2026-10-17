@@ -91,7 +91,9 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   Page Number and Document, Page Numbering check the number in the dialog, and Apply Last Style applies the paragraph
   style last ended before the caret. A value a dialog refuses gets its message there, with what was typed kept.
   Delete Style and changing a style's codes ask first, and the last style cannot be deleted; Clear (Del) with nothing
-  selected deletes the character at the caret, and Cut ends Highlight.
+  selected deletes the character at the caret, and Cut ends Highlight. Shortcut Preferences checks its codes in the
+  dialog, Notification Settings brings back every message hidden with "do not show again", and a new hyphen table
+  lays the document out again.
 - **Save As.** Formatted braille (BRF in a choice of braille encodings), PEF (Portable Embosser Format), formatted
   text in a choice of code pages (the encoding or code page chosen in the Save As dialog's own Encoding box), coded braille, refreshable braille (.lbf), LaTeX, and the older document format.
 - **Printing.** Print documents and braille (with interline print) through the system printer.

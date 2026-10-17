@@ -71,6 +71,10 @@ impl FileStore {
     pub fn set(&mut self, section: &str, key: &str, value: &str) {
         self.sections.entry(section.to_string()).or_default().insert(key.to_string(), value.to_string());
     }
+
+    pub fn clear_section(&mut self, section: &str) {
+        self.sections.remove(section);
+    }
 }
 
 // ------------------------------------------------------------------ where they are kept
@@ -115,10 +119,20 @@ mod backend {
     }
 
     pub fn set(section: &str, key: &str, value: &str) {
-        let text = with(|s| {
+        write(with(|s| {
             s.set(section, key, value);
             s.text()
-        });
+        }));
+    }
+
+    pub fn clear_section(section: &str) {
+        write(with(|s| {
+            s.clear_section(section);
+            s.text()
+        }));
+    }
+
+    fn write(text: String) {
         let Some(path) = path() else { return };
         if let Some(folder) = path.parent() {
             let _ = std::fs::create_dir_all(folder);
@@ -160,6 +174,14 @@ mod backend {
         fn RegQueryValueExW(key: Hkey, name: *const u16, reserved: *mut u32, kind: *mut u32, data: *mut u8, len: *mut u32) -> i32;
         fn RegSetValueExW(key: Hkey, name: *const u16, reserved: u32, kind: u32, data: *const u8, len: u32) -> i32;
         fn RegCloseKey(key: Hkey) -> i32;
+        fn RegDeleteTreeW(key: Hkey, sub: *const u16) -> i32;
+    }
+
+    /// Takes a section's key, with every value in it, out of the user's settings.
+    pub fn clear_section(section: &str) {
+        if !section.is_empty() {
+            unsafe { RegDeleteTreeW(HKEY_CURRENT_USER, wide(&path(section)).as_ptr()) };
+        }
     }
 
     fn wide(s: &str) -> Vec<u16> {
@@ -225,7 +247,16 @@ mod backend {
     }
 }
 
-pub use backend::{get, set};
+pub use backend::{clear_section, get, set};
+
+/// Global, Notification Settings, OK: every kept "do not show this again" answer is forgotten, as the original
+/// empties these sections (Mutable holds the message answers, AddIns the screen reader script offer, EmbossTV and
+/// EmbossTVTemp the embosser prompts).
+pub fn reset_notifications() {
+    for section in ["Mutable", "AddIns", "EmbossTV", "EmbossTVTemp"] {
+        clear_section(section);
+    }
+}
 
 // ------------------------------------------------------------------ the program's settings
 

@@ -389,8 +389,11 @@ pub fn run(id: i32, checked: bool) {
         3109 => shortcut_preferences(),
         3111 => {
             let d = open_dialog(1023, None);
-            d.show();
+            let ok = d.show() == 1;
             d.destroy();
+            if ok {
+                settings_store::reset_notifications();
+            }
         }
         3113 => {
             settings_dialog(1037, "", None, |d| {
@@ -3189,17 +3192,25 @@ fn choose_learning_step(course: usize) {
     set_document_tables(Some(tables), |i| i.to_string());
 }
 
+/// Document, Hyphen Table: the document's table; as in the original a change marks the document changed and lays it
+/// out again (the layout key holds the table).
 fn set_hyphen(id: i32) {
     app::with(|a| {
         if let Some(d) = a.doc_mut() {
-            d.hyphen = match id {
+            let chosen = match id {
                 2901 => Hyphen::None,
                 2902 => Hyphen::Dashes,
                 2903 => Hyphen::DashesHyphens,
                 2904 => Hyphen::French,
                 _ => Hyphen::French113,
             };
+            if d.hyphen != chosen {
+                d.hyphen = chosen;
+                d.dirty = true;
+                d.area_stale = true;
+            }
         }
+        a.update_status();
     });
 }
 
@@ -3569,6 +3580,35 @@ fn view_preferences() {
     });
 }
 
+/// What the original says about a shortcut code field (Global, Shortcut Preferences), or None when it is accepted.
+fn shortcut_field_problem(text: &str) -> Option<String> {
+    const LONGEST: usize = 99;
+    let n = text.encode_utf16().count();
+    if n == 0 {
+        return Some("The shortcut string is empty.".into());
+    }
+    if n > LONGEST {
+        return Some(format!("The shortcut string must not be longer than {LONGEST} characters."));
+    }
+    (!codes_properly_marked(text)).then(|| "Some codes are not properly started or terminated.".into())
+}
+
+/// The original's check of a codes field: a code is not started inside a code, not ended outside one, and none is
+/// left open at the end.
+fn codes_properly_marked(text: &str) -> bool {
+    let mut open = false;
+    for c in text.chars() {
+        match c {
+            '[' if open => return false,
+            '[' => open = true,
+            ']' if !open => return false,
+            ']' => open = false,
+            _ => {}
+        }
+    }
+    !open
+}
+
 fn shortcut_preferences() {
     let s = app::with(|a| a.settings.shortcuts.clone());
     let d = open_dialog(1022, None);
@@ -3580,6 +3620,11 @@ fn shortcut_preferences() {
     d.set_text(17, &s.new_ref_page);
     d.set_radio(&[19, 20, 21], s.page_nav.min(2));
     d.set_radio(&[23, 24, 25], s.control_page_nav.min(2));
+    // Each code field is checked in the dialog, in order, as the original checks them: not empty, at most 99
+    // characters, codes properly started and ended.
+    d.check_on_ok(|d| {
+        [7, 9, 11, 13, 15, 17].into_iter().find_map(|field| shortcut_field_problem(&d.text(field)).map(|m| (field, m)))
+    });
     if d.show() == 1 {
         let new = app::Shortcuts {
             grade0: d.text(7),
@@ -3712,5 +3757,18 @@ mod tests {
         assert_eq!(open_styles(&Shown::marked("[es~a]x[es~b]y[ee~b]z"), 21), vec!["a".to_string()]);
         // Typed brackets are text, not style codes.
         assert!(open_styles(&Shown::plain("[es~a]x"), 7).is_empty());
+    }
+
+    #[test]
+    fn shortcut_fields_are_checked_as_the_original() {
+        assert_eq!(shortcut_field_problem("[g0]"), None);
+        assert_eq!(shortcut_field_problem("[l]text"), None);
+        assert_eq!(shortcut_field_problem("").as_deref(), Some("The shortcut string is empty."));
+        let long = "x".repeat(100);
+        assert_eq!(shortcut_field_problem(&long).as_deref(), Some("The shortcut string must not be longer than 99 characters."));
+        assert!(shortcut_field_problem(&"x".repeat(99)).is_none());
+        for bad in ["[g0", "g0]", "[[g0]]", "[a]]"] {
+            assert_eq!(shortcut_field_problem(bad).as_deref(), Some("Some codes are not properly started or terminated."), "{bad}");
+        }
     }
 }
