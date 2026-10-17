@@ -627,8 +627,16 @@ impl App {
         let pos = self.docs[i].caret() as i64;
         // Page, line and column of the caret on the laid-out pages (spec 19 section 4): the ordinal page, the line on
         // that page and the cell on that line.
-        let location = (!self.docs[i].view.codes)
-            .then(|| bc_core::format::locate(&self.laid_out(i, &shown), pos.max(0) as usize));
+        // In the formatted view, the row the caret stands on (spec 27 1b: the caret's page, line and column).
+        let row = self.docs[i].formatted.as_ref().and_then(|f| {
+            let (n, col) = f.view.line_at(self.docs[i].text.get_insertion_point().max(0) as usize)?;
+            let (p, l, _) = f.view.lines[n];
+            Some((p + 1, l + 1, col + 1))
+        });
+        let location = match row {
+            Some(r) => Some(r),
+            None => (!self.docs[i].view.codes).then(|| bc_core::format::locate(&self.laid_out(i, &shown), pos.max(0) as usize)),
+        };
         let d = &self.docs[i];
         let style = bc_core::status::style_text(&shown, pos);
         let status = StatusLine {
@@ -808,8 +816,29 @@ impl App {
         f.stale = false;
         if changed {
             let text = f.view.text.clone();
+            // The last line of each page: the page break follows it (spec 27 3a).
+            let ends: Vec<(i64, i64)> = f
+                .view
+                .lines
+                .iter()
+                .enumerate()
+                .filter(|(n, l)| f.view.lines.get(n + 1).is_none_or(|next| next.0 != l.0))
+                .map(|(n, l)| (l.2 as i64, f.view.lines.get(n + 1).map_or(text.chars().count(), |next| next.2) as i64))
+                .collect();
             d.text.set_value(&text);
+            // The reference gives each page break a row of its own after the page's lines, with no text in it; here
+            // that row is the space after the page's last line, so screen readers read the lines alone, as the
+            // reference's text for them is. The reference also draws a line across that row; the system text
+            // control draws none.
+            // One row: the font's size in pixels and its line spacing.
+            let size = self.face(self.docs[i].view.font).1.max(4);
+            let row = size * 4 / 3 * 6 / 5;
+            let t = self.docs[i].text.handle_ptr() as *mut ffi::wxd_Window_t;
+            for (from, to) in ends {
+                unsafe { ffi::wxd_TextCtrl_SetSpaceAfter(t, from as std::os::raw::c_long, to as std::os::raw::c_long, row) };
+            }
         }
+        let d = &mut self.docs[i];
         d.select_doc(caret, caret);
     }
 

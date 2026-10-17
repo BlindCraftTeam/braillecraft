@@ -1,6 +1,6 @@
 Changes BrailleCraft made to liblouis 3.39.0 (as the GNU LGPL asks of modified copies)
 
-2026-10-14, Jeremiah Beasley: comment text that named a commercial braille program was reworded in these tables;
+2026-10-14, BlindCraft Team: comment text that named a commercial braille program was reworded in these tables;
 no translation rule was changed.
 
   tables/es-g2.ctb (two comment lines)

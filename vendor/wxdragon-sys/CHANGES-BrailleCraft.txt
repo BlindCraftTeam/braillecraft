@@ -24,5 +24,12 @@ and included from cpp/include/wxdragon.h):
 - wxd_TextCtrl_ShowCursorLocator: the Cursor Locator over a multi-line text control, a rectangle closing in on the
   caret, drawn with four borderless popup windows in the window text colour.
 
+Also added, in cpp/include/core/wxd_space_after.h, cpp/src/space_after.cpp and cpp/src/space_after_osx.mm
+(macOS only; listed in cpp/CMakeLists.txt and included from cpp/include/wxdragon.h):
+- wxd_TextCtrl_SetSpaceAfter: empty space after a line of a multi-line text control, with no text in it: the
+  text view's pixels-below-lines tag on GTK, its paragraph spacing on macOS, wxWidgets' paragraph spacing on
+  Windows.
+  cpp/CMakeLists.txt adds the GTK 3 include directories (pkg-config gtk+-3.0) on Linux for it.
+
 The Rust bindings are generated from the header when the crate builds, so no Rust file changed.
 The workspace Cargo.toml uses this copy through [patch.crates-io].

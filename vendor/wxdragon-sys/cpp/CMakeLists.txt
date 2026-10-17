@@ -195,6 +195,7 @@ set(WXDRAGON_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/print.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/reader_static_text.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/cursor_locator.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/space_after.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/progressdialog.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/propertygrid.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/radio_button.cpp
@@ -246,6 +247,9 @@ if(PLATFORM_NAME STREQUAL "macos")
     list(APPEND WXDRAGON_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/window_osx.mm)
     set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/src/window_osx.mm
         PROPERTIES COMPILE_FLAGS "-fobjc-arc")
+    list(APPEND WXDRAGON_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/space_after_osx.mm)
+    set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/src/space_after_osx.mm
+        PROPERTIES COMPILE_FLAGS "-fobjc-arc")
 endif()
 
 # Add Linux compatibility layer for older systems
@@ -295,6 +299,13 @@ add_library(wxdragon STATIC ${WXDRAGON_SOURCES})
 target_include_directories(wxdragon PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
+
+# BrailleCraft: space_after.cpp uses the GTK text buffer of a multi-line text control on Linux.
+if(PLATFORM_NAME STREQUAL "linux")
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(WXD_GTK3 REQUIRED gtk+-3.0)
+    target_include_directories(wxdragon PRIVATE ${WXD_GTK3_INCLUDE_DIRS})
+endif()
 
 # --- Set link libraries ---
 target_link_libraries(wxdragon PRIVATE wx::base)
