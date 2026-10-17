@@ -236,6 +236,36 @@ fn wrap_selection(before: &Shown, after: &Shown) {
     }
 }
 
+/// Runs `change` on the active document's running text (codes marked 0x1C ... 0x1F) with the selection's anchor and
+/// the caret as running-text places, as the original's style commands work; its answer (the new text and the caret)
+/// becomes the document in one undo step. Nothing happens when it answers None.
+fn change_running(change: impl FnOnce(&str, usize, usize) -> Option<(String, usize)>) {
+    let Some((shown, anchor, caret)) = app::with(|a| {
+        a.doc().map(|d| {
+            let (f, t) = d.selection();
+            let c = d.caret();
+            (d.shown(), if c == f { t } else { f }, c)
+        })
+    }) else {
+        return;
+    };
+    let to_running = |p: usize| shown.slice(0, p).to_running().chars().count();
+    let running = shown.to_running();
+    let Some((new, caret_r)) = change(&running, to_running(anchor), to_running(caret)) else { return };
+    let new_shown = Shown::from_running(&new);
+    let caret = Shown::from_running(&new.chars().take(caret_r).collect::<String>()).text.chars().count();
+    app::with(|a| {
+        if let Some(i) = a.active {
+            a.edit_by(i, |e| {
+                let len = e.doc.text.chars().count();
+                e.replace(0, len, &new_shown);
+                Shown::default()
+            });
+        }
+    });
+    select_range(caret as i64, caret as i64);
+}
+
 /// Selects document places `from` to `to` in the active document.
 fn select_range(from: i64, to: i64) {
     app::with(|a| {
@@ -337,13 +367,15 @@ pub fn run(id: i32, checked: bool) {
 
         1401 => apply_style(),
         1402 => apply_last_style(),
-        1403 | 1404 | 1406 => message(PLANNED_FORMATTER),
+        1403 | 1404 => message(PLANNED_FORMATTER),
+        1406 => join_styles(),
         1407 => join_lines(),
         1409 => set_page_number(),
         1410 => header_footer(&HEADER),
         1411 => header_footer(&FOOTER),
         1413 => message(PLANNED_FORMATTER),
         1416 => code_list(),
+        1910 if has_doc => new_paragraph(),
         1701..=2404 if has_doc => insert_code(id),
         2501..=2511 => message(PLANNED_PICTURES),
 
@@ -2501,8 +2533,11 @@ fn choose_style(dialog: i32) -> Option<Style> {
     app::with(|a| a.doc().and_then(|doc| doc.styles.iter().find(|s| s.name == chosen).cloned()))
 }
 
+/// Applies the style as the original (spec 31): a paragraph style takes whole paragraphs and is cleaned up inside; a
+/// character style goes round the selection.
 fn apply_named_style(name: &str) {
-    wrap_selection(&Shown::marked(&format!("[es~{name}]")), &Shown::marked(&format!("[ee~{name}]")));
+    let name = name.to_string();
+    change_running(move |r, anchor, caret| Some(bc_core::style_apply::apply_style(r, anchor, caret, caret, &name)));
 }
 
 fn apply_style() {
@@ -2525,13 +2560,22 @@ fn apply_last_style() {
     }
 }
 
+/// Layout, Join Lines (spec 31 5.4): only with a selection; the paragraph style is joined over it, then its line and
+/// style codes are taken out with a space between the words they parted.
 fn join_lines() {
-    let Some((value, caret)) = app::with(|a| a.doc().map(|d| (d.shown().text, d.caret()))) else { return };
-    let pos = app::char_to_byte(&value, caret as i64);
-    if let Some(nl) = value[pos..].find('\n') {
-        let at = app::byte_to_char(&value, pos + nl) as usize;
-        replace_plain(at, at + 1, " ");
-    }
+    change_running(bc_core::style_apply::join_lines);
+}
+
+/// Layout, Join Styles (spec 31 5.3): only with a selection; the paragraph style open at its anchor (or the caret)
+/// applied again over it.
+fn join_styles() {
+    change_running(bc_core::style_apply::join_styles);
+}
+
+/// Layout, New Paragraph (spec 31): in an open paragraph style it ends and starts the style again, else the paragraph
+/// code; with a selection at its end and then at its start.
+fn new_paragraph() {
+    change_running(|r, anchor, caret| Some(bc_core::style_apply::new_paragraph(r, anchor, caret)));
 }
 
 /// A whole number field checked as the original checks one in its dialog: string 2644 when it is not a number, else

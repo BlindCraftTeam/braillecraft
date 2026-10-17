@@ -311,6 +311,33 @@ fn remember(t: &mut Tracker, s: Shown) {
     }
 }
 
+/// The original's style commands on the editor's text (bc_core style_apply, spec 31), with the selection's anchor and
+/// the caret as UTF-16 places: `what` is "apply" (style `name`), "join-lines", "join-styles" or "new-paragraph".
+/// Answers JSON {"text": the editor's new text, "caret": UTF-16 place}, or an empty string when nothing changes.
+#[wasm_bindgen]
+pub fn editor_style_command(what: &str, name: &str, anchor: u32, caret: u32) -> String {
+    use bc_core::style_apply as sa;
+    EDITOR.with(|e| {
+        let mut e = e.borrow_mut();
+        let t = e.shown.text.clone();
+        let to_running = |u: u32| e.shown.slice(0, char_pos(&t, u)).to_running().chars().count();
+        let (a, c) = (to_running(anchor), to_running(caret));
+        let running = e.shown.to_running();
+        let out = match what {
+            "apply" => Some(sa::apply_style(&running, a, c, c, name)),
+            "join-lines" => sa::join_lines(&running, a, c),
+            "join-styles" => sa::join_styles(&running, a, c),
+            "new-paragraph" => Some(sa::new_paragraph(&running, a, c)),
+            _ => None,
+        };
+        let Some((new, caret_r)) = out else { return String::new() };
+        e.shown = Shown::from_running(&new);
+        let caret_chars = Shown::from_running(&new.chars().take(caret_r).collect::<String>()).text.chars().count();
+        let text = e.shown.text.clone();
+        serde_json::json!({ "text": text, "caret": utf16_pos(&text, caret_chars) }).to_string()
+    })
+}
+
 /// The editor takes a document's running text (codes marked 0x1C ... 0x1F, as a document file keeps them); answers
 /// the text as the editor shows it.
 #[wasm_bindgen]

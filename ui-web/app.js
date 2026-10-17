@@ -2932,8 +2932,27 @@ async function applyStyle() {
   if (result === "ok" && d.selected(7)) applyNamedStyle(d.selected(7));
 }
 
+// The original's style commands (the core's style_apply, spec 31) on the editor: "apply" (a style by name),
+// "join-lines", "join-styles", "new-paragraph"; the selection's anchor and the caret are passed, the new text and the
+// caret come back. Nothing happens when the core answers nothing (Join with no selection).
+function styleCommand(what, name = "") {
+  if (!core) return;
+  const forward = editor.selectionDirection !== "backward";
+  const caret = forward ? editor.selectionEnd : editor.selectionStart;
+  const anchor = forward ? editor.selectionStart : editor.selectionEnd;
+  const out = core.editor_style_command(what, name, anchor, caret);
+  if (!out) return;
+  const { text, caret: at } = JSON.parse(out);
+  editor.value = text;
+  editor.setSelectionRange(at, at);
+  doc.dirty = true;
+  lastLine = null;
+  showStatus();
+  showTranslatedLine();
+}
+
 function applyNamedStyle(name) {
-  wrapSelection(`[es~${name}]`, `[ee~${name}]`);
+  styleCommand("apply", name);
 }
 
 // Layout, Apply Last Style: the paragraph style ended last before the caret or the selection start, read from the
@@ -3184,14 +3203,10 @@ async function exitProgram() {
   await message("To leave BrailleCraft, close its browser tab or window.");
 }
 
-// Layout, Join Lines: the next line break becomes a space.
-function joinLines() {
-  const at = editor.value.indexOf("\n", editor.selectionStart);
-  if (at >= 0) {
-    editor.setRangeText(" ", at, at + 1, "preserve");
-    editor.dispatchEvent(new Event("input"));
-  }
-}
+// Layout, Join Lines, Join Styles and New Paragraph, as the desktop program (spec 31).
+const joinLines = () => styleCommand("join-lines");
+const joinStyles = () => styleCommand("join-styles");
+const newParagraph = () => styleCommand("new-paragraph");
 
 // Layout, Page Number (dialog 1042): the page numbering style and number codes.
 async function setPageNumber() {
@@ -3410,6 +3425,8 @@ async function chooseLearningStep(course) {
 
 // A Layout menu code item: its codes put in, or put around the selection.
 function insertCode(id) {
+  // New Paragraph closes and opens the paragraph style it is in, as the original.
+  if (id === 1910) return newParagraph();
   const code = core ? core.menu_code(id) : "";
   if (!code) return;
   const c = JSON.parse(code);
@@ -3470,7 +3487,7 @@ const COMMANDS = {
   1402: applyLastStyle,
   1403: () => message(PLANNED_FORMATTER),
   1404: () => message(PLANNED_FORMATTER),
-  1406: () => message(PLANNED_FORMATTER),
+  1406: joinStyles,
   1407: joinLines,
   1409: setPageNumber,
   1410: () => headerFooter(HEADER),

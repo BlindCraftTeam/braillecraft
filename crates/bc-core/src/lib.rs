@@ -30,6 +30,7 @@ pub mod printer_setup;
 pub mod range;
 pub mod rule_script;
 pub mod status;
+pub mod style_apply;
 pub mod table_list;
 pub mod templates;
 pub mod unimap;
