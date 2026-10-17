@@ -880,7 +880,7 @@ pub fn code_pages() -> Vec<String> {
 #[wasm_bindgen]
 pub fn formatted_text(text: &str, cells: u32, lines: u32, code_page: &str) -> Vec<u8> {
     let pages = laid_out(text, cells, lines, false);
-    bc_core::codepages::encode(code_page, &bc_core::format::formatted_text(&pages).replace('\u{a0}', " "))
+    bc_core::format::formatted_text_file(&pages, code_page)
 }
 
 /// Save As formatted braille (.brf): a braille document laid out `cells` by `lines` (spec 04d-B). Each line loses its

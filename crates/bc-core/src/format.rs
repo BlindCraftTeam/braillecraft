@@ -1882,6 +1882,23 @@ pub fn formatted_text(pages: &[Page]) -> String {
     out
 }
 
+/// The bytes of a formatted text file (.prf) in `code_page`, as the original program writes it: each line with "\n"
+/// and a form feed after every page, a hard space as a space, encoded in the code page ('#' for a character it cannot
+/// hold), through a text-mode file stream, which puts a carriage return before every line feed byte. In a one-byte or
+/// multi-byte code page that is CR LF per line; in UTF-16 and UTF-32 it is also what the original's files hold (a CR
+/// byte before the 0x0A byte of each line end, and of any character holding a 0x0A byte).
+pub fn formatted_text_file(pages: &[Page], code_page: &str) -> Vec<u8> {
+    let text = formatted_text(pages).replace("\r\n", "\n").replace('\u{a0}', " ");
+    let mut out = Vec::new();
+    for b in crate::codepages::encode(code_page, &text) {
+        if b == b'\n' {
+            out.push(b'\r');
+        }
+        out.push(b);
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2076,6 +2093,9 @@ mod tests {
     fn a_formatted_file_has_trimmed_lines_and_a_form_feed_after_every_page() {
         let pages = format(&m("[p]\nab cd[pg]ef"), &Layout::braille(8, 2), None);
         assert_eq!(formatted_text(&pages), "  ab cd\r\n\r\n\u{c}ef\r\n\r\n\u{c}");
+        // The file: CR LF in a one-byte code page; in UTF-16 the CR byte goes before the line end's 0x0A byte.
+        assert_eq!(formatted_text_file(&pages[1..], "ISO-8859-1"), b"ef\r\n\r\n\x0c".to_vec());
+        assert_eq!(formatted_text_file(&pages[1..], "UTF-16LE"), b"e\0f\0\r\n\0\r\n\0\x0c\0".to_vec());
     }
 
     #[test]

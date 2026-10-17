@@ -52,6 +52,20 @@ jobs:
       - name: Tests
         run: cargo test --workspace
 
+      # Windows' own tables for the code pages formatted text and coded text use, written by Windows itself
+      # (examples/windows_code_pages.rs), kept as the windows-code-pages artifact.
+      - name: Windows code page tables
+        if: runner.os == 'Windows'
+        shell: bash
+        run: cargo run --release -p bc-core --example windows_code_pages -- code-pages
+
+      - uses: actions/upload-artifact@v7
+        if: runner.os == 'Windows'
+        with:
+          name: windows-code-pages
+          if-no-files-found: error
+          path: code-pages
+
       # The native desktop program (wxWidgets): a folder that runs as it is, with its braille fonts and its
       # translation tables, its document templates, its embosser models and its JAWS scripts beside it.
       - name: Native program

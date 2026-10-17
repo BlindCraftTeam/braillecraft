@@ -1383,7 +1383,7 @@ fn brf_bytes(pages: &[bc_core::format::Page], shown_in: &encodings::Encoding, ch
 /// formatted_text in the chosen code page (bc_core::codepages); a character it cannot hold is written '#', and a hard
 /// space is a space.
 fn prf_bytes(pages: &[bc_core::format::Page], code_page: &str) -> Vec<u8> {
-    bc_core::codepages::encode(code_page, &bc_core::format::formatted_text(pages).replace('\u{a0}', " "))
+    bc_core::format::formatted_text_file(pages, code_page)
 }
 
 /// Save As LaTeX (.tex) for a print document (translation::latex). The document keeps its own file and name.
