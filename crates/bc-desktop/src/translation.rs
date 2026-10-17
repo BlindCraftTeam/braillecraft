@@ -69,6 +69,23 @@ pub fn coded(body: &[u8], braille: bool) -> Result<Vec<u8>, String> {
     bc_core::rule_script::run_all(&mut scripts, body).map_err(|e| e.to_string())
 }
 
+/// The files the import chain reads, from the shipped tables folder (tables/scan and tables/rule-scripts).
+pub struct ImportFiles(std::path::PathBuf);
+
+pub fn import_files() -> Result<ImportFiles, String> {
+    let rules = RULES.with(|r| r.borrow().clone()).ok_or("The rule scripts were not found.")?;
+    Ok(ImportFiles(rules.parent().map(Path::to_path_buf).unwrap_or(rules)))
+}
+
+impl bc_core::import_chain::Files for ImportFiles {
+    fn scan_table(&self, name: &str) -> Result<Vec<u8>, String> {
+        std::fs::read(self.0.join("scan").join(name)).map_err(|e| e.to_string())
+    }
+    fn rule_script(&self, name: &str) -> Result<bc_core::rule_script::RuleScript, String> {
+        bc_core::rule_script::RuleScript::open(&self.0.join("rule-scripts").join(name)).map_err(|e| e.to_string())
+    }
+}
+
 /// Reads the table index and the list of table sets by language from `folder`; translation reports an error until
 /// this has run.
 pub fn load(folder: &Path) -> Result<usize, String> {

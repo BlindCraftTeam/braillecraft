@@ -65,7 +65,11 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   file's kind from its name and content (formatted text, formatted braille, coded text, coded braille, PDF, PEF, a
   document file) and, for any file that is not a document file, asks in the import dialog for its template, its
   kind, and the code page or braille encoding to read it in; Insert File does the same and refuses braille in a print
-  document and print in a braille one.
+  document and print in a braille one. Formatted braille, coded braille and coded text are imported the way the
+  original program imports them: formatted braille is read page by page, with the page numbers in its corners taken
+  as page numbering, running heads and feet, print page changes, indented, centred and as-is lines turned back into
+  codes; then format words ($p, |IND5 and the like), line ends, hyphens at line ends and spaces are read as the import
+  scan tables say, and the import rule scripts finish the codes, tables and Nemeth passages.
 - **Translated line.** Under the document, the braille (or the print) of the line you are on, updated as you write.
 - **View preferences.** A margin bell a chosen number of cells before the end of a braille line, which codes the
   translated line shows, line numbers beside each line of a braille document in the formatted view when
@@ -92,6 +96,10 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   Internationalization, Support UI Automation is on, as the original program does; through the macOS accessibility
   interface for VoiceOver; through ATK and AT-SPI for Orca on Linux. On Windows a set of JAWS scripts comes with the
   program, and BrailleCraft offers to install them when it starts.
+- **Formatted braille import settings.** Global, Formatted Braille Importer: where the braille and print page
+  numbers stand on even and odd pages of the file, which pages have a running head or foot, the lines and cells of
+  the file's pages, and Read formatted braille without interpretation, which keeps the file's lines and pages as they
+  are. Until that is on, importing formatted braille first says that it may be reformatted.
 - **PDF import settings.** Global, PDF Importer: whether the dialog shows for each import, PDF/A markup, ledger
   tables, leader dots, a custom script, header and footer heights, font hints and the layout analysis values.
 - **Command line.** `braillecraft-desktop file.dxp` opens a file. Options before a file act on the files after

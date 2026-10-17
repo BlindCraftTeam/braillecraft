@@ -98,6 +98,11 @@ impl Encoding {
             .copied()
     }
 
+    /// The cell a character of this encoding stands for, the character exactly as the encoding lists it.
+    pub fn cell_exact(&self, c: char) -> Option<usize> {
+        self.reverse().get(&c).copied()
+    }
+
     /// This encoding's characters back to cells, for back-translation and for changing encodings. Upper and lower
     /// case stand for the same cell; a character with no cell becomes a blank cell.
     pub fn text_to_cells(&self, text: &str) -> String {

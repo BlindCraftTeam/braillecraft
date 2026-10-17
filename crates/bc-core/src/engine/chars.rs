@@ -17,10 +17,6 @@ pub(crate) fn strip(s: &str) -> &str {
     s.trim_matches(is_blank)
 }
 
-pub(crate) fn rstrip(s: &str) -> &str {
-    s.trim_end_matches(is_blank)
-}
-
 pub(crate) fn lstrip(s: &str) -> &str {
     s.trim_start_matches(is_blank)
 }

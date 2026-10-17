@@ -472,16 +472,70 @@ pub fn save_internationalization(encoding: &str, uia: bool) {
     set("Accessibility", "UIAutomation", if uia { "1" } else { "0" });
 }
 
-/// The answer kept for a question with a "Do not ask this again" box: the answer plus one (so 0 means none is kept),
-/// in section `section` under `key`. None when no answer is kept. (Only the Windows start-up asks such a question.)
-#[cfg_attr(not(windows), allow(dead_code))]
+/// The answer kept for a message or question with a "Do not show (or ask) this again" box: the answer plus one (so 0
+/// means none is kept), in section `section` under `key`. None when no answer is kept.
 pub fn kept_answer(section: &str, key: &str) -> Option<u32> {
     get_number(section, key).filter(|n| *n > 0).map(|n| (n - 1) as u32)
 }
 
-#[cfg_attr(not(windows), allow(dead_code))]
 pub fn keep_answer(section: &str, key: &str, answer: u32) {
     set(section, key, &(answer + 1).to_string());
+}
+
+const BRAIDE: &str = "FormattedBrailleImporter";
+/// Where page numbers stand, as the settings name them (0 none to 4 lower right).
+const CORNERS: [&str; 5] = ["NoPages", "UpperLeft", "UpperRight", "LowerLeft", "LowerRight"];
+/// Which pages have a running head or foot, as the settings name them (0 none to 3 both).
+const SIDES: [&str; 4] = ["None", "Odd", "Even", "Both"];
+
+/// Global, Formatted Braille Importer, under the names the reference program keeps them by; a value that is missing
+/// or not understood keeps its default (both main page numbers lower right, both reference page numbers upper right,
+/// no running head or foot, 30 lines of 40 cells, formatting not preserved).
+pub fn load_braide() -> bc_core::braide::Settings {
+    let mut s = bc_core::braide::Settings::default();
+    let word = |key: &str, list: &[&str]| {
+        get(BRAIDE, key).and_then(|v| list.iter().position(|w| w.eq_ignore_ascii_case(v.trim()))).map(|i| i as i32)
+    };
+    for (key, field) in [
+        ("OddMainPages", &mut s.odd_main),
+        ("EvenMainPages", &mut s.even_main),
+        ("OddReferencePages", &mut s.odd_reference),
+        ("EvenReferencePages", &mut s.even_reference),
+    ] {
+        if let Some(v) = word(key, &CORNERS) {
+            *field = v;
+        }
+    }
+    if let Some(v) = word("Header", &SIDES) {
+        s.header = v;
+    }
+    if let Some(v) = word("Footer", &SIDES) {
+        s.footer = v;
+    }
+    if let Some(n) = get_number(BRAIDE, "MaxLen").filter(|n| *n > 0) {
+        s.lines = n as usize;
+    }
+    if let Some(n) = get_number(BRAIDE, "MaxWidth").filter(|n| *n > 0) {
+        s.cells = n as usize;
+    }
+    if let Some(b) = get_bool(BRAIDE, "PreserveFormatting") {
+        s.preserve = b;
+    }
+    s
+}
+
+pub fn save_braide(s: &bc_core::braide::Settings) {
+    let corner = |v: i32| CORNERS.get(v as usize).copied().unwrap_or(CORNERS[0]);
+    let side = |v: i32| SIDES.get(v as usize).copied().unwrap_or(SIDES[0]);
+    set(BRAIDE, "OddMainPages", corner(s.odd_main));
+    set(BRAIDE, "EvenMainPages", corner(s.even_main));
+    set(BRAIDE, "OddReferencePages", corner(s.odd_reference));
+    set(BRAIDE, "EvenReferencePages", corner(s.even_reference));
+    set(BRAIDE, "Header", side(s.header));
+    set(BRAIDE, "Footer", side(s.footer));
+    set(BRAIDE, "MaxLen", &s.lines.to_string());
+    set(BRAIDE, "MaxWidth", &s.cells.to_string());
+    set(BRAIDE, "PreserveFormatting", if s.preserve { "yes" } else { "no" });
 }
 
 #[cfg(test)]

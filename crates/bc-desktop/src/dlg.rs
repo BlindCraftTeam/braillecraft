@@ -593,7 +593,14 @@ impl Dlg {
             if let Some(t) = w.as_widget::<TextCtrl>() {
                 t.set_value(value);
             } else if let Some(s) = w.as_widget::<StaticText>() {
+                // A label the layout gives several lines wraps its new text to its width, as Windows static text
+                // does by itself (a macOS label wraps by itself). Its size is taken first: a new label resizes it.
+                let (size, line) = (s.get_size(), s.get_text_extent("Ag").height.max(1));
                 s.set_label(value);
+                if cfg!(not(target_os = "macos")) && size.height >= 2 * line {
+                    s.wrap(size.width.max(1));
+                    s.set_size(size);
+                }
             } else {
                 w.set_label(value);
             }

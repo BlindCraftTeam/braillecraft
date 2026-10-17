@@ -110,7 +110,7 @@ fn tokens(text: &str) -> Result<Vec<Vec<i64>>, EngineError> {
     const END: i64 = 0x100;
     const COMMENT: i64 = 0x101;
     let mut pos = 0usize;
-    let mut ch = |pos: &mut usize| -> i64 {
+    let ch = |pos: &mut usize| -> i64 {
         let Some(&c) = text.get(*pos) else { return END };
         *pos += 1;
         if c != '|' {
@@ -139,7 +139,7 @@ fn tokens(text: &str) -> Result<Vec<Vec<i64>>, EngineError> {
             }
         }
     };
-    let mut token = |pos: &mut usize| -> Option<Vec<i64>> {
+    let token = |pos: &mut usize| -> Option<Vec<i64>> {
         loop {
             let mut buf = Vec::new();
             let c = loop {
@@ -156,14 +156,12 @@ fn tokens(text: &str) -> Result<Vec<Vec<i64>>, EngineError> {
                 return if buf.is_empty() { None } else { Some(buf) };
             }
             // A comment: the rest of its line; a line that was only a comment gives no value.
-            let mut end = false;
-            loop {
+            let end = loop {
                 let c = ch(pos);
                 if c == 10 || c == END {
-                    end = c == END;
-                    break;
+                    break c == END;
                 }
-            }
+            };
             if !buf.is_empty() {
                 return Some(buf);
             }

@@ -21,6 +21,7 @@ pub mod fview;
 pub mod pef;
 pub mod pdf_import;
 pub mod ink;
+pub mod import_chain;
 pub mod internal;
 pub mod lbf;
 pub mod menu_codes;

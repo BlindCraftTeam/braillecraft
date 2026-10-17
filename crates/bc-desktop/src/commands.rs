@@ -115,6 +115,66 @@ fn page_numbering() {
     });
 }
 
+/// Global, Formatted Braille Importer (1045): the settings the formatted braille import reads, kept under the
+/// reference names. The four groups are braille page numbers on even and on odd pages and print page numbers on even
+/// and on odd pages of the file; then the running head and foot pages, the lines and cells of the file's pages. With
+/// "Read formatted braille without interpretation" checked (formatting preserved) the other controls are disabled.
+fn formatted_braille_importer() {
+    const GROUPS: [[i32; 5]; 4] = [[8, 9, 10, 11, 12], [14, 15, 16, 17, 18], [20, 21, 22, 23, 24], [26, 27, 28, 29, 30]];
+    const HEADER: [i32; 4] = [32, 33, 34, 35];
+    const FOOTER: [i32; 4] = [37, 38, 39, 40];
+    let s = settings_store::load_braide();
+    let d = open_dialog(1045, None);
+    d.set_checked(6, s.preserve);
+    for (g, v) in GROUPS.iter().zip([s.even_main, s.odd_main, s.even_reference, s.odd_reference]) {
+        d.set_radio(g, v as usize);
+    }
+    d.set_radio(&HEADER, s.header as usize);
+    d.set_radio(&FOOTER, s.footer as usize);
+    d.set_text(42, &s.lines.to_string());
+    d.set_text(44, &s.cells.to_string());
+    let (id, dialog) = (d.id, d.dialog);
+    let apply = move || {
+        let d = Dlg { id, dialog, page: None };
+        let raw = d.checked(6);
+        for c in 7..=44 {
+            d.enable(c, !raw);
+        }
+    };
+    if let Some(cb) = d.win(6).and_then(|w| w.as_widget::<CheckBox>()) {
+        cb.on_toggled(move |_| apply());
+    }
+    // Applied once the dialog is showing.
+    wxdragon::call_after(Box::new(apply));
+    let ok = d.show() == 1;
+    let mut n = s;
+    n.preserve = d.checked(6);
+    let mut corners = [n.even_main, n.odd_main, n.even_reference, n.odd_reference];
+    for (k, g) in GROUPS.iter().enumerate() {
+        if let Some(i) = d.radio(g) {
+            corners[k] = i as i32;
+        }
+    }
+    [n.even_main, n.odd_main, n.even_reference, n.odd_reference] = corners;
+    if let Some(i) = d.radio(&HEADER) {
+        n.header = i as i32;
+    }
+    if let Some(i) = d.radio(&FOOTER) {
+        n.footer = i as i32;
+    }
+    // A count that is not a number above 0 keeps the one there was.
+    if let Some(v) = d.number(42).filter(|v| *v > 0) {
+        n.lines = v as usize;
+    }
+    if let Some(v) = d.number(44).filter(|v| *v > 0) {
+        n.cells = v as usize;
+    }
+    d.destroy();
+    if ok {
+        settings_store::save_braide(&n);
+    }
+}
+
 /// A settings dialog: shown with its last values; the values are kept on OK. Returns the dialog on OK.
 fn settings_dialog(id: i32, key: &'static str, title: Option<&str>, setup: impl FnOnce(&Dlg)) -> Option<Dlg> {
     let d = open_dialog(id, title);
@@ -349,32 +409,7 @@ pub fn run(id: i32, checked: bool) {
             });
         }
         3116 => crate::pdf_options::dialog(),
-        3117 => {
-            settings_dialog(1045, "", None, |d| {
-                d.set_radio(&[8, 9, 10, 11, 12], 2);
-                d.set_radio(&[14, 15, 16, 17, 18], 4);
-                d.set_radio(&[20, 21, 22, 23, 24], 0);
-                d.set_radio(&[26, 27, 28, 29, 30], 0);
-                d.set_radio(&[32, 33, 34, 35], 0);
-                d.set_radio(&[37, 38, 39, 40], 0);
-                d.set_text(42, "25");
-                d.set_text(44, "40");
-                // "When this is checked, most of the other controls on the dialog are disabled" (the manual).
-                let (id, dialog) = (d.id, d.dialog);
-                let apply = move || {
-                    let d = Dlg { id, dialog, page: None };
-                    let raw = d.checked(6);
-                    for c in 7..=44 {
-                        d.enable(c, !raw);
-                    }
-                };
-                if let Some(cb) = d.win(6).and_then(|w| w.as_widget::<CheckBox>()) {
-                    cb.on_toggled(move |_| apply());
-                }
-                // Applied once the remembered values are in place and the dialog is showing.
-                wxdragon::call_after(Box::new(apply));
-            });
-        }
+        3117 => formatted_braille_importer(),
 
         3202 | 3204 | 3205 => message(PLANNED_HELP),
         3206 => message("BrailleCraft 0.1: the main window, menus, dialogs, editing, find and replace, six-key entry, the code vocabulary, braille fonts for 18 encodings, and translation with the BrailleCraft engine and its tables. The file format, printing and embossing follow in the plan."),
@@ -776,6 +811,7 @@ fn open_path_asking(path: &Path, ask: bool) -> Option<u64> {
 }
 
 use bc_core::filekind::FileKind;
+use bc_core::import_chain::Recipe;
 
 /// What the import dialog chose: the kind of file, the template, and the code page or braille encoding read in.
 struct ImportChoice {
@@ -873,6 +909,10 @@ fn import_dialog(kind: FileKind) -> Option<ImportChoice> {
     if !ok {
         return None;
     }
+    // Formatted braille read with interpretation may be laid out again: the notice, until it is turned off.
+    if kind == FileKind::FormattedBraille && !settings_store::load_braide().preserve && !reformat_notice() {
+        return None;
+    }
     let mut choice = ImportChoice { kind, template, code_page, encoding };
     if kind.asks_code_page() {
         if let Some(i) = chosen_page {
@@ -885,6 +925,25 @@ fn import_dialog(kind: FileKind) -> Option<ImportChoice> {
         }
     }
     Some(choice)
+}
+
+/// The notice that formatted braille may be reformatted (1054), with its "Do not show this message again" box, kept
+/// under Mutable, BrailleReformatWarning. False when it is closed without OK.
+fn reformat_notice() -> bool {
+    const SECTION: &str = "Mutable";
+    const KEY: &str = "BrailleReformatWarning";
+    if let Some(answer) = settings_store::kept_answer(SECTION, KEY) {
+        return answer == 1;
+    }
+    let d = open_dialog(1054, Some("BrailleCraft"));
+    d.set_text(5, "BrailleCraft may reformat your braille document. To avoid this, set the \"Read formatted braille without interpretation\" option in the Global: Formatted Braille Importer dialog.");
+    let answer = d.show();
+    let keep = d.checked(6);
+    d.destroy();
+    if keep {
+        settings_store::keep_answer(SECTION, KEY, answer as u32);
+    }
+    answer == 1
 }
 
 /// A file's text as `choice` says to read it: text kinds in the chosen code page; braille kinds in the chosen braille
@@ -901,15 +960,39 @@ fn read_import(bytes: &[u8], choice: &ImportChoice) -> Option<Shown> {
             message("This document cannot be imported into BrailleCraft.  It appears to be in Rich Text Format (RTF).  If Microsoft® Word is installed, you can use it to convert your document to a native Word format and import that into BrailleCraft.");
             None
         }
-        // Coded text is read in the chosen code page. Formatted text is read as UTF-8 whatever the code page box says,
-        // as the reference's formatted text importer reads it (its layout analysis, which makes paragraphs and
-        // headings of the lines, is queue line AUD-I-3).
-        FileKind::CodedText | FileKind::FormattedText => {
-            let page = if choice.kind == FileKind::CodedText { choice.code_page.as_str() } else { "UTF-8" };
-            let text = bc_core::codepages::decode(page, bytes);
+        // Formatted text is read as UTF-8 whatever the code page box says, as the reference's formatted text importer
+        // reads it (its layout analysis, which makes paragraphs and headings of the lines, is queue line AUD-I-3).
+        FileKind::FormattedText => {
+            let text = bc_core::codepages::decode("UTF-8", bytes);
             Some(Shown::plain(&text.replace("\r\n", "\n").replace('\r', "\n")))
         }
-        FileKind::CodedBraille | FileKind::FormattedBraille | FileKind::Orbit => {
+        // Coded text, coded braille and formatted braille go through the import chain of their kind.
+        FileKind::CodedText | FileKind::CodedBraille | FileKind::FormattedBraille => {
+            let files = match translation::import_files() {
+                Ok(f) => f,
+                Err(e) => {
+                    message(&e);
+                    return None;
+                }
+            };
+            let (input, recipe) = match choice.kind {
+                FileKind::CodedText => (bytes.to_vec(), Recipe::CodedText(choice.code_page.clone())),
+                FileKind::CodedBraille => (bytes.to_vec(), Recipe::CodedBraille),
+                _ => (north_american(bytes, encodings::find(&choice.encoding)), Recipe::FormattedBraille(settings_store::load_braide())),
+            };
+            let imported = bc_core::import_chain::run(&input, &recipe, &files);
+            if imported.warnings.long_page {
+                message("Page depth exceeded.");
+            }
+            if imported.warnings.wide_line {
+                message("Page width exceeded.");
+            }
+            if !imported.errors.is_empty() {
+                message(&imported.errors.join("\n"));
+            }
+            Some(Shown::from_running(&bc_core::internal::decode(&imported.text)))
+        }
+        FileKind::Orbit => {
             let text: String = bytes.iter().map(|&b| char::from(b)).collect();
             let text = text.replace("\r\n", "\n").replace('\r', "\n").replace('\u{c}', "\n");
             let display = app::with(|a| a.encoding());
@@ -920,6 +1003,25 @@ fn read_import(bytes: &[u8], choice: &ImportChoice) -> Option<Shown> {
             None
         }
     }
+}
+
+/// The file's braille characters in North American braille ASCII, as the formatted braille import's first step reads
+/// them: each character that is not a control character and that the file's encoding lists becomes the North
+/// American character of the same cell; any other byte stays as it is.
+fn north_american(bytes: &[u8], from: &encodings::Encoding) -> Vec<u8> {
+    let na = encodings::find(encodings::DEFAULT);
+    bytes
+        .iter()
+        .map(|&b| {
+            if b < 0x80 && (b as char).is_ascii_control() {
+                return b;
+            }
+            match from.cell_exact(char::from(b)).map(|p| na.cell_char(p)) {
+                Some(c) if (c as u32) < 0x100 => c as u32 as u8,
+                _ => b,
+            }
+        })
+        .collect()
 }
 
 fn insert_file() {
