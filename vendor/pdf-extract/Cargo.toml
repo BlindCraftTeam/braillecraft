@@ -1,0 +1,27 @@
+# pdf-extract 0.12.1 (crates.io), vendored for BrailleCraft with the changes listed in CHANGES-BrailleCraft.txt.
+# Dependencies as published; the test-only dependencies and the release profile are left out.
+
+[package]
+edition = "2018"
+name = "pdf-extract"
+version = "0.12.1"
+authors = ["Jeff Muizelaar <jmuizelaar@mozilla.com>"]
+description = "A library to extract content from pdfs"
+license = "MIT"
+repository = "https://github.com/jrmuizel/pdf-extract"
+readme = "README.md"
+
+[lib]
+name = "pdf_extract"
+path = "src/lib.rs"
+
+[dependencies]
+adobe-cmap-parser = "0.4.1"
+cff-parser = "0.2.0"
+encoding_rs = "0.8.34"
+euclid = "0.20.5"
+log = "0.4.22"
+lopdf = { version = "=0.42.0", default-features = false, features = ["wasm_js"] }
+postscript = "0.14"
+type1-encoding-parser = "0.1.1"
+unicode-normalization = "0.1.19"

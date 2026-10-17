@@ -1809,6 +1809,18 @@ fileInput.addEventListener("change", async () => {
       statusLine.textContent = String(err.message ?? err);
       return;
     }
+  } else if (ext === "pdf" && core) {
+    // A PDF becomes a print document with codes, its styles named as the template names them.
+    doc.kind = "print";
+    doc.file = null;
+    try {
+      const running = core.import_pdf(bytes, (await styleNames()).join("\n"));
+      editor.value = core.editor_load(running);
+    } catch (err) {
+      statusLine.textContent = String(err.message ?? err);
+      return;
+    }
+    doc.saved = false;
   } else {
     doc.kind = ext === "brf" || ext === "brl" || ext === "bru" ? "braille" : "print";
     const read = decodeTextFile(bytes);

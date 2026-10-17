@@ -14,3 +14,5 @@ repository = "https://github.com/BlindCraftTeam/braillecraft"
 # wxdragon-sys 0.9.22 with the printing functions BrailleCraft needs added (vendor/wxdragon-sys/CHANGES-BrailleCraft.txt).
 [patch.crates-io]
 wxdragon-sys = { path = "vendor/wxdragon-sys" }
+# pdf-extract 0.12.1 with marked content, font descent and figures reported (vendor/pdf-extract/CHANGES-BrailleCraft.txt).
+pdf-extract = { path = "vendor/pdf-extract" }

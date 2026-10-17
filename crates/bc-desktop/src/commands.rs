@@ -605,7 +605,7 @@ fn pick_file(message_text: &str) -> Option<std::path::PathBuf> {
     let f = app::frame();
     let dialog = FileDialog::builder(&f)
         .with_message(message_text)
-        .with_wildcard("All supported files|*.txt;*.brf;*.brl;*.bru;*.pef;*.dxp;*.dxb|Print and braille documents (*.dxp, *.dxb)|*.dxp;*.dxb|Braille files (*.brf, *.brl, *.bru)|*.brf;*.brl;*.bru|Portable Embosser Format (*.pef)|*.pef|Text files (*.txt)|*.txt|All files|*")
+        .with_wildcard("All supported files|*.txt;*.brf;*.brl;*.bru;*.pef;*.pdf;*.dxp;*.dxb|Print and braille documents (*.dxp, *.dxb)|*.dxp;*.dxb|Braille files (*.brf, *.brl, *.bru)|*.brf;*.brl;*.bru|Portable Embosser Format (*.pef)|*.pef|PDF documents (*.pdf)|*.pdf|Text files (*.txt)|*.txt|All files|*")
         .with_style(FileDialogStyle::Open | FileDialogStyle::FileMustExist)
         .build();
     if dialog.show_modal() == wxdragon::id::ID_OK {
@@ -729,6 +729,9 @@ pub fn open_path(path: &Path) -> Option<u64> {
     }
     if ext == "pef" {
         return open_pef(&path);
+    }
+    if ext == "pdf" {
+        return open_pdf(&path);
     }
     match read_text_file(&path) {
         Ok(text) => {
@@ -1169,6 +1172,38 @@ fn open_pef(path: &Path) -> Option<u64> {
     }
     let name = path.file_name().map(|n| n.to_string_lossy().into_owned());
     let key = documents::new_document(DocKind::Braille, name, &Shown::plain(&text));
+    app::with(|a| {
+        if let Some(i) = a.index_of(key) {
+            a.docs[i].dirty = false;
+            a.docs[i].path = Some(path.to_path_buf());
+            a.docs[i].saved = true;
+            app::child_set_title(&a.docs[i].frame, &a.docs[i].full_name());
+        }
+        a.set_title();
+    });
+    Some(key)
+}
+
+/// Opens a PDF as a print document (bc_core::pdf_import: the reference's PDF front end, spec 29), with the styles
+/// of the default template, whose names decide between the long and short heading and paragraph style names.
+fn open_pdf(path: &Path) -> Option<u64> {
+    let bytes = match std::fs::read(path) {
+        Ok(b) => b,
+        Err(e) => {
+            message(&format!("{}: {e}", path.display()));
+            return None;
+        }
+    };
+    let styles: Vec<String> = translation::template_style_list(&translation::default_template()).into_iter().map(|s| s.name).collect();
+    let running = match bc_core::pdf_import::import(&bytes, &bc_core::pdf_import::PdfOptions::default(), &styles) {
+        Ok(t) => t,
+        Err(e) => {
+            message(&e);
+            return None;
+        }
+    };
+    let name = path.file_name().map(|n| n.to_string_lossy().into_owned());
+    let key = documents::new_document(DocKind::Print, name, &Shown::from_running(&running));
     app::with(|a| {
         if let Some(i) = a.index_of(key) {
             a.docs[i].dirty = false;

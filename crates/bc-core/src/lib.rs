@@ -16,6 +16,7 @@ pub mod engine;
 pub mod format;
 pub mod fview;
 pub mod pef;
+pub mod pdf_import;
 pub mod ink;
 pub mod internal;
 pub mod lbf;

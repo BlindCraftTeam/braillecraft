@@ -46,7 +46,9 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
 
 - **Documents.** Print documents and braille documents, each in its own window, with formatting codes and styles
   kept apart from the text. Opens and saves .dxp (print) and .dxb (braille) documents, and opens text and braille
-  files (.txt, .brf, .brl) and PEF (.pef) files.
+  files (.txt, .brf, .brl), PEF (.pef) files and PDF files. A PDF becomes a print document: a tagged PDF through
+  its structure (headings, paragraphs, lists, tables as styles and codes), any other PDF from its page layout
+  (paragraphs, line breaks, and ledger tables of dates, text and amounts).
 - **Formatted and coded views.** A document opens in the formatted view: its laid-out page lines with the codes
   hidden and an empty row after each page, which is what a screen reader reads. You type, delete, cut, paste and undo
   there as anywhere; a code next to the caret is removed whole. View, Codes (Alt+F3) switches to the coded view,
@@ -139,6 +141,7 @@ step does. The installers are made by the scripts in `packaging` (WiX 5 on Windo
 | `packaging` | Icons and the installers for Windows, macOS and Linux. |
 | `tools` | The generators for menus, dialogs, fonts, icons, templates, language lists and the web tables. |
 | `vendor/wxdragon-sys` | wxDragon's wxWidgets binding with what BrailleCraft needs added: printing, the Cursor Locator, the page break row and the line number column of the formatted view, and About box texts a screen reader reaches by Tab. The list is in `CHANGES-BrailleCraft.txt`. |
+| `vendor/pdf-extract` | The PDF text reader, with marked content, font descent and figures reported for PDF import. The list is in `CHANGES-BrailleCraft.txt`. |
 | `crates/bc-shell`, `crates/bc-louis`, `ui` | An earlier desktop shell (Tauri) and its liblouis binding; not part of the downloads. |
 | `.github/workflows/build.yml` | Builds, tests and packages everything on every push to main. |
 

@@ -1,0 +1,24 @@
+pdf-extract 0.12.1 from crates.io (MIT, https://github.com/jrmuizel/pdf-extract), vendored for BrailleCraft's PDF
+import. Changes, all in src/lib.rs, each marked with a "BrailleCraft:" comment:
+
+- OutputDev gains five methods with default bodies, so other output devices are unchanged:
+  - output_glyph: a character with its font's descent; by default it calls output_character. show_text now calls
+    output_glyph.
+  - begin_marked_content(tag, mcid) and end_marked_content: the BMC and BDC operators (with the MCID of a
+    properties dictionary given inline; a property list named from the resources is not looked up, as pdfminer
+    does not look it up) and the matching EMC. Tagged PDFs tie their structure tree to page content by these MCIDs.
+  - begin_figure and end_figure around the content of a form XObject.
+- Do runs only form XObjects; an image XObject was run as if its data were content operators.
+- real_f64 (public): lopdf keeps real numbers as f32; every real is now taken as the f64 of its shortest decimal
+  form, the number as the file wrote it, so positions match a reader that parses numbers in double precision
+  (pdfminer). Used in as_num, the f64 FromObj, the TJ adjustment and the font descent.
+- #![allow(warnings)] at the top: the upstream code's own warnings are not shown, as for a registry crate.
+- PdfFont gains descent(), read from the font descriptor's Descent (for a composite font, from its first descendant
+  font), in thousandths of the text size; 0 when there is none.
+
+Known, unchanged: a form XObject's content starts from an identity matrix (its /Matrix and the page's current matrix
+are not applied), and page /Rotate is not applied; BrailleCraft applies the page rotation itself.
+
+Cargo.toml: the published dependencies only (the test-only dependencies and the release profile are left out), lopdf
+pinned to the exact version 0.42.0.
+LICENSE: the standard MIT text with the crate's author; the upstream repository has no license file.

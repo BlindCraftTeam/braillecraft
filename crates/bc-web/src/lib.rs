@@ -183,6 +183,14 @@ pub fn editor_load(running: &str) -> String {
     })
 }
 
+/// A PDF imported as running text with codes (bc_core::pdf_import, the reference's PDF front end); `styles` are the
+/// style names of the document it goes into, one per line.
+#[wasm_bindgen]
+pub fn import_pdf(bytes: &[u8], styles: &str) -> Result<String, JsError> {
+    let styles: Vec<String> = styles.lines().map(str::to_string).collect();
+    bc_core::pdf_import::import(bytes, &bc_core::pdf_import::PdfOptions::default(), &styles).map_err(error)
+}
+
 /// The editor takes text with no codes (a text or braille file, a new document).
 #[wasm_bindgen]
 pub fn editor_load_plain(text: &str) {
