@@ -71,8 +71,8 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
 - **Braille pages.** Lines per page, cells per line, margins, centred headings and page numbering, shown in the
   status line as page, line and column. A page number shares the first or last line with text, which keeps three
   cells clear of it; print documents get page numbers too, and [pg] codes can renumber pages. Each document's styles (headings, lists, paragraphs) are laid out from its
-  own style list. Running heads and feet are kept out of the body text; showing them at the top and bottom of later
-  pages is still being built.
+  own style list. Running heads go on the first lines of the pages they are set for and running feet on the last
+  line, centred or at a side, beside the page numbers.
 - **Save As.** Formatted braille (BRF in a choice of braille encodings), PEF (Portable Embosser Format), formatted
   text in a choice of code pages, coded braille, refreshable braille (.lbf), LaTeX, and the older document format.
 - **Printing.** Print documents and braille (with interline print) through the system printer.

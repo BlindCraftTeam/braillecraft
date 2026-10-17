@@ -17,8 +17,8 @@
 //!   and print formatting files); [skN] [l] then N blank lines (0 when not given; a negative N to the line -N from
 //!   the page end); [svsblN] N blank lines after every line (1 when not given).
 //! - Words that do not fit go to the next line at the runover margin. Extra spaces are left out.
-//! - [pg] new page always (two in a row give a blank page); [top] new page once the page is started; [cpN:L] new page if
-//!   fewer than N + 1 lines remain, else a new line and L blank lines (braille 1 and 0, print 2 and 1, F0b).
+//! - [pg] new page always (two in a row give a blank page); [top] new page once the page is started; [cpN:L] new
+//!   page if fewer than N + 1 lines remain, else a new line and L blank lines (braille 1 and 0, print 2 and 1, F0b).
 //! - [hdsN:L] ... [hde] centred heading: on a new page if fewer than N + 1 lines remain (braille 1, print 2), else
 //!   after L blank lines (braille 0, print 1); each heading line is centred on the whole line, (cells - length) / 2,
 //!   its words wrapping inside the right margin.
@@ -27,6 +27,8 @@
 //! - Braille page numbers: in the corner the document's page numbering names for even and odd pages, on the first
 //!   or last line beside the text, which keeps three cells clear of them; [pgN~X] numbers the next page.
 //! - A word that does not fit breaks after its last hyphen that does; one longer than a line starts on the line.
+//! - [tls] ... [tle] a running head on the first lines of later pages, [rfs] ... [rfe] a running foot on the last
+//!   line (spec 19 7.1, 7.2).
 //! Codes this formatter does not lay out take no room.
 
 use crate::doctext::Shown;
@@ -240,6 +242,80 @@ fn page_number(n: usize, prefix: Option<char>, braille: bool) -> String {
     s
 }
 
+/// The side room a running head or foot keeps ([svrhsM:N:J], [svrfsM:N:J]): M cells at the left, N at the right, and
+/// where the line goes: 'l' after M, 'r' ending N before the end, else centred on the whole line.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Side {
+    left: usize,
+    right: usize,
+    align: char,
+}
+
+impl Default for Side {
+    fn default() -> Side {
+        Side { left: 8, right: 8, align: 'c' }
+    }
+}
+
+impl Side {
+    /// From a code's parameters "M:N:J" on lines of `cells` cells: M 8 and N = M when not given; centred, only the
+    /// total counts.
+    fn parse(params: &str, cells: usize) -> Side {
+        let parts: Vec<&str> = params.split(':').collect();
+        let number = |k: usize| parts.get(k).and_then(|p| p.trim().parse::<usize>().ok());
+        let m = number(0).unwrap_or(8);
+        let n = number(1).unwrap_or(m);
+        let align = parts.get(2).and_then(|p| p.trim().chars().next()).map(|c| c.to_ascii_lowercase()).unwrap_or('c');
+        let most = cells.saturating_sub(1);
+        match align {
+            'l' | 'r' => {
+                let left = m.min(cells / 2);
+                Side { left, right: n.min(cells.saturating_sub(left + 1)), align }
+            }
+            _ => {
+                let left = ((m + n) / 2).min(most);
+                Side { left, right: ((left + 1 + n) / 2).min(most), align: 'c' }
+            }
+        }
+    }
+
+    /// Where a line of `len` cells starts.
+    fn start(self, len: usize, cells: usize) -> usize {
+        match self.align {
+            'l' => self.left,
+            'r' => cells.saturating_sub(self.right + len),
+            _ => cells.saturating_sub(len) / 2,
+        }
+    }
+
+    /// The width a captured head or foot line wraps at.
+    fn width(self, cells: usize) -> usize {
+        cells.saturating_sub((self.left + self.right).min(cells.saturating_sub(1))).max(1)
+    }
+}
+
+/// A head or foot line of `text` placed on a line of `cells` cells by `side`.
+fn side_line(text: &str, side: Side, cells: usize) -> Line {
+    let pad = side.start(text.chars().count(), cells);
+    let text = format!("{}{text}", " ".repeat(pad));
+    Line { sources: vec![None; text.chars().count()], text, marks: Vec::new() }
+}
+
+/// Words wrapped into lines of at most `width` cells.
+fn wrap_words(words: &[String], width: usize) -> Vec<String> {
+    let mut lines: Vec<String> = Vec::new();
+    for w in words {
+        match lines.last_mut() {
+            Some(l) if l.chars().count() + 1 + w.chars().count() <= width => {
+                l.push(' ');
+                l.push_str(w);
+            }
+            _ => lines.push(w.clone()),
+        }
+    }
+    lines
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Formatter {
     layout: Layout,
@@ -271,11 +347,22 @@ struct Formatter {
     heading: Option<(Vec<(String, Vec<Option<usize>>)>, i64, i64)>,
     /// The last thing done was a page break by [pg] (a second one gives a blank page).
     after_page_code: bool,
-    /// Between [tls] and [tle] (or [rfs] and [rfe]): the words of a running head (or foot), which are not body text
-    /// (spec 19, page numbers and running heads). INTERIM: where the reference places it on later pages is not traced
-    /// (spec 19 section 4 UNKNOWN), so it is kept and not shown.
-    running: Option<Vec<String>>,
-    pub running_head: Option<String>,
+    /// Between [tls] and [tle] (a head, true) or [rfs] and [rfe] (a foot): the words captured, which are not body text.
+    running: Option<(bool, Vec<String>)>,
+    /// The running head's lines (at most two) and the running foot (one line), the pages they go on ([svrhp],
+    /// [svrfp]: 1 odd, 2 even, 3 both, 0 none) and the side room they keep ([svrhs], [svrfs]).
+    head: Vec<String>,
+    foot: Option<String>,
+    head_pages: i64,
+    foot_pages: i64,
+    head_side: Side,
+    foot_side: Side,
+    /// The page being filled is an odd page (the page parity flips at every page).
+    odd: bool,
+    /// The page has been opened (its first content came), the head lines laid on it, and the foot it carries.
+    opened: bool,
+    head_rows: usize,
+    page_foot: Option<String>,
     /// Marks met while a word was being collected, each with the index in the word of the cell after it: they are
     /// placed with the word (Formatter::word).
     word_marks: Vec<(usize, usize)>,
@@ -309,7 +396,16 @@ impl Formatter {
             heading: None,
             after_page_code: false,
             running: None,
-            running_head: None,
+            head: Vec::new(),
+            foot: None,
+            head_pages: 3,
+            foot_pages: 3,
+            head_side: Side::default(),
+            foot_side: Side::default(),
+            odd: true,
+            opened: false,
+            head_rows: 0,
+            page_foot: None,
             word_marks: Vec::new(),
             touching: false,
         }
@@ -351,16 +447,44 @@ impl Formatter {
         self.layout.cells.saturating_sub(self.right.max(self.rooms().1)).max(1)
     }
 
-    /// The corner the number of the page being filled goes in (none before the first page shown). INFERENCE: odd
-    /// and even are those of the page counter (the reference's parity flag is not traced to its source).
+    /// The corner the number of the page being filled goes in (none before the first page shown), by the page
+    /// parity.
     fn corner(&self) -> Corner {
         if self.counter < self.first_number_shown {
             return Corner::None;
         }
-        if self.counter % 2 == 0 {
-            self.numbers_even
-        } else {
+        if self.odd {
             self.numbers_odd
+        } else {
+            self.numbers_even
+        }
+    }
+
+    /// Whether a head or foot set for `pages` (1 odd, 2 even, 3 both) goes on the page being filled.
+    fn on_this_page(&self, pages: i64) -> bool {
+        pages == 3 || (pages == 1 && self.odd) || (pages == 2 && !self.odd)
+    }
+
+    /// Opens the page when its first content comes: the running head goes on its first lines, then the blank lines
+    /// after titles (braille 0, print 2) and the line spacing; the running foot is kept for its last line.
+    fn open_page(&mut self) {
+        if self.opened {
+            return;
+        }
+        self.opened = true;
+        if self.foot.is_some() && self.on_this_page(self.foot_pages) {
+            self.page_foot = self.foot.clone();
+        }
+        if !self.head.is_empty() && self.on_this_page(self.head_pages) {
+            let cells = self.layout.cells;
+            for h in self.head.clone() {
+                self.page.push(side_line(&h, self.head_side, cells));
+            }
+            self.head_rows = self.head.len();
+            let after = if self.layout.braille { 0 } else { 2 } + self.blank_between;
+            for _ in 0..after.min(self.capacity().saturating_sub(self.page.len() + 1)) {
+                self.page.push(Line::default());
+            }
         }
     }
 
@@ -372,7 +496,7 @@ impl Formatter {
     /// The lines a page holds. A page number takes no line of its own: it goes on the first or last line, beside the
     /// text (rooms).
     fn capacity(&self) -> usize {
-        self.layout.lines.max(1)
+        self.layout.lines.saturating_sub(usize::from(self.page_foot.is_some())).max(1)
     }
 
     /// The cells the page number keeps on the line being filled, at its start and at its end: the number's length
@@ -380,7 +504,7 @@ impl Formatter {
     fn rooms(&self) -> (usize, usize) {
         let c = self.corner();
         let at = self.page.len();
-        if (c.top() && at == 0) || (c.bottom() && at + 1 == self.capacity()) {
+        if (c.top() && at == 0) || (c.bottom() && at + 1 == self.layout.lines) {
             let room = self.number_text().chars().count() + 3;
             if c.right() {
                 (0, room)
@@ -431,6 +555,7 @@ impl Formatter {
         if self.page.len() >= self.capacity() {
             self.finish_page();
         }
+        self.open_page();
         // Blank lines are kept at the top of a page too: skips that do not fit on a page go on at the top of the next.
         self.page.push(line);
         if self.page.len() >= self.capacity() {
@@ -442,7 +567,7 @@ impl Formatter {
         let corner = self.corner();
         let number = self.number_text();
         let mut lines = std::mem::take(&mut self.page);
-        let room = self.capacity();
+        let room = self.layout.lines.max(1);
         lines.resize(room, Line::default());
         // The number goes on the first line (at the top) or the last (at the bottom), at its start or its end; the
         // text on that line was kept clear of it.
@@ -461,6 +586,27 @@ impl Formatter {
             }
             line.text = text.into_iter().collect();
         }
+        // The running foot on the last line, sharing it with a page number at the bottom.
+        if let Some(foot) = self.page_foot.take() {
+            let placed = side_line(&foot, self.foot_side, self.layout.cells);
+            let line = &mut lines[room - 1];
+            let mut text: Vec<char> = line.text.chars().collect();
+            let width = placed.text.chars().count();
+            if text.len() < width {
+                text.resize(width, ' ');
+                line.sources.resize(width, None);
+            }
+            for (k, c) in placed.text.chars().enumerate() {
+                if c != ' ' {
+                    text[k] = c;
+                    line.sources[k] = None;
+                }
+            }
+            line.text = text.into_iter().collect();
+        }
+        self.opened = false;
+        self.head_rows = 0;
+        self.odd = !self.odd;
         let start = self.page_start.take().unwrap_or(self.last_start);
         self.last_start = start;
         self.pages.push(Page { lines, start });
@@ -488,7 +634,7 @@ impl Formatter {
 
     /// Places one word (its cells and their sources), wrapping it to the runover margin when it does not fit.
     fn word(&mut self, cells: &[(char, Option<usize>)]) {
-        if let Some(r) = &mut self.running {
+        if let Some((_, r)) = &mut self.running {
             r.push(cells.iter().map(|c| c.0).collect());
             self.word_marks.clear();
             return;
@@ -499,6 +645,7 @@ impl Formatter {
             self.word_marks.clear();
             return;
         }
+        self.open_page();
         if self.flush_right {
             self.flush_right = false;
             let len = cells.len();
@@ -655,7 +802,8 @@ impl Formatter {
                     self.next_counter = Some(n as usize);
                 }
                 if self.after_page_code && !self.page_has_text() {
-                    // Two page codes in a row: a blank page.
+                    // Two page codes in a row: a blank page (with its head and number).
+                    self.open_page();
                     self.finish_page();
                 } else {
                     self.new_page();
@@ -689,28 +837,75 @@ impl Formatter {
                 }
             }
             // [scL] skip L lines (1 when not given), only after a line that is not blank (spec 19, Lines).
-            // [scL:M:N:P]: L lines (1 when not given) after a line with text; P lines (0 when not given) after a blank
-            // line or at the top of a page. (M after a print page change line and N after a running head wait for
-            // those to be laid out.)
+            // [scL:M:N:P]: L lines (1 when not given) after a line with text; N (L when not given) after a running
+            // head or at the top of a page that carries one; P (0 when not given) after a blank line or at the top of
+            // a page. (M after a print page change line waits for those to be laid out.)
             "sc" => {
                 if self.line_has_text() {
                     self.end_line(self.left);
                 }
+                let l = first.unwrap_or(1);
+                let after_head = n.get(2).copied().unwrap_or(l);
+                let after_blank = n.get(3).copied().unwrap_or(0);
                 let after_text = self.page.last().is_some_and(|l| l.sources.iter().any(Option::is_some));
-                let count = if after_text { first.unwrap_or(1) } else { n.get(3).copied().unwrap_or(0) };
+                let count = if !self.opened {
+                    // The top of a page: N when it will carry a head, else P.
+                    if !self.head.is_empty() && self.on_this_page(self.head_pages) { after_head } else { after_blank }
+                } else if self.head_rows > 0 && self.page.len() == self.head_rows {
+                    after_head
+                } else if after_text {
+                    l
+                } else {
+                    after_blank
+                };
                 for _ in 0..count.clamp(0, 3 * self.layout.lines as i64) {
                     self.push_line(Line::default());
                 }
             }
-            "tls" | "rfs" => self.running = Some(Vec::new()),
+            // [tls] ... [tle] the running head, [rfs] ... [rfe] the running foot: the line ends, the old one is
+            // cleared and the words are captured (spec 19 7.1, 7.2).
+            "tls" | "rfs" => {
+                if self.line_has_text() {
+                    self.end_line(self.left);
+                }
+                if name == "tls" {
+                    self.head.clear();
+                } else {
+                    self.foot = None;
+                }
+                self.running = Some((name == "tls", Vec::new()));
+            }
             "tle" | "rfe" => {
-                if let Some(words) = self.running.take() {
-                    if name == "tle" {
-                        self.running_head = Some(words.join(" "));
+                if let Some((is_head, words)) = self.running.take() {
+                    let cells = self.layout.cells;
+                    let lines = self.layout.lines;
+                    if is_head {
+                        // At most two head lines, and head and foot lines fewer than the page's.
+                        let width = self.head_side.width(cells);
+                        let feet = usize::from(self.foot.is_some());
+                        self.head = wrap_words(&words, width).into_iter().take(2).take(lines.saturating_sub(feet + 1)).collect();
+                    } else {
+                        let width = self.foot_side.width(cells);
+                        self.foot = wrap_words(&words, width).into_iter().next().filter(|_| self.head.len() + 1 < lines);
+                        // On this page too, when its text has not come to the foot's line.
+                        if self.opened && self.on_this_page(self.foot_pages) && self.page.len() + 2 < lines {
+                            self.page_foot = self.foot.clone();
+                        }
                     }
                 }
             }
-            "tld" => self.running_head = None,
+            "tld" => self.head.clear(),
+            // [rfd] no foot from here, on this page too when its text has not come to the foot's line.
+            "rfd" => {
+                self.foot = None;
+                if self.page.len() + 2 < self.layout.lines {
+                    self.page_foot = None;
+                }
+            }
+            "svrhp" => self.head_pages = first.unwrap_or(3).clamp(0, 3),
+            "svrfp" => self.foot_pages = first.unwrap_or(3).clamp(0, 3),
+            "svrhs" => self.head_side = Side::parse(&code[5..], self.layout.cells),
+            "svrfs" => self.foot_side = Side::parse(&code[5..], self.layout.cells),
             "hds" => {
                 let (need, skip) = if self.layout.braille { (1, 0) } else { (2, 1) };
                 let need = first.unwrap_or(need);
@@ -730,6 +925,7 @@ impl Formatter {
     }
 
     fn heading_lines(&mut self, words: &[(String, Vec<Option<usize>>)], need: i64, skip: i64) {
+        self.open_page();
         // On a page number's line a centred line keeps twice the number's room, so it stays centred on the line.
         let (l, r) = self.rooms();
         let width = self.layout.cells.saturating_sub(self.right.max(2 * l.max(r))).max(1);
@@ -908,7 +1104,7 @@ fn is_layout(code: &str) -> bool {
         split_code(code).0,
         "<" | "l" | "p" | "sk" | "ind" | "inm" | "ptys" | "ptye" | "rm" | "svsbl" | "pg" | "top" | "cp" | "fr" | "hds" | "hde"
             | "svpnp" | "svpfd"
-            | "tls" | "tle" | "tld" | "rfs" | "rfe" | "kps" | "kpe" | "sc"
+            | "tls" | "tle" | "tld" | "rfs" | "rfe" | "rfd" | "svrhp" | "svrfp" | "svrhs" | "svrfs" | "kps" | "kpe" | "sc"
     )
 }
 
@@ -1529,9 +1725,26 @@ mod tests {
     }
 
     #[test]
-    fn running_head_text_is_not_body_text() {
-        let pages = format(&m("ab [tls]Head Line[tle] cd ef[rfs]Foot[rfe]"), &Layout::braille(20, 3), None);
-        assert_eq!(texts(&pages[0])[0], "ab cd ef");
-        assert!(texts(&pages[0]).iter().all(|l| !l.contains("Head") && !l.contains("Foot")));
+    fn running_heads_and_feet_go_on_the_pages() {
+        // A head defined before the page's first text is on that page, centred; the foot reserves the last line.
+        // The head wraps inside its side room (8 cells each side when not set).
+        let pages = format(&m("[tls]Head Line[tle]ab cd[pg]ef[rfs]Foot[rfe]"), &Layout::braille(40, 5), None);
+        assert_eq!(texts(&pages[0]), ["               Head Line", "ab cd", "", "", ""]);
+        assert_eq!(texts(&pages[1]), ["               Head Line", "ef", "", "", "                  Foot"]);
+        let pages = format(&m("[tls]Head Line[tle]ab"), &Layout::braille(20, 5), None);
+        assert_eq!(texts(&pages[0])[..3], ["        Head", "        Line", "ab"]);
+        // Head text is not body text; a head after the page has text starts on the next page.
+        let pages = format(&m("ab [tls]Head[tle]cd\ne\nf"), &Layout::braille(20, 3), None);
+        assert_eq!(texts(&pages[0]), ["ab", "cd", "e"]);
+        assert_eq!(texts(&pages[1])[..2], ["        Head", "f"]);
+        // [svrhp1] heads on odd pages only; a print page has two blank lines after its head.
+        let pages = format(&m("[svrhp1][tls]H[tle]a[pg]b[pg]c"), &Layout::print(10, 5), None);
+        assert_eq!(texts(&pages[0])[..4], ["    H", "", "", "a"]);
+        assert_eq!(texts(&pages[1])[0], "b");
+        assert_eq!(texts(&pages[2])[3], "c");
+        // [svrhs0:0:l] puts the head at the left.
+        let pages = format(&m("[svrhs0:0:l][tls]H[tle]a"), &Layout::braille(10, 3), None);
+        assert_eq!(texts(&pages[0])[0], "H");
     }
+
 }
