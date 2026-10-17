@@ -1,0 +1,32 @@
+Font: ls78
+Font: ls78 Normal
+Font: ls78-Regular-perm
+| Font to display the Fraser Alphabet for Lisu language
+*00: ls78
+U+0041: [q~*] | A 
+U+0042: [q~[] | B 
+U+0043: [q~%] | C 
+U+0044: [q~>] | D 
+U+0045: [q~:] | E 
+U+0046: [q~)] | F 
+U+0047: [q~q] | G 
+U+0048: [q~3] | H
+U+0049: [q~#] | I
+U+004a: f | J 
+U+004b: [q~{U+005D}] | K 
+U+004c: [q~<] | L 
+U+004d: m | M
+U+004e: n | N
+U+004f: x | O
+U+0050: [q~?] | P 
+U+0051: q | Q
+U+0052: [q~!] | R 
+U+0053: s | S
+U+0054: [q~\] | T 
+U+0055: [q~+] | U 
+U+0056: [q~$] | V 
+U+0057: w | W
+U+0058: x | X
+U+0059: [q~4] | Y
+U+005a: z | Z
+U+0066: [q~(] | f 

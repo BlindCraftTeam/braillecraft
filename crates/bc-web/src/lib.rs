@@ -93,12 +93,13 @@ thread_local! {
     static IMPORT_FILES: std::cell::RefCell<std::collections::HashMap<String, Vec<u8>>> = Default::default();
 }
 
-/// The files the import chains read, for the page to fetch and hand in with `import_add_file`: "scan/<name>" and
-/// "rule-scripts/<name>" under tables/.
+/// The files the import chains read, for the page to fetch and hand in with `import_add_file`: "scan/<name>",
+/// "rule-scripts/<name>" and "unimap/<name>" under tables/.
 #[wasm_bindgen]
 pub fn import_file_names() -> Vec<String> {
     let scan = bc_core::import_chain::SCAN_TABLES.iter().map(|n| format!("scan/{n}"));
-    scan.chain(bc_core::import_chain::RULE_SCRIPTS.iter().map(|n| format!("rule-scripts/{n}"))).collect()
+    let maps = bc_core::import_chain::UNIMAP_TABLES.iter().map(|n| format!("unimap/{n}"));
+    scan.chain(bc_core::import_chain::RULE_SCRIPTS.iter().map(|n| format!("rule-scripts/{n}"))).chain(maps).collect()
 }
 
 /// A file the import chains read (a name from `import_file_names`, without its folder) and its bytes.
@@ -117,6 +118,9 @@ impl bc_core::import_chain::Files for Fetched {
     fn rule_script(&self, name: &str) -> Result<bc_core::rule_script::RuleScript, String> {
         let bytes = self.scan_table(name)?;
         bc_core::rule_script::RuleScript::from_bytes(&bytes, None).map_err(|e| e.to_string())
+    }
+    fn unimap_tables(&self) -> Result<Vec<(String, Vec<u8>)>, String> {
+        bc_core::import_chain::UNIMAP_TABLES.iter().map(|n| self.scan_table(n).map(|b| (n.to_string(), b))).collect()
     }
 }
 
@@ -196,6 +200,7 @@ pub fn import_file(bytes: &[u8], kind: &str, code_page: &str, unknown: u8, braid
     let kind = FileKind::filters().iter().find(|f| format!("{:?}", f.0) == kind).map(|f| f.0);
     let recipe = match kind {
         Some(FileKind::CodedText) => Recipe::CodedText(code_page.to_string(), unknown),
+        Some(FileKind::FormattedText) => Recipe::FormattedText(unknown),
         Some(FileKind::CodedBraille) => Recipe::CodedBraille,
         Some(FileKind::Orbit) => Recipe::Orbit,
         Some(FileKind::FormattedBraille) => {

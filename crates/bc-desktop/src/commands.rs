@@ -982,14 +982,9 @@ fn read_import(bytes: &[u8], choice: &ImportChoice) -> Option<Shown> {
             message("This document cannot be imported into BrailleCraft.  It appears to be in Rich Text Format (RTF).  If Microsoft® Word is installed, you can use it to convert your document to a native Word format and import that into BrailleCraft.");
             None
         }
-        // Formatted text is read as UTF-8 whatever the code page box says, as the reference's formatted text importer
-        // reads it (its layout analysis, which makes paragraphs and headings of the lines, is queue line AUD-I-3).
-        FileKind::FormattedText => {
-            let text = bc_core::codepages::decode("UTF-8", bytes);
-            Some(Shown::plain(&text.replace("\r\n", "\n").replace('\r', "\n")))
-        }
-        // Coded text, coded braille, formatted braille and Orbit braille go through the import chain of their kind.
-        FileKind::CodedText | FileKind::CodedBraille | FileKind::FormattedBraille | FileKind::Orbit => {
+        // Coded and formatted text, coded and formatted braille and Orbit braille go through the import chain of their
+        // kind. (Formatted text is read as UTF-8 whatever the code page box says, as the original program reads it.)
+        FileKind::CodedText | FileKind::FormattedText | FileKind::CodedBraille | FileKind::FormattedBraille | FileKind::Orbit => {
             let files = match translation::import_files() {
                 Ok(f) => f,
                 Err(e) => {
@@ -1001,6 +996,7 @@ fn read_import(bytes: &[u8], choice: &ImportChoice) -> Option<Shown> {
                 FileKind::CodedText => {
                     (bytes.to_vec(), Recipe::CodedText(choice.code_page.clone(), settings_store::load_unknown_characters()))
                 }
+                FileKind::FormattedText => (bytes.to_vec(), Recipe::FormattedText(settings_store::load_unknown_characters())),
                 FileKind::CodedBraille => (bytes.to_vec(), Recipe::CodedBraille),
                 FileKind::Orbit => (bytes.to_vec(), Recipe::Orbit),
                 _ => (north_american(bytes, encodings::find(&choice.encoding)), Recipe::FormattedBraille(settings_store::load_braide())),

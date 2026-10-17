@@ -9,6 +9,10 @@
 //!   normalised three times.
 //! - Coded text: the file decoded in the chosen code page and written as internal text, then the same steps as coded
 //!   braille with the print scan table.
+//! - Formatted text: the page layout read into paragraphs, headings, tables and other styles (`pimbri`), the
+//!   characters through the character map tables (`unimap`), the text written as internal text, then the same steps
+//!   as coded text. (The original's Chinese character step comes between the character map and the internal text;
+//!   it changes nothing until Chinese characters are marked for it, and no step here marks them.)
 //! - Orbit Reader braille (.obf): line ends to line codes and capitals to small letters, the import scan with the
 //!   braille scan table, then the Nemeth-in-UEB scripts as for formatted braille.
 //!
@@ -23,6 +27,8 @@ use crate::rule_script::RuleScript;
 pub trait Files {
     fn scan_table(&self, name: &str) -> Result<Vec<u8>, String>;
     fn rule_script(&self, name: &str) -> Result<RuleScript, String>;
+    /// The character map tables (tables/unimap, the names in `UNIMAP_TABLES`) with their bytes.
+    fn unimap_tables(&self) -> Result<Vec<(String, Vec<u8>)>, String>;
 }
 
 /// Which recipe a file is imported with.
@@ -34,6 +40,8 @@ pub enum Recipe {
     /// Coded text in the named code page (as `codepages::decode` names them), with what a character that has no
     /// internal code becomes (the Word importer's Unknown Characters setting: 0 "*", 1 nothing, 2 "{U+XXXX}").
     CodedText(String, u8),
+    /// Formatted text, with the Unknown Characters setting as for coded text.
+    FormattedText(u8),
     Orbit,
 }
 
@@ -52,6 +60,8 @@ const PRINT_SCAN: &str = "import-print.sct";
 /// Every file a chain may read: the scan tables (tables/scan) and the rule scripts (tables/rule-scripts), for a
 /// caller that has to fetch them first.
 pub const SCAN_TABLES: [&str; 2] = [BRAILLE_SCAN, PRINT_SCAN];
+pub const UNIMAP_TABLES: [&str; 8] =
+    ["unimap.txt", "abd.txt", "lao.txt", "lisu.txt", "math12.txt", "suttony.txt", "vietnamese.txt", "welsh.txt"];
 pub const RULE_SCRIPTS: [&str; 7] = [
     "page-end-blanks.rules",
     "ninit-codes.rules",
@@ -92,6 +102,24 @@ pub fn run(bytes: &[u8], recipe: &Recipe, files: &dyn Files) -> Imported {
         Recipe::CodedBraille => scan(BRAILLE_SCAN, &mut text, &mut out.errors),
         Recipe::CodedText(page, unknown) => {
             text = coded_text_bytes(&text, page, *unknown);
+            scan(PRINT_SCAN, &mut text, &mut out.errors);
+        }
+        Recipe::FormattedText(unknown) => {
+            // The importer's substitution set is the code page family the file's first 512 bytes look like (-1, its
+            // default, when they do not look like text).
+            let set = crate::filekind::text_stats(&text[..text.len().min(512)]).map_or(-1, |s| s.code_page);
+            match crate::pimbri::Factors::shipped() {
+                Ok(f) => text = crate::pimbri::pimbri(&text, set, &f),
+                Err(e) => out.errors.push(format!("text factors: {e}")),
+            }
+            match files.unimap_tables() {
+                Ok(tables) => {
+                    let refs: Vec<(&str, &[u8])> = tables.iter().map(|(n, b)| (n.as_str(), b.as_slice())).collect();
+                    text = crate::unimap::UniMap::read(&refs).map(&text, -1, *unknown);
+                }
+                Err(e) => out.errors.push(format!("unimap: {e}")),
+            }
+            text = coded_text_bytes(&text, "UTF-8", *unknown);
             scan(PRINT_SCAN, &mut text, &mut out.errors);
         }
         Recipe::Orbit => {
@@ -217,6 +245,12 @@ mod tests {
         fn rule_script(&self, name: &str) -> Result<RuleScript, String> {
             RuleScript::open(&tables().join("rule-scripts").join(name)).map_err(|e| e.to_string())
         }
+        fn unimap_tables(&self) -> Result<Vec<(String, Vec<u8>)>, String> {
+            UNIMAP_TABLES
+                .iter()
+                .map(|n| std::fs::read(tables().join("unimap").join(n)).map(|b| (n.to_string(), b)).map_err(|e| e.to_string()))
+                .collect()
+        }
     }
 
     #[test]
@@ -247,6 +281,16 @@ mod tests {
         assert_eq!(coded_text_bytes(bytes, "UTF-8", 0), b"a*b".to_vec());
         assert_eq!(coded_text_bytes(bytes, "UTF-8", 1), b"ab".to_vec());
         assert_eq!(coded_text_bytes(bytes, "UTF-8", 2), b"a{U+0378}b".to_vec());
+    }
+
+    #[test]
+    fn formatted_text_gets_styles() {
+        let page = "INTRODUCTION\r\n\r\nThe rain had stopped by the time we reached the old stone bridge at last.\r\n";
+        let got = run(page.as_bytes(), &Recipe::FormattedText(0), &Shipped);
+        assert!(got.errors.is_empty(), "{:?}", got.errors);
+        let text = String::from_utf8_lossy(&got.text).into_owned();
+        assert!(text.contains("\x1cind5\x1fINTRODUCTION"), "{text:?}");
+        assert!(text.contains("\x1ces~para.\x1fThe rain had stopped"), "{text:?}");
     }
 
     #[test]

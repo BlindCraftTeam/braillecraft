@@ -66,8 +66,10 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   file's kind from its name and content (formatted text, formatted braille, coded text, coded braille, PDF, PEF, a
   document file) and, for any file that is not a document file, asks in the import dialog for its template, its
   kind, and the code page or braille encoding to read it in; Insert File does the same and refuses braille in a print
-  document and print in a braille one. A document keeps the translation tables its file names. Formatted braille, coded braille, Orbit Reader braille (.obf) and coded text
-  are imported the way the original program imports them (an Orbit file's line ends become line codes): formatted braille is read page by page, with the page numbers in its corners taken
+  document and print in a braille one. A document keeps the translation tables its file names. Formatted braille, coded braille, Orbit Reader braille (.obf), coded text and
+  formatted text are imported the way the original program imports them (formatted text is read for its page
+  layout: centred and left headings, paragraphs, poems and outlines, tables, letters' salutations and closes, running
+  heads and page numbers become styles and codes, and its characters go through the character map tables) (an Orbit file's line ends become line codes): formatted braille is read page by page, with the page numbers in its corners taken
   as page numbering, running heads and feet, print page changes, indented, centred and as-is lines turned back into
   codes; then format words ($p, |IND5 and the like), line ends, hyphens at line ends and spaces are read as the import
   scan tables say, and the import rule scripts finish the codes, tables and Nemeth passages. The web build opens files

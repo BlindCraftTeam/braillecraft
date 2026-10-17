@@ -20,6 +20,7 @@ pub mod format;
 pub mod fview;
 pub mod pef;
 pub mod pdf_import;
+pub mod pimbri;
 pub mod ink;
 pub mod import_chain;
 pub mod internal;
@@ -31,6 +32,7 @@ pub mod rule_script;
 pub mod status;
 pub mod table_list;
 pub mod templates;
+pub mod unimap;
 
 /// The two kinds of document. A print document holds ink text; a braille document holds braille cells.
 /// The kind decides which translation direction applies and how some codes are written.

@@ -1,0 +1,36 @@
+| book.pot 1;8 - pimbri output style table, books
+| highest used index: 13
+| intermediate unused indices: 0
+| 1;1 1989-8-31/1989-9-8  JES
+| 1;4 1990-7-10 JES: add ability to skip line bfr & after centered head, and
+|     option to omit/use running head
+| 1;5 1991-1-23 JES: add ability to retain accents for French, &c.
+| 1;6 1991-5-8 JES: retain accents for English also
+| 1;7 1991-7-30 JES: add factor 12
+| 1;8 1992-8-28 JES: add factor 13 (to allow partitioned table layout)
+-pimbri o 1
+| For table layout:
+1 2 | Min. space between table columns
+2 2 | Max. space between table columns
+13 1 | 1 = allow partitioned layout
+| For paragraphing:
+3 0 | 0=just skip line before paragraphs, 1=explicit $p
+| For putting out "left" (topical) headers:
+4 1 | 0=no skipped line before topical header, 1=skip line
+5 5 | alignment col. for header
+| For putting out print page numbers:
+6 1 | 0=no print page no. issued, 1=issue "$leaf-" command
+| For putting out centered headers:
+7 1 | 0=no skipped line before centered header, 1=skip line
+8 1 | 0=no skipped line after centered header, 1=skip line
+| For putting out running heads:
+9 1 | 0=omit running heads, 1=issue them
+| For deciding which control ($...) set to produce:
+10 0 | 0=English, 1=French, 2=Spanish
+| For inhibiting prefix-marking of accented letters:
+11 1 | 0=no (explicit % for English dot 4), 1=yes (e.g. for French)
+| For multi-level blocks (outline structures):
+12 4 | amt of runover from left (0 eqv to 4; use -1 for 0)
+| terminators:
+-1 0 | required terminator for integer factors
+*** | required table terminator

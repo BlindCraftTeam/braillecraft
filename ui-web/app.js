@@ -1786,7 +1786,7 @@ async function emboss() {
 // ------------------------------------------------------------------ importing files
 
 // The kinds read through an import chain (kinds as the core names them).
-const CHAIN_KINDS = ["CodedText", "CodedBraille", "FormattedBraille", "Orbit"];
+const CHAIN_KINDS = ["CodedText", "FormattedText", "CodedBraille", "FormattedBraille", "Orbit"];
 
 // What the desktop program says for a kind it cannot import.
 function importRefusal({ kind, filter }) {
@@ -1977,9 +1977,8 @@ async function northAmerican(bytes, encodingId) {
 
 // A file as the import dialog's choice says to read it: { braille, running } (text with codes) or { braille, plain },
 // with the template chosen; null after saying why it cannot be read. A PDF becomes print with codes, its styles named
-// as the template names them; coded text, coded braille, formatted braille and Orbit braille go through the import
-// chain of their kind; formatted text is read as UTF-8 whatever the code page box says, as the original program's
-// formatted text importer reads it; the kinds BrailleCraft cannot import say so.
+// as the template names them; coded and formatted text, coded and formatted braille and Orbit braille go through the
+// import chain of their kind; the kinds BrailleCraft cannot import say so.
 async function readImport(bytes, choice) {
   const template = choice.template;
   if (choice.kind === "Pdf") {
@@ -2003,11 +2002,8 @@ async function readImport(bytes, choice) {
     if (imported.errors) await message(imported.errors);
     return { braille: choice.braille, running: imported.running, template };
   }
-  if (choice.kind !== "FormattedText") {
-    await message(importRefusal(choice));
-    return null;
-  }
-  return { braille: false, plain: new TextDecoder("utf-8").decode(bytes).replace(/\r\n?/g, "\n"), template };
+  await message(importRefusal(choice));
+  return null;
 }
 
 // A file through the import chain of its kind, the chain's tables fetched once.

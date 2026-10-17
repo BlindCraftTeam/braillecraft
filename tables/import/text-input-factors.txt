@@ -1,0 +1,85 @@
+| genl.pit 2;4 - pimbri input factor table, general
+| highest used index: 48
+| intermediate unused indices: 12 16
+| 1;1 1989-8-31/1989-9-30 JES
+| 1;4 1990-2-4/6 JES - add rqmts for tables (##30-35); rmv #16 (former
+|     max. % of line breaks that can be non-forced in a "block")
+| 2;1 1991-1-23/25 JES - allow for selection of initial-pim substitution
+|     set (e.g. for retention of accented letters for French, &c.), and
+|     for double &c. spacing; allow for min. indentation # and % for
+|     multi-level blocks; add min. page width; add text col. factors;
+|     allow inhibition of top/bot hdr/footer recognition:
+|     i.e. new factors: ##36-47
+| 2;2 1991-2-14 JES: add ability to disable computerese scan (#48)
+| 2;3 1991-5-7 JES disable computerese in this "general" table (for
+|     now, genlc should be used to enable);
+|     set to preserve accents, as amerc & britic now allow them
+| 2;4 1991-7-30 JES: increase % indented lines for multi-levels (outlines)
+|     from 25 to 41%; increase min. # table lines from 1 to 3
+-pimbri i 1
+| For determining whether input page has been hyphenated:
+10 1000 | min. % of lines ending in hyphens
+| For "centered-heading" blocks (PAHCTR):
+0 6 | min. margin to l. of centered-heading block (within column)
+1 4 | min. margin to r. of centered-heading block (within column)
+5 8500 | % caps required for "fully" capitalized treatment
+2 14 | tolerance for centering (amt. l. and r. margins can vary) if non-caps
+6 24 | centering tolerance if fully capitalized
+| For "left-level-1-heading" blocks (PAHLL1):
+3 0 | max. margin to l.
+4 15 | min. margin to r.
+9 8500 | % capitals required
+| For determining whether paragraph is continued to next page/column:
+7 6 | wasted-space tolerance if sentence-ending punctuation is present
+8 12 | wasted-space tolerance if sentence-ending punctuation not present
+| For recognizing "decimal" alignment in cols.:
+11 2 | min. no. of lines in col. for "decimal" alignment
+13 4500 | min. % of lines with actual decimal pt. (others must be spaces)
+| For recognizing letter salutation:
+17 3 | max. no. of preceding centered or blocked text-boxes
+18 7 | max. size of preceding boxes
+21 0 | max. indentation from left of column
+22 10 | min. indentation from right of column
+| For recognizing letter complementary close:
+19 5 | max. no. of following text boxes
+20 6 | max. size of following boxes
+23 10 | min. indentation from left or right of column
+| For recognizing "blocked" text:
+14 10 | min. indentation on l. or r.
+15 5 | max. indentation of possible 1-line paragraph
+24 20 | max. indentation on r. for treatment as "blocked-right"
+25 30 | min. indentation on l. for treatment as "blocked-right"
+39 2 | min. no. of indented lines, multi-level "outline" blocks
+40 4100 | min. % indented lines, multi-level "outline" blocks
+41 10 | min. depth block to treat by abv 2
+| For recognizing vertical breaks (as for tables & columns):
+32 3 | # lines <= which factor 33 is used, > which factor 34 is used
+33 3 | # spaces needed for split when fewer lines
+34 2 | # spaces needed for split when more lines
+| For recognizing tables:
+26 3 | min. no. of lines required in a table
+30 7000 | min. % of nonblank entries in leftmost col.
+31 0 | min. no. of cols. in excess of 2
+35 0 | % of 1st (of 2) col. non-enumerators at & below which non-table
+| For recognizing computerese:
+48 1 | 0 | disable consideration of computerese (0=no, 1=yes)
+27 50 | total box size (l x w) <= which first % limit is used
+28 1500 | min. % of 'computerese' chars. (limit 1, small boxes)
+29 315 | min. % of 'computerese' chars. (limit 2, large boxes)
+| For allowing retention of specific accented letters:
+36 1 | 0 | Substitution set (0=unaccented, 1=accented)
+| For allowing removal of extra lines due to double &c. spacing
+37 3 | Max. no. of regular blank lines between others to remove
+38 17 | Min. original page depth to perform removal
+| For calculating certain right-side indentations:
+42 65 | Minimum page width to use even if text lacking
+| For recognizing text columns in body of page:
+43 4 | Max. number of (apparent) horizontal blocks on columned page
+44 8 | Max. number of text columns on page
+45 2 | Max. width variation between widest & narrowest column
+| To allow inhibition of consideration of top or bottom as hdr/ftr:
+46 0 | 0=top can, 1=can't, be considered as header and/or page no.
+47 0 | 0=bot can, 1=can't, be considered as footer and/or page no.
+| terminators:
+-1 0 | required terminator for integer factors
+*** | required table terminator

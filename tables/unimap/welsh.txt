@@ -1,0 +1,21 @@
+﻿Font: Afallon
+Font: Cwrwgl
+Font: Heledd
+Font: Padarn
+Font: Teifryn
+*00: Afallon|Cwrwgl|Heledd|Padarn|Teifryn
+U+009F: {U+0178} |  -> Ÿ
+U+00A6: {U+1E80} | ¦ -> Ẁ
+U+00A8: {U+1E80} | ¨ -> Ẁ
+U+00AA: {U+1E82} | ª -> Ẃ
+U+00AC: {U+1EF2} | ¬ -> Ỳ
+U+00AF: {U+0178} | ¯ -> Ÿ
+U+00B8: {U+1E81} | ¸ -> ẁ
+U+00BA: {U+1E83} | º -> ẃ
+U+00BC: {U+1EF3} | ¼ -> ỳ
+U+00BD: {U+1E84} | ½ -> Ẅ
+U+00BE: {U+1E85} | ¾ -> ẅ
+U+00D0: {U+0174} | Ð -> Ŵ
+U+00DE: {U+0176} | Þ -> Ŷ
+U+00F0: {U+0175} | ð -> ŵ
+U+00FE: {U+0177} | þ -> ŷ

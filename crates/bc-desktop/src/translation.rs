@@ -84,6 +84,12 @@ impl bc_core::import_chain::Files for ImportFiles {
     fn rule_script(&self, name: &str) -> Result<bc_core::rule_script::RuleScript, String> {
         bc_core::rule_script::RuleScript::open(&self.0.join("rule-scripts").join(name)).map_err(|e| e.to_string())
     }
+    fn unimap_tables(&self) -> Result<Vec<(String, Vec<u8>)>, String> {
+        bc_core::import_chain::UNIMAP_TABLES
+            .iter()
+            .map(|n| std::fs::read(self.0.join("unimap").join(n)).map(|b| (n.to_string(), b)).map_err(|e| format!("{n}: {e}")))
+            .collect()
+    }
 }
 
 /// Reads the table index and the list of table sets by language from `folder`; translation reports an error until
