@@ -46,6 +46,17 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
     // Control id 0, as the reference program's editing area has: screen reader scripts read the last line of the
     // document window (the status line) directly when the focused window has id 0.
     let text_ctrl = TextCtrl::builder(&child).with_id(0).with_style(style).build();
+    // Line numbers beside the formatted lines of a braille document (spec 24 2d, spec 27 3b): a drawn column, shown
+    // when Global, View Preferences asks for them (App::update_gutter). The reference's column is 20 pixels; it is
+    // widened here to hold two digits in the braille font size.
+    let gutter_width = app::with(|a| (a.settings.fonts.braille_size * 4 / 3 * 6 / 5 + 4).max(20));
+    let gutter = unsafe {
+        wxdragon_sys::wxd_LineGutter_Create(
+            child.handle_ptr() as *mut wxdragon_sys::wxd_Window_t,
+            text_ctrl.handle_ptr() as *mut wxdragon_sys::wxd_Window_t,
+            gutter_width,
+        )
+    };
     text_ctrl.set_value(text);
     // A document opens at its start (GTK leaves the caret after the text).
     text_ctrl.set_insertion_point(0);
@@ -66,7 +77,15 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
     line.show(view.translated);
 
     let sizer = BoxSizer::builder(Orientation::Vertical).build();
-    sizer.add(&text_ctrl, 1, SizerFlag::Expand, 0);
+    let row = BoxSizer::builder(Orientation::Horizontal).build();
+    if !gutter.is_null() {
+        unsafe {
+            wxdragon_sys::wxd_Sizer_AddWindow(row.as_sizer_ptr(), gutter, 0, SizerFlag::Expand.bits() as i32, 0);
+            wxdragon_sys::wxd_Window_Show(gutter, false);
+        }
+    }
+    row.add(&text_ctrl, 1, SizerFlag::Expand, 0);
+    sizer.add_sizer(&row, 1, SizerFlag::Expand, 0);
     sizer.add(&line, 0, SizerFlag::Expand, 0);
     sizer.add(&status, 0, SizerFlag::Expand | SizerFlag::All, 2);
     child.set_sizer(sizer, true);
@@ -113,6 +132,7 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
         layout: crate::embosser::default_layout().0,
         file_sections: Vec::new(),
         formatted: None,
+        gutter,
     };
     app::with(|a| {
         child_set_title(&doc.frame, &doc.full_name());

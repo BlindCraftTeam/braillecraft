@@ -137,6 +137,7 @@ extern "C" {
 // Added for BrailleCraft: the Cursor Locator
 #include "core/wxd_cursor_locator.h"
 #include "core/wxd_space_after.h"
+#include "core/wxd_line_gutter.h"
 
 // Sound support
 #include "core/wxd_sound.h"

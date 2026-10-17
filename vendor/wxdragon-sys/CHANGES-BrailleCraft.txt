@@ -31,5 +31,10 @@ Also added, in cpp/include/core/wxd_space_after.h, cpp/src/space_after.cpp and c
   Windows.
   cpp/CMakeLists.txt adds the GTK 3 include directories (pkg-config gtk+-3.0) on Linux for it.
 
+Also added, in cpp/include/core/wxd_line_gutter.h and cpp/src/line_gutter.cpp (listed in cpp/CMakeLists.txt and
+included from cpp/include/wxdragon.h):
+- wxd_LineGutter_Create and wxd_LineGutter_SetMarks: a narrow drawn column beside a multi-line text control showing
+  labels (line numbers) at the height of given text positions, repainted when the control scrolls or is resized.
+
 The Rust bindings are generated from the header when the crate builds, so no Rust file changed.
 The workspace Cargo.toml uses this copy through [patch.crates-io].

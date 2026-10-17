@@ -58,8 +58,9 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   Language codes in the text switch tables in the middle of a document.
 - **Translated line.** Under the document, the braille (or the print) of the line you are on, updated as you write.
 - **View preferences.** A margin bell a chosen number of cells before the end of a braille line, which codes the
-  translated line shows, and the Cursor Locator: a rectangle that closes in on the caret when a document is opened
-  or translated, when the view changes, or when Shift is pressed alone.
+  translated line shows, line numbers beside each line of a braille document in the formatted view when
+  that setting is on, and the Cursor Locator: a rectangle that closes in on the caret when a document is opened or
+  translated, when the view changes, or when Shift is pressed alone.
 - **Braille pages.** Lines per page, cells per line, margins, centred headings and page numbering, shown in the
   status line as page, line and column. Each document's styles (headings, lists, paragraphs) are laid out from its
   own style list. Running heads and feet are kept out of the body text; showing them at the top and bottom of later
@@ -135,7 +136,7 @@ step does. The installers are made by the scripts in `packaging` (WiX 5 on Windo
 | `scripts/jaws` | The JAWS scripts. |
 | `packaging` | Icons and the installers for Windows, macOS and Linux. |
 | `tools` | The generators for menus, dialogs, fonts, icons, templates, language lists and the web tables. |
-| `vendor/wxdragon-sys` | wxDragon's wxWidgets binding with what BrailleCraft needs added: printing, the Cursor Locator, the page break row of the formatted view, and About box texts a screen reader reaches by Tab. The list is in `CHANGES-BrailleCraft.txt`. |
+| `vendor/wxdragon-sys` | wxDragon's wxWidgets binding with what BrailleCraft needs added: printing, the Cursor Locator, the page break row and the line number column of the formatted view, and About box texts a screen reader reaches by Tab. The list is in `CHANGES-BrailleCraft.txt`. |
 | `crates/bc-shell`, `crates/bc-louis`, `ui` | An earlier desktop shell (Tauri) and its liblouis binding; not part of the downloads. |
 | `.github/workflows/build.yml` | Builds, tests and packages everything on every push to main. |
 

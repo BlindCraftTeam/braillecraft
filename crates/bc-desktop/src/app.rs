@@ -128,6 +128,8 @@ pub struct Doc {
     pub file_sections: Vec<(usize, u16, Vec<u8>)>,
     /// The formatted view (re/spec/27-formatted-view.md), while the document shows it.
     pub formatted: Option<Formatted>,
+    /// The drawn column of line numbers beside the editing area (App::update_gutter); null when it could not be made.
+    pub gutter: *mut ffi::wxd_Window_t,
 }
 
 /// A document in the formatted view: the editing area shows its laid-out page lines, so the document's own text is
@@ -544,6 +546,7 @@ impl App {
         }
         d.line.show(d.view.translated);
         d.frame.layout();
+        self.update_gutter(i);
         self.refresh_menus();
         self.docs[i].last_line_key.clear();
         self.update_status();
@@ -854,6 +857,31 @@ impl App {
         }
         let d = &mut self.docs[i];
         d.select_doc(caret, caret);
+        if changed {
+            self.update_gutter(i);
+        }
+    }
+
+    /// Shows or hides document `i`'s line numbers: a braille document in the formatted view with Global, View
+    /// Preferences, line numbers on (spec 24 2d.2) shows the number of each page line beside it, separator rows and
+    /// the coded view none (spec 27 3b).
+    pub fn update_gutter(&mut self, i: usize) {
+        let d = &self.docs[i];
+        if d.gutter.is_null() {
+            return;
+        }
+        let shown = d.kind == DocKind::Braille && self.settings.view_prefs.line_numbers && d.formatted.as_ref().is_some_and(|f| !f.coded);
+        if shown {
+            if let Some(f) = d.formatted.as_ref() {
+                let positions: Vec<std::os::raw::c_long> = f.view.lines.iter().map(|l| l.2 as std::os::raw::c_long).collect();
+                let labels: Vec<std::ffi::CString> =
+                    f.view.lines.iter().map(|l| std::ffi::CString::new((l.1 + 1).to_string()).unwrap_or_default()).collect();
+                let pointers: Vec<*const std::os::raw::c_char> = labels.iter().map(|c| c.as_ptr()).collect();
+                unsafe { ffi::wxd_LineGutter_SetMarks(d.gutter, positions.as_ptr(), pointers.as_ptr(), positions.len() as i32) };
+            }
+        }
+        unsafe { ffi::wxd_Window_Show(d.gutter, shown) };
+        d.frame.layout();
     }
 
     /// Edits document `i` in the formatted view: document places `from` to `to` become `put`, a code the range
