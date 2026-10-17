@@ -1,0 +1,416 @@
+/* See https://daisy.github.io/ebraille/published/best-practices/styling/ */
+
+@namespace bc url("https://blindcraft.dev/braillecraft");
+
+p + p.left-aligned {
+   margin-top: 1rem;
+}
+
+p {
+   text-indent: 2ch;
+}
+
+p.h1-headingcentered {
+   text-align: center;
+   margin-left: 3ch;
+   margin-right: 3ch;
+   margin-top: 1rem;
+   margin-bottom: 1rem;
+}
+
+p.h2-headingcell5 {
+   margin-left: 4ch;
+   margin-right: 4ch;
+}
+
+p.h3-headingcell7 {
+   margin-left: 6ch;
+   margin-right:6ch;
+}
+
+p.centered {
+   text-align: center;
+   margin-left: 3ch;
+   margin-right: 3ch;
+}
+
+p.b-bodytext {
+   text-indent: 2ch;
+}
+
+body > ol {
+    margin-left: 0;
+}
+
+ol {
+   list-style-type: none;
+}
+
+/* Indents for 1-level list and like formats */
+ol > li {
+    text-indent: -2ch;
+    margin-left: 2ch;
+}
+
+/* Indents for 2-level list and like formats */
+ol[bc|maxdepth="2"] > li {
+    text-indent: -4ch;
+    margin-left: 4ch;
+}
+
+ol[bc|maxdepth="2"] li ol > li {
+    text-indent: -2ch;
+    margin-left: 4ch;
+}
+
+/* Indents for 3-level list and like formats */
+ol[bc|maxdepth="3"] > li {
+    text-indent: -6ch;
+    margin-left: 6ch;
+}
+
+ol[bc|maxdepth="3"] li ol > li {
+    text-indent: -4ch;
+    margin-left: 6ch;
+}
+
+ol[bc|maxdepth="3"] li ol li ol > li {
+    text-indent: -2ch;
+    margin-left: 6ch;
+}
+
+/* Indents for 4-level list and like formats */
+ol[bc|maxdepth="4"] > li {
+    text-indent: -8ch;
+    margin-left: 8ch;
+}
+
+ol[bc|maxdepth="4"] li ol > li {
+    text-indent: -6ch;
+    margin-left: 8ch;
+}
+
+ol[bc|maxdepth="4"] li ol li ol > li {
+    text-indent: -4ch;
+    margin-left: 8ch;
+}
+
+ol[bc|maxdepth="4"] li ol li ol li ol > li {
+    text-indent: -2ch;
+    margin-left: 8ch;
+}
+
+/* Indents for 5-level list and like formats */
+ol[bc|maxdepth="5"] > li {
+    text-indent: -10ch;
+    margin-left: 10ch;
+}
+
+ol[bc|maxdepth="5"] li ol > li {
+    text-indent: -8ch;
+    margin-left: 10ch;
+}
+
+ol[bc|maxdepth="5"] li ol li ol > li {
+    text-indent: -6ch;
+    margin-left: 10ch;
+}
+
+ol[bc|maxdepth="5"] li ol li ol li ol > li {
+    text-indent: -4ch;
+    margin-left: 10ch;
+}
+
+ol[bc|maxdepth="5"] li ol li ol li ol li ol > li {
+    text-indent: -2ch;
+    margin-left: 10ch;
+}
+
+/* Indents for 6-level list and like formats */
+ol[bc|maxdepth="6"] > li {
+    text-indent: -12ch;
+    margin-left: 12ch;
+}
+
+ol[bc|maxdepth="6"] li ol > li {
+    text-indent: -10ch;
+    margin-left: 12ch;
+}
+
+ol[bc|maxdepth="6"] li ol li ol > li {
+    text-indent: -8ch;
+    margin-left: 12ch;
+}
+
+ol[bc|maxdepth="6"] li ol li ol li ol > li {
+    text-indent: -6ch;
+    margin-left: 12ch;
+}
+
+ol[bc|maxdepth="6"] li ol li ol li ol li ol > li {
+    text-indent: -4ch;
+    margin-left: 12ch;
+}
+
+ol[bc|maxdepth="6"] li ol li ol li ol li ol li ol > li {
+    text-indent: -2ch;
+    margin-left: 12ch;
+}
+
+/* */
+
+h1 {
+    text-align: center;
+    margin-left: 3ch;
+    margin-right: 3ch;
+    margin-bottom: 1rem;
+}
+/* */
+
+p._1-1 {
+    text-indent: 0ch;
+    margin-left: 0ch;
+}
+
+p._1-2 {
+    text-indent: -1ch;
+    margin-left: 1ch;
+}
+
+p._1-3 {
+    text-indent: -2ch;
+    margin-left: 2ch;
+}
+
+p._1-5 {
+    text-indent: -4ch;
+    margin-left: 4ch;
+}
+
+p._1-6 {
+    text-indent: -5ch;
+    margin-left: 5ch;
+}
+
+p._1-7 {
+    text-indent: -6ch;
+    margin-left: 6ch;
+}
+
+p._1-9 {
+    text-indent: -8ch;
+    margin-left: 8ch;
+}
+
+p._3-1 {
+    text-indent: 2ch;
+    margin-left: 0ch;
+}
+
+p._3-3 {
+    text-indent: 0ch;
+    margin-left: 2ch;
+}
+
+p._3-5 {
+    text-indent: -2ch;
+    margin-left: 4ch;
+}
+
+p._3-7 {
+    text-indent: -4ch;
+    margin-left: 6ch;
+}
+
+p._3-9 {
+    text-indent: -6ch;
+    margin-left: 8ch;
+}
+
+p._4-6 {
+    text-indent: -2ch;
+    margin-left: 5ch;
+}
+
+p._5-3 {
+    text-indent: 2ch;
+    margin-left: 2ch;
+}
+
+p._5-5 {
+    text-indent: 0ch;
+    margin-left: 4ch;
+}
+
+p._5-7 {
+    text-indent: -2ch;
+    margin-left: 6ch;
+}
+
+p._5-9 {
+    text-indent: -4ch;
+    margin-left: 8ch;
+}
+
+p._7-5 {
+    text-indent: 2ch;
+    margin-left: 4ch;
+}
+
+p._7-7 {
+    text-indent: 0ch;
+    margin-left: 6ch;
+}
+
+p._7-9 {
+    text-indent: -2ch;
+    margin-left: 8ch;
+}
+
+p._7-11 {
+    text-indent: -4ch;
+    margin-left: 10ch;
+}
+
+p._9-7 {
+    text-indent: 2ch;
+    margin-left: 6ch;
+}
+
+p._9-9 {
+    text-indent: 0ch;
+    margin-left: 8ch;
+}
+
+p._9-11 {
+    text-indent: -2ch;
+    margin-left: 10ch;
+}
+
+p._9-13 {
+    text-indent: -4ch;
+    margin-left: 12ch;
+}
+
+p._11-9 {
+    text-indent: 2ch;
+    margin-left: 8ch;
+}
+
+p._11-11 {
+    text-indent: 0ch;
+    margin-left: 10ch;
+}
+
+p._11-13 {
+    text-indent: -2ch;
+    margin-left: 12ch;
+}
+
+p._11-15 {
+    text-indent: -4ch;
+    margin-left: 14ch;
+}
+
+p._13-11 {
+    text-indent: 2ch;
+    margin-left: 10ch;
+}
+
+p._13-13 {
+    text-indent: 0ch;
+    margin-left: 12ch;
+}
+
+p._13-15 {
+    text-indent: -2ch;
+    margin-left: 14ch;
+}
+
+p._13-17 {
+    text-indent: -4ch;
+    margin-left: 16ch;
+}
+
+
+/* */
+p.refpagenumber {
+    display: flex;
+    grid-template-columns: auto max-content;
+    justify-content: flex-end;
+}
+
+p.refpagenumber span.num {
+    /* font-variant-numeric: tabular-nums; */
+    text-align: right;
+}
+
+p.refpagenumber span.num::before {
+    content: " ";
+}
+
+p.refpagenumber span.leaders::after {
+    flex: 1;
+    content: "\2824\2824\2824\2824\2824\2824\2824\2824\2824\2824"
+             "\2824\2824\2824\2824\2824\2824\2824\2824\2824\2824"
+             "\2824\2824\2824\2824\2824\2824\2824\2824\2824\2824"
+             "\2824\2824\2824\2824\2824\2824\2824\2824\2824\2824"
+             "\2824\2824\2824\2824\2824\2824\2824\2824";
+}
+
+/* From https://codepen.io/nzakas/pen/rNJaeMo */
+
+.visually-hidden {
+    clip: rect(0 0 0 0);
+    clip-path: inset(100%);
+    height: 1px;
+    overflow: hidden;
+    position: absolute;
+    width: 1px;
+    white-space: nowrap;
+}
+
+.c-contents, .c-contents ol {
+    list-style-type: none;
+}
+
+.c-contents {
+    padding: 0;
+}
+
+.c-contents ol {
+    padding-inline-start: 2ch;
+}
+
+.c-contents > li {
+    margin-block-start: 1em;
+}
+
+.c-contents li {
+    text-decoration: none;
+    display: grid;
+    grid-template-columns: auto max-content;
+    align-items: end;
+}
+
+.c-contents li > .title {
+    position: relative;
+    overflow: hidden;
+}
+
+.c-contents li .leaders::after {
+    position: absolute;
+    padding-inline-start: .25ch;
+    content: "\2810\2810\2810\2810\2810\2810\2810\2810\2810\2810"
+             "\2810\2810\2810\2810\2810\2810\2810\2810\2810\2810"
+	     "\2810\2810\2810\2810\2810\2810\2810\2810\2810\2810"
+	     "\2810\2810\2810\2810\2810\2810\2810\2810\2810\2810"
+	     "\2810\2810\2810\2810\2810\2810\2810\2810";
+    text-align: right;
+}
+
+.c-contents li > .page {
+    min-width: 2ch;
+    /* font-variant-numeric: tabular-nums; */
+    text-align: right;
+}

@@ -2460,12 +2460,14 @@ const SAVE_TYPES = {
     ["Formatted braille (*.brf)", "brf", "formatted"],
     ["Coded braille (*.bru)", "bru", "coded"],
     ["Refreshable braille (*.lbf)", "lbf", "refreshable"],
+    ["eBraille (*.ebrl)", "ebrl", "ebraille"],
   ],
   print: [
     ["Print document (*.dxp)", "dxp", "document"],
     ["Print document, older format (*.dxp)", "dxp", "older"],
     ["Formatted text (*.prf)", "prf", "formatted"],
     ["Coded text (*.txt)", "txt", "coded"],
+    ["EPUB 3 (*.epub)", "epub", "ebraille"],
     ["HTML (*.htm)", "htm", "html"],
     ["LaTeX (*.tex)", "tex", "latex"],
     ["HTML with MathJax (*.htm)", "htm", "mathjax"],
@@ -2631,6 +2633,9 @@ async function saveAs() {
       case "refreshable":
         bytes = (await documentFile()).refreshable(storedText());
         break;
+      case "ebraille":
+        bytes = await ebraillePackage();
+        break;
       case "html":
         bytes = core.html(
           editor.value,
@@ -2653,6 +2658,119 @@ async function saveAs() {
   } catch (err) {
     await message(String(err.message ?? err));
   }
+}
+
+// eBraille and EPUB 3 (spec 23). The package metadata of the open document (Document, eBraille Metadata), with
+// the desktop program's field names; the web form shows the same fields as rows (the desktop dialog's pages and
+// its language, braille system and attribute dialogs are rows here: one entry per line).
+const EBRAILLE_QUALITY_WARNING =
+  "eBraille exports should be reliably working to produce readable eBraille files, but the quality is not yet reliable. Any sample files sent to the support team will help us to improve the quality.";
+
+function ebrailleMeta() {
+  if (!doc.ebraille) {
+    doc.ebraille = {
+      titles: [], creators: [], producers: [], languages: [], braille_systems: [], date: "", id_type: 2, identifier: "",
+      date_copyrighted: "", tactile_graphics: false, complete_transcription: false, publishers: [], education_levels: [],
+      description: "", rights: [], source_type: 0, source: "", subjects: [], properties: [], field_attributes: [], edited_xml: null,
+    };
+  }
+  return doc.ebraille;
+}
+
+// The package bytes: the quality notice first (kept under Mutable, EBrailleQualityWarning until its box is checked;
+// Cancel stops the save), then the core builds the package from the document, its styles and its metadata.
+async function ebraillePackage() {
+  if (!(await onceNotice("EBrailleQualityWarning", EBRAILLE_QUALITY_WARNING))) return null;
+  const e = encodingNow();
+  const cells = e.cells.length ? e.cells : naCells();
+  return (await documentFile()).ebraille(editor.value, doc.kind === "braille", JSON.stringify(ebrailleMeta()), JSON.stringify(cells));
+}
+
+// File, Save eBraille (1107): the package downloaded as eBraille for a braille document, EPUB 3 for a print one.
+async function saveEBraille() {
+  if (!core) return;
+  try {
+    const bytes = await ebraillePackage();
+    if (bytes) download(`${stem()}.${doc.kind === "braille" ? "ebrl" : "epub"}`, bytes);
+  } catch (err) {
+    await message(String(err.message ?? err));
+  }
+}
+
+// Document, eBraille Metadata (2606): the fields of the desktop dialog's Required, Recommended and Additional pages
+// as labelled rows; lists are one entry per line, braille systems as "language grade specialization", properties
+// as name=value; the XML preview is shown from the fields.
+async function ebrailleMetadata() {
+  const m = ebrailleMeta();
+  const fields = {};
+  const area = (form, id, label, value) => {
+    const t = labelledRow(form, id, label, document.createElement("textarea"));
+    t.rows = 3;
+    t.value = value;
+    return t;
+  };
+  const input = (form, id, label, value, type = "text") => {
+    const i = labelledRow(form, id, label, document.createElement("input"));
+    i.type = type;
+    if (type === "checkbox") i.checked = value;
+    else i.value = value;
+    return i;
+  };
+  const choice = (form, id, label, items, selected) => {
+    const s = labelledRow(form, id, label, document.createElement("select"));
+    s.replaceChildren(...items.map((it) => new Option(it, it)));
+    s.selectedIndex = selected;
+    return s;
+  };
+  const ok = await ownDialog("eBraille Metadata", (form) => {
+    fields.titles = area(form, "ebr-title", "Titles (1 per line):", m.titles.join("\n"));
+    fields.creators = area(form, "ebr-creator", "Creators (1 per line):", m.creators.join("\n"));
+    fields.producers = area(form, "ebr-producer", "Producers (1 per line):", m.producers.join("\n"));
+    fields.languages = area(form, "ebr-languages", "Languages (1 per line):", m.languages.join("\n"));
+    fields.systems = area(form, "ebr-systems", "Braille systems (language grade specialization, 1 per line):", m.braille_systems.map((s) => `${s.language} ${s.grade} ${s.specialization}`).join("\n"));
+    fields.date = input(form, "ebr-date", "Date:", m.date, "date");
+    fields.idType = choice(form, "ebr-idtype", "ID type:", ["ISBN", "DOI", "UUID"], m.id_type);
+    fields.identifier = input(form, "ebr-id", "Identifier:", m.identifier);
+    fields.copyrighted = input(form, "ebr-copyrighted", "Date copyrighted:", m.date_copyrighted, "date");
+    fields.tactile = input(form, "ebr-tactile", "Tactile Graphics", m.tactile_graphics, "checkbox");
+    fields.complete = input(form, "ebr-complete", "Complete Transcription", m.complete_transcription, "checkbox");
+    fields.publishers = area(form, "ebr-publisher", "Publishers (1 per line):", m.publishers.join("\n"));
+    fields.education = area(form, "ebr-education", "Education Levels (1 per line):", m.education_levels.join("\n"));
+    fields.description = input(form, "ebr-description", "Description:", m.description);
+    fields.rights = area(form, "ebr-rights", "Rights (1 per line):", m.rights.join("\n"));
+    fields.sourceType = choice(form, "ebr-sourcetype", "Source type:", ["ISBN", "DOI", "UUID"], m.source_type);
+    fields.source = input(form, "ebr-source", "Source:", m.source);
+    fields.subjects = area(form, "ebr-subject", "Subjects (1 per line):", m.subjects.join("\n"));
+    fields.properties = area(form, "ebr-properties", "Additional properties (name=value, 1 per line):", m.properties.map((p) => `${p.name}=${p.value}`).join("\n"));
+  });
+  if (!ok) return;
+  const lines = (t) => t.value.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  m.titles = lines(fields.titles);
+  m.creators = lines(fields.creators);
+  m.producers = lines(fields.producers);
+  m.languages = lines(fields.languages);
+  m.braille_systems = lines(fields.systems).map((l) => {
+    const [language = "", grade = "grade2", specialization = "None"] = l.split(/\s+/);
+    return { language, grade, specialization };
+  });
+  m.date = fields.date.value;
+  m.id_type = fields.idType.selectedIndex;
+  m.identifier = fields.identifier.value;
+  m.date_copyrighted = fields.copyrighted.value;
+  m.tactile_graphics = fields.tactile.checked;
+  m.complete_transcription = fields.complete.checked;
+  m.publishers = lines(fields.publishers);
+  m.education_levels = lines(fields.education);
+  m.description = fields.description.value;
+  m.rights = lines(fields.rights);
+  m.source_type = fields.sourceType.selectedIndex;
+  m.source = fields.source.value;
+  m.subjects = lines(fields.subjects);
+  m.properties = lines(fields.properties).map((l) => {
+    const at = l.indexOf("=");
+    return at < 0 ? { name: l, value: "", attributes: [] } : { name: l.slice(0, at), value: l.slice(at + 1), attributes: [] };
+  });
+  doc.dirty = true;
 }
 
 // File, Save: a document read from or saved as a document file (.dxp, .dxb) is saved as that file again; any other
@@ -2877,7 +2995,6 @@ const PLANNED_HELP = "The BrailleCraft help is written with the features it desc
 const PLANNED_TEMPLATES = "Templates are built with the BrailleCraft document format in step 7 of the plan.";
 const PLANNED_PICTURES = "Pictures are built after the core features of version 1.";
 const PLANNED_FORMATTER = "This needs the page formatter, built in step 8 of the plan.";
-const PLANNED_EBRAILLE = "eBraille output is built after the formatted braille, document and PEF outputs.";
 
 // Puts `text` in place of the selection as text (pasted, a file's, a sign): brackets in it are text, as typed ones
 // are; the caret goes after it.
@@ -3956,7 +4073,7 @@ const COMMANDS = {
   1309: () => setView((v) => (v.codes = !v.codes)),
   1310: () => setView((v) => (v.translated = !v.translated)),
   1103: closeDocument,
-  1107: () => message(PLANNED_EBRAILLE),
+  1107: saveEBraille,
   1114: exitProgram,
   1501: () => tableProperties(),
   1503: () => tableProperties(),
@@ -3971,7 +4088,7 @@ const COMMANDS = {
   2706: () => setRegion(5),
   2801: () => setGrade("[g1l]"),
   2802: () => setGrade("[g2u]"),
-  2606: () => message(PLANNED_EBRAILLE),
+  2606: ebrailleMetadata,
   2608: addStyle,
   2609: modifyStyle,
   2610: deleteStyle,

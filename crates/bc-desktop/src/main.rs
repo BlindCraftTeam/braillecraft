@@ -11,6 +11,7 @@ mod dialog_table;
 mod dlg;
 mod editor_view;
 mod documents;
+mod ebraille;
 mod embosser;
 mod encodings;
 mod ftdi;

@@ -137,6 +137,9 @@ pub struct Doc {
     /// The optional sections of the document file it was read from that BrailleCraft does not use itself, written
     /// back as they were (their descriptor's place, kind and bytes).
     pub file_sections: Vec<(usize, u16, Vec<u8>)>,
+    /// Document, eBraille Metadata: the package metadata of an eBraille or EPUB 3 save (kept with the open document;
+    /// where the original stores it in the document file is not traced, spec 23 section 2).
+    pub ebraille: bc_core::ebraille::Metadata,
 }
 
 impl Doc {

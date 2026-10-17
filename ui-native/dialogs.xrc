@@ -4917,4 +4917,860 @@
       </object>
     </object>
   </object>
+  <object class="wxDialog" name="dlg26061">
+    <size>250,230</size>
+    <title>EBraille Attributes Dialog</title>
+    <object class="wxBoxSizer" name="vBox">
+      <orient>wxVERTICAL</orient>
+      <object class="sizeritem">
+        <flag>wxALIGN_CENTER_HORIZONTAL</flag>
+        <object class="wxFlexGridSizer" name="hbFields">
+          <cols>2</cols>
+          <growablecols>1:1</growablecols>
+          <vgap>3</vgap>
+          <object class="sizeritem">
+            <flag>wxALL | wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL</flag>
+            <border>0</border>
+            <object class="wxStaticText" name="lblOptionalAttributes">
+              <label>&amp;Optional attributes:</label>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <flag>wxALL | wxEXPAND | wxALIGN_CENTER_VERTICAL</flag>
+            <border>10</border>
+            <object class="wxComboBox" name="cbAvailableAttributes">
+              <pos>95,105</pos>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <flag>wxALL | wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL</flag>
+            <border>0</border>
+            <object class="wxStaticText" name="lblAttributeValue">
+              <label>&amp;Value:</label>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <flag>wxALL | wxEXPAND | wxALIGN_CENTER_VERTICAL</flag>
+            <border>10</border>
+            <object class="wxTextCtrl" name="tcAttributeValue">
+              <pos>95,105</pos>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <flag>wxALL | wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL</flag>
+            <border>0</border>
+            <object class="wxStaticText" name="lblDefinedAttributes">
+              <label>&amp;Chosen attributes:</label>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <flag>wxALL | wxEXPAND | wxALIGN_CENTER_VERTICAL</flag>
+            <border>10</border>
+            <object class="wxListBox" name="lbDefinedAttributes">
+              <pos>95,105</pos>
+            </object>
+          </object>
+        </object>
+      </object>
+      <object class="sizeritem">
+        <flag>wxALIGN_RIGHT</flag>
+        <border>5</border>
+        <object class="wxBoxSizer" name="hbButtons">
+          <orient>wxHORIZONTAL</orient>
+          <object class="sizeritem">
+            <object class="wxButton" name="btnAddAttribute">
+              <size>70,30</size>
+              <label>&amp;Add</label>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <object class="wxButton" name="btnUpdateAttribute">
+              <label>&amp;Update</label>
+              <size>70,30</size>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <object class="wxButton" name="btnRemoveAttribute">
+              <label>&amp;Remove</label>
+              <size>70,30</size>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <object class="wxButton" name="wxID_OK">
+              <label>OK</label>
+              <size>70,30</size>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <object class="wxButton" name="wxID_CANCEL">
+              <label>Cancel</label>
+              <size>70,30</size>
+            </object>
+          </object>
+        </object>
+      </object>
+    </object>
+  </object>
+  <object class="wxDialog" name="dlg26062">
+    <size>250,230</size>
+    <title>Attributes for Braille system:</title>
+    <object class="wxBoxSizer" name="vBox">
+      <orient>wxVERTICAL</orient>
+      <object class="sizeritem">
+        <border>5</border>
+        <object class="wxFlexGridSizer" name="hbFields">
+          <cols>2</cols>
+          <vgap>3</vgap>
+          <object class="sizeritem">
+            <flag>wxALL | wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL</flag>
+            <border>0</border>
+            <object class="wxStaticText" name="lblAvailableBrailleSystemLanguages">
+              <label>Braille system &amp;language:</label>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <flag>wxALL | wxEXPAND | wxALIGN_CENTER_VERTICAL</flag>
+            <border>10</border>
+            <object class="wxComboBox" name="cbAvailableBrailleSystemLanguages">
+              <pos>95,105</pos>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <flag>wxEXPAND | wxALIGN_CENTER_VERTICAL</flag>
+            <border>10</border>
+            <object class="wxRadioBox" name="rbBrailleSystemGrades">
+              <label>&amp;Grade:</label>
+              <style>wxRA_SPECIFY_COLS</style>
+              <content>
+                <item>grade0</item>
+                <item>grade1</item>
+                <item>grade2</item>
+                <item>no-grade</item>
+              </content>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <flag>wxEXPAND| wxALIGN_CENTER_VERTICAL</flag>
+            <border>10</border>
+            <object class="wxRadioBox" name="rbBrailleSystemSpecializations">
+              <label>&amp;Specialization:</label>
+              <style>wxRA_SPECIFY_COLS</style>
+              <content>
+                <item>None</item>
+                <item>comp6</item>
+                <item>math</item>
+                <item>music</item>
+                <item>phonetic</item>
+              </content>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <flag>wxALL | wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL</flag>
+            <border>0</border>
+            <object class="wxStaticText" name="lblDefinedBrailleSystems">
+              <label>&amp;Chosen Braille systems:</label>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <flag>wxALL | wxEXPAND | wxALIGN_CENTER_VERTICAL</flag>
+            <border>10</border>
+            <object class="wxListBox" name="lbDefinedBrailleSystems">
+              <pos>95,105</pos>
+            </object>
+          </object>
+        </object>
+      </object>
+      <object class="sizeritem">
+        <flag>wxALIGN_RIGHT</flag>
+        <border>5</border>
+        <object class="wxBoxSizer" name="hbButtons">
+          <orient>wxHORIZONTAL</orient>
+          <object class="sizeritem">
+            <object class="wxButton" name="btnAdd">
+              <size>70,30</size>
+              <label>&amp;Add</label>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <object class="wxButton" name="btnRemove">
+              <size>70,30</size>
+              <label>&amp;Remove</label>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <object class="wxButton" name="btnShowBrailleSystemAttributes">
+              <label>Options...</label>
+              <size>70,30</size>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <object class="wxButton" name="btnUp">
+              <label>&amp;Up</label>
+              <size>0,30</size>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <object class="wxButton" name="btnDown">
+              <label>&amp;Down</label>
+              <size>70,30</size>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <object class="wxButton" name="wxID_OK">
+              <label>OK</label>
+              <size>70,30</size>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <object class="wxButton" name="wxID_CANCEL">
+              <label>Cancel</label>
+              <size>70,30</size>
+            </object>
+          </object>
+        </object>
+      </object>
+    </object>
+  </object>
+  <object class="wxDialog" name="dlg26063">
+    <size>250,230</size>
+    <title>Attributes for Braille system:</title>
+    <object class="wxBoxSizer" name="vBox">
+      <orient>wxVERTICAL</orient>
+      <object class="sizeritem">
+        <object class="wxFlexGridSizer" name="hbFields">
+          <cols>2</cols>
+          <vgap>3</vgap>
+          <object class="sizeritem">
+            <flag>wxALL | wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL</flag>
+            <border>0</border>
+            <object class="wxStaticText" name="lblAvailableLanguages">
+              <label>&amp;Language:</label>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <flag>wxALL | wxEXPAND | wxALIGN_CENTER_VERTICAL</flag>
+            <border>10</border>
+            <object class="wxComboBox" name="cbAvailableLanguages">
+              <pos>95,105</pos>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <flag>wxALL | wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL</flag>
+            <border>0</border>
+            <object class="wxStaticText" name="lblDefinedLanguages">
+              <label>&amp;Chosen languages:</label>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <flag>wxALL | wxEXPAND | wxALIGN_CENTER_VERTICAL</flag>
+            <border>10</border>
+            <object class="wxListBox" name="lbDefinedLanguages">
+              <pos>95,105</pos>
+            </object>
+          </object>
+        </object>
+      </object>
+      <object class="sizeritem">
+        <flag>wxALIGN_RIGHT</flag>
+        <border>5</border>
+        <object class="wxBoxSizer" name="hbButtons">
+          <orient>wxHORIZONTAL</orient>
+          <object class="sizeritem">
+            <object class="wxButton" name="btnAdd">
+              <size>70,30</size>
+              <label>&amp;Add</label>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <object class="wxButton" name="btnRemove">
+              <size>70,30</size>
+              <label>&amp;Remove</label>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <object class="wxButton" name="btnShowLanguageAttributes">
+              <label>Options...</label>
+              <size>70,30</size>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <object class="wxButton" name="btnUp">
+              <label>&amp;Up</label>
+              <size>0,30</size>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <object class="wxButton" name="btnDown">
+              <label>&amp;Down</label>
+              <size>70,30</size>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <object class="wxButton" name="wxID_OK">
+              <label>OK</label>
+              <size>70,30</size>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <object class="wxButton" name="wxID_CANCEL">
+              <label>Cancel</label>
+              <size>70,30</size>
+            </object>
+          </object>
+        </object>
+      </object>
+    </object>
+  </object>
+  <object class="wxDialog" name="dlg2606">
+    <size>250,230</size>
+    <title>EBrailleMetaDialog</title>
+    <object class="wxBoxSizer" name="vSizer">
+      <orient>wxVERTICAL</orient>
+      <object class="sizeritem">
+        <object class="wxGridSizer" name="gSizer">
+          <cols>1</cols>
+          <rows>1</rows>
+          <vgap>0</vgap>
+          <hgap>0</hgap>
+          <object class="sizeritem">
+            <object class="wxNotebook" name="m_Notebook">
+              <style>wxNB_TOP</style>
+              <object class="notebookpage">
+                <label>Required</label>
+                <object class="wxPanel" name="m_RequiredPage">
+                  <object class="wxBoxSizer" name="vBox">
+                    <orient>wxVERTICAL</orient>
+                    <object class="sizeritem">
+                      <object class="wxFlexGridSizer" name="hbFields">
+                        <cols>3</cols>
+                        <vgap>3</vgap>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>0</border>
+                          <object class="wxStaticText" name="lblTitle">
+                            <label>&amp;Titles (1 per line):</label>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxEXPAND | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>10</border>
+                          <object class="wxTextCtrl" name="tcTitle">
+                            <pos>95,105</pos>
+                            <size>250,55</size>
+                            <style>wxTE_MULTILINE</style>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALIGN_CENTER</flag>
+                          <border>0</border>
+                          <object class="wxButton" name="btnShowTitleAttributes">
+                            <size>70,30</size>
+                            <label>Options...</label>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>0</border>
+                          <object class="wxStaticText" name="lblCreator">
+                            <label>&amp;Creators (1 per line):</label>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxEXPAND | wxFIXED_MINSIZE | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>10</border>
+                          <object class="wxTextCtrl" name="tcCreator">
+                            <pos>95,105</pos>
+                            <size>250,55</size>
+                            <style>wxTE_MULTILINE</style>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALIGN_CENTER</flag>
+                          <border>0</border>
+                          <object class="wxButton" name="btnShowCreatorAttributes">
+                            <size>70,30</size>
+                            <label>Options...</label>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>0</border>
+                          <object class="wxStaticText" name="lblProducer">
+                            <label>&amp;Producers (1 per line):</label>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxEXPAND | wxFIXED_MINSIZE | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>10</border>
+                          <object class="wxTextCtrl" name="tcProducer">
+                            <pos>95,105</pos>
+                            <size>250,55</size>
+                            <style>wxTE_MULTILINE</style>
+                          </object>
+                        </object>
+                        <object class="spacer">
+                          <size>1,1</size>
+                        </object>
+                        <object class="spacer">
+                          <size>1,1</size>
+                        </object>
+                        <object class="sizeritem">
+                          <border>5</border>
+                          <flag>wxALL | wxALIGN_CENTER_VERTICAL</flag>
+                          <object class="wxGridSizer" name="hbLanguageButtons">
+                            <vgap>2</vgap>
+                            <object class="sizeritem">
+                              <object class="wxButton" name="btnShowLanguages">
+                                <label>&amp;Language...</label>
+                                <size>120,30</size>
+                              </object>
+                            </object>
+                            <object class="sizeritem">
+                              <object class="wxButton" name="btnShowBrailleSystems">
+                                <label>&amp;Braille system...</label>
+                                <size>120,30</size>
+                              </object>
+                            </object>
+                          </object>
+                        </object>
+                        <object class="spacer">
+                          <size>1,1</size>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>0</border>
+                          <object class="wxStaticText" name="lblDate">
+                            <label>&amp;Date:</label>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxEXPAND | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>10</border>
+                          <object class="wxDatePickerCtrl" name="dpDate">
+                            <pos>95,105</pos>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALIGN_CENTER</flag>
+                          <border>0</border>
+                          <object class="wxButton" name="btnShowDateAttributes">
+                            <label>Options...</label>
+                            <size>70,30</size>
+                          </object>
+                        </object>
+                        <object class="spacer">
+                          <size>1,1</size>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxEXPAND | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>10</border>
+                          <object class="wxRadioBox" name="rbIdentifierTypes">
+                            <label>&amp;ID type:</label>
+                            <style>wxRA_SPECIFY_ROWS</style>
+                            <content>
+                              <item>ISBN</item>
+                              <item>DOI</item>
+                              <item>UUID</item>
+                            </content>
+                          </object>
+                        </object>
+                        <object class="spacer">
+                          <size>1,1</size>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>0</border>
+                          <object class="wxStaticText" name="lblIdentifier">
+                            <label>Identifier:</label>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxEXPAND | wxFIXED_MINSIZE | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>10</border>
+                          <object class="wxTextCtrl" name="tcIdentifier">
+                            <pos>95,105</pos>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALIGN_CENTER</flag>
+                          <border>0</border>
+                          <object class="wxButton" name="btnShowIdentifierAttributes">
+                            <label>Options...</label>
+                            <size>70,30</size>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>0</border>
+                          <object class="wxStaticText" name="lblDateCopyrighted">
+                            <label>Date c&amp;opyrighted:</label>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxEXPAND | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>10</border>
+                          <object class="wxDatePickerCtrl" name="dpDateCopyrighted">
+                            <pos>95,105</pos>
+                          </object>
+                        </object>
+                        <object class="spacer">
+                          <size>1,1</size>
+                        </object>
+                        <object class="spacer">
+                          <size>1,1</size>
+                        </object>
+                        <object class="sizeritem">
+                          <object class="wxBoxSizer" name="vbCheckboxes">
+                            <orient>wxVERTICAL</orient>
+                            <object class="sizeritem">
+                              <object class="wxCheckBox" name="chkTactileGraphics">
+                                <label>Tactile &amp;Graphics:</label>
+                                <pos>15,105</pos>
+                              </object>
+                            </object>
+                            <object class="spacer">
+                              <size>2,2</size>
+                            </object>
+                            <object class="sizeritem">
+                              <object class="wxCheckBox" name="chkCompleteTranscription">
+                                <label>Com&amp;plete Transcription:</label>
+                                <pos>15,105</pos>
+                              </object>
+                            </object>
+                          </object>
+                        </object>
+                        <object class="spacer">
+                          <size>1,1</size>
+                        </object>
+                      </object>
+                    </object>
+                  </object>
+                </object>
+              </object>
+              <object class="notebookpage">
+                <label>Recommended</label>
+                <object class="wxPanel" name="m_RecommendedPage">
+                  <object class="wxBoxSizer" name="vBox">
+                    <orient>wxVERTICAL</orient>
+                    <object class="sizeritem">
+                      <object class="wxFlexGridSizer" name="hbFields">
+                        <vgap>3</vgap>
+                        <cols>3</cols>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>0</border>
+                          <object class="wxStaticText" name="lblPublisher">
+                            <label>&amp;Publishers (1 per line):</label>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxEXPAND | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>10</border>
+                          <object class="wxTextCtrl" name="tcPublisher">
+                            <pos>95,105</pos>
+                            <size>250,55</size>
+                            <style>wxTE_MULTILINE</style>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALIGN_CENTER</flag>
+                          <border>0</border>
+                          <object class="wxButton" name="btnShowPublisherAttributes">
+                            <size>70,30</size>
+                            <label>Options...</label>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>0</border>
+                          <object class="wxStaticText" name="lblEducationLevels">
+                            <label>&amp;Education Levels (1 per line):</label>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxEXPAND | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>10</border>
+                          <object class="wxTextCtrl" name="tcEducationLevels">
+                            <pos>95,105</pos>
+                            <size>250,55</size>
+                            <style>wxTE_MULTILINE</style>
+                          </object>
+                        </object>
+                        <object class="spacer">
+                          <size>1,1</size>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>0</border>
+                          <object class="wxStaticText" name="lblDescription">
+                            <label>&amp;Description</label>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxEXPAND | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>10</border>
+                          <object class="wxTextCtrl" name="tcDescription">
+                            <pos>95,105</pos>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALIGN_CENTER</flag>
+                          <border>0</border>
+                          <object class="wxButton" name="btnShowDescriptionAttributes">
+                            <label>Options...</label>
+                            <size>70,30</size>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>0</border>
+                          <object class="wxStaticText" name="lblRights">
+                            <label>&amp;Rights (1 per line):</label>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxEXPAND | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>10</border>
+                          <object class="wxTextCtrl" name="tcRights">
+                            <pos>95,105</pos>
+                            <size>250,55</size>
+                            <style>wxTE_MULTILINE</style>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALIGN_CENTER</flag>
+                          <border>0</border>
+                          <object class="wxButton" name="btnShowRightsAttributes">
+                            <label>Options...</label>
+                            <size>70,30</size>
+                          </object>
+                        </object>
+                        <object class="spacer">
+                          <size>1,1</size>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxEXPAND | wxALIGN_CENTER_HORIZONTAL</flag>
+                          <border>10</border>
+                          <object class="wxRadioBox" name="rbSourceTypes">
+                            <label>Source &amp;type:</label>
+                            <style>wxRA_SPECIFY_ROWS</style>
+                            <content>
+                              <item>ISBN</item>
+                              <item>DOI</item>
+                              <item>UUID</item>
+                            </content>
+                          </object>
+                        </object>
+                        <object class="spacer">
+                          <size>1,1</size>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>0</border>
+                          <object class="wxStaticText" name="lblSource" />
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxEXPAND | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>10</border>
+                          <object class="wxTextCtrl" name="tcSource">
+                            <pos>95,105</pos>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALIGN_CENTER</flag>
+                          <border>0</border>
+                          <object class="wxButton" name="btnShowSourceAttributes">
+                            <label>Options...</label>
+                            <size>70,30</size>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>0</border>
+                          <object class="wxStaticText" name="lblSubject">
+                            <label>&amp;Subjects (1 per line):</label>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxEXPAND | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>10</border>
+                          <object class="wxTextCtrl" name="tcSubject">
+                            <pos>95,105</pos>
+                            <size>250,55</size>
+                            <style>wxTE_MULTILINE</style>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALIGN_CENTER</flag>
+                          <border>0</border>
+                          <object class="wxButton" name="btnShowSubjectAttributes">
+                            <label>Options...</label>
+                            <size>70,30</size>
+                          </object>
+                        </object>
+                      </object>
+                    </object>
+                  </object>
+                </object>
+              </object>
+              <object class="notebookpage">
+                <label>Additional</label>
+                <object class="wxPanel" name="m_AdditionalPage">
+                  <object class="wxBoxSizer" name="vBox">
+                    <orient>wxVERTICAL</orient>
+                    <object class="sizeritem">
+                      <object class="wxFlexGridSizer" name="hbFields">
+                        <vgap>3</vgap>
+                        <cols>2</cols>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>0</border>
+                          <object class="wxStaticText" name="lblAvailableProperties">
+                            <label>Available &amp;properties:</label>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxEXPAND | wxFIXED_MINSIZE | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>10</border>
+                          <object class="wxComboBox" name="cbAvailableProperties">
+                            <pos>95,105</pos>
+                            <size>300,20</size>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>0</border>
+                          <object class="wxStaticText" name="lblPropertyValue">
+                            <label>&amp;Value:</label>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxEXPAND | wxFIXED_MINSIZE | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>10</border>
+                          <object class="wxTextCtrl" name="tcPropertyValue">
+                            <pos>95,105</pos>
+                            <size>300,20</size>
+                          </object>
+                        </object>
+                        <object class="spacer">
+                          <size>1,1</size>
+                        </object>
+                        <object class="sizeritem">
+                          <object class="wxGridSizer" name="gridAddRemove">
+                            <cols>2</cols>
+                            <object class="sizeritem">
+                              <object class="wxButton" name="btnAddProperty">
+                                <label>&amp;Add</label>
+                                <size>70,30</size>
+                              </object>
+                            </object>
+                            <object class="sizeritem">
+                              <object class="wxButton" name="btnUpdateProperty">
+                                <label>&amp;Update</label>
+                                <size>70,30</size>
+                              </object>
+                            </object>
+                            <object class="sizeritem">
+                              <object class="wxButton" name="btnRemoveProperty">
+                                <label>&amp;Remove</label>
+                                <size>70,30</size>
+                              </object>
+                            </object>
+                            <object class="sizeritem">
+                              <object class="wxButton" name="btnShowPropertyAttributes">
+                                <label>&amp;Options...</label>
+                                <size>70,30</size>
+                              </object>
+                            </object>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>0</border>
+                          <object class="wxStaticText" name="lblDefinedProperties">
+                            <label>&amp;Defined properties:</label>
+                          </object>
+                        </object>
+                        <object class="sizeritem">
+                          <flag>wxALL | wxEXPAND | wxALIGN_CENTER_VERTICAL</flag>
+                          <border>10</border>
+                          <object class="wxListBox" name="lbDefinedProperties">
+                            <pos>95,105</pos>
+                          </object>
+                        </object>
+                      </object>
+                    </object>
+                  </object>
+                </object>
+              </object>
+              <object class="notebookpage">
+                <label>XML Preview</label>
+                <object class="wxPanel" name="m_PreviewPage">
+                  <object class="wxBoxSizer" name="vBox">
+                    <orient>wxVERTICAL</orient>
+                    <object class="sizeritem">
+                      <object class="wxBoxSizer" name="hBox">
+                        <orient>wxHORIZONTAL</orient>
+                        <object class="sizeritem">
+                          <object class="wxFlexGridSizer" name="hbFields">
+                            <vgap>3</vgap>
+                            <object class="sizeritem">
+                              <flag>wxALIGN_CENTER</flag>
+                              <border>0</border>
+                              <object class="wxStaticText" name="lblXMLPreview">
+                                <label>XML preview:</label>
+                              </object>
+                            </object>
+                            <object class="sizeritem">
+                              <flag>wxEXPAND</flag>
+                              <border>5</border>
+                              <object class="wxTextCtrl" name="tcXMLPreview">
+                                <pos>95,105</pos>
+                                <size>250,55</size>
+                                <style>wxTE_MULTILINE</style>
+                              </object>
+                            </object>
+                            <object class="sizeritem">
+                              <object class="wxCheckBox" name="chkAllowEditing">
+                                <label>&amp;Allow editing</label>
+                              </object>
+                            </object>
+                          </object>
+                        </object>
+                      </object>
+                    </object>
+                  </object>
+                </object>
+              </object>
+            </object>
+          </object>
+        </object>
+      </object>
+      <object class="sizeritem">
+        <flag>wxALIGN_RIGHT</flag>
+        <border>5</border>
+        <object class="wxBoxSizer" name="buttonSizer">
+          <orient>wxHORIZONTAL</orient>
+          <object class="sizeritem">
+            <object class="wxButton" name="wxID_OK">
+              <label>OK</label>
+              <size>70,30</size>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <object class="wxButton" name="wxID_CANCEL">
+              <label>Cancel</label>
+              <size>70,30</size>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <object class="wxButton" name="wxID_HELP">
+              <label>&amp;Help</label>
+              <size>70,30</size>
+            </object>
+          </object>
+        </object>
+      </object>
+    </object>
+  </object>
 </resource>

@@ -1014,6 +1014,26 @@ impl Document {
     }
 
     /// Save As refreshable braille (.lbf): `text` (editor form) with the document's styles (bc_core::lbf).
+    /// Save As eBraille (a braille document) or EPUB 3 (a print one), spec 23: the package from the editor text,
+    /// this document's styles (bc_core::ebraille::kind_of), the metadata (JSON of bc_core::ebraille::Metadata) and
+    /// the braille encoding's 64 cell characters (a JSON list, cell by position).
+    pub fn ebraille(&self, text: &str, braille: bool, meta: &str, cells: &str) -> Result<Vec<u8>, JsError> {
+        let meta: bc_core::ebraille::Metadata = serde_json::from_str(meta).map_err(error)?;
+        let cells: Vec<String> = serde_json::from_str(cells).map_err(error)?;
+        let running = shown_of(text).to_running();
+        let styles = &self.0.styles;
+        let kinds = |name: &str| -> bc_core::ebraille::StyleKind {
+            styles.iter().find(|s| s.0 == name).map_or(bc_core::ebraille::StyleKind::Block, |s| bc_core::ebraille::kind_of(&s.0, &s.1))
+        };
+        let cell = |c: char| -> u8 {
+            match c as u32 {
+                n @ 0x2800..=0x283F => (n - 0x2800) as u8,
+                _ => cells.iter().position(|s| s.chars().any(|x| x == c)).map_or(0, |p| p as u8),
+            }
+        };
+        Ok(bc_core::ebraille::package(&bc_core::ebraille::Input { running: &running, braille, kinds: &kinds, cell: &cell, meta: &meta }))
+    }
+
     pub fn refreshable(&self, text: &str) -> Vec<u8> {
         bc_core::lbf::write(&shown_of(text).to_running(), &self.0.styles)
     }

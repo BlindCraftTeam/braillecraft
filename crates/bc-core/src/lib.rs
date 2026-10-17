@@ -8,6 +8,7 @@ pub mod cmdline;
 pub mod codepages;
 pub mod doctext;
 pub mod docx;
+pub mod ebraille;
 pub mod word;
 pub mod braide;
 pub mod editor;

@@ -20,7 +20,6 @@ use bc_core::find;
 use bc_core::table_list::TableList;
 
 // Messages for parts of the program that later build steps bring. They say what is missing and where it comes.
-const PLANNED_EBRAILLE: &str = "eBraille output is built after the formatted braille, document and PEF outputs.";
 const PLANNED_SPELL: &str = "The spell checker (Hunspell dictionaries) is built after the core features of version 1.";
 const PLANNED_HELP: &str = "The BrailleCraft help is written with the features it describes; it is not in this build yet.";
 const PLANNED_TEMPLATES: &str = "Templates are built with the BrailleCraft document format in step 7 of the plan.";
@@ -328,7 +327,7 @@ pub fn run(id: i32, checked: bool) {
         1106 if has_doc => {
             save(None, true);
         }
-        1107 => message(PLANNED_EBRAILLE),
+        1107 if has_doc => crate::ebraille::save_ebraille(),
         1109 => translate_document(),
         1111 => print(),
         1112 => emboss(),
@@ -393,7 +392,7 @@ pub fn run(id: i32, checked: bool) {
         2801 => set_grade("[g1l]"),
         2802 => set_grade("[g2u]"),
         2901..=2905 => set_hyphen(id),
-        2606 => message(PLANNED_EBRAILLE),
+        2606 if has_doc => crate::ebraille::metadata_dialog(),
         2608 => add_style(),
         2609 => modify_style(),
         2610 => delete_style(),
@@ -1021,7 +1020,7 @@ fn reformat_notice() -> bool {
 
 /// A notice (1054) with its "Do not show this message again" box, kept under Mutable by `key` as the original keeps
 /// it. True on OK, or when OK was kept.
-fn once_notice(key: &str, text: &str) -> bool {
+pub fn once_notice(key: &str, text: &str) -> bool {
     const SECTION: &str = "Mutable";
     if let Some(answer) = settings_store::kept_answer(SECTION, key) {
         return answer == 1;
@@ -1187,6 +1186,8 @@ enum SaveType {
     Html,
     /// HTML with MathJax (.htm, spec 21): the text export table and the MathJax script between a fixed head and foot.
     HtmlMathJax,
+    /// eBraille (.ebrl) for braille documents and EPUB 3 (.epub) for print documents (spec 23, bc_core::ebraille).
+    EBraille,
     /// Portable Embosser Format (.pef, bc_core::pef): not in the reference program; the version 1 scope asks for it.
     Pef,
 }
@@ -1201,6 +1202,7 @@ fn save_types(braille: bool) -> &'static [(&'static str, &'static str, SaveType)
             ("Formatted braille (*.brf)", "brf", SaveType::Formatted),
             ("Coded braille (*.bru)", "bru", SaveType::Coded),
             ("Refreshable braille (*.lbf)", "lbf", SaveType::Refreshable),
+            ("eBraille (*.ebrl)", "ebrl", SaveType::EBraille),
             ("Portable Embosser Format (*.pef)", "pef", SaveType::Pef),
         ]
     } else {
@@ -1209,6 +1211,7 @@ fn save_types(braille: bool) -> &'static [(&'static str, &'static str, SaveType)
             ("Print document, older format (*.dxp)", "dxp", SaveType::OlderDocument),
             ("Formatted text (*.prf)", "prf", SaveType::Formatted),
             ("Coded text (*.txt)", "txt", SaveType::Coded),
+            ("EPUB 3 (*.epub)", "epub", SaveType::EBraille),
             ("HTML (*.htm)", "htm", SaveType::Html),
             ("LaTeX (*.tex)", "tex", SaveType::Latex),
             ("HTML with MathJax (*.htm)", "htm", SaveType::HtmlMathJax),
@@ -1294,6 +1297,7 @@ fn save(key: Option<u64>, as_new: bool) -> bool {
         SaveType::Latex => write_text_export(key, &chosen, translation::latex),
         SaveType::Html => write_text_export(key, &chosen, translation::html),
         SaveType::HtmlMathJax => write_text_export(key, &chosen, translation::mathjax),
+        SaveType::EBraille => crate::ebraille::save_as(key, &chosen),
         SaveType::Pef => write_pef(key, &chosen),
         SaveType::OlderDocument => write_document(key, &chosen, 0),
         SaveType::Document => write_document(key, &chosen, 1),

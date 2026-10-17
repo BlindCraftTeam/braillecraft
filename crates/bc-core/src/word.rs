@@ -1222,8 +1222,14 @@ impl StyleMap {
                     1 | 2 => {
                         if !e.forward || e.backward {
                             out.push_str(&format!("{O}ee|~{s}{C}{O}es|~{s}{C}~{O}l{C}~\n"));
+                        } else if e.aggregate == 2 {
+                            // Forward-only aggregation (no shipped map sets it): the loader formats
+                            // "[ee~S][es~S][hlN]" and writes it as one rule; read as the end and start becoming the
+                            // level code (INFERENCE: the bracket text's split into match and replacement was not
+                            // traced).
+                            out.push_str(&format!("{O}ee|~{s}{C}{O}es|~{s}{C}~{O}hl{}{C}~\n", e.level));
                         } else {
-                            continue_rules(&mut out, s, false);
+                            out.push_str(&format!("{O}ee|~{s}{C}{O}es|~{s}{C}~{O}l{C}~\n"));
                         }
                     }
                     // Paragraphs (a User block's paragraph entry as read): the end followed by the start becomes a

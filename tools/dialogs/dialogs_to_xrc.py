@@ -41,6 +41,8 @@ def xrc_dialogs(path, mapping_path):
             n = e.get("name")
             if n and n.startswith(prefix):
                 e.set("name", n[len(prefix):])
+            # The program's own window classes behind a dialog or panel are not ours; the plain class is loaded.
+            e.attrib.pop("subclass", None)
         obj.set("name", "dlg%d" % wanted[name])
         ET.indent(obj, space="  ", level=1)
         out.append("  " + ET.tostring(obj, encoding="unicode").rstrip())
