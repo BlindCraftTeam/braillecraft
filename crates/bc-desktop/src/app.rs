@@ -144,6 +144,8 @@ pub struct Formatted {
     /// A key the program has just carried out itself (Backspace, Delete, Enter, the clipboard and undo keys), with
     /// the caret it left: on systems whose text control then carries the key out as well, that change is put back.
     pub echo: Option<i64>,
+    /// The coded view (View, Codes): the document's text with its codes, in rows (spec 27 section 4).
+    pub coded: bool,
 }
 
 impl Doc {
@@ -617,9 +619,12 @@ impl App {
         let Some(i) = self.active else { return };
         // The formatted lines are shown again when the text was set from outside an edit, or when what the
         // document is laid out by (page size, numbering, styles) changed.
-        if let Some(model) = self.docs[i].formatted.as_ref().map(|f| f.model.clone()) {
-            let pages = self.laid_out(i, &model);
-            if self.docs[i].formatted.as_ref().is_some_and(|f| f.stale || !std::rc::Rc::ptr_eq(&f.pages, &pages)) {
+        if let Some((model, coded, stale)) = self.docs[i].formatted.as_ref().map(|f| (f.model.clone(), f.coded, f.stale)) {
+            let moved = !coded && {
+                let pages = self.laid_out(i, &model);
+                self.docs[i].formatted.as_ref().is_some_and(|f| !std::rc::Rc::ptr_eq(&f.pages, &pages))
+            };
+            if stale || moved {
                 self.refresh_formatted(i, None);
             }
         }
@@ -628,7 +633,7 @@ impl App {
         // Page, line and column of the caret on the laid-out pages (spec 19 section 4): the ordinal page, the line on
         // that page and the cell on that line.
         // In the formatted view, the row the caret stands on (spec 27 1b: the caret's page, line and column).
-        let row = self.docs[i].formatted.as_ref().and_then(|f| {
+        let row = self.docs[i].formatted.as_ref().filter(|f| !f.coded).and_then(|f| {
             let (n, col) = f.view.line_at(self.docs[i].text.get_insertion_point().max(0) as usize)?;
             let (p, l, _) = f.view.lines[n];
             Some((p + 1, l + 1, col + 1))
@@ -806,11 +811,20 @@ impl App {
     pub fn refresh_formatted(&mut self, i: usize, caret: Option<usize>) {
         let Some(model) = self.docs[i].formatted.as_ref().map(|f| f.model.clone()) else { return };
         let caret = caret.unwrap_or_else(|| self.docs[i].caret());
-        let pages = self.laid_out(i, &model);
-        let view = bc_core::fview::View::new(&pages);
+        let coded = self.docs[i].formatted.as_ref().is_some_and(|f| f.coded);
+        // The coded view: the text with its codes in rows 65 characters wide for a print document, 42 for a braille
+        // one (spec 27 4b); the formatted view: the laid-out page lines.
+        let (pages, view) = if coded {
+            let width = if self.docs[i].kind == DocKind::Braille { 42 } else { 65 };
+            (std::rc::Rc::new(Vec::new()), bc_core::fview::View::coded(&model, width))
+        } else {
+            let pages = self.laid_out(i, &model);
+            let view = bc_core::fview::View::new(&pages);
+            (pages, view)
+        };
         let d = &mut self.docs[i];
         let Some(f) = d.formatted.as_mut() else { return };
-        let changed = f.view.text != view.text || f.view.lines.is_empty();
+        let changed = f.view.text != view.text || f.view.lines.is_empty() || f.view.coded != view.coded;
         f.pages = pages;
         f.view = view;
         f.stale = false;
@@ -822,7 +836,7 @@ impl App {
                 .lines
                 .iter()
                 .enumerate()
-                .filter(|(n, l)| f.view.lines.get(n + 1).is_none_or(|next| next.0 != l.0))
+                .filter(|(n, l)| !coded && f.view.lines.get(n + 1).is_none_or(|next| next.0 != l.0))
                 .map(|(n, l)| (l.2 as i64, f.view.lines.get(n + 1).map_or(text.chars().count(), |next| next.2) as i64))
                 .collect();
             d.text.set_value(&text);
@@ -901,27 +915,23 @@ impl App {
         let caret = self.docs[i].caret();
         let d = &mut self.docs[i];
         d.view.codes = codes;
-        if codes {
-            if let Some(f) = d.formatted.take() {
-                d.codes = f.model.codes.clone();
-                d.inner = f.model.inner.clone();
-                d.last_value = f.model.text.clone();
-                d.text.set_value(&f.model.text);
-                d.select_doc(caret, caret);
+        match d.formatted.as_mut() {
+            Some(f) => f.coded = codes,
+            None => {
+                let model = d.shown();
+                d.formatted = Some(Formatted {
+                    model,
+                    pages: std::rc::Rc::new(Vec::new()),
+                    view: bc_core::fview::View::default(),
+                    stale: true,
+                    undo: Vec::new(),
+                    redo: Vec::new(),
+                    echo: None,
+                    coded: codes,
+                });
             }
-        } else if d.formatted.is_none() {
-            let model = d.shown();
-            d.formatted = Some(Formatted {
-                model,
-                pages: std::rc::Rc::new(Vec::new()),
-                view: bc_core::fview::View::default(),
-                stale: true,
-                undo: Vec::new(),
-                redo: Vec::new(),
-                echo: None,
-            });
-            self.refresh_formatted(i, Some(caret));
         }
+        self.refresh_formatted(i, Some(caret));
         self.docs[i].last_line_key.clear();
     }
 

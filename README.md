@@ -50,7 +50,7 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
 - **Formatted and coded views.** A document opens in the formatted view: its laid-out page lines with the codes
   hidden and an empty row after each page, which is what a screen reader reads. You type, delete, cut, paste and undo
   there as anywhere; a code next to the caret is removed whole. View, Codes (Alt+F3) switches to the coded view,
-  the running text with every code in brackets, and back, with the caret kept in place. Control+Page Up and
+  the running text with every code in brackets in rows of 42 characters (65 in a print document), and back, with the caret kept in place. Control+Page Up and
   Control+Page Down go to the same line on the previous or next page (Global, Shortcut Preferences sets what Page Up
   and Page Down do).
 - **Translation.** Print to braille and braille to print with 657 translation tables for 188 languages and braille

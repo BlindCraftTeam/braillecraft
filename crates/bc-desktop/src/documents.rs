@@ -36,7 +36,13 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
 
     let child = MDIChildFrame::builder(&frame).with_title(&name).build();
     // The rich text style on Windows makes positions count a line break as one character, as on the other systems.
-    let style = if cfg!(windows) { TextCtrlStyle::MultiLine | TextCtrlStyle::Rich2 } else { TextCtrlStyle::MultiLine };
+    // Lines are not wrapped by the control: both views end their lines themselves, and the reference scrolls
+    // sideways instead (spec 27 5d).
+    let style = if cfg!(windows) {
+        TextCtrlStyle::MultiLine | TextCtrlStyle::Rich2 | TextCtrlStyle::DontWrap
+    } else {
+        TextCtrlStyle::MultiLine | TextCtrlStyle::DontWrap
+    };
     // Control id 0, as the reference program's editing area has: screen reader scripts read the last line of the
     // document window (the status line) directly when the focused window has id 0.
     let text_ctrl = TextCtrl::builder(&child).with_id(0).with_style(style).build();
@@ -111,13 +117,11 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
     app::with(|a| {
         child_set_title(&doc.frame, &doc.full_name());
         a.docs.push(doc);
-        // With View, Codes off (the Global, Default Views setting) the document opens in the formatted view
-        // (spec 27 2a).
-        if !view.codes {
-            let i = a.docs.len() - 1;
-            a.set_view_codes(i, false);
-            a.docs[i].select_doc(0, 0);
-        }
+        // The document opens in the view Global, Default Views sets: the formatted view with View, Codes off, else
+        // the coded view (spec 27 2a).
+        let i = a.docs.len() - 1;
+        a.set_view_codes(i, view.codes);
+        a.docs[i].select_doc(0, 0);
     });
     child_maximize(&child);
     child.show(true);
@@ -388,7 +392,8 @@ pub fn formatted_key(a: &mut app::App, i: usize, code: i32, control: bool, alt: 
     const NUMPAD_ENTER: i32 = 370;
     const DELETE: i32 = 127;
     const NUMPAD_DELETE: i32 = 385;
-    if alt {
+    // In the coded view the editing area carries these keys out itself and the change is read back (formatted_typed).
+    if alt || a.docs[i].formatted.as_ref().is_none_or(|f| f.coded) {
         return false;
     }
     let model = a.docs[i].shown();
