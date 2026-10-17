@@ -221,45 +221,16 @@ pub fn selection_has_table_code(running: &str, a: usize, b: usize) -> bool {
 }
 
 /// The table the caret is in: its start code (the place of its 0x1C and after its 0x1F) and its number of rows and
-/// columns. INFERENCE: the original finds the table in the formatter's table regions and takes the rows and columns
-/// from the table's layout (spec 33 2.1, 4); BrailleCraft's formatter has no table layout yet, so the table is found
-/// from its codes (from its start code to after its end code, the innermost one holding the caret) and the rows and
-/// columns are counted from its row and cell codes.
+/// columns, from the formatter's table regions (spec 35 section 7): a table runs from its start code to the first
+/// end code (tables do not nest), its rows are the rows collected and its columns the most cells in a row (a
+/// matrix without its fence cells).
 pub fn table_at(running: &str, caret: usize) -> Option<(usize, usize, u32, u32)> {
+    let doc = crate::doctext::Shown::from_running(running);
+    let regions = crate::format::table_regions(&doc);
+    let t = regions.iter().find(|t| t.holds(caret))?;
     let r: Vec<char> = running.chars().collect();
-    let codes = codes_in(&r, 0, r.len());
-    let mut stack: Vec<usize> = Vec::new();
-    let mut found: Option<(usize, usize, usize)> = None;
-    for (k, (name, o, after)) in codes.iter().enumerate() {
-        if name.starts_with("htbs") {
-            stack.push(k);
-        } else if name == "htbe" {
-            if let Some(s) = stack.pop() {
-                let start = codes[s].1;
-                if start <= caret && caret < *after && found.is_none_or(|f| start >= codes[f.0].1) {
-                    found = Some((s, k, *o));
-                }
-            }
-        }
-    }
-    let (s, e, _) = found?;
-    let (mut rows, mut cols, mut cells, mut depth) = (1u32, 1u32, 1u32, 0usize);
-    for (name, _, _) in &codes[s + 1..e] {
-        match name.as_str() {
-            n if n.starts_with("htbs") => depth += 1,
-            "htbe" => depth = depth.saturating_sub(1),
-            "<" if depth == 0 => {
-                rows += 1;
-                cells = 1;
-            }
-            ">" if depth == 0 => {
-                cells += 1;
-                cols = cols.max(cells);
-            }
-            _ => {}
-        }
-    }
-    Some((codes[s].1, codes[s].2, rows, cols))
+    let after = r[t.start..].iter().position(|&c| c == CLOSE).map_or(t.start + 1, |p| t.start + p + 1);
+    Some((t.start, after, t.rows.len() as u32, t.cols as u32))
 }
 
 /// Table Properties' change (spec 33 5.4): the start code at `open` (its 0x1C) to `after` (after its 0x1F) gets

@@ -245,10 +245,15 @@ pub fn change(running: &str, anchor: usize, caret: usize, has_selection: bool, s
 /// Inside a table, Style Level + and - move the caret to the next or previous cell of its row (spec 34 1, table
 /// case): next is the cell after, with no move past the row's last cell; previous first goes to the start of the
 /// current cell, then to the cell before, with no move before the row's first. None means a beep and no move.
-/// INFERENCE: the original moves by the table's layout; until BrailleCraft lays tables out, the cells are the
-/// table's [>] codes and the rows its [<] codes (spec 33).
+/// The caret counts as in the table only from its first cell's start on (spec 35 7.1, the editor's strict test);
+/// the cells are the table's [>] codes and the rows its [<] codes, as the table regions collect them (spec 33).
 pub fn cell_move(running: &str, caret: usize, forward: bool) -> Option<usize> {
     let (start, _, _, _) = crate::table_cmd::table_at(running, caret)?;
+    let doc = crate::doctext::Shown::from_running(running);
+    let first = crate::format::table_regions(&doc).into_iter().find(|t| t.holds(caret))?.first_cell_start()?;
+    if caret < first {
+        return None;
+    }
     let r: Vec<char> = running.chars().collect();
     let end = r.len();
     // The places cells start at in the caret's row (after the table start code or a row code, and after each cell

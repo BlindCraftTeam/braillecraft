@@ -592,7 +592,9 @@ impl App {
             }
         };
         let d = &self.docs[i];
-        let style = bc_core::status::style_text(&shown, pos);
+        // Inside a table the style text gives way to the table's text (spec 35 7.5).
+        let style = bc_core::format::table_at(&ed.pages, pos.max(0) as usize)
+            .map_or_else(|| bc_core::status::style_text(&shown, pos), |t| t.status(pos.max(0) as usize));
         let status = StatusLine {
             style,
             location,

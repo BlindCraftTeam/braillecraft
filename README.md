@@ -126,8 +126,14 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
 - **Tables as the original.** Table, Create puts a new table at the caret: its type (Unrelated Columns, Matrix, or
   one of the six table formats), swap and header rows and columns in the table's start code, and its rows of empty
   cells, with the caret in the first cell. With the caret in a table, Create and Table Properties change that table's
-  type, swap and headers. A selection holding a table's start or end code is refused. (The braille layout of tables
-  is not built yet.)
+  type, swap and headers. A selection holding a table's start or end code is refused. The formatter lays tables out
+  as the original does: the cells from the start code to the end code are measured and laid in columns (header rows
+  underlined, guide dots to the next column, the table repeated with its header rows on every page it runs on, or
+  split across two pages when asked), as a stairstep, as a list (each cell under its column heading) or as a linear
+  paragraph (cells separated by colons and semicolons), chosen by the start code or automatically (columnar, then
+  listed, then linear), in the BANA or the RNIB style, with the swapped orientation when allowed; a table the
+  layout cannot fit is shown as its text with the reason in the status line (Failsafe), and inside a table the
+  status line names the table's layout, row and column.
 - **Global, Fonts and File, New.** Fonts lists the fonts installed on the computer (typewriter fonts first for the
   print font) and checks each point size, 5 to 180, in the dialog; the printed-output sizes are greyed while their
   size is set automatically. File, New remembers Show Hidden Templates. Global, Internationalization keeps its two

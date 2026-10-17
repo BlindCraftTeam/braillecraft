@@ -40,6 +40,9 @@
 use crate::doctext::Shown;
 use crate::engine::StyleTable;
 
+mod table;
+pub use table::TableRegion;
+
 /// Where a page number goes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Corner {
@@ -138,6 +141,20 @@ pub struct Page {
     /// The page's own number (its counter and prefix letter), as File Print and File Emboss match typed page
     /// numbers against it. Roman numbering ([pntr]) is not laid out yet, so it is never roman.
     pub number: crate::range::PageNumber,
+    /// The tables that start on this page (spec 35 section 7): the editor's table regions.
+    pub tables: Vec<TableRegion>,
+}
+
+/// The table holding document place `pos` among the laid-out pages, when the place is after the table's first
+/// cell starts (the original's "in the table" test for the status line and Style Level).
+pub fn table_at(pages: &[Page], pos: usize) -> Option<&TableRegion> {
+    pages.iter().flat_map(|p| p.tables.iter()).find(|t| t.holds(pos) && t.first_cell_start().is_some_and(|s| pos >= s))
+}
+
+/// The table regions of a document from its codes alone (no layout): what Table Properties and the cell moves
+/// read when the pages are not at hand.
+pub fn table_regions(doc: &Shown) -> Vec<TableRegion> {
+    table::regions(&pieces(doc, None), false)
 }
 
 /// The font attribute of each character position of the document (bit 1 bold, 2 italic, 4 underline): set by
@@ -507,6 +524,12 @@ struct Formatter {
     magazine: Option<(i64, Option<i64>)>,
     /// [svantN]: 1 or 3 the head as it stands when the page closes; 2 or 3 the print page number likewise.
     anticipatory: i64,
+    /// The table being collected (from [htbs] to [htbe], spec 35), the [htbfmtN:FFF] values for the next table
+    /// (the options pair and the automatic layout letters), and the regions of the tables that started on the page
+    /// being filled.
+    table: Option<Box<table::Collector>>,
+    htbfmt: (i64, String),
+    page_tables: Vec<TableRegion>,
 }
 
 impl Formatter {
@@ -579,7 +602,93 @@ impl Formatter {
             wanted_odd: None,
             magazine: None,
             anticipatory: 0,
+            table: None,
+            htbfmt: (0, String::new()),
+            page_tables: Vec::new(),
         }
+    }
+
+    /// The page geometry a table starting now is laid into (spec 35 2.1, in this formatter's page model): the lines
+    /// left on this page below the pen, and the lines of a fresh page under its running head and the blank lines
+    /// after it, less the running foot. A table on a full page starts on the next page.
+    fn table_geometry(&self) -> table::Geometry {
+        let first_depth = self.capacity().saturating_sub(self.page.len());
+        let next_odd = !self.odd;
+        let on = |pages: i64| pages == 3 || (pages == 1 && next_odd) || (pages == 2 && !next_odd);
+        let foot_next = self.foot.is_some() && on(self.foot_pages);
+        let head_next = if !self.head.is_empty() && on(self.head_pages) {
+            self.head.len() + if self.layout.braille { 0 } else { 2 } + self.blank_between
+        } else {
+            0
+        };
+        let other_depth = self.usable().saturating_sub(usize::from(foot_next)).saturating_sub(head_next).max(1);
+        let (first_depth, other_depth) = if first_depth == 0 && other_depth > 0 { (other_depth, other_depth) } else { (first_depth, other_depth) };
+        table::Geometry { first_depth, other_depth, width: self.layout.cells, first_below_head: self.page.len() > self.head_rows }
+    }
+
+    /// [htbs...]: the current line ends, the page is open, and a table object takes every piece up to [htbe].
+    fn start_table(&mut self, code: &str) {
+        if self.line_has_text() {
+            self.end_line(self.left);
+        }
+        self.open_page();
+        let geometry = self.table_geometry();
+        let braille = self.layout.braille;
+        self.table = Some(Box::new(table::Collector::new(code, &self.htbfmt, braille, geometry)));
+    }
+
+    /// A piece while a table is being collected: the table takes it; at [htbe] (its mark, which gives the code's
+    /// place) the table is laid out and the mark then stands after it.
+    fn table_step(&mut self, p: &Piece) {
+        let Some(t) = self.table.as_mut() else { return };
+        if t.take(p) {
+            return;
+        }
+        let end = match p {
+            Piece::Mark(pos) => *pos + 6,
+            _ => t.last_mark().map_or(0, |m| m + 1),
+        };
+        self.lay_table(end);
+        if let Piece::Mark(pos) = p {
+            self.mark(*pos);
+        }
+    }
+
+    /// Lays out the collected table (spec 35 1.4): its page images go on this page and on new pages after it; a
+    /// tainted table's text is laid out as ordinary text (the failsafe) and its region keeps the reason.
+    fn lay_table(&mut self, end: usize) {
+        let Some(t) = self.table.take() else { return };
+        let pieces = t.pieces.clone();
+        let laid = t.finish(end);
+        self.page_tables.push(laid.region);
+        if laid.tainted.is_some() {
+            let mut word = Vec::new();
+            for p in &pieces {
+                self.step(p, &mut word);
+            }
+            if !word.is_empty() {
+                self.word(&word);
+            }
+            self.touching = false;
+            return;
+        }
+        for (k, lines) in laid.images.into_iter().enumerate() {
+            if k > 0 {
+                self.new_page();
+            }
+            for line in lines {
+                if self.page_start.is_none() {
+                    self.page_start = line.sources.iter().flatten().next().copied();
+                }
+                if line.sources.iter().any(Option::is_some) {
+                    self.pending_blank = 0;
+                }
+                self.push_line(line);
+            }
+        }
+        self.start_col = self.left;
+        self.touching = false;
+        self.after_page_code = false;
     }
 
     /// Skips `count` lines (at most three pages' worth) as a skip code asks, less what [skn] cancelled of them.
@@ -1029,7 +1138,8 @@ impl Formatter {
         self.last_start = start;
         let print_labels = std::mem::take(&mut self.labels);
         let number = crate::range::PageNumber { number: self.counter as u32, letter: self.prefix, roman: false };
-        self.pages.push(Page { lines, start, print_labels, number });
+        let tables = std::mem::take(&mut self.page_tables);
+        self.pages.push(Page { lines, start, print_labels, number, tables });
         // The next page: its counter, and the number settings changed on this one.
         self.counter = self.next_counter.take().unwrap_or(self.counter + 1);
         if let Some((odd, even)) = self.next_numbers.take() {
@@ -1219,6 +1329,20 @@ impl Formatter {
     }
 
     fn code(&mut self, code: &str) {
+        // [htbfmtN:FFF] the options pair N and the automatic layout letters FFF of the next table (spec 35 1.1);
+        // [htbs...] starts a table; [htbe] outside a table is nothing.
+        if let Some(rest) = code.strip_prefix("htbfmt") {
+            let (n, letters) = rest.split_once(':').unwrap_or((rest, ""));
+            self.htbfmt = (n.trim().parse().unwrap_or(0), letters.replace(':', ""));
+            return;
+        }
+        if code.starts_with("htbs") {
+            self.start_table(code);
+            return;
+        }
+        if code == "htbe" {
+            return;
+        }
         // [fr;F~X] the next word flush right (before a page number's room), with fill F ('p' partial) of the first
         // character of X (the second in a print document).
         if code == "fr" || code.starts_with("fr;") || code.starts_with("fr~") {
@@ -1698,6 +1822,10 @@ impl Formatter {
 
     /// Lays out one piece; `word` is the word being collected.
     fn step(&mut self, p: &Piece, word: &mut Vec<(char, Option<usize>)>) {
+        if self.table.is_some() {
+            self.table_step(p);
+            return;
+        }
         match p {
             Piece::Char(c, at) => word.push((if *c == '\u{a0}' { ' ' } else { *c }, Some(*at))),
             Piece::Space => {
@@ -1837,6 +1965,10 @@ impl Formatter {
 
     /// Lays out the last word and what is still open, and gives the pages.
     fn end(mut self, word: Vec<(char, Option<usize>)>) -> Vec<Page> {
+        // A table without [htbe] runs to the end of the document (spec 35 1.3).
+        if let Some(end) = self.table.as_ref().map(|t| t.last_mark().map_or(0, |m| m + 1)) {
+            self.lay_table(end);
+        }
         if !word.is_empty() {
             self.word(&word);
         }
@@ -1867,7 +1999,10 @@ impl Formatter {
 }
 
 fn is_layout(code: &str) -> bool {
-    code.starts_with("fr;")
+    code.starts_with("htbs")
+        || code == "htbe"
+        || code.starts_with("htbfmt")
+        || code.starts_with("fr;")
         || code.starts_with("fr~")
         || code.starts_with("tab~")
         || code.starts_with("stb")
@@ -2730,6 +2865,32 @@ mod tests {
         // A list: level 1 starts at cell 1 and runs over to cell 3, each level two cells further in.
         let pages = format(&m("[hi1:3:0:2:2][hl1]aaa bbb ccc[hl2]aaa bbb ccc[hi]x"), &Layout::braille(9, 8), None);
         assert_eq!(texts(&pages[0])[..6], ["aaa bbb", "  ccc", "  aaa bbb", "    ccc", "x", ""]);
+    }
+
+    #[test]
+    fn a_table_is_laid_out_in_columns_with_its_header_underlined() {
+        // Two rows, two columns: the header row is underlined, the data row below it; the text after the table
+        // follows on the next line. The table's region knows its cells and the status text.
+        let doc = m("[htbs;r:1:1:b:n:a]Name[>]Age[<]Ann[>]12[htbe]After.");
+        let pages = format(&doc, &Layout::print(40, 25), None);
+        assert_eq!(&texts(&pages[0])[..4], ["Name  Age", "----  ---", "Ann   12", "After."]);
+        let region = &pages[0].tables[0];
+        assert_eq!((region.rows.len(), region.cols, region.kind, region.layout, region.auto), (2, 2, 0, table::COLUMNAR, true));
+        let twelve = doc.text.find("12").unwrap();
+        assert_eq!(region.place(twelve), (0, Some((1, 1))));
+        assert_eq!(region.status(twelve), "Columnar Table (Auto) Row 2/2 Col 2/2");
+        assert_eq!(table_at(&pages, twelve).map(|r| r.start), Some(0));
+        // The caret finds its cell: the "12" lands on the third line at column 7 (page, line, column from 1).
+        assert_eq!(locate(&pages, twelve), (1, 3, 7));
+        // The regions from the codes alone agree.
+        let regions = table_regions(&doc);
+        assert_eq!(regions.len(), 1);
+        assert_eq!((regions[0].rows.len(), regions[0].cols), (2, 2));
+        // In braille the underline is dots 25 led by dot 5 (a one-cell column shows the dot 5 alone), and an empty
+        // body cell gets the guide-dot lead (dot 5, dot 5), which is the width an empty cell measures as.
+        let b = m("[htbs]a[>]b[<]c[>][htbe]");
+        let pages = format(&b, &Layout::braille(40, 25), None);
+        assert_eq!(&texts(&pages[0])[..3], ["a  b", "\"  \"3", "c  \"\""]);
     }
 
     #[test]

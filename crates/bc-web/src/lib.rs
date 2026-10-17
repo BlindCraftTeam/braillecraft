@@ -1341,9 +1341,12 @@ pub fn status_line(text: &str, cells: u32, lines: u32, braille: bool, position: 
     use bc_core::status::{char_field, style_text, StatusLine};
     let shown = shown_of(text);
     let pos = position as i64;
+    let pages = laid_out(text, cells, lines, braille);
+    // Inside a table the style text gives way to the table's text (spec 35 7.5).
+    let style = bc_core::format::table_at(&pages, position).map_or_else(|| style_text(&shown, pos), |t| t.status(position));
     StatusLine {
-        style: style_text(&shown, pos),
-        location: (!codes).then(|| bc_core::format::locate(&laid_out(text, cells, lines, braille), position)),
+        style,
+        location: (!codes).then(|| bc_core::format::locate(&pages, position)),
         character: char_field(&shown, pos, verbose),
         six_key,
         highlight,
