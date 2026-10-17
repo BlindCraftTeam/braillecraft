@@ -103,6 +103,10 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   and - (Alt+Right, Alt+Left) raise or lower the hierarchy level code [hlN] of the paragraph style at the caret, up
   to the most levels the [hi] code allows, and renumber every run of level codes in a selection; inside a table they
   move to the next or previous cell of the row; a failure beeps.
+- **Formatter.** The braille layout follows the original's codes: tab stops ([stb], [#], [>], [ctb]), [tas] and [taa],
+  [lps] and [lpr], the decimal character, the left-margin adjustment [svlma], the relative form of [hi] and its
+  paragraph values, [skn], page parity [sd], magazine paragraphs [pm], anticipatory heads and print numbers [svant],
+  the word-break modes [wb-no] and [wb-cb], and a print page beginning on the last lines of a page.
 - **Find and Replace as the original.** Each document keeps its own Find and Replace. A search looks in the
   selection first, then offers the rest of the document and the other end of it; it can search for codes, for a
   style by its name (Replace renames a style's codes, or takes them out), or with a `*` at the end of a code standing

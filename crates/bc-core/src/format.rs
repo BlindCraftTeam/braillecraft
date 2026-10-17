@@ -306,7 +306,9 @@ fn page_number(n: usize, prefix: Option<char>, braille: bool) -> String {
 /// Where the next word goes (a tab, flush right, [run]): column `col` (1-based; for flush right the last cell before
 /// the page number's room), justified 'L' (starting there), 'R' (ending there), 'C' (centred on it) or 'D' (its
 /// decimal point on it), with a fill from the pen ('partial' keeps a space at each end of it); `may_wrap` ends the
-/// line first when the column is not after the pen and a space.
+/// line first when the column is not after the pen and a space. `spacing` ([tas]) puts the word that many cells
+/// after the pen instead when the column is behind it and the word still fits; `overwrite` ([taa], [lpr]) puts it at
+/// the column whatever is there.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Place {
     col: Option<i64>,
@@ -314,6 +316,14 @@ struct Place {
     fill: Option<char>,
     partial: bool,
     may_wrap: bool,
+    spacing: Option<usize>,
+    overwrite: bool,
+}
+
+impl Place {
+    fn at(col: i64, just: char) -> Place {
+        Place { col: Some(col), just, fill: None, partial: false, may_wrap: true, spacing: None, overwrite: false }
+    }
 }
 
 /// The side room a running head or foot keeps ([svrhsM:N:J], [svrfsM:N:J]): M cells at the left, N at the right, and
@@ -477,6 +487,26 @@ struct Formatter {
     keep_stop: Option<usize>,
     /// The page just finished filled inside a block that started on it: the piece the block started at.
     keep_overflow: Option<usize>,
+    /// Tab stops [stbS:A:P] (stop number, justification, column), the minimum spacing of [tas] ([svmtsN]), the
+    /// decimal character of 'D' justification ([svdac~X]), the pen column [lps] saved for [lpr].
+    stops: Vec<(usize, char, i64)>,
+    min_spacing: usize,
+    decimal: char,
+    saved_col: Option<usize>,
+    /// [svlmaN], added to later [ind] and [hi] margins.
+    lma: i64,
+    /// The word break mode of the word being collected ([wb-no] 1, [wb-cb] 2).
+    word_break: u8,
+    /// Skipped lines: how many blank lines stand pending at the end of the page (written, as the original writes
+    /// them lazily), and lines of the next skip that [skn] cancelled.
+    pending_blank: usize,
+    skip_debt: i64,
+    /// [sdN]: the next page opened must be odd (true) or even.
+    wanted_odd: Option<bool>,
+    /// [pmN:C]: the next word goes N spaces on in the line if it fits, else starts a paragraph (C its column).
+    magazine: Option<(i64, Option<i64>)>,
+    /// [svantN]: 1 or 3 the head as it stands when the page closes; 2 or 3 the print page number likewise.
+    anticipatory: i64,
 }
 
 impl Formatter {
@@ -538,6 +568,39 @@ impl Formatter {
             retried: false,
             keep_stop: None,
             keep_overflow: None,
+            stops: Vec::new(),
+            min_spacing: 1,
+            decimal: '.',
+            saved_col: None,
+            lma: 0,
+            word_break: 0,
+            pending_blank: 0,
+            skip_debt: 0,
+            wanted_odd: None,
+            magazine: None,
+            anticipatory: 0,
+        }
+    }
+
+    /// Skips `count` lines (at most three pages' worth) as a skip code asks, less what [skn] cancelled of them.
+    fn skip_lines(&mut self, count: i64) {
+        let count = count.clamp(0, 3 * self.layout.lines as i64);
+        let n = count - self.skip_debt;
+        self.skip_debt = (self.skip_debt - count).max(0);
+        for _ in 0..n.max(0) {
+            self.push_line(Line::default());
+            self.pending_blank += 1;
+        }
+    }
+
+    /// The cell of the first character of the line above that is not blank: the nearest such line when `nearest`,
+    /// else the line just above (0 when it is blank). For the relative form of [hi].
+    fn above_cell(&self, nearest: bool) -> i64 {
+        let first = |l: &Line| l.text.chars().position(|c| c != ' ').map(|p| p as i64);
+        if nearest {
+            self.page.iter().rev().find_map(first).unwrap_or(0)
+        } else {
+            self.page.last().and_then(first).unwrap_or(0)
         }
     }
 
@@ -566,6 +629,10 @@ impl Formatter {
     /// margin when F is 1 or 3, within the line.
     fn margin(&self, p: Option<i64>, f: Option<i64>) -> usize {
         let mut cell = p.unwrap_or(1) - 1;
+        // The [svlma] adjustment goes in below F 2.
+        if f.unwrap_or(0) < 2 {
+            cell += self.lma;
+        }
         if matches!(f, Some(1) | Some(3)) {
             cell += self.left as i64 + 1;
         }
@@ -657,6 +724,15 @@ impl Formatter {
     fn open_page(&mut self) {
         if self.opened {
             return;
+        }
+        // [sdN] asked for an odd or even page: a page of the wrong parity is left blank (its head and number laid)
+        // and the content goes on the next.
+        if let Some(odd) = self.wanted_odd.take() {
+            if odd != self.odd && self.page.is_empty() {
+                self.opened = true;
+                self.page_print = self.print_text().filter(|_| self.print_corner() != Corner::None);
+                self.finish_page();
+            }
         }
         self.opened = true;
         self.page_print = self.print_text().filter(|_| self.print_corner() != Corner::None);
@@ -752,9 +828,18 @@ impl Formatter {
             }
             return;
         }
-        if !self.line_has_text() && self.page.len() + 1 == self.usable() && next_top {
-            // It begins on the next page (the page's end brings the count to 0).
-            self.print_since = usize::MAX;
+        // On the last lines of the page with the next page's number at the top: the page is filled out so the
+        // change shows in the next page's corner, and the print page begins there.
+        let left_after = self.usable().saturating_sub(self.page.len() + usize::from(self.line_has_text()));
+        if next_top && left_after <= 1 && !self.page.is_empty() {
+            if self.line_has_text() {
+                self.end_line(self.left);
+            }
+            if !self.page.is_empty() {
+                self.finish_page();
+            }
+            self.print_since = 0;
+            self.start_col = self.left;
             return;
         }
         if self.line_has_text() {
@@ -788,11 +873,33 @@ impl Formatter {
     }
 
     fn put(&mut self, c: char, source: Option<usize>) {
-        if source.is_some() && self.page_start.is_none() {
-            self.page_start = source;
+        if source.is_some() {
+            if self.page_start.is_none() {
+                self.page_start = source;
+            }
+            self.pending_blank = 0;
         }
         self.line.text.push(c);
         self.line.sources.push(source);
+    }
+
+    /// Puts `c` at column `at` of the line: over what is there, or at the end.
+    fn put_at(&mut self, at: usize, c: char, source: Option<usize>) {
+        let used = self.line.text.chars().count();
+        if at < used {
+            let mut text: Vec<char> = self.line.text.chars().collect();
+            text[at] = c;
+            self.line.text = text.into_iter().collect();
+            self.line.sources[at] = source;
+            if source.is_some() {
+                self.pending_blank = 0;
+            }
+        } else {
+            for _ in used..at {
+                self.put(' ', None);
+            }
+            self.put(c, source);
+        }
     }
 
     /// Ends the line; the next one starts at `next_col`.
@@ -832,6 +939,21 @@ impl Formatter {
         let mut lines = std::mem::take(&mut self.page);
         let room = self.usable();
         lines.resize(self.layout.lines.max(room), Line::default());
+        // An anticipatory head ([svant] 1 or 3) is written as it stands when the page closes, over the rows it was
+        // given at the opening. INFERENCE: the original lays the page out again when the number of head lines
+        // changed; here a line that went away is left blank and one that came is not shown.
+        if self.anticipatory & 1 != 0 && self.head_rows > 0 {
+            let cells = self.layout.cells;
+            for k in 0..self.head_rows.min(lines.len()) {
+                lines[k] = match self.head.get(k) {
+                    Some(h) => side_line(h, self.head_side, cells),
+                    None => Line::default(),
+                };
+            }
+        }
+        if self.anticipatory & 2 != 0 && self.opened {
+            self.page_print = self.print_text().filter(|_| self.print_corner() != Corner::None);
+        }
         // The number goes on the first line (at the top) or the last (at the bottom), at its start or its end; the
         // text on that line was kept clear of it.
         let at = if corner.top() { Some(0) } else if corner.bottom() { Some(room - 1) } else { None };
@@ -940,10 +1062,11 @@ impl Formatter {
         let col = loop {
             let (room_left, room_right) = self.rooms();
             let target = place.col.unwrap_or((width - room_right.min(width)) as i64);
+            let decimal = self.decimal;
             let start = match place.just {
                 'R' => target + 1 - len as i64,
                 'C' => target + 1 - (len as i64 + 1) / 2,
-                'D' => target - cells.iter().position(|c| c.0 == '.').unwrap_or(len.saturating_sub(1)) as i64,
+                'D' => target - cells.iter().position(|c| c.0 == decimal).unwrap_or(len.saturating_sub(1)) as i64,
                 _ => target,
             };
             let col = (start.clamp(1, (width as i64 - len as i64 + 1).max(1)) - 1) as usize;
@@ -951,6 +1074,17 @@ impl Formatter {
             let has_text = self.line_has_text();
             let behind = col < used + usize::from(has_text);
             let blocked = col < room_left || col + len > width.saturating_sub(room_right);
+            // [taa] and [lpr] put the word at the column whatever is there.
+            if place.overwrite {
+                break col;
+            }
+            // [tas]: behind the pen, the word goes its minimum spacing after the pen when it still fits.
+            if let Some(s) = place.spacing.filter(|_| behind && has_text) {
+                let after = used + s;
+                if after + len <= width.saturating_sub(room_right) {
+                    break after;
+                }
+            }
             if place.may_wrap && has_text && (behind || blocked) && !wrapped {
                 wrapped = true;
                 self.touching = false;
@@ -969,11 +1103,11 @@ impl Formatter {
             self.put(c, None);
         }
         for (k, &(c, s)) in cells.iter().enumerate() {
-            let at = self.line.text.chars().count();
+            let at = if place.overwrite { col + k } else { self.line.text.chars().count() };
             self.place_word_marks(k, at);
-            self.put(c, s);
+            self.put_at(at, c, s);
         }
-        let at = self.line.text.chars().count();
+        let at = if place.overwrite { col + len } else { self.line.text.chars().count() };
         self.place_word_marks(len, at);
         self.touching = false;
     }
@@ -998,8 +1132,35 @@ impl Formatter {
         self.open_page();
         if let Some(place) = self.place.take() {
             self.placed_word(cells, place);
+            self.word_break = 0;
             return;
         }
+        // [pmN:C] magazine paragraph: N spaces on in the line when the word fits after them, else a paragraph
+        // (C: -2 at the left margin, -3 at the runover point, else that cell).
+        if let Some((spaces, c)) = self.magazine.take() {
+            let used = self.line.text.chars().count();
+            let spaces = spaces.max(0) as usize;
+            if self.line_has_text() && used + spaces + cells.len() <= self.width() {
+                for _ in 0..spaces {
+                    self.put(' ', None);
+                }
+                self.touching = true;
+            } else {
+                if self.line_has_text() {
+                    self.end_line(self.left);
+                }
+                let (col, skip, from_margin) = self.paragraph;
+                self.skip_lines(skip);
+                let col = match c {
+                    Some(-2) => self.left,
+                    Some(-3) => self.runover(),
+                    Some(p) if p > 0 => (p - 1) as usize,
+                    _ => (col - 1).max(0) as usize + if from_margin { self.left } else { 0 },
+                };
+                self.start_col = col.min(self.layout.cells.saturating_sub(1));
+            }
+        }
+        let word_break = std::mem::take(&mut self.word_break);
         let mut rest = cells;
         let mut k = 0;
         while !rest.is_empty() {
@@ -1014,9 +1175,13 @@ impl Formatter {
             // where translation marks a break and after its hyphenation pair; only the hyphen cell is used here). A
             // word longer than a whole line starts on this line when there is room after the space; else it goes to
             // the next line, and a word longer than a line with nothing before it is cut at the line end.
+            // [wb-no] lets no hyphen break the word; [wb-cb] lets it break at any cell (INFERENCE: without a
+            // continuation sign).
             let take = if rest.len() <= room {
                 rest.len()
-            } else if let Some(n) = rest[..room.min(rest.len())].iter().rposition(|c| c.0 == '-').map(|i| i + 1) {
+            } else if word_break == 2 && room >= 1 {
+                room
+            } else if let Some(n) = rest[..room.min(rest.len())].iter().rposition(|c| c.0 == '-').map(|i| i + 1).filter(|_| word_break != 1) {
                 n
             } else if !has_text {
                 room.max(1)
@@ -1066,13 +1231,78 @@ impl Formatter {
                 fill,
                 partial: kind.trim().chars().next().is_some_and(|k| k.eq_ignore_ascii_case(&'p')),
                 may_wrap: true,
+                spacing: None,
+                overwrite: false,
             });
+            return;
+        }
+        // [stbS:A:P] tab stop S (1 to 9) justified A at cell P; [ctb] clears them; [#S] the next word at stop S; [>]
+        // at the first stop past the pen (nothing without one, INFERENCE).
+        if let Some(rest) = code.strip_prefix("stb") {
+            let parts: Vec<&str> = rest.split(':').collect();
+            let number = |k: usize| parts.get(k).and_then(|p| p.trim().parse::<i64>().ok());
+            if let Some(s) = number(0).filter(|s| (1..=9).contains(s)) {
+                let just = parts.get(1).and_then(|p| p.trim().chars().next()).map_or('L', |c| c.to_ascii_uppercase());
+                let col = number(2).unwrap_or(1);
+                self.stops.retain(|st| st.0 != s as usize);
+                self.stops.push((s as usize, just, col));
+                self.stops.sort_by_key(|st| st.0);
+            }
+            return;
+        }
+        if let Some(rest) = code.strip_prefix('#') {
+            if let Some(stop) = rest.trim().parse::<usize>().ok().and_then(|s| self.stops.iter().find(|st| st.0 == s)) {
+                self.place = Some(Place::at(stop.2, stop.1));
+            }
+            return;
+        }
+        if code == ">" {
+            let pen = self.line.text.chars().count() as i64;
+            if let Some(stop) = self.stops.iter().find(|st| st.2 > pen) {
+                self.place = Some(Place::at(stop.2, stop.1));
+            }
+            return;
+        }
+        if let Some(x) = code.strip_prefix("svdac~") {
+            if let Some(c) = x.chars().next() {
+                self.decimal = c;
+            }
             return;
         }
         let (name, n) = split_code(code);
         let name = if name.starts_with("tab~") { "tab" } else { name };
         let first = n.first().copied();
         match name {
+            "ctb" => self.stops.clear(),
+            // [tasP] the next word at cell P, or its minimum spacing after the pen; [taaP] at cell P whatever is
+            // there; [svmtsN] that spacing.
+            "tas" => self.place = Some(Place { spacing: Some(self.min_spacing), ..Place::at(first.unwrap_or(1), 'L') }),
+            "taa" => self.place = Some(Place { may_wrap: false, overwrite: true, ..Place::at(first.unwrap_or(1), 'L') }),
+            "svmts" => self.min_spacing = first.unwrap_or(1).max(0) as usize,
+            // [lps] saves the pen column, [lpr] puts the next word back there (INFERENCE: over what is there).
+            "lps" => self.saved_col = Some(self.line.text.chars().count()),
+            "lpr" => {
+                if let Some(col) = self.saved_col {
+                    self.place = Some(Place { may_wrap: false, overwrite: true, ..Place::at(col as i64 + 1, 'L') });
+                }
+            }
+            "svlma" => self.lma = first.unwrap_or(0),
+            // [sknL:M] takes back L of the lines the last skip left (M more cancel lines of the next skip).
+            "skn" => {
+                let l = first.unwrap_or(1).max(0) as usize;
+                let m = n.get(1).copied().unwrap_or(0).max(0) as usize;
+                let back = l.min(self.pending_blank);
+                let more = m.min(self.pending_blank - back);
+                for _ in 0..back + more {
+                    self.page.pop();
+                }
+                self.pending_blank -= back + more;
+                self.skip_debt += (m - more) as i64;
+            }
+            // [sdN] the next page is odd (1) or even (0).
+            "sd" => self.wanted_odd = Some(first.unwrap_or(1) != 0),
+            "pm" => self.magazine = Some((first.unwrap_or(0), n.get(1).copied())),
+            "svant" => self.anticipatory = first.unwrap_or(0).clamp(0, 3),
             "<" => {
                 self.interrupt_keep(|f| {
                     let next = f.left;
@@ -1092,9 +1322,7 @@ impl Formatter {
                 // cell: braille the third, print the first, counted from the edge of the page (or from the left
                 // margin when [svprg] says so).
                 let (col, skip, from_margin) = self.paragraph;
-                for _ in 0..skip.max(0) {
-                    self.push_line(Line::default());
-                }
+                self.skip_lines(skip);
                 let col = (col - 1).max(0) as usize + if from_margin { self.left } else { 0 };
                 self.start_col = col.min(self.layout.cells.saturating_sub(1));
             }
@@ -1111,9 +1339,7 @@ impl Formatter {
                 if remaining < need + 1 && !self.page.is_empty() && self.keep_depth == 0 {
                     self.finish_page();
                 } else if !self.page.is_empty() {
-                    for _ in 0..skip.max(0) {
-                        self.push_line(Line::default());
-                    }
+                    self.skip_lines(skip);
                 }
             }
             "sk" => {
@@ -1124,9 +1350,7 @@ impl Formatter {
                 }
                 let n = first.unwrap_or(0);
                 let count = if n < 0 { self.capacity() as i64 - self.page.len() as i64 + n } else { n };
-                for _ in 0..count.clamp(0, 3 * self.layout.lines as i64) {
-                    self.push_line(Line::default());
-                }
+                self.skip_lines(count);
             }
             "ind" => {
                 if self.line_has_text() {
@@ -1144,17 +1368,30 @@ impl Formatter {
             // [ptys] alone is a runover two cells in.
             "ptys" => self.runover_offset = first.unwrap_or(2).max(0),
             "ptye" => self.runover_offset = 0,
-            // [hiL:V:R:I:J:K:M:N:O:P] level margins, level 1 at once (spec 19 7.3): L and V the first cells (1-based)
-            // of a level-1 first line and runover line, R its right margin, I J K the increments per level, M the
-            // most levels, N O P limits. Not yet: the relative form (11th value) and the [p] values (12th to 14th).
+            // [hiL:V:R:I:J:K:M:N:O:P:Q:S:T:U] level margins, level 1 at once (spec 19 7.3): L and V the first cells
+            // (1-based) of a level-1 first line and runover line, R its right margin, I J K the increments per level,
+            // M the most levels, N O P limits; with Q not 0, L and V are added to the cell of the first character of
+            // the line above (Q 1: the nearest line with text; else the line just above, 0 when blank) and the
+            // [svlma] adjustment is left out; S, T and U replace the [p] settings (start cell, lines skipped, from the
+            // margin).
             "hi" => {
                 if self.line_has_text() {
                     self.end_line(self.left);
                 }
                 let get = |k: usize, default: i64| n.get(k).copied().unwrap_or(default);
+                let relative = get(10, 0) != 0;
+                let (l, v) = if relative {
+                    let base = self.above_cell(get(10, 0) == 1);
+                    (base + get(0, 1) + 1, base + get(1, 1) + 1)
+                } else {
+                    (get(0, 1) + self.lma, get(1, 1))
+                };
+                if n.len() > 11 {
+                    self.paragraph = (get(11, self.paragraph.0), get(12, self.paragraph.1), get(13, 0) != 0);
+                }
                 self.levels = Some([
-                    get(0, 1),
-                    get(1, 1),
+                    l,
+                    v,
                     get(2, 0),
                     get(3, 0),
                     get(4, 0),
@@ -1200,9 +1437,7 @@ impl Formatter {
                     self.end_line(self.left);
                     count -= 1;
                 }
-                for _ in 0..count.clamp(0, 3 * self.layout.lines as i64) {
-                    self.push_line(Line::default());
-                }
+                self.skip_lines(count);
             }
             "ki" => self.keep_interrupt = first.unwrap_or(0) != 0,
             "rm" => self.right = first.unwrap_or(0).max(0) as usize,
@@ -1267,16 +1502,14 @@ impl Formatter {
                 let just = parts.get(1).and_then(|p| p.trim().chars().next()).map_or('L', |c| c.to_ascii_uppercase());
                 let kind = parts.get(2).and_then(|p| p.trim().chars().next());
                 self.place = Some(Place {
-                    col: Some(col),
-                    just,
                     fill: x.and_then(|x| x.chars().next()),
                     partial: kind.is_some_and(|k| k.eq_ignore_ascii_case(&'p')),
-                    may_wrap: true,
+                    ..Place::at(col, just)
                 });
             }
             // [run] the next word at the runover margin, on this line.
             "run" => {
-                self.place = Some(Place { col: Some(self.runover() as i64 + 1), just: 'L', fill: None, partial: false, may_wrap: false });
+                self.place = Some(Place { may_wrap: false, ..Place::at(self.runover() as i64 + 1, 'L') });
             }
             // [kps] ... [kpe] keep a block together on a page (new lines at both ends); [kbs] ... [kbe] the same within
             // a line (spec 19 7.4). A block at the top of a page's body is not counted.
@@ -1350,9 +1583,7 @@ impl Formatter {
                 } else {
                     after_blank
                 };
-                for _ in 0..count.clamp(0, 3 * self.layout.lines as i64) {
-                    self.push_line(Line::default());
-                }
+                self.skip_lines(count);
             }
             // [tls] ... [tle] the running head, [rfs] ... [rfe] the running foot: the line ends, the old one is
             // cleared and the words are captured (spec 19 7.1, 7.2).
@@ -1484,6 +1715,13 @@ impl Formatter {
                 if !in_word && !word.is_empty() {
                     self.word(&std::mem::take(word));
                     self.touching = true;
+                }
+                // The word break mode of the word in progress: [wb-no] none, [wb-cb] computer braille, [wb] normal.
+                match code.as_str() {
+                    "wb-no" => self.word_break = 1,
+                    "wb-cb" => self.word_break = 2,
+                    "wb" => self.word_break = 0,
+                    _ => {}
                 }
                 if is_layout(code) {
                     self.code(code);
@@ -1629,13 +1867,21 @@ impl Formatter {
 }
 
 fn is_layout(code: &str) -> bool {
-    code.starts_with("fr;") || code.starts_with("fr~") || code.starts_with("tab~") || matches!(
-        split_code(code).0,
-        "<" | "l" | "p" | "sk" | "ind" | "inm" | "ptys" | "ptye" | "rm" | "svsbl" | "pg" | "top" | "cp" | "fr" | "hds" | "hde"
-            | "kbs" | "kbe" | "kpf" | "tab" | "run"
-            | "svpnp" | "svpfd" | "hi" | "hl" | "lea" | "svrlb" | "svprg" | "sl" | "st" | "ki"
-            | "tls" | "tle" | "tld" | "rfs" | "rfe" | "rfd" | "svrhp" | "svrfp" | "svrhs" | "svrfs" | "kps" | "kpe" | "sc"
-    )
+    code.starts_with("fr;")
+        || code.starts_with("fr~")
+        || code.starts_with("tab~")
+        || code.starts_with("stb")
+        || code.starts_with('#')
+        || code.starts_with("svdac~")
+        || code == ">"
+        || matches!(
+            split_code(code).0,
+            "<" | "l" | "p" | "sk" | "ind" | "inm" | "ptys" | "ptye" | "rm" | "svsbl" | "pg" | "top" | "cp" | "fr" | "hds" | "hde"
+                | "kbs" | "kbe" | "kpf" | "tab" | "run"
+                | "svpnp" | "svpfd" | "hi" | "hl" | "lea" | "svrlb" | "svprg" | "sl" | "st" | "ki"
+                | "tls" | "tle" | "tld" | "rfs" | "rfe" | "rfd" | "svrhp" | "svrfp" | "svrhs" | "svrfs" | "kps" | "kpe" | "sc"
+                | "ctb" | "tas" | "taa" | "svmts" | "lps" | "lpr" | "svlma" | "skn" | "sd" | "pm" | "svant"
+        )
 }
 
 /// Lays out a document (in the editor's form) into pages, with the document's styles.
@@ -2417,6 +2663,49 @@ mod tests {
         // Right justified at a cell.
         let pages = format(&m("a [tab8:R]xyz"), &Layout::braille(10, 2), None);
         assert_eq!(texts(&pages[0])[0], "a    xyz");
+    }
+
+    #[test]
+    fn tab_stops_and_the_tab_variants() {
+        // [#1] goes to stop 1, [>] to the next stop past the pen.
+        let pages = format(&m("[stb1:L:5][stb2:L:10]a[#1]b[>]c"), &Layout::braille(20, 2), None);
+        assert_eq!(texts(&pages[0])[0], "a   b    c");
+        // [tas]: at the cell, or the minimum spacing after the pen when the cell is behind it.
+        let pages = format(&m("[tas3]ab[tas2]cd"), &Layout::braille(20, 2), None);
+        assert_eq!(texts(&pages[0])[0], "  ab cd");
+        // [taa] writes over what is there; [lps] and [lpr] go back to the saved column.
+        let pages = format(&m("abcdef[taa2]XY"), &Layout::braille(20, 2), None);
+        assert_eq!(texts(&pages[0])[0], "aXYdef");
+        let pages = format(&m("ab[lps]cd[lpr]XY"), &Layout::braille(20, 2), None);
+        assert_eq!(texts(&pages[0])[0], "abXY");
+    }
+
+    #[test]
+    fn skips_taken_back_margin_adjustment_magazine_paragraph_parity_and_word_break() {
+        // [skn2] takes back two of the three lines [sk3] skipped.
+        let pages = format(&m("a[sk3][skn2]b"), &Layout::braille(10, 6), None);
+        assert_eq!(texts(&pages[0])[..3], ["a", "", "b"]);
+        // [svlma] moves later [ind] margins.
+        let pages = format(&m("[svlma2][ind1]a"), &Layout::braille(10, 2), None);
+        assert_eq!(texts(&pages[0])[0], "  a");
+        // A magazine paragraph: the word three spaces on when it fits, else a new paragraph.
+        let pages = format(&m("ab[pm3]cd"), &Layout::braille(10, 2), None);
+        assert_eq!(texts(&pages[0])[0], "ab   cd");
+        let pages = format(&m("abcdef[pm3]ghij"), &Layout::braille(10, 3), None);
+        assert_eq!(texts(&pages[0])[..2], ["abcdef", "  ghij"]);
+        // [sd1] after a page break leaves the even page blank.
+        let pages = format(&m("a[pg][sd1]b"), &Layout::braille(10, 2), None);
+        assert_eq!(pages.len(), 3);
+        assert!(pages[1].lines.iter().all(|l| l.text.trim().is_empty()));
+        assert_eq!(texts(&pages[2])[0], "b");
+        // [wb-no]: the word moves whole to the next line instead of breaking at its hyphen.
+        let pages = format(&m("xy ab-cd"), &Layout::braille(6, 3), None);
+        assert_eq!(texts(&pages[0])[..2], ["xy ab-", "cd"]);
+        let pages = format(&m("xy [wb-no]ab-cd"), &Layout::braille(6, 3), None);
+        assert_eq!(texts(&pages[0])[..2], ["xy", "ab-cd"]);
+        // An anticipatory head shows as it stands when the page closes.
+        let pages = format(&m("[tls]one[tle][svant1]a[tls]two[tle]b"), &Layout::braille(10, 4), None);
+        assert_eq!(texts(&pages[0])[0], "   two");
     }
 
     #[test]
