@@ -1699,9 +1699,13 @@ fn copies_field(d: &Dlg, cid: i32) -> Option<u32> {
     }
 }
 
-/// The pages a page range group asks for (indexes into `pages`, None for a blank page), or None when a message was
-/// shown and the dialog stays open. `caret` and the selection `(from, to)` are positions in the document.
-fn chosen_pages(d: &Dlg, radios: [i32; 5], fields: (i32, i32), pages: &[bc_core::format::Page], caret: i64, (from, to): (i64, i64)) -> Option<Vec<Option<usize>>> {
+/// The pages a page range group asks for (indexes into the pages printed, None for a blank page), and for Selection
+/// the pages printed in place of the document's: the selection laid out as a document of its own (document `i`'s
+/// places `from` to `to`), all of whose pages are printed, as the original does; or None when a message was shown and
+/// the dialog stays open. `caret` and the selection are positions in the document.
+type ChosenPages = (Vec<Option<usize>>, Option<std::rc::Rc<Vec<bc_core::format::Page>>>);
+
+fn chosen_pages(d: &Dlg, radios: [i32; 5], fields: (i32, i32), pages: &[bc_core::format::Page], i: usize, caret: i64, (from, to): (i64, i64)) -> Option<ChosenPages> {
     use crate::print::{parse_range, Range};
     let count = pages.len();
     let range = match d.radio(&radios).unwrap_or(0) {
@@ -1711,15 +1715,14 @@ fn chosen_pages(d: &Dlg, radios: [i32; 5], fields: (i32, i32), pages: &[bc_core:
             (Range::Pages(vec![Some(p - 1)]), false, false)
         }
         2 => {
-            // INFERENCE: the reference gives an error for an empty selection (spec 24, 2a); its message is not
-            // traced, so the no-pages message stands in.
-            if from >= to {
-                (Range::NoneFound, false, false)
-            } else {
-                let first = bc_core::format::locate(pages, from.max(0) as usize).0;
-                let last = bc_core::format::locate(pages, (to - 1).max(0) as usize).0;
-                (Range::Pages((first - 1..last).map(Some).collect()), false, false)
+            let (a, b) = (from.min(to).max(0) as usize, from.max(to).max(0) as usize);
+            let part = app::with(|ap| ap.laid_out_part(i, a, b));
+            // No page made of it: the original shows its message -1, which has no text, so "Error message -1".
+            if part.is_empty() {
+                message("Error message -1");
+                return None;
             }
+            return Some(((0..part.len()).map(Some).collect(), Some(part)));
         }
         // Page n is the n-th laid-out page both for the page numbers and for the page sequence numbers: the
         // formatter numbers pages from 1 in order.
@@ -1746,7 +1749,7 @@ fn chosen_pages(d: &Dlg, radios: [i32; 5], fields: (i32, i32), pages: &[bc_core:
             if repeated && !yes_no("The page range you have specified implies that one or more pages will be printed more than once.  Do you wish to proceed?") {
                 return None;
             }
-            Some(p)
+            Some((p, None))
         }
     }
 }
@@ -1767,7 +1770,7 @@ pub fn print_with(skip: Option<u32>) {
     }) else {
         return;
     };
-    let pages = app::with(|a| {
+    let mut pages = app::with(|a| {
         let shown = a.docs[i].shown();
         a.laid_out(i, &shown)
     });
@@ -1800,7 +1803,10 @@ pub fn print_with(skip: Option<u32>) {
                     return;
                 }
                 let Some(copies) = copies_field(&d, 7) else { continue };
-                let Some(chosen) = chosen_pages(&d, PRINT_RANGE, (15, 16), &pages, caret, (from, to)) else { continue };
+                let Some((chosen, part)) = chosen_pages(&d, PRINT_RANGE, (15, 16), &pages, i, caret, (from, to)) else { continue };
+                if let Some(part) = part {
+                    pages = part;
+                }
                 break (copies, chosen, braille && d.checked(17));
             };
             d.destroy();
@@ -1914,7 +1920,7 @@ pub fn emboss_with(skip: Option<u32>) {
         Check::DoesNotFit if !yes_no(&does_not_fit_message(&shown_setup, &shown_form, cells, lines)) => return,
         _ => {}
     }
-    let pages = app::with(|a| {
+    let mut pages = app::with(|a| {
         let shown = a.docs[i].shown();
         a.laid_out(i, &shown)
     });
@@ -1943,7 +1949,10 @@ pub fn emboss_with(skip: Option<u32>) {
                     return;
                 }
                 let Some(copies) = copies_field(&d, 7) else { continue };
-                let Some(chosen) = chosen_pages(&d, EMBOSS_RANGE, (14, 15), &pages, caret, selection) else { continue };
+                let Some((chosen, part)) = chosen_pages(&d, EMBOSS_RANGE, (14, 15), &pages, i, caret, selection) else { continue };
+                if let Some(part) = part {
+                    pages = part;
+                }
                 if !transend {
                     break (copies, chosen, bc_core::ink::ALL_PASSES);
                 }

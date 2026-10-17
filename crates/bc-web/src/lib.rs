@@ -499,6 +499,20 @@ pub fn editor_table_apply(table: &str, type_index: u32, swap_index: i32, rows: &
     })
 }
 
+/// UTF-16 places `from` to `to` of the editor's text, kept with their codes as a text made from it, as File Print and
+/// File Emboss lay out a selection as a document of its own (audit print-emboss E1).
+#[wasm_bindgen]
+pub fn editor_part(from: u32, to: u32) -> String {
+    let part = EDITOR.with(|e| {
+        let e = e.borrow();
+        let t = &e.shown.text;
+        e.shown.slice(char_pos(t, from.min(to)), char_pos(t, from.max(to)))
+    });
+    let text = part.text.clone();
+    derive(part);
+    text
+}
+
 /// The UTF-16 place in the editor's text of running place `r`.
 #[wasm_bindgen]
 pub fn editor_running_place(r: u32) -> u32 {

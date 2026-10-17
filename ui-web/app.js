@@ -1540,7 +1540,8 @@ async function copiesField(d, cid) {
   return null;
 }
 
-// The pages the page range group asks for (indexes, -1 for a blank page), or null when a message was shown and the
+// The pages the page range group asks for ({ pages: indexes, -1 for a blank page; text: the selection's own text
+// when Selection lays it out as a document of its own, else null }), or null when a message was shown and the
 // dialog stays open; the caret and the selection are the editor's as the dialog opened.
 async function chosenPages(d, radios, fields, braille, caret, from, to) {
   const count = core.page_count(editor.value, doc.cells, doc.lines, braille);
@@ -1553,16 +1554,17 @@ async function chosenPages(d, radios, fields, braille, caret, from, to) {
     case 1:
       range = { kind: "pages", pages: [pageOf(caret) - 1] };
       break;
-    case 2:
-      // INFERENCE (as in the desktop program): an empty selection gives the no-pages message.
-      if (from >= to) {
-        range = { kind: "none" };
-      } else {
-        const first = pageOf(from);
-        const last = pageOf(to - 1);
-        range = { kind: "pages", pages: [...Array(last - first + 1).keys()].map((k) => first - 1 + k) };
+    case 2: {
+      // The selection laid out as a document of its own, all of its pages (as the original); no page: its
+      // message -1, which has no text.
+      const part = core.editor_part(from, to);
+      const n = core.page_count(part, doc.cells, doc.lines, braille);
+      if (!n) {
+        await message("Error message -1");
+        return null;
       }
-      break;
+      return { pages: [...Array(n).keys()], text: part };
+    }
     case 3:
       range = JSON.parse(core.parse_range(d.text(fields[0]), count));
       break;
@@ -1592,7 +1594,7 @@ async function chosenPages(d, radios, fields, braille, caret, from, to) {
   if (range.repeated && !(await yesNo("The page range you have specified implies that one or more pages will be printed more than once.  Do you wish to proceed?"))) {
     return null;
   }
-  return range.pages;
+  return { pages: range.pages, text: null };
 }
 
 // ------------------------------------------------------------------ File Print (dialog 1040)
@@ -1621,15 +1623,15 @@ async function print() {
     async onOk(d) {
       const copies = await copiesField(d, 7);
       if (copies === null) return false;
-      const pages = await chosenPages(d, PRINT_RANGE, [15, 16], braille, caret, from, to);
-      if (pages === null) return false;
-      job = { copies, pages, interline: braille && d.checked(17) };
+      const chosen = await chosenPages(d, PRINT_RANGE, [15, 16], braille, caret, from, to);
+      if (chosen === null) return false;
+      job = { copies, pages: chosen.pages, text: chosen.text, interline: braille && d.checked(17) };
       return true;
     },
   });
   if (result !== "ok") return;
   if (braille) store.set("print.interline", job.interline ? "1" : "0");
-  const pages = JSON.parse(core.page_lines(editor.value, doc.cells, doc.lines, braille, Int32Array.from(job.pages)));
+  const pages = JSON.parse(core.page_lines(job.text ?? editor.value, doc.cells, doc.lines, braille, Int32Array.from(job.pages)));
   const back = job.interline ? await documentEngine(true) : null;
   const area = $("print-area");
   area.replaceChildren();
@@ -1790,9 +1792,9 @@ async function emboss() {
     async onOk(d) {
       const copies = await copiesField(d, 7);
       if (copies === null) return false;
-      const pages = await chosenPages(d, EMBOSS_RANGE, [14, 15], braille, caret, from, to);
-      if (pages === null) return false;
-      job = { copies, pages };
+      const chosen = await chosenPages(d, EMBOSS_RANGE, [14, 15], braille, caret, from, to);
+      if (chosen === null) return false;
+      job = { copies, pages: chosen.pages, text: chosen.text };
       return true;
     },
   });
@@ -1804,7 +1806,8 @@ async function emboss() {
   const [kind, target] = Object.entries(setup.output)[0];
   for (const [n, side] of sides.entries()) {
     if (n > 0 && !(await okCancel("Please re-insert the stack of embossed sheets to emboss the second side."))) return;
-    const bytes = cat.job(setupJson, layoutJson, storedText(), braille, doc.cells, doc.lines, job.copies, Int32Array.from(job.pages), codes, side);
+    const text = job.text === null ? storedText() : braille ? toNA(job.text) : job.text;
+    const bytes = cat.job(setupJson, layoutJson, text, braille, doc.cells, doc.lines, job.copies, Int32Array.from(job.pages), codes, side);
     if (kind === "Port" && /^com/i.test(target) && "serial" in navigator) {
       try {
         await sendSerial(setup, bytes);

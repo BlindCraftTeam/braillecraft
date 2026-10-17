@@ -706,6 +706,14 @@ impl App {
         pages
     }
 
+    /// Document places `from` to `to` of document `i` laid out as a document of their own with its layout, as File
+    /// Print and File Emboss take a selection in the original (audit print-emboss E1): pages numbered from 1.
+    pub fn laid_out_part(&self, i: usize, from: usize, to: usize) -> std::rc::Rc<Vec<bc_core::format::Page>> {
+        let (_, layout, styles) = self.page_layout(i);
+        let part = self.docs[i].shown().slice(from, to);
+        std::rc::Rc::new(bc_core::format::format(&part, &layout, Some(&styles)))
+    }
+
     /// What document `i` is laid out by: its cells per line and lines per page, its braille page numbers (a braille
     /// document), the first page whose number is shown, and its styles; with a key that changes when any of them does.
     pub fn page_layout(&self, i: usize) -> (u64, bc_core::format::Layout, bc_core::engine::StyleTable) {
