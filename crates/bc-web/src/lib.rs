@@ -1385,6 +1385,20 @@ pub fn page_count(text: &str, cells: u32, lines: u32, braille: bool) -> usize {
     laid_out(text, cells, lines, braille).len()
 }
 
+/// Printer Setup's typed page size checked as the original checks it: JSON [lines, chars, corrected field (0 none,
+/// 1 lines, 2 chars)].
+#[wasm_bindgen]
+pub fn printer_page_check(lines: &str, chars: &str) -> String {
+    let (l, c, f) = bc_core::printer_setup::page_size_check(lines, chars);
+    serde_json::json!([l, c, f]).to_string()
+}
+
+/// Question 1000 for a corrected page size.
+#[wasm_bindgen]
+pub fn printer_page_question(lines: u32, chars: u32) -> String {
+    bc_core::printer_setup::page_size_question(lines, chars)
+}
+
 /// Whether two of a document's pages carry the same page number (File Print and File Emboss then offer no
 /// page-number range).
 #[wasm_bindgen]

@@ -399,8 +399,16 @@ pub fn run(id: i32, checked: bool) {
         2612 => create_template(),
         2613 => message(PLANNED_TEMPLATES),
 
-        3101 => embosser_setup(true),
-        3102 => printer_setup(true),
+        3101 => {
+            if global_setup_allowed(bc_core::printer_setup::GLOBAL_EMBOSSER_WARNING) {
+                embosser_setup(true);
+            }
+        }
+        3102 => {
+            if global_setup_allowed(bc_core::printer_setup::GLOBAL_PRINTER_WARNING) {
+                printer_setup(true);
+            }
+        }
         3104 => {
             settings_dialog(1060, "", None, |d| {
                 d.set_checked(10, true);
@@ -993,20 +1001,31 @@ fn import_dialog(kind: FileKind) -> Option<ImportChoice> {
 /// The notice that formatted braille may be reformatted (1054), with its "Do not show this message again" box, kept
 /// under Mutable, BrailleReformatWarning. False when it is closed without OK.
 fn reformat_notice() -> bool {
+    once_notice("BrailleReformatWarning", "BrailleCraft may reformat your braille document. To avoid this, set the \"Read formatted braille without interpretation\" option in the Global: Formatted Braille Importer dialog.")
+}
+
+/// A notice (1054) with its "Do not show this message again" box, kept under Mutable by `key` as the original keeps
+/// it. True on OK, or when OK was kept.
+fn once_notice(key: &str, text: &str) -> bool {
     const SECTION: &str = "Mutable";
-    const KEY: &str = "BrailleReformatWarning";
-    if let Some(answer) = settings_store::kept_answer(SECTION, KEY) {
+    if let Some(answer) = settings_store::kept_answer(SECTION, key) {
         return answer == 1;
     }
     let d = open_dialog(1054, Some("BrailleCraft"));
-    d.set_text(5, "BrailleCraft may reformat your braille document. To avoid this, set the \"Read formatted braille without interpretation\" option in the Global: Formatted Braille Importer dialog.");
+    d.set_text(5, text);
     let answer = d.show();
     let keep = d.checked(6);
     d.destroy();
     if keep {
-        settings_store::keep_answer(SECTION, KEY, answer as u32);
+        settings_store::keep_answer(SECTION, key, answer as u32);
     }
     answer == 1
+}
+
+/// Global, Printer Setup and Global, Embosser Setup first say that their changes do not affect the open document
+/// (notice 1054 under the given Mutable name) and go on only on OK; with no document open they go straight on.
+fn global_setup_allowed((key, text): (&str, &str)) -> bool {
+    !app::with(|a| a.doc().is_some()) || once_notice(key, text)
 }
 
 /// A file's text as `choice` says to read it: text kinds in the chosen code page; braille kinds in the chosen braille
@@ -3415,17 +3434,15 @@ fn printer_setup(global: bool) {
         Some((.., Some(own))) if !global => own.clone(),
         _ => a.settings.printer.clone(),
     });
-    let braille_doc = !global && matches!(doc, Some((_, DocKind::Braille, ..)));
     let (lines, chars) = match doc {
         Some((_, _, c, l, _)) if !global => (l, c),
         _ => (setup.lines, setup.chars),
     };
     let d = open_dialog(1071, Some(title));
     show_printer_setup(&d, &setup);
+    // The page size fields stay enabled for a braille document (the original only ignores their values there).
     d.set_text(2003, &lines.to_string());
     d.set_text(2005, &chars.to_string());
-    d.enable(2003, !braille_doc);
-    d.enable(2005, !braille_doc);
     d.closes_with(1026);
     d.on_button(1038, || message(PLANNED_HELP));
     // The sample page follows the paper, orientation and margins as they are chosen and typed.
@@ -3459,7 +3476,7 @@ fn printer_setup(global: bool) {
         }
         setup.landscape = d.radio(&[1056, 1057]) == Some(1);
     };
-    loop {
+    let (new_lines, new_chars) = loop {
         match d.show() {
             1026 => {
                 read_paper(&d, &mut setup);
@@ -3482,37 +3499,45 @@ fn printer_setup(global: bool) {
                 };
                 setup.margins = [margins[0], margins[1], margins[2], margins[3]];
                 setup.metric = metric;
-                break;
+                // The page size as the original checks it: a corrected size is shown and asked about (question
+                // 1000); Cancel keeps the dialog open on the corrected field.
+                let (l, c, corrected) = bc_core::printer_setup::page_size_check(&d.text(2003), &d.text(2005));
+                if corrected != 0 {
+                    d.set_text(2003, &l.to_string());
+                    d.set_text(2005, &c.to_string());
+                    if !ok_cancel(&bc_core::printer_setup::page_size_question(l, c)) {
+                        if let Some(w) = d.win(if corrected == 1 { 2003 } else { 2005 }) {
+                            w.set_focus();
+                            if let Some(t) = w.as_widget::<TextCtrl>() {
+                                t.select_all();
+                            }
+                        }
+                        continue;
+                    }
+                }
+                break (l, c);
             }
             _ => {
                 d.destroy();
                 return;
             }
         }
-    }
-    let (new_lines, new_chars) = (d.number(2003), d.number(2005));
+    };
     d.destroy();
     if let Some(data) = driver {
         crate::print::keep_driver(key, data);
     }
     app::with(|a| {
         if global {
-            if let Some(l) = new_lines.filter(|l| (5..=160).contains(l)) {
-                setup.lines = l as u32;
-            }
-            if let Some(c) = new_chars.filter(|c| (10..=100).contains(c)) {
-                setup.chars = c as u32;
-            }
+            setup.lines = new_lines;
+            setup.chars = new_chars;
             settings_store::save_printer(&setup);
             a.settings.printer = setup;
         } else if let Some(doc) = a.doc_mut() {
+            // The new size applies to a print document only.
             if doc.kind == DocKind::Print {
-                if let Some(l) = new_lines.filter(|l| (5..=160).contains(l)) {
-                    doc.lines = l as u32;
-                }
-                if let Some(c) = new_chars.filter(|c| (10..=100).contains(c)) {
-                    doc.cells = c as u32;
-                }
+                doc.lines = new_lines;
+                doc.cells = new_chars;
             }
             doc.printer = Some(setup);
         }

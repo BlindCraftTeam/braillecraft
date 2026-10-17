@@ -1714,8 +1714,8 @@ const printerSetupOf = (global) => (!global && doc.printer) || store.get("printe
 // braille document takes its page size from Embosser Setup, so the two fields are shown but not changed here.
 // The browser chooses the printer in its own print dialog, so Printer... says so (web build).
 async function printerSetup(global) {
-  const braille = !global && doc.kind === "braille";
   let setup = printerSetupOf(global);
+  let size = [0, 0];
   const view = JSON.parse(core.printer_setup_view(setup));
   const [lines, chars] = global ? [view.lines, view.chars] : [doc.lines, doc.cells];
   const margins = [1155, 1156, 1157, 1158];
@@ -1726,31 +1726,45 @@ async function printerSetup(global) {
       d.setItems(1138, ["Automatically Select"], 0);
       d.setRadio([1056, 1057], view.landscape ? 1 : 0);
       margins.forEach((c, i) => d.setText(c, view.margins[i]));
+      // The page size fields stay enabled for a braille document (the original only ignores their values there).
       d.setText(2003, String(lines));
       d.setText(2005, String(chars));
-      d.enable(2003, !braille);
-      d.enable(2005, !braille);
       d.get(1026)?.addEventListener("click", () => message("In the browser, the printer and its own settings are chosen in the browser's print dialog when you print."));
       d.get(1038)?.addEventListener("click", () => message(PLANNED_HELP));
     },
     async onOk(d) {
       try {
         setup = core.printer_setup_read(setup, d.selected(1137) ?? "", d.radio([1056, 1057]) === 1, margins.map((c) => d.text(c)));
-        return true;
       } catch (e) {
         await message(e.message);
         return false;
       }
+      // The page size as the original checks it: a corrected size is shown and asked about (question 1000); Cancel
+      // keeps the dialog open on the corrected field.
+      const [l, c, corrected] = JSON.parse(core.printer_page_check(d.text(2003), d.text(2005)));
+      if (corrected) {
+        d.setText(2003, String(l));
+        d.setText(2005, String(c));
+        if (!(await okCancel(core.printer_page_question(l, c)))) {
+          const field = d.get(corrected === 1 ? 2003 : 2005);
+          field.focus();
+          field.select();
+          return false;
+        }
+      }
+      size = [l, c];
+      return true;
     },
   });
   if (result !== "ok") return;
-  const [newLines, newChars] = [d.number(2003), d.number(2005)];
+  const [newLines, newChars] = size;
   if (global) {
-    store.set("printer.setup", core.printer_setup_page(setup, newLines ?? 0, newChars ?? 0));
+    store.set("printer.setup", core.printer_setup_page(setup, newLines, newChars));
   } else {
+    // The new size applies to a print document only.
     if (doc.kind === "print") {
-      if (newLines !== null && newLines >= 5 && newLines <= 160) doc.lines = newLines;
-      if (newChars !== null && newChars >= 10 && newChars <= 100) doc.cells = newChars;
+      doc.lines = newLines;
+      doc.cells = newChars;
     }
     doc.printer = setup;
   }
@@ -1969,20 +1983,29 @@ async function importDialog(detected) {
 // as the desktop program keeps it (Mutable, BrailleReformatWarning: the answer plus one). False when closed without
 // OK.
 async function reformatNotice() {
-  const kept = Number(store.get("Mutable.BrailleReformatWarning"));
+  return onceNotice(
+    "BrailleReformatWarning",
+    'BrailleCraft may reformat your braille document. To avoid this, set the "Read formatted braille without interpretation" option in the Global: Formatted Braille Importer dialog.',
+  );
+}
+
+// A notice (1054) with its "Do not show this message again" box, kept under Mutable by `key` as the original
+// keeps it (the answer plus one). True on OK, or when OK was kept.
+async function onceNotice(key, text) {
+  const kept = Number(store.get(`Mutable.${key}`));
   if (kept > 0) return kept - 1 === 1;
-  const { result, d } = await showDialog(1054, {
-    title: "BrailleCraft",
-    setup: (d) =>
-      d.setText(
-        5,
-        'BrailleCraft may reformat your braille document. To avoid this, set the "Read formatted braille without interpretation" option in the Global: Formatted Braille Importer dialog.',
-      ),
-  });
+  const { result, d } = await showDialog(1054, { title: "BrailleCraft", setup: (d) => d.setText(5, text) });
   const answer = result === "ok" ? 1 : 2;
-  if (d.checked(6)) store.set("Mutable.BrailleReformatWarning", String(answer + 1));
+  if (d.checked(6)) store.set(`Mutable.${key}`, String(answer + 1));
   return answer === 1;
 }
+
+// Global, Printer Setup and Global, Embosser Setup first say that their changes do not affect the open document
+// (the web build always has one), and open only on OK.
+const GLOBAL_PRINTER_WARNING =
+  "Changes that you make through Global, Printer Setup will not affect this document.  Use Document, Printer Setup instead to change document settings.";
+const GLOBAL_EMBOSSER_WARNING =
+  "Changes that you make through Global, Embosser Setup will not affect this document.  Use Document, Embosser Setup instead to change document settings.";
 
 // Global, Formatted Braille Importer, kept by the names the original program keeps them by; a value that is missing
 // or not understood keeps its default (main page numbers lower right, reference page numbers upper right, no running
@@ -3727,8 +3750,8 @@ const COMMANDS = {
       "BrailleCraft 0.1: the main window, menus, dialogs, editing, find and replace, six-key entry, the code vocabulary, braille fonts for 18 encodings, and translation with the BrailleCraft engine and its tables. The file format, printing and embossing follow in the plan.",
     ),
   3210: () => message("Updates are published on the BrailleCraft GitHub page."),
-  3101: () => embosserSetup(true),
-  3102: () => printerSetup(true),
+  3101: async () => (await onceNotice("GlobalEmbosserWarning", GLOBAL_EMBOSSER_WARNING)) && embosserSetup(true),
+  3102: async () => (await onceNotice("GlobalPrinterWarning", GLOBAL_PRINTER_WARNING)) && printerSetup(true),
   3104: () => showDialog(1060, { memory: "", setup: (d) => (d.setChecked(10, true), d.setText(12, ""), d.setText(14, "05:00")) }),
   3105: defaultViews,
   3106: internationalization,

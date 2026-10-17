@@ -125,6 +125,9 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   a number had to be adjusted, and is not offered when two pages carry the same number. Bold, italic and underlined
   passages ([fts~b], [fts~i], [fts~u]) print in those styles; Interline Print starts from the document's embosser
   layout; a document whose printer the computer no longer has prints with the global printer after saying so.
+  Printer Setup corrects a page size outside 7 to 160 characters and 1 to 100 lines and asks before taking it (Cancel
+  returns to the field); Global, Printer Setup and Global, Embosser Setup first say, once unless asked to repeat, that
+  they do not change the open document.
 - **Embossing.** Embosser setups for 139 embosser models, including Index and Enabling Technologies, with page ranges and
   copies, to a printer queue, a serial port or a file. Embossers on an FTDI USB connection (the EBrailler Cosmo) are
   listed and embossed to through FTDI's own driver library where it is installed. TranSend SE printers get their ink

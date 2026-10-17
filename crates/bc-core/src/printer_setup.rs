@@ -117,6 +117,50 @@ fn trim_number(s: &str) -> String {
     }
 }
 
+/// The least characters per line and lines per page Printer Setup allows: the original's MinPageWidth and
+/// MinPageDepth settings for print, which nothing sets, so their defaults.
+pub const MIN_CHARS: u32 = 7;
+pub const MIN_LINES: u32 = 1;
+
+/// The page size typed in Printer Setup, checked as the original checks it on OK: a field's digits make its number
+/// (other characters are skipped); with no digits or below the least it becomes the least, above 160 characters or
+/// 100 lines the most; a field holding other characters counts as corrected too. Returns (lines, chars, corrected
+/// field: 0 none, 1 lines, 2 chars; lines when both), the field for question 1000's Cancel to go to.
+pub fn page_size_check(lines_text: &str, chars_text: &str) -> (u32, u32, u8) {
+    fn read(text: &str, least: u32, most: u32) -> (u32, bool) {
+        let (mut n, mut digits, mut others) = (0u32, 0, 0);
+        for c in text.chars() {
+            match c.to_digit(10).filter(|_| c.is_ascii()) {
+                Some(d) => {
+                    digits += 1;
+                    n = n.saturating_mul(10).saturating_add(d);
+                }
+                None => others += 1,
+            }
+        }
+        if digits == 0 || n < least {
+            (least, true)
+        } else if n <= most {
+            (n, others > 0)
+        } else {
+            (most, true)
+        }
+    }
+    let (chars, c_flag) = read(chars_text, MIN_CHARS, 160);
+    let (lines, l_flag) = read(lines_text, MIN_LINES, 100);
+    (lines, chars, if l_flag { 1 } else if c_flag { 2 } else { 0 })
+}
+
+/// Question 1000 (OK accepts the corrected size; Cancel keeps the dialog open on the corrected field).
+pub fn page_size_question(lines: u32, chars: u32) -> String {
+    format!("BrailleCraft cannot support the page dimensions you requested.  It can support a page size of {lines} lines by {chars} characters.  Press OK to accept these dimensions or Cancel to alter them.")
+}
+
+/// The notices (1054, with a don't-show-again box kept under Mutable by these names) shown before Global, Printer
+/// Setup and Global, Embosser Setup when a document is open; the dialog opens only on OK.
+pub const GLOBAL_PRINTER_WARNING: (&str, &str) = ("GlobalPrinterWarning", "Changes that you make through Global, Printer Setup will not affect this document.  Use Document, Printer Setup instead to change document settings.");
+pub const GLOBAL_EMBOSSER_WARNING: (&str, &str) = ("GlobalEmbosserWarning", "Changes that you make through Global, Embosser Setup will not affect this document.  Use Document, Embosser Setup instead to change document settings.");
+
 /// A margin typed in the dialog, in thousandths of an inch: a number, then " or in for inches, mm or cm (without a
 /// unit, the setup's own). None when it is not a number of 0 or more.
 pub fn parse_margin(text: &str, metric: bool) -> Option<i32> {
