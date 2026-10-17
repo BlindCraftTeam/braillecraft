@@ -417,12 +417,85 @@ pub fn editor_replace(spec: &str, m: &str, with: &str, braille: bool) -> String 
     })
 }
 
-/// The running place of UTF-16 place `u` in the editor's text.
+/// Where Find Again searches from: one unit on from UTF-16 place `caret` in the direction of the search `spec`
+/// (JSON), past a hyphen code when its text has none (bc_core find step_from); a running place.
 #[wasm_bindgen]
-pub fn editor_running_at(u: u32) -> u32 {
+pub fn editor_find_again_from(spec: &str, caret: u32) -> u32 {
+    let s: bc_core::find::Search = serde_json::from_str(spec).unwrap_or_default();
     EDITOR.with(|e| {
         let e = e.borrow();
-        e.shown.slice(0, char_pos(&e.shown.text, u)).to_running().chars().count() as u32
+        let p = e.shown.slice(0, char_pos(&e.shown.text, caret)).to_running().chars().count();
+        bc_core::find::step_from(&e.shown.to_running(), p, &s, s.backward) as u32
+    })
+}
+
+/// Table, Create and Table Properties (bc_core table_cmd, spec 33), with the selection's `anchor` and the `caret`
+/// (UTF-16 places): {"refused": true} for a selection holding a table code, else {"create": bool, "table": the table
+/// as the dialog shows it}.
+#[wasm_bindgen]
+pub fn editor_table_info(anchor: u32, caret: u32) -> String {
+    use bc_core::table_cmd::{self, Table};
+    EDITOR.with(|e| {
+        let e = e.borrow();
+        let t = &e.shown.text;
+        let to_running = |u: u32| e.shown.slice(0, char_pos(t, u)).to_running().chars().count();
+        let (a, c) = (to_running(anchor), to_running(caret));
+        let running = e.shown.to_running();
+        if table_cmd::selection_has_table_code(&running, a, c) {
+            return serde_json::json!({ "refused": true }).to_string();
+        }
+        let table = match table_cmd::table_at(&running, c) {
+            Some((open, after, rows, cols)) => {
+                let name: String = running.chars().skip(open + 1).take(after - open - 2).collect();
+                Table { rows, cols, ..Table::parse(&name) }
+            }
+            None => Table::default(),
+        };
+        let create = table_cmd::table_at(&running, c).is_none();
+        serde_json::json!({ "create": create, "table": table, "types": table_cmd::TYPES.iter().map(|t| t.0).collect::<Vec<_>>(), "swaps": table_cmd::SWAPS.iter().map(|s| s.0).collect::<Vec<_>>(), "type_index": table.type_index(), "swap_index": table.swap_index() }).to_string()
+    })
+}
+
+/// Table, Create or Table Properties carried out with `table` (JSON, as editor_table_info answered it, changed by
+/// the dialog: "type_index" the type chosen; the swap letter set only when the swap list was changed; the four
+/// number fields as typed, their digits read): answers {"text": the editor's new text, "anchor", "caret": UTF-16
+/// places}.
+#[wasm_bindgen]
+pub fn editor_table_apply(table: &str, type_index: u32, swap_index: i32, rows: &str, header_rows: &str, cols: &str, header_cols: &str, anchor: u32, caret: u32) -> String {
+    use bc_core::table_cmd::{self, Table};
+    EDITOR.with(|e| {
+        let mut e = e.borrow_mut();
+        let Ok(mut t) = serde_json::from_str::<Table>(table) else { return String::new() };
+        t.set_type(type_index as usize);
+        if swap_index >= 0 {
+            t.set_swap(swap_index as usize);
+        }
+        t.rows = table_cmd::digits(rows).clamp(0, u32::MAX as i64) as u32;
+        t.header_rows = table_cmd::digits(header_rows);
+        t.cols = table_cmd::digits(cols).clamp(0, u32::MAX as i64) as u32;
+        t.header_cols = table_cmd::digits(header_cols);
+        let text = e.shown.text.clone();
+        let to_running = |u: u32| e.shown.slice(0, char_pos(&text, u)).to_running().chars().count();
+        let (a, c) = (to_running(anchor), to_running(caret));
+        let running = e.shown.to_running();
+        let (new, a2, c2) = match table_cmd::table_at(&running, c) {
+            None => {
+                let (codes, after) = t.new_table();
+                let r: Vec<char> = running.chars().collect();
+                let mut s: String = r[..c].iter().collect();
+                s.push_str(&codes);
+                s.extend(&r[c..]);
+                (s, c + after, c + after)
+            }
+            Some((open, after, _, _)) => {
+                let (s, delta) = table_cmd::set_start_code(&running, open, after, &t);
+                let moved = |p: usize| (p as isize + delta).max(0) as usize;
+                (s, moved(a), moved(c))
+            }
+        };
+        e.shown = Shown::from_running(&new);
+        let shown_u16 = |r: usize| Shown::from_running(&new.chars().take(r).collect::<String>()).text.encode_utf16().count();
+        serde_json::json!({ "text": e.shown.text, "anchor": shown_u16(a2), "caret": shown_u16(c2) }).to_string()
     })
 }
 

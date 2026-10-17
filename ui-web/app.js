@@ -2877,8 +2877,10 @@ async function find(again) {
   if (!core) return;
   const stored = doc.find ?? {};
   if (again && stored.text) {
-    // Find Again: one unit on from the caret; the search's state is not kept back.
-    const out = await runSearch(stored, { from: caretRunning(), step: stored.backward ? -1 : 1 });
+    // Find Again: one unit on from the caret (past a hyphen code the text has none of); the state is not kept back.
+    const forward = editor.selectionDirection !== "backward";
+    const caret = forward ? editor.selectionEnd : editor.selectionStart;
+    const out = await runSearch(stored, { from: core.editor_find_again_from(JSON.stringify(stored), caret) });
     if (out.match) showFound(out);
     else await message("The text does not appear again in the document.");
     return;
@@ -2901,12 +2903,6 @@ async function find(again) {
   else await message("Text was not found in the document.");
 }
 
-// The caret as a running-text place.
-function caretRunning() {
-  const forward = editor.selectionDirection !== "backward";
-  const caret = forward ? editor.selectionEnd : editor.selectionStart;
-  return core.editor_running_at(caret);
-}
 
 // The Replace dialog's texts as running text and whether it is a style search: with style name chosen, a whole style
 // code typed is taken as its bare name; a style search when both are names or both are codes.
@@ -3280,19 +3276,56 @@ async function createTemplate() {
 
 // Table, Create Table and Table Properties (dialog 1062): the table settings, kept as the dialog's memory; Create
 // Table puts the table codes around the selection.
-async function tableProperties(create) {
-  const { result } = await showDialog(1062, {
-    memory: "",
+// Table, Create and Table Properties, one command as in the original (bc_core table_cmd, spec 33; the desktop
+// program's table_command): with the caret in a table it edits that table's start code, else it puts a new table at
+// the caret; a selection holding a table start or end code is refused.
+async function tableProperties() {
+  if (!core) return;
+  const forward = editor.selectionDirection !== "backward";
+  const caret = forward ? editor.selectionEnd : editor.selectionStart;
+  const anchor = forward ? editor.selectionStart : editor.selectionEnd;
+  const info = JSON.parse(core.editor_table_info(anchor, caret));
+  if (info.refused) {
+    await message("You have a selection that spans across a table boundary.  Please place the cursor in a table to set table properties or outside of all tables to create a new table.");
+    return;
+  }
+  const t = info.table;
+  let swapChanged = -1;
+  const { result, d } = await showDialog(1062, {
     setup(d) {
-      d.setItems(7, ["Table: [Automatic]", "Table: Columnar", "Table: Stairstep", "Table: Listed", "Table: Linear", "Table: Two-Page"], 0);
-      d.setItems(9, ["Do Not Swap", "Force Swap", "Swap if More Compact"], 0);
-      d.setText(11, "2");
-      d.setText(13, "1");
-      d.setText(15, "2");
-      d.setText(17, "0");
+      d.setItems(7, info.types, info.type_index);
+      d.setItems(9, info.swaps, info.swap_index);
+      d.setText(11, String(t.rows));
+      d.setText(13, String(t.header_rows));
+      d.setText(15, String(t.cols));
+      d.setText(17, String(t.header_cols));
+      d.enable(11, info.create);
+      d.enable(15, info.create);
+      // Header rows and columns only for a table (not Unrelated Columns, not Matrix).
+      const headers = () => {
+        const on = (d.get(7)?.selectedIndex ?? 0) > 1;
+        d.enable(13, on);
+        d.enable(17, on);
+      };
+      headers();
+      d.get(7)?.addEventListener("change", headers);
+      // The swap letter changes only when the list is changed; untouched, the table keeps its own.
+      d.get(9)?.addEventListener("change", () => (swapChanged = d.get(9).selectedIndex));
     },
   });
-  if (result === "ok" && create) wrapSelection("[htbs]", "[htbe]");
+  if (result !== "ok") return;
+  const typeIndex = d.get(7)?.selectedIndex ?? info.type_index;
+  const out = core.editor_table_apply(JSON.stringify(t), Math.max(typeIndex, 0), swapChanged, d.text(11), d.text(13), d.text(15), d.text(17), anchor, caret);
+  if (!out) return;
+  const r = JSON.parse(out);
+  editor.value = r.text;
+  editor.focus();
+  if (info.create) editor.setSelectionRange(r.caret, r.caret);
+  else editor.setSelectionRange(Math.min(r.anchor, r.caret), Math.max(r.anchor, r.caret), r.anchor <= r.caret ? "forward" : "backward");
+  doc.dirty = true;
+  lastLine = null;
+  showStatus();
+  showTranslatedLine();
 }
 
 // "Document "name" not saved!  Save changes?": Yes saves (Save), No goes on, Cancel stops. Answers whether to go on.
@@ -3623,8 +3656,8 @@ const COMMANDS = {
   1103: closeDocument,
   1107: () => message(PLANNED_EBRAILLE),
   1114: exitProgram,
-  1501: () => tableProperties(true),
-  1503: () => tableProperties(false),
+  1501: () => tableProperties(),
+  1503: () => tableProperties(),
   2601: () => embosserSetup(false),
   2602: () => printerSetup(false),
   2604: pageNumbering,

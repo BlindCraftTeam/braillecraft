@@ -380,14 +380,7 @@ pub fn run(id: i32, checked: bool) {
         1701..=2404 if has_doc => insert_code(id),
         2501..=2511 => message(PLANNED_PICTURES),
 
-        1501 => {
-            if settings_dialog(1062, "", None, fill_table_properties).is_some() {
-                wrap_selection(&Shown::marked("[htbs]"), &Shown::marked("[htbe]"));
-            }
-        }
-        1503 => {
-            settings_dialog(1062, "", None, fill_table_properties);
-        }
+        1501 | 1503 if has_doc => table_command(),
 
         2601 => embosser_setup(false),
         2602 => printer_setup(false),
@@ -493,10 +486,12 @@ struct TemplateIds {
     show: i32,
     region: i32,
     show_hidden: i32,
+    /// Show Hidden Templates is kept between runs (File, New, as the original keeps it: ShowAllTemplates).
+    kept: bool,
 }
 
-const NEW_TEMPLATES: TemplateIds = TemplateIds { list: 10, default: 11, hide: 12, show: 13, region: 14, show_hidden: 15 };
-const IMPORT_TEMPLATES: TemplateIds = TemplateIds { list: 7, default: 8, hide: 9, show: 10, region: 11, show_hidden: 12 };
+const NEW_TEMPLATES: TemplateIds = TemplateIds { list: 10, default: 11, hide: 12, show: 13, region: 14, show_hidden: 15, kept: true };
+const IMPORT_TEMPLATES: TemplateIds = TemplateIds { list: 7, default: 8, hide: 9, show: 10, region: 11, show_hidden: 12, kept: false };
 
 const REGION_NAMES: [&str; 6] = ["Western Hemisphere", "Europe", "Asia", "Africa", "Pacific", "All Regions/All Languages"];
 
@@ -553,12 +548,12 @@ fn template_chooser(d: &Dlg, ids: TemplateIds) -> std::rc::Rc<std::cell::RefCell
         ids,
         hidden: settings_store::load_hidden_templates(),
         default: translation::default_template(),
-        show_hidden: false,
+        show_hidden: ids.kept && settings_store::load_show_all_templates(),
         region: bc_core::table_list::ALL_REGIONS,
         names: Vec::new(),
         current: None,
     }));
-    d.set_checked(ids.show_hidden, false);
+    d.set_checked(ids.show_hidden, state.borrow().show_hidden);
     fill_new_dialog(d, &mut state.borrow_mut(), None);
     let copy = |d: &Dlg| Dlg { id: d.id, dialog: d.dialog, page: d.page };
 
@@ -609,6 +604,9 @@ fn template_chooser(d: &Dlg, ids: TemplateIds) -> std::rc::Rc<std::cell::RefCell
         let (dc, st) = (copy(&d), state.clone());
         c.on_toggled(move |e| {
             st.borrow_mut().show_hidden = e.is_checked();
+            if ids.kept {
+                settings_store::save_show_all_templates(e.is_checked());
+            }
             let keep = st.borrow().current.clone();
             fill_new_dialog(&dc, &mut st.borrow_mut(), keep);
         });
@@ -2481,9 +2479,7 @@ fn find(again: bool) {
 
 /// Edit, Find Again (spec 32 4): the remembered Find, one unit on from the caret; its state is not kept back.
 fn find_again(cx: &FindContext, mut s: find::Search) {
-    let u = find::Units::new(&cx.running);
-    let k = u.unit_of(cx.caret);
-    let from = if s.backward { u.at[k.saturating_sub(1)] } else { u.at[(k + 1).min(u.u.len())] };
+    let from = find::step_from(&cx.running, cx.caret, &s, s.backward);
     match find::find(&cx.running, from, &mut s, cx.print, false, &mut search_question) {
         Some(m) => show_found(&cx.running, &m, &s),
         None => message("The text does not appear again in the document."),
@@ -2765,11 +2761,16 @@ fn new_paragraph() {
 /// A whole number field checked as the original checks one in its dialog: string 2644 when it is not a number, else
 /// `low` or `high` (with the limit put in for %d) when it is out of 1 ..= 2147483647.
 fn check_number(d: &Dlg, field: i32, low: &str, high: &str) -> Option<(i32, String)> {
-    const MAX: i64 = 0x7fff_ffff;
+    check_range(d, field, 1, 0x7fff_ffff, low, high)
+}
+
+/// A number field checked as the original checks one: not a number, below `min` (`low`, %d the minimum) or above
+/// `max` (`high`, %d the maximum).
+fn check_range(d: &Dlg, field: i32, min: i64, max: i64, low: &str, high: &str) -> Option<(i32, String)> {
     match d.number(field) {
         None => Some((field, "The number entered is not valid.".into())),
-        Some(n) if n < 1 => Some((field, low.replace("%d", "1"))),
-        Some(n) if n > MAX => Some((field, high.replace("%d", &MAX.to_string()))),
+        Some(n) if n < min => Some((field, low.replace("%d", &min.to_string()))),
+        Some(n) if n > max => Some((field, high.replace("%d", &max.to_string()))),
         Some(_) => None,
     }
 }
@@ -2946,17 +2947,97 @@ fn code_list() {
     }
 }
 
-fn fill_table_properties(d: &Dlg) {
-    d.set_items(
-        7,
-        &["Table: [Automatic]", "Table: Columnar", "Table: Stairstep", "Table: Listed", "Table: Linear", "Table: Two-Page"],
-        Some(0),
-    );
-    d.set_items(9, &["Do Not Swap", "Force Swap", "Swap if More Compact"], Some(0));
-    d.set_text(11, "2");
-    d.set_text(13, "1");
-    d.set_text(15, "2");
-    d.set_text(17, "0");
+/// Table, Create and Table, Table Properties, one command as in the original (spec 33): with the caret in a table it
+/// edits that table's start code, else it puts a new table at the caret; a selection holding a table start or end
+/// code is refused.
+fn table_command() {
+    use bc_core::table_cmd::{self, Table};
+    use std::cell::RefCell;
+    use std::rc::Rc;
+    let Some(cx) = find_context() else { return };
+    let found = table_cmd::table_at(&cx.running, cx.caret);
+    let selected = if cx.had_sel { (cx.anchor, cx.caret) } else { (cx.caret, cx.caret) };
+    if table_cmd::selection_has_table_code(&cx.running, selected.0, selected.1) {
+        let f = app::frame();
+        MessageDialog::builder(&f, table_cmd::SPANS_BOUNDARY, "Error")
+            .with_style(MessageDialogStyle::OK | MessageDialogStyle::IconWarning)
+            .build()
+            .show_modal();
+        return;
+    }
+    let table = match found {
+        Some((open, after, rows, cols)) => {
+            let name: String = cx.running.chars().skip(open + 1).take(after - open - 2).collect();
+            Table { rows, cols, ..Table::parse(&name) }
+        }
+        None => Table::default(),
+    };
+    let create = found.is_none();
+    let d = open_dialog(1062, None);
+    let types: Vec<&str> = table_cmd::TYPES.iter().map(|t| t.0).collect();
+    let swaps: Vec<&str> = table_cmd::SWAPS.iter().map(|s| s.0).collect();
+    d.set_items(7, &types, Some(table.type_index() as u32));
+    d.set_items(9, &swaps, Some(table.swap_index() as u32));
+    d.set_text(11, &table.rows.to_string());
+    d.set_text(13, &table.header_rows.to_string());
+    d.set_text(15, &table.cols.to_string());
+    d.set_text(17, &table.header_cols.to_string());
+    d.enable(11, create);
+    d.enable(15, create);
+    // Header rows and columns only for a table (not Unrelated Columns, not Matrix).
+    let headers = |d: &Dlg| {
+        let on = d.selection(7).is_some_and(|i| i > 1);
+        d.enable(13, on);
+        d.enable(17, on);
+    };
+    headers(&d);
+    let me = Dlg { id: d.id, dialog: d.dialog, page: d.page };
+    d.on_select(7, move || headers(&me));
+    // The swap letter changes only when the list is changed; untouched, the table keeps its own.
+    let swap = Rc::new(RefCell::new(table.swap));
+    let (s, me) = (swap.clone(), Dlg { id: d.id, dialog: d.dialog, page: d.page });
+    d.on_select(9, move || {
+        let mut t = Table::default();
+        t.set_swap(me.selection(9).unwrap_or(0) as usize);
+        *s.borrow_mut() = t.swap;
+    });
+    let ok = d.show() == 1;
+    let mut t = table.clone();
+    t.set_type(d.selection(7).unwrap_or(table.type_index() as u32) as usize);
+    t.swap = *swap.borrow();
+    t.rows = table_cmd::digits(&d.text(11)).clamp(0, u32::MAX as i64) as u32;
+    t.header_rows = table_cmd::digits(&d.text(13));
+    t.cols = table_cmd::digits(&d.text(15)).clamp(0, u32::MAX as i64) as u32;
+    t.header_cols = table_cmd::digits(&d.text(17));
+    d.destroy();
+    if !ok {
+        return;
+    }
+    match found {
+        // A new table at the caret, the selection given up (not wrapped); the caret in its first cell.
+        None => {
+            let (new, caret_after) = t.new_table();
+            let r: Vec<char> = cx.running.chars().collect();
+            let mut text: String = r[..cx.caret].iter().collect();
+            text.push_str(&new);
+            text.extend(&r[cx.caret..]);
+            put_running(&text);
+            let p = shown_place(&text, cx.caret + caret_after);
+            select_range(p, p);
+        }
+        // The table's start code rewritten; the caret and the selection moved by the change.
+        Some((open, after, _, _)) => {
+            let (text, delta) = table_cmd::set_start_code(&cx.running, open, after, &t);
+            put_running(&text);
+            let moved = |p: usize| (p as isize + delta).max(0) as usize;
+            if cx.had_sel {
+                select_range(shown_place(&text, moved(cx.anchor)), shown_place(&text, moved(cx.caret)));
+            } else {
+                let p = shown_place(&text, moved(cx.caret));
+                select_range(p, p);
+            }
+        }
+    }
 }
 
 // ------------------------------------------------------------------ Document
@@ -3787,18 +3868,49 @@ fn internationalization() {
 
 fn global_fonts() {
     let current = app::with(|a| a.settings.fonts.clone());
-    let faces = ["Courier New", "Consolas", "Arial", "Times New Roman", "Verdana"];
-    let status = ["Segoe UI", "Arial", "Courier New", "Verdana"];
+    let system = crate::print::font_names();
+    let faces = bc_core::font_list::font_list(&system, true);
+    let status = bc_core::font_list::font_list(&system, false);
+    let pick = |list: &[String], name: &str| list.iter().position(|f| f == name).map(|p| p as u32).or(Some(0));
+    let faces_ref: Vec<&str> = faces.iter().map(String::as_str).collect();
+    let status_ref: Vec<&str> = status.iter().map(String::as_str).collect();
     let d = open_dialog(1049, None);
-    d.set_items(7, &faces, faces.iter().position(|f| *f == current.print_face).map(|p| p as u32).or(Some(0)));
+    d.set_items(7, &faces_ref, pick(&faces, &current.print_face));
     d.set_text(9, &current.print_size.to_string());
     d.set_text(11, &current.braille_size.to_string());
-    // Printed output (spec 24, 2c): auto-determine the point size, or the print font's and the braille fonts' sizes.
+    // Printed output (spec 24, 2c): auto-determine the point size, or the print font's and the braille fonts' sizes;
+    // the two sizes and their labels (13 to 16) are greyed while auto-determine is checked.
     d.set_checked(12, current.print_auto);
     d.set_text(14, &current.print_output_size.to_string());
     d.set_text(16, &current.braille_output_size.to_string());
-    d.set_items(18, &status, status.iter().position(|f| *f == current.status_face).map(|p| p as u32).or(Some(0)));
+    let output_enabled = |d: &Dlg, on: bool| {
+        for c in 13..=16 {
+            d.enable(c, on);
+        }
+    };
+    output_enabled(&d, !current.print_auto);
+    let me = Dlg { id: d.id, dialog: d.dialog, page: d.page };
+    d.on_check(12, move || output_enabled(&me, !me.checked(12)));
+    d.set_items(18, &status_ref, pick(&status, &current.status_face));
     d.set_text(20, &current.status_size.to_string());
+    // The checks of the original's Fonts dialog, in its order: a font chosen in the print font list (none chosen keeps
+    // the dialog open with no message), each size 5 to 180 points, a font chosen in the status line list.
+    d.check_on_ok(|d| {
+        const PRINT: (&str, &str) = ("The print font point size must not be less than %d.", "The print font point size must not be greater than %d.");
+        const BRAILLE: (&str, &str) = ("The braille font point size must not be less than %d.", "The braille font point size must not be greater than %d.");
+        let chosen = |list: i32| d.selection(list).is_some().then_some(()).ok_or((list, String::new()));
+        let size = |field: i32, (low, high): (&str, &str)| check_range(d, field, 5, 180, low, high).map_or(Ok(()), Err);
+        let all = || -> Result<(), (i32, String)> {
+            chosen(7)?;
+            size(9, PRINT)?;
+            size(11, BRAILLE)?;
+            size(14, PRINT)?;
+            size(16, BRAILLE)?;
+            chosen(18)?;
+            size(20, PRINT)
+        };
+        all().err()
+    });
     if d.show() == 1 {
         let print_face = d.selected_text(7);
         let (ps, bs, ss) = (d.number(9), d.number(11), d.number(20));
@@ -3807,22 +3919,22 @@ fn global_fonts() {
         app::with(|a| {
             let f = &mut a.settings.fonts;
             f.print_auto = auto;
-            if let Some(n) = pos.filter(|n| (1..=72).contains(n)) {
+            if let Some(n) = pos {
                 f.print_output_size = n as i32;
             }
-            if let Some(n) = bos.filter(|n| (1..=72).contains(n)) {
+            if let Some(n) = bos {
                 f.braille_output_size = n as i32;
             }
             if let Some(p) = print_face {
                 f.print_face = p;
             }
-            if let Some(n) = ps.filter(|n| (6..=72).contains(n)) {
+            if let Some(n) = ps {
                 f.print_size = n as i32;
             }
-            if let Some(n) = bs.filter(|n| (6..=72).contains(n)) {
+            if let Some(n) = bs {
                 f.braille_size = n as i32;
             }
-            if let Some(n) = ss.filter(|n| (6..=36).contains(n)) {
+            if let Some(n) = ss {
                 f.status_size = n as i32;
             }
             if let Some(s) = status_face {

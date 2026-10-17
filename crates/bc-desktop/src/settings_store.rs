@@ -419,6 +419,15 @@ pub fn save_default_template(name: &str) {
     set(ROOT, "DefaultTemplate", name);
 }
 
+/// File, New's Show Hidden Templates box, kept as the original keeps it (ShowAllTemplates, yes or no).
+pub fn load_show_all_templates() -> bool {
+    get(ROOT, "ShowAllTemplates").is_some_and(|v| v.trim().eq_ignore_ascii_case("yes"))
+}
+
+pub fn save_show_all_templates(on: bool) {
+    set(ROOT, "ShowAllTemplates", yes_no(on));
+}
+
 /// The templates hidden from File, New (Hide Template), kept as one value with the names separated by "|".
 pub fn load_hidden_templates() -> Vec<String> {
     get(ROOT, "HiddenTemplates")

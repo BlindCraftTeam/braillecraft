@@ -87,6 +87,22 @@ impl Units {
     }
 }
 
+/// The place one unit on from running place `p` (back for `backward`), as Find Again steps before searching (spec 32
+/// 4.2): a hyphen code [-] is stepped over as well when the search text has none.
+pub fn step_from(running: &str, p: usize, s: &Search, backward: bool) -> usize {
+    let t = Units::new(running);
+    let skip = !Units::new(&s.text).u.contains(&HYPHEN);
+    let mut k = t.unit_of(p);
+    loop {
+        k = if backward { k.saturating_sub(1) } else { (k + 1).min(t.u.len()) };
+        let edge = if backward { k == 0 } else { k == t.u.len() };
+        if !(skip && !edge && t.u[k] == HYPHEN) {
+            break;
+        }
+    }
+    t.at[k]
+}
+
 /// The pattern in units, as the original makes it from the search: codes [-] and ['] as single units, a "*" right
 /// before a code's end mark a wildcard when wildcards are on, and for a style search the style's start code.
 fn pattern(s: &Search) -> Vec<char> {
@@ -501,6 +517,14 @@ mod tests {
         let m = find(&r, 0, &mut s, true, false, &mut |_| false).unwrap();
         assert_eq!(replace_match(&r, &m, &s, "Block", false).text, run("x[es~block]y[ee~block]z"));
         assert_eq!(replace_match(&r, &m, &s, "", false).text, "xyz");
+    }
+
+    #[test]
+    fn find_again_steps_past_a_hyphen_code() {
+        let r = run("a[-]b");
+        assert_eq!(step_from(&r, 0, &plain("b"), false), 4);
+        assert_eq!(step_from(&r, 0, &Search { text: run("[-]b"), ..Search::default() }, false), 1);
+        assert_eq!(step_from(&r, 4, &plain("a"), true), 0);
     }
 
     #[test]

@@ -741,6 +741,17 @@ impl Dlg {
         }
     }
 
+    /// A list or drop-down list runs `handler` when its selection changes.
+    pub fn on_select(&self, cid: i32, handler: impl FnMut() + 'static) {
+        let handler = std::rc::Rc::new(std::cell::RefCell::new(handler));
+        let Some(w) = self.win(cid) else { return };
+        if let Some(l) = w.as_widget::<ListBox>() {
+            l.on_selection_changed(move |_| (handler.borrow_mut())());
+        } else if let Some(c) = w.as_widget::<Choice>() {
+            c.on_selection_changed(move |_| (handler.borrow_mut())());
+        }
+    }
+
     /// Hides a control.
     pub fn hide(&self, cid: i32) {
         self.set_shown(cid, false);
