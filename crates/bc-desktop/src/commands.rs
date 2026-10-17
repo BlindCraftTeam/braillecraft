@@ -15,7 +15,7 @@ use crate::documents;
 use crate::encodings;
 use crate::settings_store;
 use crate::translation;
-use bc_core::doctext::Shown;
+use bc_core::doctext::{codes_properly_marked, style_codes_problem, style_name_problem, Shown, NEW_STYLE_NAME};
 use bc_core::table_list::TableList;
 
 // Messages for parts of the program that later build steps bring. They say what is missing and where it comes.
@@ -3239,57 +3239,69 @@ fn add_style() {
     if active_area().is_none() {
         return;
     }
+    use crate::translation::{codes_for_dialog, codes_from_dialog};
     let names = style_names();
     let d = open_dialog(1025, None);
-    d.set_text(7, "New Style Name");
+    d.set_text(7, NEW_STYLE_NAME);
     let mut basis = vec!["(No Style)".to_string()];
     basis.extend(names.iter().cloned());
     let refs: Vec<&str> = basis.iter().map(String::as_str).collect();
     d.set_items(10, &refs, Some(0));
     d.set_items(12, STYLE_SHOW, Some(0));
+    // "Style can be nested" starts checked for a name without the period (the default name has none).
+    d.set_checked(8, true);
+    // Choosing a style for basis puts its codes in the code fields.
+    let me = Dlg { id: d.id, dialog: d.dialog, page: d.page };
+    if let Some(list) = d.win(10).and_then(|w| w.as_widget::<ListBox>()) {
+        list.on_selection_changed(move |_| {
+            let chosen = me.selected_text(10);
+            let style = chosen.and_then(|n| app::with(|a| a.doc().and_then(|doc| doc.styles.iter().find(|s| s.name == n).cloned())));
+            me.set_text(14, &style.as_ref().map(|s| codes_for_dialog(&s.begin)).unwrap_or_default());
+            me.set_text(16, &style.map(|s| codes_for_dialog(&s.end)).unwrap_or_default());
+        });
+    }
+    // The name is checked in the dialog, as the original: empty, too long, the default name, invalid characters.
+    d.check_on_ok(|d| style_name_problem(&d.text(7)).map(|p| (7, p)));
     let ok = d.show() == 1;
-    let (name, nested, base, begin, end) = (d.text(7).trim().to_string(), d.checked(8), d.selected_text(10), d.text(14), d.text(16));
+    let (mut name, nested, begin, end) = (d.text(7), d.checked(8), d.text(14), d.text(16));
     d.destroy();
     if !ok {
         return;
     }
-    if name.is_empty() {
-        message("The style name is empty.");
-        return;
+    // A style that cannot be nested is one whose name ends in a period.
+    if !nested && !name.ends_with('.') {
+        name.push('.');
     }
-    if name == "New Style Name" {
-        message("You must give the style a name other than \"New Style Name\".");
-        return;
-    }
-    if !name.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-')) {
-        message("The style name contains invalid characters.  Style names may only contain letters (uppercase and lowercase), numbers, the period, the hyphen, and the underscore.");
+    // Then Edit Style Codes (1044), as in the original, with the codes from the first dialog.
+    let e = open_dialog(1044, None);
+    e.set_text(6, &format!("Edit codes for style: {name}"));
+    e.set_text(9, &begin);
+    e.set_text(11, &end);
+    e.check_on_ok(|d| [9, 11].into_iter().find_map(|f| style_codes_problem(&d.text(f)).map(|p| (f, p))));
+    let ok = e.show() == 1;
+    let (begin, end) = (e.text(9), e.text(11));
+    e.destroy();
+    if !ok {
         return;
     }
     if names.contains(&name) {
-        message(&format!("A style named {name} already exists."));
+        message("Unable to add style to style list.");
         return;
     }
     app::with(|a| {
         if let Some(doc) = a.doc_mut() {
-            let based = base.and_then(|b| doc.styles.iter().find(|s| s.name == b).cloned());
             doc.styles.push(Style {
+                nested: !name.ends_with('.'),
                 name,
-                nested,
-                begin: if begin.is_empty() {
-                    based.as_ref().map(|s| s.begin.clone()).unwrap_or_default()
-                } else {
-                    crate::translation::codes_from_dialog(&begin)
-                },
-                end: if end.is_empty() {
-                    based.map(|s| s.end).unwrap_or_default()
-                } else {
-                    crate::translation::codes_from_dialog(&end)
-                },
+                begin: codes_from_dialog(&begin),
+                end: codes_from_dialog(&end),
             });
+            doc.dirty = true;
             doc.last_line_key.clear();
         }
     });
 }
+
 
 fn modify_style() {
     let names = style_names();
@@ -3614,22 +3626,6 @@ fn shortcut_field_problem(text: &str) -> Option<String> {
     (!codes_properly_marked(text)).then(|| "Some codes are not properly started or terminated.".into())
 }
 
-/// The original's check of a codes field: a code is not started inside a code, not ended outside one, and none is
-/// left open at the end.
-fn codes_properly_marked(text: &str) -> bool {
-    let mut open = false;
-    for c in text.chars() {
-        match c {
-            '[' if open => return false,
-            '[' => open = true,
-            ']' if !open => return false,
-            ']' => open = false,
-            _ => {}
-        }
-    }
-    !open
-}
-
 fn shortcut_preferences() {
     let s = app::with(|a| a.settings.shortcuts.clone());
     let d = open_dialog(1022, None);
@@ -3788,6 +3784,14 @@ mod tests {
         let long = "x".repeat(100);
         assert_eq!(shortcut_field_problem(&long).as_deref(), Some("The shortcut string must not be longer than 99 characters."));
         assert!(shortcut_field_problem(&"x".repeat(99)).is_none());
+        assert_eq!(style_codes_problem("[ind3][hds2]"), None);
+        assert_eq!(style_codes_problem(""), None);
+        assert_eq!(style_codes_problem("[d~Chapter ]"), None);
+        assert_eq!(
+            style_codes_problem("[ind3] x").as_deref(),
+            Some("You cannot place text in a style definition.  To include text, use the [d~] or [q~] codes.")
+        );
+        assert_eq!(style_codes_problem(&"[p]".repeat(400)).as_deref(), Some("The code string for the style is too long."));
         for bad in ["[g0", "g0]", "[[g0]]", "[a]]"] {
             assert_eq!(shortcut_field_problem(bad).as_deref(), Some("Some codes are not properly started or terminated."), "{bad}");
         }

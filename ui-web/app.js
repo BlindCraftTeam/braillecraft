@@ -2947,15 +2947,49 @@ function applyLastStyle() {
 async function addStyle() {
   const file = await documentFile();
   const names = file.style_names;
+  // The field is checked in the dialog; on a refusal the message is shown and the field selected again.
+  const refuse = async (d, field, problem) => {
+    if (!problem) return true;
+    await message(problem);
+    d.get(field)?.focus();
+    d.get(field)?.select?.();
+    return false;
+  };
   const { result, d } = await showDialog(1025, {
     setup(d) {
       d.setText(7, "New Style Name");
       d.setItems(10, ["(No Style)", ...names], 0);
       d.setItems(12, STYLE_SHOW, 0);
+      // "Style can be nested" starts checked for a name without the period.
+      d.setChecked(8, true);
+      // Choosing a style for basis puts its codes in the code fields.
+      d.get(10)?.addEventListener("change", () => {
+        const codes = file.style_codes(d.selected(10) ?? "");
+        const [b, e] = codes ? JSON.parse(codes) : ["", ""];
+        d.setText(14, b);
+        d.setText(16, e);
+      });
     },
+    onOk: (d) => refuse(d, 7, core.style_name_problem(d.text(7))),
   });
   if (result !== "ok") return;
-  const problem = file.add_style(d.text(7).trim(), d.selected(10) ?? "", d.text(14), d.text(16));
+  // A style that cannot be nested is one whose name ends in a period.
+  let name = d.text(7);
+  if (!d.checked(8) && !name.endsWith(".")) name += ".";
+  // Then Edit Style Codes (1044), as in the original.
+  const codes = await showDialog(1044, {
+    setup(e) {
+      e.setText(6, `Edit codes for style: ${name}`);
+      e.setText(9, d.text(14));
+      e.setText(11, d.text(16));
+    },
+    async onOk(e) {
+      for (const f of [9, 11]) if (!(await refuse(e, f, core.style_codes_problem(e.text(f))))) return false;
+      return true;
+    },
+  });
+  if (codes.result !== "ok") return;
+  const problem = file.add_style(name, "", codes.d.text(9), codes.d.text(11));
   if (problem) {
     await message(problem);
     return;

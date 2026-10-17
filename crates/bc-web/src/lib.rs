@@ -852,19 +852,26 @@ fn codes_for_dialog(running: &str) -> String {
 
 /// The checks Add Style makes on a new style's name, with the reference messages.
 fn check_style_name(name: &str, names: &[String]) -> Result<(), String> {
-    if name.is_empty() {
-        return Err("The style name is empty.".into());
+    if let Some(p) = bc_core::doctext::style_name_problem(name) {
+        return Err(p);
     }
-    if name == "New Style Name" {
-        return Err("You must give the style a name other than \"New Style Name\".".into());
-    }
-    if !name.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-')) {
-        return Err("The style name contains invalid characters.  Style names may only contain letters (uppercase and lowercase), numbers, the period, the hyphen, and the underscore.".into());
-    }
+    // The original's list refuses a second style of the same name.
     if names.iter().any(|n| n == name) {
-        return Err(format!("A style named {name} already exists."));
+        return Err("Unable to add style to style list.".into());
     }
     Ok(())
+}
+
+/// Document, Add Style: what the original says about the name typed (empty when it is accepted).
+#[wasm_bindgen]
+pub fn style_name_problem(name: &str) -> String {
+    bc_core::doctext::style_name_problem(name).unwrap_or_default()
+}
+
+/// Edit Style Codes: what the original says about a codes field (empty when it is accepted).
+#[wasm_bindgen]
+pub fn style_codes_problem(text: &str) -> String {
+    bc_core::doctext::style_codes_problem(text).unwrap_or_default()
 }
 
 /// A new document from a template's text, as File, New makes one in the desktop program: the template's four
@@ -1617,7 +1624,7 @@ mod tests {
         assert_eq!(doc.add_style("New Style Name", "", "", ""), "You must give the style a name other than \"New Style Name\".");
         assert!(doc.add_style("bad name", "", "", "").starts_with("The style name contains invalid characters."));
         assert_eq!(doc.add_style("quote", "", "[ind4][rm4]", "[p]"), "");
-        assert_eq!(doc.add_style("quote", "", "", ""), "A style named quote already exists.");
+        assert_eq!(doc.add_style("quote", "", "", ""), "Unable to add style to style list.");
         assert_eq!(doc.add_style("quote2", "quote", "", "[l]"), "");
         assert_eq!(doc.style_codes("quote2"), r#"["[ind4][rm4]","[l]"]"#);
         doc.set_style_codes("quote2", "[ind4][rm4]", "[p]");

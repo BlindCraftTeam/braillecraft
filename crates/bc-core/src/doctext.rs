@@ -26,6 +26,61 @@ pub fn is_idle_code(code: &str) -> bool {
     code == "idle" || code.starts_with("idle~")
 }
 
+/// The name Document, Add Style starts with.
+pub const NEW_STYLE_NAME: &str = "New Style Name";
+
+/// What the original says about a new style's name in Document, Add Style, or None when it is accepted: empty, longer
+/// than 31, still the starting name, or a character other than a letter, a digit, period, hyphen or underscore.
+pub fn style_name_problem(name: &str) -> Option<String> {
+    if name.is_empty() {
+        Some("The style name is empty.".into())
+    } else if name.chars().count() > 31 {
+        Some("The style name is too long.  It must not be greater than 31 characters.".into())
+    } else if name.eq_ignore_ascii_case(NEW_STYLE_NAME) {
+        Some(format!("You must give the style a name other than \"{NEW_STYLE_NAME}\"."))
+    } else if !name.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-')) {
+        Some("The style name contains invalid characters.  Style names may only contain letters (uppercase and lowercase), numbers, the period, the hyphen, and the underscore.".into())
+    } else {
+        None
+    }
+}
+
+/// True when the brackets of a codes field are as the original requires: a code not started inside a code, not ended
+/// outside one, none left open.
+pub fn codes_properly_marked(text: &str) -> bool {
+    let mut open = false;
+    for c in text.chars() {
+        match c {
+            '[' if open => return false,
+            '[' => open = true,
+            ']' if !open => return false,
+            ']' => open = false,
+            _ => {}
+        }
+    }
+    !open
+}
+
+/// What the original says about a style's codes field (Edit Style Codes, codes shown in brackets), or None: longer
+/// than 1000, text outside the codes, codes not properly started or ended.
+pub fn style_codes_problem(text: &str) -> Option<String> {
+    if text.chars().count() > 1000 {
+        return Some("The code string for the style is too long.".into());
+    }
+    let mut open = false;
+    for c in text.chars() {
+        match c {
+            '[' => open = true,
+            ']' => open = false,
+            _ if !open => {
+                return Some("You cannot place text in a style definition.  To include text, use the [d~] or [q~] codes.".into())
+            }
+            _ => {}
+        }
+    }
+    (!codes_properly_marked(text)).then(|| "Some codes are not properly started or terminated.".into())
+}
+
 /// The new-line code, shown as a line break.
 const NEW_LINE: &str = "<";
 
