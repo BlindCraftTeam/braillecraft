@@ -718,6 +718,8 @@ impl App {
         // Page numbers on even and odd pages, for print documents too (in digits, with no numeric indicator).
         layout.numbers_even = bc_core::format::Corner::from_code(d.page_numbers[0]);
         layout.numbers_odd = bc_core::format::Corner::from_code(d.page_numbers[1]);
+        layout.print_numbers_even = bc_core::format::Corner::from_code(d.page_numbers[2]);
+        layout.print_numbers_odd = bc_core::format::Corner::from_code(d.page_numbers[3]);
         layout.first_number_shown = d.page_numbers[4].max(1) as usize;
         (h.finish(), layout, crate::translation::style_table(&d.styles))
     }

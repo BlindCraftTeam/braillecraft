@@ -933,6 +933,8 @@ fn laid_out(text: &str, cells: u32, lines: u32, braille: bool) -> Vec<bc_core::f
     let n = NUMBERING.with(|c| c.get());
     layout.numbers_even = bc_core::format::Corner::from_code(n[0]);
     layout.numbers_odd = bc_core::format::Corner::from_code(n[1]);
+    layout.print_numbers_even = bc_core::format::Corner::from_code(n[2]);
+    layout.print_numbers_odd = bc_core::format::Corner::from_code(n[3]);
     layout.first_number_shown = n[4].max(1) as usize;
     bc_core::format::format(&shown_of(text), &layout, None)
 }

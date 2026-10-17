@@ -32,6 +32,9 @@
 //!   line (spec 19 7.1, 7.2).
 //! - [kps] ... [kpeL:M] a block kept on one page (with L lines after it): a page that fills inside a block that
 //!   started on it is laid out again, ending before the block (spec 19 7.4); [hi] and [hlN] level margins (7.3).
+//! - [lea] the next word is the print page number: in its corner (with a, b, ... on later braille pages of the same
+//!   print page), and a print page change line (dots 3-6, then the number) where it begins in the middle of a page.
+//!   Not yet: filling out a page whose last lines a print page begins on when the next page's corner is at the top.
 //! Codes this formatter does not lay out take no room.
 
 use crate::doctext::Shown;
@@ -86,6 +89,9 @@ pub struct Layout {
     pub numbers_odd: Corner,
     /// The first page whose number is shown.
     pub first_number_shown: usize,
+    /// Print page numbers (from [lea]) on even pages and on odd pages.
+    pub print_numbers_even: Corner,
+    pub print_numbers_odd: Corner,
 }
 
 impl Layout {
@@ -97,6 +103,8 @@ impl Layout {
             numbers_even: Corner::None,
             numbers_odd: Corner::None,
             first_number_shown: 1,
+            print_numbers_even: Corner::None,
+            print_numbers_odd: Corner::None,
         }
     }
 
@@ -348,6 +356,17 @@ struct Formatter {
     numbers_even: Corner,
     first_number_shown: usize,
     next_numbers: Option<(Corner, Corner)>,
+    /// Print page numbers: where they go on odd and even pages, the current print page number (the word after
+    /// [lea]), how many braille pages it has gone on to (its continuation letter), the text this page shows, the line
+    /// of this page that is a print page change line, and a [lea] waiting for its word.
+    print_odd: Corner,
+    print_even: Corner,
+    next_print: Option<(Corner, Corner)>,
+    print_number: Option<String>,
+    print_since: usize,
+    page_print: Option<String>,
+    change_line: Option<usize>,
+    lea: bool,
     next_first_shown: Option<usize>,
     page_start: Option<usize>,
     /// Where the last page finished starts (a page with no text starts there too).
@@ -416,6 +435,14 @@ impl Formatter {
             numbers_even: layout.numbers_even,
             first_number_shown: layout.first_number_shown,
             next_numbers: None,
+            print_odd: layout.print_numbers_odd,
+            print_even: layout.print_numbers_even,
+            next_print: None,
+            print_number: None,
+            print_since: 0,
+            page_print: None,
+            change_line: None,
+            lea: false,
             next_first_shown: None,
             page_start: None,
             last_start: 0,
@@ -549,6 +576,7 @@ impl Formatter {
             return;
         }
         self.opened = true;
+        self.page_print = self.print_text().filter(|_| self.print_corner() != Corner::None);
         if self.foot.is_some() && self.on_this_page(self.foot_pages) {
             self.page_foot = self.foot.clone();
         }
@@ -579,18 +607,85 @@ impl Formatter {
     /// The cells the page number keeps on the line being filled, at its start and at its end: the number's length
     /// and three more on the first line for a number at the top, on the last line for one at the bottom.
     fn rooms(&self) -> (usize, usize) {
-        let c = self.corner();
         let at = self.page.len();
-        if (c.top() && at == 0) || (c.bottom() && at + 1 == self.layout.lines) {
-            let room = self.number_text().chars().count() + 3;
-            if c.right() {
-                (0, room)
-            } else {
-                (room, 0)
+        let mut rooms = (0, 0);
+        let numbers = [(self.corner(), Some(self.number_text())), (self.print_corner(), self.page_print.clone())];
+        for (c, text) in numbers {
+            let Some(text) = text else { continue };
+            if (c.top() && at == 0) || (c.bottom() && at + 1 == self.layout.lines) {
+                let room = text.chars().count() + 3;
+                if c.right() {
+                    rooms.1 = rooms.1.max(room);
+                } else {
+                    rooms.0 = rooms.0.max(room);
+                }
             }
-        } else {
-            (0, 0)
         }
+        rooms
+    }
+
+    /// The corner the print page number goes in on the page being filled: none before the first [lea], and none
+    /// where the braille page number goes.
+    fn print_corner(&self) -> Corner {
+        let c = if self.odd { self.print_odd } else { self.print_even };
+        if self.print_number.is_none() || c == self.corner() {
+            Corner::None
+        } else {
+            c
+        }
+    }
+
+    /// The print page number as a page shows it in its corner: with a continuation letter (a, b, ...) on the braille
+    /// pages after the one its print page began on.
+    fn print_text(&self) -> Option<String> {
+        let n = self.print_number.as_ref()?;
+        Some(match self.print_since {
+            0 => n.clone(),
+            k => format!("{}{n}", (b'a' + ((k - 1) % 26) as u8) as char),
+        })
+    }
+
+    /// The word after [lea]: the new print page number. At the top of a page whose print number goes at the top (or
+    /// on the last line when the next page's does) it only goes to the corner; else a print page change line is laid
+    /// (dots 3-6 across the line, then the number at its end).
+    fn print_page(&mut self, cells: &[(char, Option<usize>)]) {
+        self.word_marks.clear();
+        let text: String = cells.iter().take(36).map(|c| c.0).collect();
+        self.print_number = Some(text.clone());
+        let next_top = if self.odd { self.print_even } else { self.print_odd }.top();
+        let at_top = !self.line_has_text() && (!self.opened || self.page.len() == 0);
+        if at_top && self.print_corner().top() {
+            self.print_since = 0;
+            if self.opened {
+                self.page_print = self.print_text();
+            }
+            return;
+        }
+        if !self.line_has_text() && self.page.len() + 1 == self.layout.lines && next_top {
+            // It begins on the next page (the page's end brings the count to 0).
+            self.print_since = usize::MAX;
+            return;
+        }
+        if self.line_has_text() {
+            self.end_line(self.left);
+        }
+        self.open_page();
+        let len = cells.len().min(self.layout.cells);
+        let dashes = self.layout.cells - len;
+        let mut line = Line {
+            text: "-".repeat(dashes),
+            sources: vec![None; dashes],
+            marks: Vec::new(),
+        };
+        for &(c, s) in cells.iter().take(len) {
+            line.text.push(c);
+            line.sources.push(s);
+        }
+        self.change_line = Some(self.page.len());
+        self.push_line(line);
+        // This page is the one the print page began on; the next continues it.
+        self.print_since = 0;
+        self.start_col = self.left;
     }
 
     fn line_has_text(&self) -> bool {
@@ -662,6 +757,33 @@ impl Formatter {
                 line.sources[col + k] = None;
             }
             line.text = text.into_iter().collect();
+        }
+        // The print page number in its corner.
+        let print_corner = self.print_corner();
+        if let Some(text) = self.page_print.take() {
+            let at = if print_corner.top() { Some(0) } else if print_corner.bottom() { Some(room - 1) } else { None };
+            if let Some(line) = at.and_then(|k| lines.get_mut(k)) {
+                let len = text.chars().count();
+                let col = if print_corner.right() { self.layout.cells.saturating_sub(len) } else { 0 };
+                let mut cells: Vec<char> = line.text.chars().collect();
+                if cells.len() < col + len {
+                    cells.resize(col + len, ' ');
+                    line.sources.resize(col + len, None);
+                }
+                for (k, c) in text.chars().enumerate() {
+                    cells[col + k] = c;
+                    line.sources[col + k] = None;
+                }
+                line.text = cells.into_iter().collect();
+            }
+        }
+        if self.print_number.is_some() && self.opened {
+            self.print_since = self.print_since.wrapping_add(1);
+        }
+        self.change_line = None;
+        if let Some((odd, even)) = self.next_print.take() {
+            self.print_odd = odd;
+            self.print_even = even;
         }
         // The running foot on the last line, sharing it with a page number at the bottom.
         if let Some(foot) = self.page_foot.take() {
@@ -774,6 +896,10 @@ impl Formatter {
             // The heading's words are centred later; places in them with no cell fall back to the cell before.
             h.0.push((cells.iter().map(|c| c.0).collect(), cells.iter().map(|c| c.1).collect()));
             self.word_marks.clear();
+            return;
+        }
+        if std::mem::take(&mut self.lea) {
+            self.print_page(cells);
             return;
         }
         self.open_page();
@@ -978,10 +1104,21 @@ impl Formatter {
             // [svpnpA:B] where page numbers go from the next page, A on odd and B on even pages (0 none, 1 upper left,
             // 2 upper right, 3 lower left, 4 lower right); alone, lower right on both.
             "svpnp" => {
-                let (odd, even) = if n.is_empty() { (4, 4) } else { (n[0], n.get(1).copied().unwrap_or(0)) };
+                let (odd, even, p_odd, p_even) = if n.is_empty() {
+                    (4, 4, 2, 2)
+                } else {
+                    let get = |k: usize| n.get(k).copied().unwrap_or(0);
+                    (get(0), get(1), get(2), get(3))
+                };
                 let corner = |v: i64| Corner::from_code(v.clamp(0, 4) as u16);
                 self.next_numbers = Some((corner(odd), corner(even)));
+                // A print position equal to the braille one on the same pages is off.
+                let p_odd = if p_odd == odd { 0 } else { p_odd };
+                let p_even = if p_even == even { 0 } else { p_even };
+                self.next_print = Some((corner(p_odd), corner(p_even)));
             }
+            // [lea] the next word is the print page number.
+            "lea" => self.lea = true,
             // [svpfdN] the first page whose number is shown, from the next page.
             "svpfd" => self.next_first_shown = Some(first.unwrap_or(1).max(1) as usize),
             // [top] a new page once the page has been started (blank lines start it too).
@@ -1063,9 +1200,9 @@ impl Formatter {
                 }
             }
             // [scL] skip L lines (1 when not given), only after a line that is not blank (spec 19, Lines).
-            // [scL:M:N:P]: L lines (1 when not given) after a line with text; N (L when not given) after a running
-            // head or at the top of a page that carries one; P (0 when not given) after a blank line or at the top of
-            // a page. (M after a print page change line waits for those to be laid out.)
+            // [scL:M:N:P]: L lines (1 when not given) after a line with text; M (L when not given) after a print page
+            // change line; N (L when not given) after a running head or at the top of a page that carries one; P (0
+            // when not given) after a blank line or at the top of a page.
             "sc" => {
                 if self.line_has_text() {
                     self.end_line(self.left);
@@ -1077,6 +1214,8 @@ impl Formatter {
                 let count = if !self.opened {
                     // The top of a page: N when it will carry a head, else P.
                     if !self.head.is_empty() && self.on_this_page(self.head_pages) { after_head } else { after_blank }
+                } else if self.change_line.is_some_and(|c| c + 1 == self.page.len()) {
+                    n.get(1).copied().unwrap_or(l)
                 } else if self.head_rows > 0 && self.page.len() == self.head_rows {
                     after_head
                 } else if after_text {
@@ -1364,7 +1503,7 @@ fn is_layout(code: &str) -> bool {
         split_code(code).0,
         "<" | "l" | "p" | "sk" | "ind" | "inm" | "ptys" | "ptye" | "rm" | "svsbl" | "pg" | "top" | "cp" | "fr" | "hds" | "hde"
             | "kbs" | "kbe" | "kpf" | "tab" | "run"
-            | "svpnp" | "svpfd" | "hi" | "hl"
+            | "svpnp" | "svpfd" | "hi" | "hl" | "lea"
             | "tls" | "tle" | "tld" | "rfs" | "rfe" | "rfd" | "svrhp" | "svrfp" | "svrhs" | "svrfs" | "kps" | "kpe" | "sc"
     )
 }
@@ -1983,6 +2122,20 @@ mod tests {
         assert_eq!(texts(&pages[0])[0], "abcde");
         let pages = format(&m("abc[x]de"), &Layout::braille(4, 3), None);
         assert_eq!(texts(&pages[0])[..2], ["abc", "de"]);
+    }
+
+    #[test]
+    fn print_page_numbers_from_lea() {
+        let mut layout = Layout::braille(20, 4);
+        layout.print_numbers_odd = Corner::UpperRight;
+        layout.print_numbers_even = Corner::UpperRight;
+        // In the middle of a page: a print page change line; the next braille page shows the number with a letter.
+        let pages = format(&m("a [lea]5 b c\nd\ne"), &layout, None);
+        assert_eq!(texts(&pages[0]), ["a", &format!("{}5", "-".repeat(19)), "b c", "d"]);
+        assert_eq!(texts(&pages[1])[0], format!("e{}a5", " ".repeat(17)));
+        // At the top of a page whose print number goes at the top: only in the corner.
+        let pages = format(&m("[lea]7 x"), &layout, None);
+        assert_eq!(texts(&pages[0])[0], format!("x{}7", " ".repeat(18)));
     }
 
     #[test]

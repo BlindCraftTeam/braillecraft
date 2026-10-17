@@ -73,7 +73,9 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   cells clear of it; print documents get page numbers too, and [pg] codes can renumber pages. Each document's styles (headings, lists, paragraphs) are laid out from its
   own style list. Running heads go on the first lines of the pages they are set for and running feet on the last
   line, centred or at a side, beside the page numbers. Blocks kept together (a heading with the lines after it, a list
-  item) move to the next page whole rather than break across one.
+  item) move to the next page whole rather than break across one. Print page numbers marked in the text show in their corner,
+  with a continuation letter on later braille pages, and a print page change line where a print page begins in the
+  middle of a braille page.
 - **Save As.** Formatted braille (BRF in a choice of braille encodings), PEF (Portable Embosser Format), formatted
   text in a choice of code pages, coded braille, refreshable braille (.lbf), LaTeX, and the older document format.
 - **Printing.** Print documents and braille (with interline print) through the system printer.
