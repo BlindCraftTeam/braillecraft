@@ -1166,6 +1166,8 @@ async function editSetup(setup, cat) {
     s.handshaking = general.chosenIn(31, lists.handshaking) ?? s.handshaking;
     s.version = device.chosenIn(5, lists.versions) ?? 0;
     s.escape_codes = device.checked(6);
+    s.et_speaks_manage = device.checked(7);
+    s.et_speaks_on = device.checked(8);
     s.seek_top_of_form = device.checked(9);
     s.interpoint_enabled = device.checked(34);
     s.encoding = device.selected(37) ?? s.encoding;
@@ -1322,6 +1324,8 @@ function fillSheet(general, device, advanced, s, cat, lists, models) {
   const index = cat.driver(s.model).includes("Index");
   device.setItems(5, lists.versions, Math.min(s.version, lists.versions.length - 1));
   device.setChecked(6, s.escape_codes);
+  device.setChecked(7, !!s.et_speaks_manage);
+  device.setChecked(8, !!s.et_speaks_on);
   device.setChecked(9, s.seek_top_of_form);
   device.setChecked(34, s.interpoint_enabled);
   let encodings = cat.encodings(s.model);

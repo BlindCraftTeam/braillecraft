@@ -275,6 +275,8 @@ fn fill_sheet(general: &Dlg, device: &Dlg, advanced: &Dlg, s: &Setup, cat: &Cata
     // Device settings.
     device.set_items(5, VERSIONS, Some(s.version.min(VERSIONS.len() - 1) as u32));
     device.set_checked(6, s.escape_codes);
+    device.set_checked(7, s.et_speaks_manage);
+    device.set_checked(8, s.et_speaks_on);
     device.set_checked(9, s.seek_top_of_form);
     device.set_checked(34, s.interpoint_enabled);
     let encodings: Vec<&str> = model.map(|m| m.encodings()).unwrap_or_default();
@@ -682,6 +684,8 @@ fn read_sheet(p: &[Dlg], base: &Setup, cat: &Catalog, model: &str) -> Setup {
     s.handshaking = general.chosen_in(31, HANDSHAKING).unwrap_or(s.handshaking);
     s.version = device.chosen_in(5, VERSIONS).unwrap_or(0);
     s.escape_codes = device.checked(6);
+    s.et_speaks_manage = device.checked(7);
+    s.et_speaks_on = device.checked(8);
     s.seek_top_of_form = device.checked(9);
     s.interpoint_enabled = device.checked(34);
     s.encoding = device.selected_text(37).unwrap_or(s.encoding);

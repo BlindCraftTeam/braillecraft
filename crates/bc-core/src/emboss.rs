@@ -27,8 +27,18 @@ pub struct Options {
     /// Cells of binding margin (the form's cell offset included).
     pub binding: u32,
     pub interpoint: bool,
-    /// The model sets its margins by command, so no left padding is sent.
-    pub margins_by_command: bool,
+    /// The paper is a folded booklet.
+    pub booklet: bool,
+    /// The setup is "automated" (escape codes allowed, the model uses escape codes, or an Index at level 4 or
+    /// above): its margins are not reduced by the device margins.
+    pub automated: bool,
+    /// No left padding at all (Index level 5 and above, an Index booklet at level 4 and above, Thiel advanced).
+    pub no_pad: bool,
+    /// The embosser's own margins as the Device Settings page gives them: its leftmost cell placement, its rightmost
+    /// cell placement (0 when not given) and its top margin setting.
+    pub device_left: u32,
+    pub device_right: u32,
+    pub device_top: u32,
     /// North American output: letters sent upper case; punctuation sent high (` { | } ~ for @ [ \ ] ^).
     pub letters_upper: bool,
     pub high_punctuation: bool,
@@ -68,7 +78,12 @@ impl Default for Options {
             top_margin: 0,
             binding: 0,
             interpoint: false,
-            margins_by_command: false,
+            booklet: false,
+            automated: false,
+            no_pad: false,
+            device_left: 0,
+            device_right: 0,
+            device_top: 0,
             letters_upper: false,
             high_punctuation: false,
             encoding: None,
@@ -203,16 +218,45 @@ impl Writer<'_> {
         }
     }
 
+    /// The rightmost cell the embosser places: its setting, else the document's line with its binding margin
+    /// (INFERENCE: the reference's value when the field is not given was not traced).
+    fn rightmost(&self) -> u32 {
+        let o = self.o;
+        if o.device_right > 0 { o.device_right } else { o.cells + o.binding }
+    }
+
+    /// The left padding of a line (the reference's Generic send line): none when the job sets no padding; on a
+    /// single-sided job (and a booklet the Index does not lay out itself), and on the odd sides of an interpoint job,
+    /// the binding margin, less the embosser's own left margin when the setup is not automated; on the even sides of
+    /// an interpoint job, nothing when automated, else what is left on the right: rightmost - cells - binding.
+    fn pad(&self, odd: bool) -> u32 {
+        let o = self.o;
+        if o.no_pad {
+            return 0;
+        }
+        let front = if o.automated { o.binding } else { o.binding.saturating_sub(o.device_left) };
+        if !(o.interpoint || o.booklet) || odd {
+            front
+        } else if o.automated {
+            0
+        } else {
+            self.rightmost().saturating_sub(o.cells + o.binding)
+        }
+    }
+
     /// One line of a side; `odd` is an odd (front) side.
     fn line(&mut self, text: &str, odd: bool) {
         self.release();
         let o = self.o;
-        // INFERENCE: a blank line gets no margin padding (the reference's padding of an empty line was not traced).
-        let pad = if o.margins_by_command || (o.interpoint && !odd) || text.is_empty() { 0 } else { o.binding };
+        let pad = self.pad(odd);
         for _ in 0..pad {
             self.byte(b' ');
         }
         let cells: Vec<u8> = text.chars().map(|c| if c.is_ascii() { c as u8 } else { b' ' }).collect();
+        // A line is never sent as a bare line end: an empty line with no padding is one space.
+        if pad + cells.len() as u32 == 0 {
+            self.byte(b' ');
+        }
         for &c in &cells {
             self.byte(c);
         }
@@ -222,7 +266,10 @@ impl Writer<'_> {
                 self.byte(b' ');
             }
         }
-        if len >= o.cells && !o.eol_on_full_line {
+        // The line end goes after a line that ends before the rightmost cell, or after every line when the setup
+        // sends it after a full line.
+        let column = pad + len.max(if o.pad_lines { o.cells } else { 0 });
+        if column + o.device_left >= self.rightmost() && !o.eol_on_full_line {
             return;
         }
         if o.end_of_page == 1 {
@@ -272,9 +319,9 @@ impl Writer<'_> {
 
     fn side(&mut self, page: Option<&[String]>, odd: bool) {
         let o = self.o;
-        // The top margin is blank lines on every model; setting the margins by command takes away only the left
-        // padding (spec 25 4c).
-        for _ in 0..o.top_margin {
+        // The top margin is blank lines, less the embosser's own top margin setting (the reference's Generic open
+        // page).
+        for _ in 0..o.top_margin.saturating_sub(o.device_top) {
             self.line_end();
         }
         match page {
@@ -446,8 +493,8 @@ pub fn typewriter_job(o: &Options, pages: &[Option<Vec<String>>], copies: u32, w
 /// What the Index job start is built from (spec 25 section 8.1).
 #[derive(Debug, Clone, Default)]
 pub struct IndexStart {
-    /// The driver level: below 4 no parameter string is built. INFERENCE: 4, 5 and 6 are the Index generations the
-    /// model list names V3, V4 and V5.
+    /// The driver level, the setup's Index version number (V1 1, V2 2, V3_early 3, V3 4, V4 5, V5 6; 0 unspecified):
+    /// below 4 no parameter string is built.
     pub level: u8,
     /// The form's width and length (tenths of an inch), its largest cells per line, its paper id and whether it is
     /// a folded booklet.
@@ -456,21 +503,22 @@ pub struct IndexStart {
     pub form_cells: u32,
     pub form_id: String,
     pub booklet: bool,
-    /// Width and length are swapped (INFERENCE: landscape or rotated paper).
+    /// Width and length are swapped (the model's RotatePaperSizings).
     pub rotated: bool,
-    /// The dimensions go out in millimetres (INFERENCE: the form is in tenths of an inch).
+    /// The dimensions go out in millimetres (the model's IndexPagemm).
     pub to_mm: bool,
-    /// Sideways paper names (_side, _landscape) choose their own double page codes at level 5 and above.
+    /// Sideways paper names (_side, _landscape) choose their own double page codes at level 5 and above (the
+    /// model's IndexZfold).
     pub sideways_codes: bool,
-    /// The alternative double page codes 3 and 5 (INFERENCE: Z-fold paper).
+    /// The alternative double page codes 3 and 5 (the setup's Z-fold).
     pub z_fold: bool,
     /// The 8-dot line spacing (LS100).
     pub eight_dot: bool,
     pub cells: u32,
     pub binding: u32,
     pub lines: u32,
-    /// Lines added to LP.
-    pub extra_lines: u32,
+    /// The document's top margin: added to LP at levels 5 and 6; a booklet's TM is one more.
+    pub top_margin: u32,
     pub interpoint: bool,
     pub copies: u32,
     /// The model's field list (InitSequence), empty for none.
@@ -516,8 +564,9 @@ pub fn index_fields(s: &IndexStart) -> Vec<String> {
     let mut f = vec![format!("DP{dp}")];
     if s.level == 4 {
         let (im, om, tm) = if s.booklet {
-            let om = (index_dimension(s.form_width, s.to_mm) / 12).saturating_sub(2 + s.binding + s.cells);
-            (s.binding + 2, om, s.lines + 1)
+            // The booklet's outer margin is always worked out from the width in millimetres.
+            let om = (index_dimension(s.form_width, true) / 12).saturating_sub(2 + s.binding + s.cells);
+            (s.binding + 2, om, s.top_margin + 1)
         } else {
             (0, s.form_cells.saturating_sub(s.cells + s.binding), 0)
         };
@@ -528,7 +577,7 @@ pub fn index_fields(s: &IndexStart) -> Vec<String> {
             format!("LS{ls}"),
             format!("CH{}", s.cells),
             format!("BI{}", s.binding),
-            format!("LP{}", s.lines + s.extra_lines),
+            format!("LP{}", s.lines + s.top_margin),
             "TM0".into(),
         ]);
     }
@@ -748,7 +797,13 @@ mod tests {
     fn plain_job() {
         let o = Options { cells: 10, lines: 3, binding: 2, ..Options::default() };
         let out = job(&o, &[page(&["AB", "", "C", ""])], 1);
-        assert_eq!(out, b"  ab\r\n\r\n  c\r\n\x0c".to_vec());
+        // A blank line is padded like any other; with no padding it is one space, never a bare line end.
+        assert_eq!(out, b"  ab\r\n  \r\n  c\r\n\x0c".to_vec());
+        let none = Options { no_pad: true, ..o.clone() };
+        assert_eq!(job(&none, &[page(&["A", "", "B"])], 1), b"a\r\n \r\nb\r\n\x0c".to_vec());
+        // Not automated: the embosser's own left margin comes off the binding; its top margin off the top lines.
+        let device = Options { device_left: 1, top_margin: 2, device_top: 1, ..o.clone() };
+        assert_eq!(job(&device, &[page(&["A"])], 1), b"\r\n a\r\n\x0c".to_vec());
         // Two copies send the pages twice; Control-Z and closing bytes end the job.
         let o2 = Options { control_z: true, close_sync: vec![0, 0], ..o.clone() };
         assert_eq!(job(&o2, &[page(&["A"])], 2), b"  a\r\n\x0c  a\r\n\x0c\x1a\x00\x00".to_vec());

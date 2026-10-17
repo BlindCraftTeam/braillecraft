@@ -82,6 +82,19 @@ pub struct Setup {
     pub ink_adjust_h: i32,
     #[serde(default)]
     pub ink_adjust_v: i32,
+    /// Device Settings: Manage ET Speaks (7) and Leave ET Speaks On (8).
+    #[serde(default)]
+    pub et_speaks_manage: bool,
+    #[serde(default)]
+    pub et_speaks_on: bool,
+}
+
+impl Setup {
+    /// A number field of the Device Settings page as the setup holds it (0 when empty or not a number): 27 the
+    /// leftmost cell placement, 30 the rightmost cell placement, 33 the top margin setting.
+    pub fn device_number(&self, cid: i32) -> u32 {
+        self.device_other.iter().find(|(c, _)| *c == cid).and_then(|(_, v)| v.trim().parse().ok()).unwrap_or(0)
+    }
 }
 
 /// The interline print font a new setup takes (spec 25 14.1).
@@ -405,7 +418,7 @@ impl Setup {
             data_bits: number("DataBits", 8) as u32,
             stop_bits: number("StopBits", 1) as u32,
             handshaking,
-            version: 0,
+            version: single_version(label),
             escape_codes: flag("ETCAllowEscapeCodes") || flag("UsingEscapeCodes"),
             interpoint_enabled: flag("CanDoInterpoint"),
             encoding: model.and_then(|m| m.encodings().first().map(|s| s.to_string())).unwrap_or_else(|| "North American English".into()),
@@ -433,6 +446,8 @@ impl Setup {
             transend_font_size: 0,
             ink_adjust_h: 0,
             ink_adjust_v: 0,
+            et_speaks_manage: false,
+            et_speaks_on: false,
         }
     }
 
@@ -549,43 +564,42 @@ pub fn does_not_fit_message(setup: &str, form: &str, cells: u32, lines: u32) -> 
 /// Message 2892.
 pub const NO_SETUP_MESSAGE: &str = "Before embossing this document, you must use Embosser Setup in the Document menu to choose an embosser.";
 
-/// The Index driver level of a setup: its version choice, else the firmware range its model is listed with.
-/// INFERENCE (spec 25 8.3): versions 3, 4 and 5 are levels 4, 5 and 6; versions 1 and 2 build no parameter string.
-fn index_level(s: &Setup) -> u8 {
-    match s.version {
-        1 => return 1,
-        2 => return 2,
-        3 | 4 => return 4,
-        5 => return 5,
-        6 => return 6,
-        _ => {}
-    }
-    let range = s.model.rsplit(' ').next().unwrap_or("");
-    match range.rsplit('-').next().unwrap_or(range) {
-        "V5" => 6,
-        "V4" => 5,
-        "V3" | "V3_early" => 4,
-        "V2" => 2,
+/// The version number of a model listed with one firmware version ("Index Everest-D V5" is V5, 6), as the Device
+/// Settings version list then holds only that version and chooses it (audit print-emboss E11); 0 for a model listed
+/// with a range of versions or none. Numbers: V1 1, V2 2, V3_early 3, V3 4, V4 5, V5 6.
+pub fn single_version(label: &str) -> usize {
+    match label.rsplit(' ').next().unwrap_or("") {
         "V1" => 1,
+        "V2" => 2,
+        "V3_early" => 3,
+        "V3" => 4,
+        "V4" => 5,
+        "V5" => 6,
         _ => 0,
     }
 }
 
+/// The Index driver level of a setup: its version number as the Device Settings list gives it (V1 1, V2 2, V3_early
+/// 3, V3 4, V4 5, V5 6; 0 unspecified), as the reference's driver reads it.
+fn index_level(s: &Setup) -> u8 {
+    s.version.min(6) as u8
+}
+
 /// The byte pipeline's options for a job of `copies` copies of a document laid out `cells` by `lines` with
-/// `layout`, on `setup` and its `model`: the driver's job start (spec 25 section 8), padding, line and page ends.
-/// `encoding` is the byte sent for each cell in the setup's output encoding, None for North American English.
-/// INFERENCES, as the flags behind them were not traced (spec 25 8.4): the Index paper is sent in millimetres for
-/// models marked IndexPagemm; Index V3 and later and Enabling models with escape codes set their margins by command
-/// (no padding) and an Index V3 or later makes the copies itself (MC); the Enabling side argument is @; Enabling's
-/// lines per page count the top margin.
+/// `layout`, on `setup` and its `model`: the driver's job start (spec 25 section 8), padding, line and page ends, as
+/// the reference's drivers make them (audit print-emboss E2 to E5). An Index V3 or later makes the copies itself (MC).
+/// INFERENCE: the keywords RotatePaperSizings, IndexPagemm and LabellerROM are the names of the model flags the
+/// reference reads by number (0x55, 0x3d, 0x56).
 pub fn job_options(s: &Setup, model: &Model, layout: &Layout, cells: u32, lines: u32, copies: u32, encoding: Option<[u8; 64]>) -> Options {
-    let form = model.forms.iter().find(|f| f.id == layout.form);
+    let form = model.forms.iter().find(|f| f.id.eq_ignore_ascii_case(&layout.form));
     let driver = model.driver();
     let (index, enabling) = (driver.contains("Index"), driver.contains("Enabling"));
     let interpoint = layout.interpoint && s.interpoint_enabled;
     let binding = layout.binding + form.map_or(0, |f| f.cell_offset);
-    let escape = s.escape_codes && (model.flag("ETCAllowEscapeCodes") || model.flag("UsingEscapeCodes"));
     let level = if index { index_level(s) } else { 0 };
+    let booklet = form.is_some_and(|f| f.double_page);
+    // 8-dot line spacing: a TranSend SE ink printer named, interline print on, the large interline font.
+    let eight_dot = !s.ink_printer.trim().is_empty() && layout.interline != 0 && s.transend_font_size == 1;
     let mut start = Vec::new();
     if index {
         start = index_start(&IndexStart {
@@ -594,29 +608,45 @@ pub fn job_options(s: &Setup, model: &Model, layout: &Layout, cells: u32, lines:
             form_length: form.map_or(0, |f| f.length),
             form_cells: form.map_or(cells + binding, |f| f.maximum.0),
             form_id: layout.form.clone(),
-            booklet: form.is_some_and(|f| f.double_page),
+            booklet,
+            rotated: model.flag("RotatePaperSizings"),
             to_mm: model.flag("IndexPagemm"),
-            z_fold: s.z_fold && model.flag("IndexZfold"),
+            sideways_codes: model.flag("IndexZfold"),
+            z_fold: s.z_fold,
+            eight_dot,
             cells,
             binding,
             lines,
+            top_margin: layout.top_margin,
             interpoint,
             copies,
             sequence: model.text("InitSequence").unwrap_or("").to_string(),
-            ..IndexStart::default()
         });
-    } else if enabling && escape {
+    } else if enabling && s.escape_codes {
+        // Lines per page: the form's largest number of lines (with a TranSend SE ink printer, its length at 400 or
+        // 490 to the inch), less the model's LessLinesInterpoint when interpoint.
+        let form_lines = match form {
+            Some(f) if !s.ink_printer.trim().is_empty() => f.length * 100 / if s.transend_font_size == 1 { 490 } else { 400 },
+            Some(f) => f.maximum.1,
+            None => lines + layout.top_margin,
+        };
+        let less = if interpoint { model.number("LessLinesInterpoint").unwrap_or(0).max(0) as u32 } else { 0 };
         start = enabling_start(&EnablingStart {
             full: true,
-            side: b'@',
-            seek_top_of_form: s.seek_top_of_form && model.flag("AllowSeekTOF"),
-            voice: model.flag("ETSpeaks"),
+            side: if interpoint { b'@' } else { b'A' },
+            seek_top_of_form: s.seek_top_of_form,
+            voice: s.et_speaks_manage,
+            voice_on: s.et_speaks_on,
+            dot_table: eight_dot,
+            eight_dot,
+            perforation_skip: model.flag("CanDoInterpoint"),
             interpoint,
+            label_mode: model.flag("LabellerROM"),
             form_length: form.map_or(110, |f| f.length),
-            lines: lines + layout.top_margin,
+            lines: form_lines.saturating_sub(less),
             cells,
             binding,
-            ..EnablingStart::default()
+            init: String::new(),
         });
     }
     if s.custom_codes {
@@ -629,7 +659,12 @@ pub fn job_options(s: &Setup, model: &Model, layout: &Layout, cells: u32, lines:
         top_margin: layout.top_margin,
         binding,
         interpoint,
-        margins_by_command: escape || (index && level >= 4),
+        booklet,
+        automated: s.escape_codes || model.flag("UsingEscapeCodes") || (index && level >= 4),
+        no_pad: (index && level >= 5) || (booklet && index && level >= 4) || driver.contains("ThielAdvanced"),
+        device_left: s.device_number(27),
+        device_right: s.device_number(30),
+        device_top: s.device_number(33),
         letters_upper: s.upper_case,
         high_punctuation: s.high_punctuation,
         encoding,
