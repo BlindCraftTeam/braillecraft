@@ -2693,31 +2693,20 @@ function toggleHighlight() {
 
 // Edit, Change Case: the text between the codes in the selection goes to capitals, or to small letters when it is
 // all capitals already; the codes are left as they are.
+// Edit, Change Case, as the desktop program (the core's change_case): the selection or the word at the caret; each
+// letter that changes is replaced on its own so the codes stay; the caret goes to the start of the range.
 function changeCase() {
-  const [from, to] = [editor.selectionStart, editor.selectionEnd];
-  if (from === to) return;
-  // The text runs between the editor's codes, each changed as its own edit so the codes are left as they are.
-  const codes = core ? [...core.editor_codes()] : [];
-  const runs = [];
-  let at = from;
-  for (let k = 0; k < codes.length; k += 2) {
-    const [s, e] = [codes[k], codes[k + 1]];
-    if (e <= from || s >= to) continue;
-    if (s > at) runs.push([at, s]);
-    at = Math.max(at, e);
+  if (!core) return;
+  const out = [...core.editor_change_case(editor.selectionStart, editor.selectionEnd)];
+  if (!out.length) return;
+  const start = out[0];
+  for (let k = out.length - 2; k >= 2; k -= 2) {
+    const c = String.fromCodePoint(out[k + 1]);
+    const at = out[k];
+    editor.setRangeText(c, at, at + (editor.value.codePointAt(at) > 0xffff ? 2 : 1), "preserve");
   }
-  if (at < to) runs.push([at, to]);
-  const text = runs.map(([s, e]) => editor.value.slice(s, e)).join("");
-  const upper = text !== text.toUpperCase();
-  for (const [s, e] of runs) {
-    const piece = editor.value.slice(s, e);
-    const changed = upper ? piece.toUpperCase() : piece.toLowerCase();
-    if (changed !== piece && changed.length === piece.length) {
-      editor.setRangeText(changed, s, e, "preserve");
-      editor.dispatchEvent(new Event("input"));
-    }
-  }
-  editor.setSelectionRange(from, to);
+  editor.dispatchEvent(new Event("input"));
+  editor.setSelectionRange(start, start);
 }
 
 // A text file's bytes as text, as the desktop program reads them: UTF-8 when they are valid UTF-8, else Windows

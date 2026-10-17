@@ -93,7 +93,8 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   Delete Style and changing a style's codes ask first, and the last style cannot be deleted; Clear (Del) with nothing
   selected deletes the character at the caret, and Cut ends Highlight. Shortcut Preferences checks its codes in the
   dialog, Notification Settings brings back every message hidden with "do not show again", and a new hyphen table
-  lays the document out again.
+  lays the document out again. Change Case works on the word at the caret when nothing is selected, and steps
+  lower case to a capital on each word to upper case and back.
 - **Save As.** Formatted braille (BRF in a choice of braille encodings), PEF (Portable Embosser Format), formatted
   text in a choice of code pages (the encoding or code page chosen in the Save As dialog's own Encoding box), coded braille, refreshable braille (.lbf), LaTeX, and the older document format.
 - **Printing.** Print documents and braille (with interline print) through the system printer.

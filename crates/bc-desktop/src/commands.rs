@@ -2221,33 +2221,23 @@ fn replace_plain(from: usize, to: usize, text: &str) {
     });
 }
 
+/// Edit, Change Case, as the original (bc_core doctext change_case): the selection or the word at the caret; the
+/// caret goes to the start of the range.
 fn change_case() {
     let Some(((from_c, to_c), doc)) = app::with(|a| a.doc().map(|d| (d.selection(), d.shown()))) else { return };
-    if from_c == to_c {
-        return;
-    }
-    let text: String = doc.text.chars().skip(from_c).take(to_c - from_c).collect();
-    let upper = text != text.to_uppercase();
-    // The text between the codes changes case, piece by piece; the codes are left as they are.
-    let mut pieces: Vec<(usize, usize)> = Vec::new();
-    let mut at = from_c;
-    for &(s, e) in doc.codes.iter().filter(|c| c.1 > from_c && c.0 < to_c) {
-        if s > at {
-            pieces.push((at, s));
+    let Some((start, _, changes)) = doc.change_case(from_c, to_c) else { return };
+    // Each changed letter is replaced on its own, so the codes stay as they are; all of it is one undo step.
+    app::with(|a| {
+        if let Some(i) = a.active {
+            a.edit_by(i, |e| {
+                for &(p, c) in changes.iter().rev() {
+                    e.replace(p, p + 1, &Shown::plain(&c.to_string()));
+                }
+                Shown::default()
+            });
         }
-        at = at.max(e);
-    }
-    if at < to_c {
-        pieces.push((at, to_c));
-    }
-    for &(s, e) in pieces.iter().rev() {
-        let part: String = doc.text.chars().skip(s).take(e - s).collect();
-        let changed = if upper { part.to_uppercase() } else { part.to_lowercase() };
-        if changed != part && changed.chars().count() == part.chars().count() {
-            replace_plain(s, e, &changed);
-        }
-    }
-    select_range(from_c as i64, to_c as i64);
+    });
+    select_range(start as i64, start as i64);
 }
 
 /// Edit, Goto: a page, line and column of the laid-out pages, as the status line counts them.

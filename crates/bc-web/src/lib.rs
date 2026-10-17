@@ -446,6 +446,24 @@ pub fn editor_codes() -> Vec<u32> {
     })
 }
 
+/// Edit, Change Case on the editor's UTF-16 range `from`..`to` (the word at the caret when they are equal), as the
+/// desktop program: [range start, range end, then place and new character code for each letter that changes], all in
+/// UTF-16 units; empty when nothing changes.
+#[wasm_bindgen]
+pub fn editor_change_case(from: u32, to: u32) -> Vec<u32> {
+    EDITOR.with(|e| {
+        let e = e.borrow();
+        let t = &e.shown.text;
+        let Some((s, end, changes)) = e.shown.change_case(char_pos(t, from), char_pos(t, to)) else { return Vec::new() };
+        let mut out = vec![utf16_pos(t, s), utf16_pos(t, end)];
+        for (p, c) in changes {
+            out.push(utf16_pos(t, p));
+            out.push(c as u32);
+        }
+        out
+    })
+}
+
 /// Layout, Apply Last Style: the paragraph style ended last before UTF-16 position `at` in the editor, read from its
 /// codes; empty when there is none.
 #[wasm_bindgen]

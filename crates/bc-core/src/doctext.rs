@@ -216,6 +216,91 @@ impl Shown {
         })
     }
 
+    /// Edit, Change Case, as the original: on `from`..`to`, or with no selection on the letters around the caret (a
+    /// code ends the word). With no lower-case letter in the range the letters go to lower case; with only lower-case
+    /// letters, and a character that is not a letter in the range or the range starting a word, each letter after a
+    /// character that is not a letter (a code's end bracket counts) takes a capital; otherwise all go to upper case.
+    /// Text inside codes is left as it is. Answers the range and the characters that change (place, new character),
+    /// or None when the range has no cased letter.
+    pub fn change_case(&self, from: usize, to: usize) -> Option<(usize, usize, Vec<(usize, char)>)> {
+        let chars: Vec<char> = self.text.chars().collect();
+        let in_code = |p: usize| self.codes.iter().any(|&(s, e)| s <= p && p < e);
+        let letter = |p: usize| chars.get(p).is_some_and(|c| c.is_alphabetic()) && !in_code(p);
+        let (from, to) = if from != to {
+            (from.min(to), from.max(to))
+        } else {
+            let mut s = from;
+            while s > 0 && letter(s - 1) {
+                s -= 1;
+            }
+            let mut e = from;
+            while e < chars.len() && letter(e) {
+                e += 1;
+            }
+            (s, e)
+        };
+        let word_start = from == 0 || !chars[from - 1].is_alphabetic();
+        let (mut upper, mut lower, mut other) = (false, false, false);
+        for p in (from..to).filter(|&p| !in_code(p)) {
+            let c = chars[p];
+            if c.is_uppercase() {
+                upper = true;
+            } else if c.is_lowercase() {
+                lower = true;
+            } else if !c.is_alphabetic() {
+                other = true;
+            }
+        }
+        if !upper && !lower {
+            return None;
+        }
+        enum Mode {
+            Lower,
+            Words,
+            Upper,
+        }
+        let mode = if !lower {
+            Mode::Lower
+        } else if !upper && (other || word_start) {
+            Mode::Words
+        } else {
+            Mode::Upper
+        };
+        // A case change that is one character, else the character as it is (the text keeps its length).
+        fn upper_of(c: char) -> char {
+            let mut it = c.to_uppercase();
+            match (it.next(), it.next()) {
+                (Some(x), None) => x,
+                _ => c,
+            }
+        }
+        fn lower_of(c: char) -> char {
+            let mut it = c.to_lowercase();
+            match (it.next(), it.next()) {
+                (Some(x), None) => x,
+                _ => c,
+            }
+        }
+        let mut after_other = word_start;
+        let mut changes = Vec::new();
+        for p in from..to {
+            let c = chars[p];
+            if !in_code(p) {
+                let new = match mode {
+                    Mode::Lower => lower_of(c),
+                    Mode::Upper => upper_of(c),
+                    Mode::Words if after_other => upper_of(c),
+                    Mode::Words => c,
+                };
+                if new != c {
+                    changes.push((p, new));
+                }
+            }
+            after_other = !c.is_alphabetic();
+        }
+        Some((from, to, changes))
+    }
+
     /// The text with each code whose name `keep` refuses taken out, brackets and all, with the editor's own line
     /// break after it; the other codes stay as shown.
     pub fn text_keeping_codes(&self, keep: impl Fn(&str) -> bool) -> String {
@@ -392,6 +477,33 @@ mod tests {
         let s = Shown { text: "x[y".into(), ..Shown::default() };
         assert_eq!(s.text_keeping_codes(|_| false), "x[y");
         assert!(!is_idle_code("idler"));
+    }
+
+    #[test]
+    fn change_case_steps_as_the_original() {
+        let apply = |s: &Shown, from: usize, to: usize| {
+            let (_, _, ch) = s.change_case(from, to).unwrap();
+            let mut t: Vec<char> = s.text.chars().collect();
+            for (p, c) in ch {
+                t[p] = c;
+            }
+            t.into_iter().collect::<String>()
+        };
+        // The word at the caret: lower, then capitals, then upper, then lower again.
+        let s = Shown::plain("say hello now");
+        assert_eq!(apply(&s, 6, 6), "say Hello now");
+        assert_eq!(apply(&Shown::plain("say Hello now"), 6, 6), "say HELLO now");
+        assert_eq!(apply(&Shown::plain("say HELLO now"), 6, 6), "say hello now");
+        // A selection over words takes a capital at each word.
+        assert_eq!(apply(&s, 0, 13), "Say Hello Now");
+        // Lower-case letters inside a word, with nothing else selected, go to upper case.
+        assert_eq!(apply(&s, 5, 7), "say hELlo now");
+        // Codes are left as they are, and a code's end starts a word.
+        let s = Shown::marked("[es~para.]one two");
+        let n = s.text.chars().count();
+        assert_eq!(apply(&s, 0, n), "[es~para.]One Two");
+        // Nothing with a case: no change.
+        assert!(Shown::plain("12 3").change_case(0, 4).is_none());
     }
 
     #[test]
