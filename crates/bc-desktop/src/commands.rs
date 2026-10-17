@@ -3337,6 +3337,21 @@ fn modify_style() {
         let r = Dlg::open(&outer.dialog, 1027, None);
         r.set_text(7, &old);
         r.set_checked(8, true);
+        // Checked in the dialog, as the original: an empty name does nothing, a name the document has (in any case)
+        // and invalid characters are refused with their messages.
+        r.check_on_ok(|d| {
+            let name: String = d.text(7).chars().take(31).collect();
+            if name.is_empty() {
+                return Some((7, String::new()));
+            }
+            if style_names().iter().any(|n| n.eq_ignore_ascii_case(&name)) {
+                return Some((7, format!("A style named {name} already exists.")));
+            }
+            if !name.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-')) {
+                return Some((7, "The style name contains invalid characters.  Style names may only contain letters (uppercase and lowercase), numbers, the period, the hyphen, and the underscore.".into()));
+            }
+            None
+        });
         let ok = r.show() == 1;
         let (new, everywhere) = (r.text(7).trim().to_string(), r.checked(8));
         r.destroy();

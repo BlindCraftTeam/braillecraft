@@ -3031,6 +3031,21 @@ async function modifyStyle() {
             r.setText(7, old);
             r.setChecked(8, true);
           },
+          // Checked in the dialog, as the original: an empty name does nothing, a name the document has (in any
+          // case) and invalid characters are refused with their messages.
+          async onOk(r) {
+            const name = [...r.text(7)].slice(0, 31).join("");
+            if (!name) return false;
+            let problem = null;
+            if (file.style_names.some((n) => n.toLowerCase() === name.toLowerCase())) problem = `A style named ${name} already exists.`;
+            else if (!/^[A-Za-z0-9._-]+$/.test(name))
+              problem = "The style name contains invalid characters.  Style names may only contain letters (uppercase and lowercase), numbers, the period, the hyphen, and the underscore.";
+            if (!problem) return true;
+            await message(problem);
+            r.get(7)?.focus();
+            r.get(7)?.select?.();
+            return false;
+          },
         });
         const name = r.d.text(7).trim();
         if (r.result !== "ok" || !name) return;

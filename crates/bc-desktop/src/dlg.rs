@@ -753,7 +753,7 @@ impl Dlg {
 
     /// OK first runs `check` on the dialog's fields, as the original checks a field before the dialog closes: when it
     /// answers a field and a message, the message is shown, the field gets focus with its text selected, and the
-    /// dialog stays open with everything typed in it.
+    /// dialog stays open with everything typed in it. An empty message keeps the dialog open with none shown.
     pub fn check_on_ok(&self, check: impl Fn(&Dlg) -> Option<(i32, String)> + 'static) {
         let me = Dlg { id: self.id, dialog: self.dialog, page: self.page };
         let dialog = self.dialog;
@@ -762,10 +762,12 @@ impl Dlg {
         dialog.set_affirmative_id(0x7ffe);
         self.on_button(1, move || match check(&me) {
             Some((field, text)) => {
-                MessageDialog::builder(&dialog, &text, "BrailleCraft")
-                    .with_style(MessageDialogStyle::OK | MessageDialogStyle::IconWarning)
-                    .build()
-                    .show_modal();
+                if !text.is_empty() {
+                    MessageDialog::builder(&dialog, &text, "BrailleCraft")
+                        .with_style(MessageDialogStyle::OK | MessageDialogStyle::IconWarning)
+                        .build()
+                        .show_modal();
+                }
                 if let Some(w) = me.win(field) {
                     w.set_focus();
                     if let Some(t) = w.as_widget::<TextCtrl>() {
