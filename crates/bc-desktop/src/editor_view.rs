@@ -89,23 +89,35 @@ pub struct CellForms {
     pub access: Option<&'static crate::encodings::Encoding>,
 }
 
-/// Row `r`'s text with its cells (not its code text) written as Unicode braille patterns through `enc`.
-fn row_patterns(ed: &Editor, r: usize, text: &str, enc: &crate::encodings::Encoding) -> String {
-    let in_code = |p: usize| ed.doc.codes.iter().any(|&(s, e)| s <= p && p < e);
-    let code: Vec<bool> = if ed.coded { ed.row_sources(r).iter().map(|s| s.is_some_and(in_code)).collect() } else { Vec::new() };
+/// The characters the window reads as the start and end of a code in a row's text (wxd_doc_editor.h): the code
+/// between them is drawn in the code font inside a box (spec 27 4a).
+const CODE_START: char = '\u{e000}';
+const CODE_END: char = '\u{e001}';
+
+/// Row `r`'s text for the window: its cells (never its code text) written as Unicode braille patterns through `enc`
+/// when one is given, and, with `mark`, each code (its display form) between the window's code markers.
+fn row_form(ed: &Editor, r: usize, text: &str, enc: Option<&crate::encodings::Encoding>, mark: bool) -> String {
+    let codes = ed.row_codes(r);
     let chars: Vec<char> = text.chars().collect();
-    let mut out = String::with_capacity(text.len());
-    let mut run = String::new();
-    for (k, &c) in chars.iter().enumerate() {
-        if code.get(k).copied().unwrap_or(false) {
-            out.push_str(&enc.text_to_cells(&run));
-            run.clear();
-            out.push(c);
-        } else {
-            run.push(c);
+    // The document's own text never carries the markers.
+    let cells = |run: &str| enc.map_or_else(|| run.to_string(), |e| e.text_to_cells(run)).replace([CODE_START, CODE_END], "\u{fffd}");
+    let mut out = String::with_capacity(text.len() + 2 * codes.len());
+    let mut at = 0;
+    for &(s, e) in &codes {
+        let (s, e) = (s.min(chars.len()), e.min(chars.len()));
+        let run: String = chars[at..s.max(at)].iter().collect();
+        out.push_str(&cells(&run));
+        if mark {
+            out.push(CODE_START);
         }
+        out.extend(chars[s.max(at)..e].iter().map(|&c| if c == CODE_START || c == CODE_END { '\u{fffd}' } else { c }));
+        if mark {
+            out.push(CODE_END);
+        }
+        at = e.max(at);
     }
-    out.push_str(&enc.text_to_cells(&run));
+    let run: String = chars[at..].iter().collect();
+    out.push_str(&cells(&run));
     out
 }
 
@@ -130,11 +142,10 @@ impl Area {
         for r in 0..count {
             let row = ed.row(r);
             let text = ed.row_text(r);
-            let form = |f: Option<&crate::encodings::Encoding>| f.map_or_else(|| text.clone(), |e| row_patterns(ed, r, &text, e));
             if separate {
-                access.push(form(forms.access));
+                access.push(row_form(ed, r, &text, forms.access, false));
             }
-            rows.push(form(forms.paint));
+            rows.push(row_form(ed, r, &text, forms.paint, true));
             kinds.push(c_int::from(matches!(row, Some(Row::Break { .. }))));
             if line_numbers {
                 labels.push(match row {
@@ -217,6 +228,11 @@ mod tests {
         let ed = Editor::new(Shown::marked("ab[g1]c"), bc_core::format::Layout::braille(40, 25), None, true, 42);
         let text = ed.row_text(0);
         assert_eq!(text, "ab[g1]c");
-        assert_eq!(row_patterns(&ed, 0, &text, enc), "\u{2801}\u{2803}[g1]\u{2809}");
+        assert_eq!(row_form(&ed, 0, &text, Some(enc), false), "\u{2801}\u{2803}[g1]\u{2809}");
+        // The window gets each code between its markers; a hard space is shown as the code ['].
+        assert_eq!(row_form(&ed, 0, &text, Some(enc), true), "\u{2801}\u{2803}\u{e000}[g1]\u{e001}\u{2809}");
+        let ed = Editor::new(Shown::marked("a\u{a0}[es~h1.]b"), bc_core::format::Layout::braille(40, 25), None, true, 42);
+        assert_eq!(row_form(&ed, 0, &ed.row_text(0), None, true), "a\u{e000}[']\u{e001}");
+        assert_eq!(row_form(&ed, 1, &ed.row_text(1), None, true), "\u{e000}<h1.>\u{e001}b");
     }
 }

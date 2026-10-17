@@ -2366,7 +2366,7 @@ async function readImport(bytes, choice) {
   const template = choice.template;
   if (choice.kind === "Pdf") {
     try {
-      return { braille: false, running: core.import_pdf(bytes, (await styleNames()).join("\n")), template };
+      return { braille: false, running: core.import_pdf(bytes, (await styleNames()).join("\n"), JSON.stringify(pdfOptionsOf(pdfSettings()))), template };
     } catch (err) {
       statusLine.textContent = String(err.message ?? err);
       return null;
@@ -3038,6 +3038,188 @@ async function internationalization() {
   // The field shows the patterns, or the characters, as now chosen.
   reshowEditor();
   applyView();
+}
+
+// Global, PDF Importer (the original's XRC dialog 3116, as the desktop program shows it): the
+// settings kept under "PDF" with the original's keys and defaults (numbers in thousandths), the fields in the
+// dialog's order (its pages General, Headers, Footers, Fonts, Scraping Setup as groups). The original's dialog also
+// shows a script choice, height units, header and footer trigger texts and "may be shorter" boxes that its code
+// never reads; those are shown too and do nothing, as there.
+const PDF_DEFAULTS = {
+  ShowAtImport: false, PDF_A: true, DetectLedgers: true, FixLeaderDots: true, Script: "", HeaderHeight: 0, FooterHeight: 0,
+  UseHeaderFontHints: true, RetainBold: true, RetainItalic: true, RetainUnderline: true,
+  "PDFMiner.Advanced": true, "PDFMiner.LineOverlap": 500, "PDFMiner.CharMargin": 2000, "PDFMiner.WordMargin": 100, "PDFMiner.LineMargin": 500, "PDFMiner.BoxesFlow": 500,
+  "PDFMiner.DetectVertical": false, "PDFMiner.AllTexts": false,
+};
+function pdfSettings() {
+  const s = { ...PDF_DEFAULTS };
+  for (const k of Object.keys(PDF_DEFAULTS)) {
+    const v = store.get(`PDF.${k}`);
+    if (v === null || v === undefined) continue;
+    s[k] = typeof PDF_DEFAULTS[k] === "boolean" ? v === "1" || v === "yes" : typeof PDF_DEFAULTS[k] === "number" ? Number(v) : v;
+  }
+  return s;
+}
+function savePdfSettings(s) {
+  for (const k of Object.keys(PDF_DEFAULTS)) store.set(`PDF.${k}`, typeof s[k] === "boolean" ? (s[k] ? "1" : "0") : String(s[k]));
+}
+// The importer's options from the settings, as the desktop program makes them (spec 29 3b): heights from
+// thousandths of an inch to points, layout numbers from thousandths; without Advanced, no box flow.
+function pdfOptionsOf(s) {
+  const k = (v) => v / 1000;
+  return {
+    allow_tagged: s.PDF_A,
+    header_height: s.HeaderHeight * 0.072,
+    footer_height: s.FooterHeight * 0.072,
+    la: {
+      line_overlap: k(s["PDFMiner.LineOverlap"]),
+      char_margin: k(s["PDFMiner.CharMargin"]),
+      line_margin: k(s["PDFMiner.LineMargin"]),
+      word_margin: k(s["PDFMiner.WordMargin"]),
+      boxes_flow: s["PDFMiner.Advanced"] ? k(s["PDFMiner.BoxesFlow"]) : null,
+      detect_vertical: s["PDFMiner.DetectVertical"],
+      all_texts: s["PDFMiner.AllTexts"],
+    },
+  };
+}
+const shownThousandth = (v) => String(v / 1000);
+async function pdfOptions() {
+  const s = pdfSettings();
+  const f = {};
+  const input = (form, id, label, value, type = "text") => {
+    const i = labelledRow(form, id, label, document.createElement("input"));
+    i.type = type;
+    if (type === "checkbox") i.checked = value;
+    else i.value = value;
+    return i;
+  };
+  const choice = (form, id, label, items, selected) => {
+    const sel = labelledRow(form, id, label, document.createElement("select"));
+    sel.replaceChildren(...items.map((it) => new Option(it, it)));
+    sel.selectedIndex = selected;
+    return sel;
+  };
+  const heading = (form, text) => {
+    const h = document.createElement("h3");
+    h.textContent = text;
+    form.append(h);
+  };
+  const ok = await ownDialog("PDF Importer", (form) => {
+    heading(form, "General");
+    f.show = input(form, "pdf-show", "Show This Dialog for Each Import", s.ShowAtImport, "checkbox");
+    f.pdfa = input(form, "pdf-a", "Use PDF/A Markup When Possible", s.PDF_A, "checkbox");
+    f.ledgers = input(form, "pdf-ledgers", "Detect Ledger Format When Scraping", s.DetectLedgers, "checkbox");
+    f.leader = input(form, "pdf-leader", "Fix Leader Dots", s.FixLeaderDots, "checkbox");
+    f.script = input(form, "pdf-script", "Custom Python Script:", s.Script);
+    choice(form, "pdf-engine", "Reader:", ["pdfminer.six", "PyPDF"], 0);
+    heading(form, "Headers");
+    f.header = input(form, "pdf-header", "Header Height:", shownThousandth(s.HeaderHeight));
+    choice(form, "pdf-header-units", "Units:", ["inches", "centimeters"], 0);
+    input(form, "pdf-header-max", "Header May Be Shorter", false, "checkbox");
+    input(form, "pdf-header-triggers", "End Header After Any Text Matching:", "");
+    input(form, "pdf-header-required", "Page Has No Header if No Text Matches", false, "checkbox");
+    heading(form, "Footers");
+    f.footer = input(form, "pdf-footer", "Footer Height:", shownThousandth(s.FooterHeight));
+    choice(form, "pdf-footer-units", "Units:", ["inches", "centimeters"], 0);
+    input(form, "pdf-footer-max", "Footer May Be Shorter", false, "checkbox");
+    input(form, "pdf-footer-triggers", "Begin Footer With Any Text Matching:", "");
+    input(form, "pdf-footer-required", "Page Has No Footer if No Text Matches", false, "checkbox");
+    heading(form, "Fonts");
+    const note = document.createElement("p");
+    note.textContent = "Note: Use of any of these font options can substantially slow down the PDF importer";
+    form.append(note);
+    f.hints = input(form, "pdf-hints", "Use Font Hints for Headers", s.UseHeaderFontHints, "checkbox");
+    f.bold = input(form, "pdf-bold", "Retain Bold", s.RetainBold, "checkbox");
+    f.italic = input(form, "pdf-italic", "Retain Italic", s.RetainItalic, "checkbox");
+    f.underline = input(form, "pdf-underline", "Retain Underline", s.RetainUnderline, "checkbox");
+    heading(form, "Scraping Setup: Layout Analysis Parameters");
+    f.advanced = input(form, "pdf-advanced", "Advanced Layout Analysis", s["PDFMiner.Advanced"], "checkbox");
+    f.overlap = input(form, "pdf-overlap", "Line Overlap", shownThousandth(s["PDFMiner.LineOverlap"]));
+    f.charMargin = input(form, "pdf-char", "Character Margin", shownThousandth(s["PDFMiner.CharMargin"]));
+    f.wordMargin = input(form, "pdf-word", "Word Margin", shownThousandth(s["PDFMiner.WordMargin"]));
+    f.lineMargin = input(form, "pdf-line", "Line Margin", shownThousandth(s["PDFMiner.LineMargin"]));
+    f.boxes = input(form, "pdf-boxes", "Boxes Flow", shownThousandth(s["PDFMiner.BoxesFlow"]));
+    f.vertical = input(form, "pdf-vertical", "Detect Vertical", s["PDFMiner.DetectVertical"], "checkbox");
+    f.allTexts = input(form, "pdf-alltexts", "All Texts", s["PDFMiner.AllTexts"], "checkbox");
+  });
+  if (!ok) return;
+  // The number fields as the original checks them (a number from 0 to its limit); Line Overlap is shown and not
+  // read back, as in the original.
+  const num = (field, label, max, old) => {
+    const v = Number(field.value.trim());
+    if (field.value.trim() === "" || Number.isNaN(v) || v < 0 || v > max) {
+      message(`${label} must be a number between 0.000000 and ${max.toFixed(6)}`);
+      return null;
+    }
+    return Math.round(v * 1000);
+  };
+  const header = num(f.header, "Header Height:", 10, s.HeaderHeight);
+  if (header === null) return;
+  const footer = num(f.footer, "Footer Height:", 10, s.FooterHeight);
+  if (footer === null) return;
+  const charMargin = num(f.charMargin, "Character Margin", 4, s["PDFMiner.CharMargin"]);
+  if (charMargin === null) return;
+  const wordMargin = num(f.wordMargin, "Word Margin", 1, s["PDFMiner.WordMargin"]);
+  if (wordMargin === null) return;
+  const lineMargin = num(f.lineMargin, "Line Margin", 1, s["PDFMiner.LineMargin"]);
+  if (lineMargin === null) return;
+  let boxes = s["PDFMiner.BoxesFlow"];
+  if (f.advanced.checked) {
+    boxes = num(f.boxes, "Boxes Flow", 1, s["PDFMiner.BoxesFlow"]);
+    if (boxes === null) return;
+  }
+  savePdfSettings({
+    ...s,
+    ShowAtImport: f.show.checked,
+    PDF_A: f.pdfa.checked,
+    DetectLedgers: f.ledgers.checked,
+    FixLeaderDots: f.leader.checked,
+    Script: f.script.value,
+    HeaderHeight: header,
+    FooterHeight: footer,
+    UseHeaderFontHints: f.hints.checked,
+    RetainBold: f.bold.checked,
+    RetainItalic: f.italic.checked,
+    RetainUnderline: f.underline.checked,
+    "PDFMiner.Advanced": f.advanced.checked,
+    "PDFMiner.CharMargin": charMargin,
+    "PDFMiner.WordMargin": wordMargin,
+    "PDFMiner.LineMargin": lineMargin,
+    "PDFMiner.BoxesFlow": boxes,
+    "PDFMiner.DetectVertical": f.vertical.checked,
+    "PDFMiner.AllTexts": f.allTexts.checked,
+  });
+}
+
+// Global, Python Options (the original's XRC dialog 3110): the custom library path, Include
+// Built-In Library, the logging level and the log file, kept under "Python" with the original's keys and
+// defaults. BrailleCraft reads PDFs with its own reader and runs no Python, so these have no effect on an import.
+const PYTHON_LEVELS = ["Critical", "Error", "Warning", "Info", "Debug"];
+async function pythonOptions() {
+  const s = {
+    Lib: store.get("Python.Lib") ?? "",
+    IncludeBuiltinLib: (store.get("Python.IncludeBuiltinLib") ?? "yes") !== "no",
+    LogLevel: Math.min(4, Number(store.get("Python.LogLevel") ?? 3) || 0),
+    LogFile: store.get("Python.LogFile") ?? "",
+  };
+  const f = {};
+  const ok = await ownDialog("Python Options", (form) => {
+    f.lib = labelledRow(form, "py-lib", "Custom Library Path:", document.createElement("input"));
+    f.lib.value = s.Lib;
+    f.builtin = labelledRow(form, "py-builtin", "Include Built-In Library", document.createElement("input"));
+    f.builtin.type = "checkbox";
+    f.builtin.checked = s.IncludeBuiltinLib;
+    f.level = labelledRow(form, "py-level", "Logging Level:", document.createElement("select"));
+    f.level.replaceChildren(...PYTHON_LEVELS.map((it) => new Option(it, it)));
+    f.level.selectedIndex = s.LogLevel;
+    f.log = labelledRow(form, "py-log", "Logging Destination (Leave Blank for Internal Dialog):", document.createElement("input"));
+    f.log.value = s.LogFile;
+  });
+  if (!ok) return;
+  store.set("Python.Lib", f.lib.value);
+  store.set("Python.IncludeBuiltinLib", f.builtin.checked ? "yes" : "no");
+  store.set("Python.LogLevel", String(Math.max(0, f.level.selectedIndex)));
+  store.set("Python.LogFile", f.log.value);
 }
 
 // Global, Fonts (dialog 1049): the print font, the braille fonts' size, printed output sizes and the status line font.
@@ -4327,7 +4509,8 @@ const COMMANDS = {
       memory: "",
       setup: (d) => d.setItems(10, ["Ignore", "Mark from Word document", "Treat hard page breaks as print page breaks", "Use publishers' <ipp no=#> reference page tags"], 0),
     }),
-  3116: () => message("The PDF importer and its options are built in step 9 of the plan."),
+  3110: pythonOptions,
+  3116: pdfOptions,
   // Global, Formatted Braille Importer (1045): the settings the formatted braille import reads. The four groups are
   // braille page numbers on even and on odd pages and print page numbers on even and on odd pages of the file; then
   // the running head and foot pages, the lines and cells of the file's pages. With "Read formatted braille without

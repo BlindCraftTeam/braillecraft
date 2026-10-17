@@ -452,6 +452,7 @@ pub fn run(id: i32, checked: bool) {
                 );
             });
         }
+        3110 => crate::python_options::dialog(),
         3116 => crate::pdf_options::dialog(),
         3117 => formatted_braille_importer(),
 

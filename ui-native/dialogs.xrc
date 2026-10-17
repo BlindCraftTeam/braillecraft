@@ -4917,6 +4917,105 @@
       </object>
     </object>
   </object>
+  <object class="wxDialog" name="dlg3110">
+    <style>wxCAPTION|wxRESIZE_BORDER|wxSYSTEM_MENU|wxCLOSE_BOX|wxTAB_TRAVERSAL</style>
+    <exstyle>wxWS_EX_BLOCK_EVENTS</exstyle>
+    <size>400,300</size>
+    <title>Python Options</title>
+    <centered>1</centered>
+    <object class="wxBoxSizer">
+      <orient>wxVERTICAL</orient>
+      <object class="sizeritem">
+        <flag>wxALIGN_LEFT|wxLEFT|wxRIGHT|wxTOP</flag>
+        <border>5</border>
+        <object class="wxStaticText" name="wxID_STATIC">
+          <label>Custom Library Path:</label>
+        </object>
+      </object>
+      <object class="sizeritem">
+        <flag>wxGROW|wxALL</flag>
+        <border>5</border>
+        <object class="wxTextCtrl" name="PYTHON_LIBRARY" />
+      </object>
+      <object class="sizeritem">
+        <flag>wxALIGN_LEFT|wxLEFT|wxRIGHT|wxTOP</flag>
+        <border>5</border>
+        <object class="wxCheckBox" name="INCLUDE_BUILTIN_PYTHON_LIBRARY">
+          <label>Include Built-In Library</label>
+          <checked>0</checked>
+        </object>
+      </object>
+      <object class="spacer">
+        <flag>wxALIGN_CENTER_HORIZONTAL|wxALL</flag>
+        <border>5</border>
+        <size>5,5</size>
+      </object>
+      <object class="sizeritem">
+        <flag>wxALIGN_LEFT|wxALL</flag>
+        <border>0</border>
+        <object class="wxBoxSizer">
+          <orient>wxHORIZONTAL</orient>
+          <object class="sizeritem">
+            <flag>wxALIGN_CENTER_VERTICAL|wxALL</flag>
+            <border>5</border>
+            <object class="wxStaticText" name="wxID_STATIC">
+              <label>Logging Level:</label>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <flag>wxALIGN_CENTER_VERTICAL|wxALL</flag>
+            <border>5</border>
+            <object class="wxChoice" name="CHOICE_PDF_LOGGING_LEVEL">
+              <content>
+                <item>Critical</item>
+                <item>Error</item>
+                <item>Warning</item>
+                <item>Info</item>
+                <item>Debug</item>
+              </content>
+              <selection>1</selection>
+            </object>
+          </object>
+        </object>
+      </object>
+      <object class="sizeritem">
+        <flag>wxALIGN_LEFT|wxLEFT|wxRIGHT|wxTOP</flag>
+        <border>5</border>
+        <object class="wxStaticText" name="wxID_STATIC">
+          <label>Logging Destination (Leave Blank for Internal Dialog):</label>
+        </object>
+      </object>
+      <object class="sizeritem">
+        <flag>wxGROW|wxALL</flag>
+        <border>5</border>
+        <object class="wxFilePickerCtrl" name="FILEPICKER_PDF_LOG">
+          <style>wxFLP_USE_TEXTCTRL|wxFLP_SAVE</style>
+          <message />
+        </object>
+      </object>
+      <object class="sizeritem">
+        <flag>wxALIGN_RIGHT|wxALL</flag>
+        <border>5</border>
+        <object class="wxStdDialogButtonSizer">
+          <object class="button">
+            <flag>wxALIGN_CENTER_HORIZONTAL|wxALL</flag>
+            <border>5</border>
+            <object class="wxButton" name="wxID_OK">
+              <label>&amp;OK</label>
+              <default>1</default>
+            </object>
+          </object>
+          <object class="button">
+            <flag>wxALIGN_CENTER_HORIZONTAL|wxALL</flag>
+            <border>5</border>
+            <object class="wxButton" name="wxID_CANCEL">
+              <label>&amp;Cancel</label>
+            </object>
+          </object>
+        </object>
+      </object>
+    </object>
+  </object>
   <object class="wxDialog" name="dlg26061">
     <size>250,230</size>
     <title>EBraille Attributes Dialog</title>

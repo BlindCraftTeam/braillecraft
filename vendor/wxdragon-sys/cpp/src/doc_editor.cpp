@@ -129,6 +129,27 @@ bool DocEditor::SetFont(const wxFont& font)
     m_rowHeight = wxMax(h + leading, 1);
     m_ascent = h - descent;
     m_charWidth = wxMax(w, 1);
+    // The code font (spec 27 4a; the reference's font setup makes it from the default font): the box padding is a
+    // twentieth of the row; starting at the text font's point size, the size goes down a point at a time, to 4 at
+    // the least, until the code font's ascent and descent fit the text font's less the box border (2 x padding + 1)
+    // above and below; a code's baseline is then raised by half of what is left, less that border.
+    m_codePad = m_rowHeight / 20;
+    const int border = 2 * m_codePad + 1;
+    wxFont code = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
+    int size = GetFont().GetPointSize();
+    wxCoord cw = 0, ch = 0, cd = 0, cl = 0;
+    for (;;) {
+        code.SetPointSize(wxMax(size, 1));
+        dc.SetFont(code);
+        dc.GetTextExtent("M", &cw, &ch, &cd, &cl);
+        if (ch <= h - 2 * border || size <= 4) break;
+        --size;
+    }
+    m_codeFont = code;
+    m_codeAscent = ch - cd;
+    m_codeDescent = cd;
+    m_codeRaise = (h - ch) / 2 - border;
+    m_extents.assign(m_rows.size(), std::vector<int>());
     // The caret: a tenth of the row wide (1 to 5 pixels), the row less a twentieth above and below (spec 30).
     if (GetCaret()) GetCaret()->SetSize(wxClip(m_rowHeight / 10, 1, 5), wxMax(m_rowHeight - 2 * (m_rowHeight / 20), 1));
     SetScrollRate(m_charWidth, m_rowHeight);
@@ -138,9 +159,33 @@ bool DocEditor::SetFont(const wxFont& font)
     return changed;
 }
 
+// Takes the code markers (U+E000 before a code, U+E001 after it) out of a row's text, keeping the column ranges they
+// marked.
+static void SplitCodes(const wxString& in, wxString& out, std::vector<std::pair<int, int>>& codes)
+{
+    out.clear();
+    codes.clear();
+    int start = -1;
+    int length = 0;
+    for (wxUniChar c : in) {
+        const wxUint32 v = c.GetValue();
+        if (v == 0xE000) {
+            start = length;
+        } else if (v == 0xE001) {
+            if (start >= 0 && length > start) codes.emplace_back(start, length);
+            start = -1;
+        } else {
+            out += c;
+            ++length;
+        }
+    }
+}
+
 void DocEditor::SetRows(std::vector<wxString> rows, std::vector<int> kinds, std::vector<wxString> access, int changedFrom)
 {
-    m_rows = std::move(rows);
+    m_rows.resize(rows.size());
+    m_codes.resize(rows.size());
+    for (size_t r = 0; r < rows.size(); ++r) SplitCodes(rows[r], m_rows[r], m_codes[r]);
     m_accessRows = std::move(access);
     m_kinds = std::move(kinds);
     m_kinds.resize(m_rows.size(), 0);
@@ -170,7 +215,9 @@ void DocEditor::UpdateVirtualSize()
     SetVirtualSize(width, (int)m_rows.size() * m_rowHeight + m_rowHeight);
 }
 
-// The x of each character boundary of row `row` (0 .. length), from the row's start.
+// The x of each character boundary of row `row` (0 .. length), from the row's start: text measured in the window
+// font, a code in the code font with the box padding twice on each side of it (the reference draws a code's text
+// 2 x padding in from the box's start and ends the box 2 x padding after it).
 const std::vector<int>& DocEditor::Extents(int row)
 {
     static const std::vector<int> none{0};
@@ -178,13 +225,30 @@ const std::vector<int>& DocEditor::Extents(int row)
     auto& e = m_extents[row];
     if (e.empty()) {
         wxClientDC dc(this);
-        dc.SetFont(GetFont());
-        wxArrayInt widths;
+        const wxString& text = m_rows[row];
+        const auto& codes = m_codes[row];
+        const int n = (int)text.length();
         e.push_back(0);
-        if (!m_rows[row].empty() && dc.GetPartialTextExtents(m_rows[row], widths)) {
-            for (int w : widths) e.push_back(w);
-        } else {
-            for (size_t k = 0; k < m_rows[row].length(); ++k) e.push_back((int)(k + 1) * m_charWidth);
+        int x = 0, col = 0;
+        size_t ci = 0;
+        while (col < n) {
+            while (ci < codes.size() && codes[ci].second <= col) ++ci;
+            const bool inCode = ci < codes.size() && codes[ci].first <= col;
+            int end = inCode ? codes[ci].second : (ci < codes.size() ? codes[ci].first : n);
+            end = wxClip(end, col + 1, n);
+            dc.SetFont(inCode ? m_codeFont : GetFont());
+            wxArrayInt widths;
+            if (!dc.GetPartialTextExtents(text.Mid(col, end - col), widths) || (int)widths.size() != end - col) {
+                widths.clear();
+                for (int k = col; k < end; ++k) widths.push_back((k - col + 1) * m_charWidth);
+            }
+            const int pad = inCode ? 2 * m_codePad : 0;
+            for (size_t k = 0; k < widths.size(); ++k) {
+                const bool last = inCode && k + 1 == widths.size();
+                e.push_back(x + pad + widths[k] + (last ? pad : 0));
+            }
+            x = e.back();
+            col = end;
         }
     }
     return e;
@@ -288,7 +352,6 @@ void DocEditor::OnPaint(wxPaintEvent&)
     const wxColour back = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
     const wxColour fore = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
     const wxColour selBack = wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHT);
-    const wxColour selFore = wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHTTEXT);
     const wxColour grey = wxSystemSettings::GetColour(wxSYS_COLOUR_GRAYTEXT);
     dc.SetBackground(wxBrush(back));
     dc.Clear();
@@ -327,14 +390,9 @@ void DocEditor::OnPaint(wxPaintEvent&)
         if (!text.empty()) {
             const int n = (int)text.length();
             const int a = wxClip(from, 0, n), b = wxClip(to, 0, n);
-            dc.SetTextForeground(fore);
-            if (a > 0) dc.DrawText(text.Mid(0, a), ColumnX(row, 0), y);
-            if (b > a) {
-                dc.SetTextForeground(selFore);
-                dc.DrawText(text.Mid(a, b - a), ColumnX(row, a), y);
-                dc.SetTextForeground(fore);
-            }
-            if (b < n) dc.DrawText(text.Mid(b), ColumnX(row, b), y);
+            if (a > 0) DrawPart(dc, row, 0, a, false, y);
+            if (b > a) DrawPart(dc, row, a, b, true, y);
+            if (b < n) DrawPart(dc, row, b, n, false, y);
         }
     }
     if (m_locatorShown && m_locatorOut >= 0) {
@@ -372,6 +430,50 @@ void DocEditor::OnPaint(wxPaintEvent&)
             const wxSize size = dc.GetTextExtent(m_labels[row]);
             dc.DrawText(m_labels[row], vx + m_gutter - size.GetWidth() - FromDIP(2),
                         row * m_rowHeight + (m_rowHeight - size.GetHeight()) / 2);
+        }
+    }
+}
+
+// Draws columns `from` to `to` of row `row` (top at `y`): text in the window font; each code (spec 27 4a, the
+// reference's row drawing and code box) in the code font, raised, inside a rounded box with corners a fifth of the
+// row, filled with the button face colour and framed with the window frame colour a padding wide (the highlight
+// colours when selected), its text in the button text colour (the window text colour when selected). A code is drawn
+// whole with the part its start is in.
+void DocEditor::DrawPart(wxDC& dc, int row, int from, int to, bool selected, int y)
+{
+    const wxString& text = m_rows[row];
+    const auto& codes = m_codes[row];
+    const wxColour fore = wxSystemSettings::GetColour(selected ? wxSYS_COLOUR_HIGHLIGHTTEXT : wxSYS_COLOUR_WINDOWTEXT);
+    const int base = y + m_ascent;
+    int col = from;
+    size_t ci = 0;
+    while (ci < codes.size() && codes[ci].second <= col) ++ci;
+    // A code the part starts inside was drawn whole with the part before it.
+    if (ci < codes.size() && codes[ci].first < col) {
+        col = codes[ci].second;
+        ++ci;
+    }
+    while (col < to) {
+        const bool inCode = ci < codes.size() && codes[ci].first <= col;
+        if (inCode) {
+            const int a = codes[ci].first, b = codes[ci].second;
+            const int x1 = ColumnX(row, a), x2 = ColumnX(row, b);
+            const int top = base - m_codeAscent - m_codePad - 1, bottom = base + m_codeDescent + m_codePad + 1;
+            dc.SetBrush(wxBrush(wxSystemSettings::GetColour(selected ? wxSYS_COLOUR_HIGHLIGHT : wxSYS_COLOUR_BTNFACE)));
+            dc.SetPen(wxPen(wxSystemSettings::GetColour(selected ? wxSYS_COLOUR_BTNHIGHLIGHT : wxSYS_COLOUR_WINDOWFRAME),
+                            wxMax(m_codePad, 1)));
+            dc.DrawRoundedRectangle(x1 + m_codePad, top, wxMax(x2 - x1 - 2 * m_codePad, 1), bottom - top, m_rowHeight / 5.0);
+            dc.SetFont(m_codeFont);
+            dc.SetTextForeground(wxSystemSettings::GetColour(selected ? wxSYS_COLOUR_WINDOWTEXT : wxSYS_COLOUR_BTNTEXT));
+            dc.DrawText(text.Mid(a, b - a), x1 + 2 * m_codePad, base - m_codeRaise - m_codeAscent);
+            dc.SetFont(GetFont());
+            col = b;
+            ++ci;
+        } else {
+            const int end = ci < codes.size() ? wxMin(codes[ci].first, to) : to;
+            dc.SetTextForeground(fore);
+            dc.DrawText(text.Mid(col, end - col), ColumnX(row, col), y);
+            col = end;
         }
     }
 }

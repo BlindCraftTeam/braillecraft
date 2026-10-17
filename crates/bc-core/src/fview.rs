@@ -1,9 +1,10 @@
 //! The formatted view of a document (re/spec/27-formatted-view.md): the laid-out page lines as the editing area shows
-//! them, and the maps between a place in that text and a place in the document.
+//! them, and the maps between a place in that text and a place in the document; and the coded view: the document's
+//! text with its codes in their display forms, in rows.
 //!
-//! The text is every line of every page, each followed by a line feed, the pages one after another; the page break
-//! between pages is drawn, not written, so it is not in the text, as in the reference program's text for screen
-//! readers (spec 27 section 6). Blank lines of a page are empty lines.
+//! The formatted text is every line of every page, each followed by a line feed, the pages one after another; the
+//! page break between pages is drawn, not written, so it is not in the text, as in the reference program's text for
+//! screen readers (spec 27 section 6). Blank lines of a page are empty lines.
 
 use crate::doctext::Shown;
 use crate::format::{locate, position_of, Page};
@@ -13,10 +14,20 @@ use crate::format::{locate, position_of, Page};
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct View {
     pub text: String,
+    /// The number of characters of `text`.
+    pub len: usize,
     /// For each line in order, its page and line on the page (0-based) and the character index where it starts.
     pub lines: Vec<(usize, usize, usize)>,
-    /// The coded view: the document places before which a row break is shown that is not in the document.
-    pub breaks: Vec<usize>,
+    /// The coded view: for each character index of the view (0 to its length), the document place it stands for: a
+    /// character's own place, a code's start for the characters showing the code, the place a row break was added
+    /// before for the line feed showing the break.
+    pub doc_of_view: Vec<usize>,
+    /// The coded view: for each document place (0 to the document's length), the character index of the view where
+    /// it shows (the start of a code's display form for a place inside the code).
+    pub view_of_doc: Vec<usize>,
+    /// The coded view: the character ranges of the view showing a code in its display form, in order; drawn in the
+    /// code font inside a box (spec 27 4a). A hard space and a marked hyphen are shown as codes too.
+    pub codes: Vec<(usize, usize)>,
     pub coded: bool,
 }
 
@@ -50,6 +61,39 @@ fn break_of(name: &str) -> Break {
     }
 }
 
+/// The coded view's display form of the code `code` (its text with the brackets), spec 27 4a: a style begin
+/// [es~name] is shown as "<name>", a style end [ee~name] as "</name>", a [gd~...] code cut to "[gd]"; any other code
+/// as it is.
+pub fn code_form(code: &str) -> String {
+    let inner = code.strip_prefix('[').and_then(|c| c.strip_suffix(']')).unwrap_or(code);
+    if let Some(name) = inner.strip_prefix("es~") {
+        format!("<{name}>")
+    } else if let Some(name) = inner.strip_prefix("ee~") {
+        format!("</{name}>")
+    } else if inner.starts_with("gd~") {
+        "[gd]".to_string()
+    } else {
+        code.to_string()
+    }
+}
+
+/// One unit of the coded view: a character of the document, or a code shown whole in its display form.
+struct Unit {
+    /// Its document places.
+    start: usize,
+    end: usize,
+    /// What the view shows for it.
+    text: Vec<char>,
+    /// How many characters it counts as when a row is measured: a code counts its own text, with the brackets
+    /// (spec 27 4b); the display form is put in after the row was measured, as the reference does.
+    raw: usize,
+    /// Drawn as a code (in the code font, inside a box).
+    code: bool,
+    /// A code's row rule; None for a character (a hard space and a marked hyphen are shown as codes but give no
+    /// break opportunity of their own, as in the reference's display buffer builder).
+    rule: Option<Break>,
+}
+
 impl View {
     pub fn new(pages: &[Page]) -> View {
         let mut text = String::new();
@@ -63,90 +107,144 @@ impl View {
                 at += line.text.chars().count() + 1;
             }
         }
-        View { text, lines, breaks: Vec::new(), coded: false }
+        View { text, len: at, lines, doc_of_view: Vec::new(), view_of_doc: Vec::new(), codes: Vec::new(), coded: false }
     }
 
-    /// The coded view of `doc` (spec 27 4b): its text with its codes, in rows of at most `width` characters (65 for a
-    /// print document, 42 for a braille one), the codes' text counted. A row ends at a line break of the document, at
-    /// the codes that force one, and before it would pass the width: after its last space or code, or in the middle
-    /// of a word when it has none.
+    /// The coded view of `doc` (spec 27 4a and 4b): its text with its codes in their display forms, in rows of at
+    /// most `width` characters (65 for a print document, 42 for a braille one), the codes' text counted. A row ends at
+    /// a line break of the document, at the codes that force one, and before it would pass the width: at the last
+    /// break opportunity of the row (after a space, before a code, after a code), or in the middle of a word when it
+    /// has none. A code is never cut.
     pub fn coded(doc: &Shown, width: usize) -> View {
         let chars: Vec<char> = doc.text.chars().collect();
+        let len = chars.len();
         let width = width.max(1);
-        let mut breaks: Vec<usize> = Vec::new();
-        let mut start = 0usize; // where the row starts
-        let mut opportunity: Option<usize> = None; // the last place in the row a break may go
-        let is_text = |from: usize, to: usize| (from..to).any(|k| !doc.codes.iter().any(|c| c.0 <= k && k < c.1));
+        let mut units: Vec<Unit> = Vec::with_capacity(len);
+        let mut ci = 0;
         let mut i = 0;
-        while i < chars.len() {
-            if chars[i] == '\n' {
-                i += 1;
-                start = i;
-                opportunity = None;
-                continue;
+        while i < len {
+            while ci < doc.codes.len() && doc.codes[ci].1 <= i {
+                ci += 1;
             }
-            if let Some(&(s, e)) = doc.codes.iter().find(|c| c.0 == i) {
-                let name: String = chars[s + 1..e.saturating_sub(1).max(s + 1)].iter().collect();
-                let rule = break_of(&name);
-                let forced = match rule {
-                    Break::BeforeIfAny => i > start,
-                    Break::BeforeIfText => is_text(start, i),
-                    _ => false,
-                };
-                if forced {
-                    breaks.push(i);
-                    start = i;
-                } else if e - start > width && i > start {
-                    let at = opportunity.filter(|&o| o > start).unwrap_or(i);
-                    breaks.push(at);
-                    start = at;
-                }
+            if ci < doc.codes.len() && doc.codes[ci].0 == i {
+                let (s, e) = doc.codes[ci];
+                let e = e.max(s + 1).min(len);
+                let raw: String = chars[s..e].iter().collect();
+                let name: String = chars[s + 1..(e - 1).max(s + 1)].iter().collect();
+                units.push(Unit { start: s, end: e, text: code_form(&raw).chars().collect(), raw: e - s, code: true, rule: Some(break_of(&name)) });
                 i = e;
-                let after = match rule {
-                    Break::AfterAlways => true,
-                    Break::AfterIfText => is_text(start, i),
-                    _ => false,
-                };
-                if after && i < chars.len() && chars[i] != '\n' {
-                    breaks.push(i);
-                    start = i;
-                    opportunity = None;
-                } else {
-                    // A break may go before or after a code.
-                    opportunity = Some(i);
-                }
+                ci += 1;
                 continue;
             }
-            if i + 1 - start > width && i > start {
-                let at = opportunity.filter(|&o| o > start).unwrap_or(i);
-                breaks.push(at);
-                start = at;
-                opportunity = None;
-            }
-            if chars[i] == ' ' {
-                opportunity = Some(i + 1);
-            }
+            let (text, code): (Vec<char>, bool) = match chars[i] {
+                '\u{a0}' => ("[']".chars().collect(), true),
+                '\u{1d}' => ("[-]".chars().collect(), true),
+                c => (vec![c], false),
+            };
+            units.push(Unit { start: i, end: i + 1, raw: text.len(), text, code, rule: None });
             i += 1;
         }
-        breaks.dedup();
-        let mut text = String::with_capacity(doc.text.len() + breaks.len());
+
+        // Where the rows break: `breaks[u]` is a row break before unit u that is not in the document.
+        let mut breaks = vec![false; units.len() + 1];
+        let mut row_start = 0usize;
+        let mut col = 0usize;
+        let mut has_any = false;
+        let mut has_text = false;
+        let mut opportunity: Option<usize> = None;
+        let is_newline = |u: &Unit| !u.code && u.text[0] == '\n';
+        let mut u = 0;
+        while u < units.len() {
+            if is_newline(&units[u]) {
+                u += 1;
+                row_start = u;
+                col = 0;
+                has_any = false;
+                has_text = false;
+                opportunity = None;
+                continue;
+            }
+            let (rule, raw, shown, code) = (units[u].rule, units[u].raw, units[u].text.len(), units[u].code);
+            let forced = match rule {
+                Some(Break::BeforeIfAny) => has_any,
+                Some(Break::BeforeIfText) => has_text,
+                _ => false,
+            };
+            if rule.is_some() {
+                // A break may go before a code.
+                opportunity = Some(u);
+            }
+            if forced {
+                breaks[u] = true;
+                row_start = u;
+                col = 0;
+                has_text = false;
+                opportunity = None;
+            } else if col + raw > width && has_any {
+                let at = opportunity.filter(|&o| o > row_start).unwrap_or(u);
+                breaks[at] = true;
+                row_start = at;
+                col = units[at..u].iter().map(|x| x.text.len()).sum();
+                has_text = units[at..u].iter().any(|x| !x.code);
+                opportunity = None;
+            }
+            // The unit is on the row now, whichever row that is.
+            col += shown;
+            has_any = true;
+            if !code {
+                has_text = true;
+            }
+            let after = match rule {
+                Some(Break::AfterAlways) => true,
+                Some(Break::AfterIfText) => has_text,
+                _ => false,
+            };
+            let space = !code && units[u].text[0] == ' ';
+            u += 1;
+            if after && u < units.len() && !is_newline(&units[u]) {
+                breaks[u] = true;
+                row_start = u;
+                col = 0;
+                has_any = false;
+                has_text = false;
+                opportunity = None;
+            } else if rule.is_some() || space {
+                // A break may go after a code, or after a space.
+                opportunity = Some(u);
+            }
+        }
+
+        let mut text = String::with_capacity(len + 16);
         let mut lines = vec![(0, 0, 0)];
-        let mut b = breaks.iter().peekable();
+        let mut doc_of_view: Vec<usize> = Vec::with_capacity(len + 16);
+        let mut view_of_doc = vec![0usize; len + 1];
+        let mut codes = Vec::new();
         let mut at = 0usize;
-        for (k, &c) in chars.iter().enumerate() {
-            while b.peek().is_some_and(|&&x| x == k) {
-                b.next();
+        for (u, unit) in units.iter().enumerate() {
+            if breaks[u] {
                 text.push('\n');
+                doc_of_view.push(unit.start);
                 at += 1;
                 lines.push((0, lines.len(), at));
             }
-            text.push(c);
-            at += 1;
-            if c == '\n' {
-                lines.push((0, lines.len(), at));
+            for place in unit.start..unit.end {
+                view_of_doc[place] = at;
+            }
+            if unit.code {
+                codes.push((at, at + unit.text.len()));
+            }
+            for &c in &unit.text {
+                text.push(c);
+                doc_of_view.push(unit.start);
+                at += 1;
+                if c == '\n' {
+                    lines.push((0, lines.len(), at));
+                }
             }
         }
-        View { text, lines, breaks, coded: true }
+        view_of_doc[len] = at;
+        doc_of_view.push(len);
+        View { text, len: at, lines, doc_of_view, view_of_doc, codes, coded: true }
     }
 
     /// The line (an index into `lines`) holding character index `pos`, and the column in it.
@@ -155,19 +253,23 @@ impl View {
         Some((i, pos - self.lines[i].2))
     }
 
+    /// The character index where line `line` (an index into `lines`) ends: where the next line starts, or the end
+    /// of the text.
+    pub fn line_end(&self, line: usize) -> usize {
+        self.lines.get(line + 1).map_or(self.len, |l| l.2)
+    }
+
     /// The first character index of page `page` (0-based), or the end of the text past the last page.
     pub fn page_start(&self, page: usize) -> usize {
-        self.lines.iter().find(|l| l.0 == page).map_or(self.text.chars().count(), |l| l.2)
+        self.lines.iter().find(|l| l.0 == page).map_or(self.len, |l| l.2)
     }
 
     /// The document position a caret at character index `pos` of the view stands for: the cell's source there, else
     /// the first cell after it on that line, else just after the line's last cell, else the first text after the
-    /// line (spec 27 5c, through format::position_of).
+    /// line (spec 27 5c, through format::position_of). In the coded view, the place the character stands for.
     pub fn to_document(&self, pages: &[Page], pos: usize) -> usize {
         if self.coded {
-            // Each added break before the place is one character of the view that is not in the document.
-            let added = self.breaks.iter().enumerate().take_while(|(n, &b)| b + n < pos).count();
-            return pos - added;
+            return self.doc_of_view.get(pos).or(self.doc_of_view.last()).copied().unwrap_or(0);
         }
         let Some((i, col)) = self.line_at(pos) else { return 0 };
         let (p, l, _) = self.lines[i];
@@ -175,11 +277,11 @@ impl View {
     }
 
     /// The character index of the view where the document position `doc_pos` shows: its cell, or for a position that
-    /// has no cell, just after the nearest earlier cell (spec 27 5b, through format::locate).
+    /// has no cell, just after the nearest earlier cell (spec 27 5b, through format::locate). In the coded view, the
+    /// character showing the place (the start of the new row for a place a row break was added before).
     pub fn to_view(&self, pages: &[Page], doc_pos: usize) -> usize {
         if self.coded {
-            // A place where a row break was added shows at the start of the new row.
-            return doc_pos + self.breaks.partition_point(|&b| b <= doc_pos);
+            return self.view_of_doc.get(doc_pos).or(self.view_of_doc.last()).copied().unwrap_or(0);
         }
         if pages.is_empty() {
             return 0;
@@ -242,13 +344,56 @@ mod tests {
         let v = View::coded(&Shown::marked("x[p]y[hds]Head[hde]z"), 40);
         // (the editor's own line break after [p] is in the document, so [p] ends its row as well).
         assert_eq!(v.text, "x\n[p]\ny\n[hds]Head[hde]\nz");
-        // The maps: every document place goes to the view and back.
+        // The maps: every document place that is not inside a code goes to the view and back.
         let doc = Shown::marked("x[p]y[hds]Head[hde]z");
         let v = View::coded(&doc, 40);
         for pos in 0..=doc.text.chars().count() {
-            assert_eq!(v.to_document(&[], v.to_view(&[], pos)), pos, "{pos}");
+            if !doc.codes.iter().any(|c| c.0 < pos && pos < c.1) {
+                assert_eq!(v.to_document(&[], v.to_view(&[], pos)), pos, "{pos}");
+            }
         }
         // A place where a break was added shows at the start of the new row.
         assert_eq!(v.text.chars().nth(v.to_view(&[], 1)), Some('['));
+        // The codes of the view, by their characters.
+        assert_eq!(v.codes, vec![(2, 5), (8, 13), (17, 22)]);
+    }
+
+    #[test]
+    fn codes_are_shown_in_their_display_forms() {
+        // A style begin as <name>, a style end as </name>, a gd~ code cut to [gd]; the document keeps its codes.
+        let doc = Shown::marked("ab[es~h1.]Head[ee~h1.][gd~xy]c");
+        let v = View::coded(&doc, 42);
+        assert_eq!(v.text, "ab\n<h1.>Head</h1.>\n[gd]\nc");
+        assert_eq!(v.codes, vec![(3, 8), (12, 18), (19, 23)]);
+        // A place inside a code shows at the code's start; the view's code characters stand for the code's start.
+        let code = doc.codes[0];
+        assert_eq!(v.to_view(&[], code.0), 3);
+        assert_eq!(v.to_view(&[], code.0 + 3), 3);
+        assert_eq!(v.to_document(&[], 5), code.0);
+        assert_eq!(v.to_document(&[], 8), code.1);
+        // Every place that is not inside a code goes to the view and back to itself.
+        for pos in 0..=doc.text.chars().count() {
+            if !doc.codes.iter().any(|c| c.0 < pos && pos < c.1) {
+                assert_eq!(v.to_document(&[], v.to_view(&[], pos)), pos, "{pos}");
+            }
+        }
+        // A hard space and a marked hyphen are shown as the codes ['] and [-].
+        let v = View::coded(&Shown::marked("a\u{a0}b\u{1d}c"), 42);
+        assert_eq!(v.text, "a[']b[-]c");
+        assert_eq!(v.codes, vec![(1, 4), (5, 8)]);
+        assert_eq!(v.to_document(&[], 2), 1);
+        assert_eq!(v.to_view(&[], 2), 4);
+    }
+
+    #[test]
+    fn a_row_is_measured_with_a_codes_own_text() {
+        // Rows of 10: [es~x] counts 6 while the row is measured, so it does not fit after "abcdef" and starts a new
+        // row (before itself, the last break opportunity), where it is shown as <x>.
+        assert_eq!(View::coded(&Shown::marked("abcdef[es~x]g"), 10).text, "abcdef\n<x>g");
+        // After "abcd" it fits (4 + 6), is shown as <x> (3), and the row goes on; "ghij" would pass the width at its
+        // last letter, so the row breaks at the last opportunity, after the code.
+        assert_eq!(View::coded(&Shown::marked("abcd[es~x]ghij"), 10).text, "abcd<x>\nghij");
+        // A code at the start of a row is never cut, however long.
+        assert_eq!(View::coded(&Shown::marked("[abcdefghijkl]m"), 5).text, "[abcdefghijkl]\nm");
     }
 }

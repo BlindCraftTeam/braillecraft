@@ -24,7 +24,8 @@ use table::TableFinder;
 
 /// The Global PDF Options values the importer uses (spec 29 section 2): the stored values are thousandths, here as
 /// the numbers the script receives.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
 pub struct PdfOptions {
     /// Read tagged PDFs through their structure tree (PDF/A in the dialog).
     pub allow_tagged: bool,

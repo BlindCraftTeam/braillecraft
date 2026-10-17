@@ -203,15 +203,29 @@ impl Editor {
             Some(Row::Line { page, line }) => self.pages[page].lines[line].text.clone(),
             Some(Row::Coded { row }) => {
                 let start = self.view.lines[row].2;
-                let end = self.view.lines.get(row + 1).map_or(self.view.text.chars().count(), |l| l.2);
+                let end = self.view.line_end(row);
                 self.view.text.chars().skip(start).take(end - start).filter(|&c| c != '\n').collect()
             }
             _ => String::new(),
         }
     }
 
+    /// The column ranges of screen row `row` that show a code in its display form (coded view), drawn in the code
+    /// font inside a box (spec 27 4a); none in the formatted view, where codes are hidden.
+    pub fn row_codes(&self, row: usize) -> Vec<(usize, usize)> {
+        match self.row(row) {
+            Some(Row::Coded { row }) => {
+                let start = self.view.lines[row].2;
+                let end = self.view.line_end(row);
+                let from = self.view.codes.partition_point(|c| c.0 < start);
+                self.view.codes[from..].iter().take_while(|c| c.0 < end).map(|c| (c.0 - start, c.1.min(end) - start)).collect()
+            }
+            _ => Vec::new(),
+        }
+    }
+
     /// The document place that each character of row `row` came from (None for cells the formatter added). In the
-    /// coded view every character is the document's own.
+    /// coded view every character stands for a document place (the characters showing a code for the code's start).
     pub fn row_sources(&self, row: usize) -> Vec<Option<usize>> {
         match self.row(row) {
             Some(Row::Line { page, line }) => self.pages[page].lines[line].sources.clone(),
@@ -624,5 +638,17 @@ mod tests {
         e.move_caret(Move::End, false);
         assert_eq!(e.caret, 15);
         assert_eq!(e.pos_at(0, 2), 2);
+        // A code shown in its display form: the row's code columns, its characters' sources, and the caret moving
+        // over it as one unit.
+        let mut e = Editor::new(Shown::marked("ab[es~h1.]cd"), Layout::braille(40, 25), None, true, 42);
+        assert_eq!(e.row_text(1), "<h1.>cd");
+        assert_eq!(e.row_codes(1), vec![(0, 5)]);
+        assert_eq!(e.row_sources(1), vec![Some(2), Some(2), Some(2), Some(2), Some(2), Some(10), Some(11)]);
+        e.set_caret(2);
+        assert_eq!(e.caret_place(), (1, 0));
+        e.move_caret(Move::Right, false);
+        assert_eq!(e.caret, 10);
+        assert_eq!(e.caret_place(), (1, 5));
+        assert_eq!(e.pos_at(1, 3), 2);
     }
 }

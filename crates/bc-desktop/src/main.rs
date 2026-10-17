@@ -21,6 +21,7 @@ mod menu;
 mod menu_table;
 mod page_sample;
 mod pdf_options;
+mod python_options;
 mod print;
 mod settings_store;
 mod speech;

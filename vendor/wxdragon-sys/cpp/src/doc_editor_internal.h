@@ -84,6 +84,8 @@ private:
     void OnMouse(wxMouseEvent& e);
     void OnFocus(wxFocusEvent& e);
 
+    void DrawPart(wxDC& dc, int row, int from, int to, bool selected, int y);
+
     void* m_data;
     wxd_DocEditor_KeyFn m_key;
     wxd_DocEditor_CharFn m_char;
@@ -95,6 +97,8 @@ private:
     // What screen readers get in place of each row, when it differs from what is drawn (empty otherwise).
     std::vector<wxString> m_accessRows;
     std::vector<int> m_kinds;
+    // Per row, the column ranges (from, to) showing a code: drawn in the code font inside a box (spec 27 4a).
+    std::vector<std::vector<std::pair<int, int>>> m_codes;
     std::vector<std::vector<int>> m_extents;
     std::vector<wxString> m_labels;
     int m_gutter = 0;
@@ -103,6 +107,14 @@ private:
     int m_ascent = 12;
     int m_wheel = 0;
     int m_charWidth = 8;
+    // The code font (spec 27 4a): the system default font at the text font's point size, made smaller until its
+    // ascent and descent fit the text's less the box border above and below; its ascent and descent; the box padding
+    // (a twentieth of the row); and how far above the text's baseline a code's baseline sits.
+    wxFont m_codeFont;
+    int m_codeAscent = 10;
+    int m_codeDescent = 2;
+    int m_codePad = 0;
+    int m_codeRaise = 0;
     int m_caretRow = 0, m_caretCol = 0, m_anchorRow = 0, m_anchorCol = 0;
 
     wxString m_accessibleText;

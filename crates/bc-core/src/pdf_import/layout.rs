@@ -88,7 +88,8 @@ impl Rect {
 }
 
 /// Layout parameters (pdfminer LAParams); the defaults are pdfminer's.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
 pub struct LaParams {
     pub line_overlap: f64,
     pub char_margin: f64,

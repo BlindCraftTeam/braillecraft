@@ -38,7 +38,9 @@ WXD_EXPORTED wxd_Window_t* wxd_DocEditor_Create(wxd_Window_t* parent, void* data
 // as a line across, no text). Replaces the earlier rows; `changed_from` is the first row that differs from before
 // (screen readers are told the text changed from there), or -1 when nothing changed. `access_rows`, when not NULL,
 // are `count` texts of the same lengths that screen readers get in place of the drawn rows (braille written in
-// another form for screen readers than on screen).
+// another form for screen readers than on screen). In a row's text, a code of the coded view stands between the
+// characters U+E000 and U+E001: the window takes the markers out and draws the code in the code font inside a box
+// (spec 27 4a); the markers do not count as columns and are not in the text screen readers get.
 WXD_EXPORTED void wxd_DocEditor_SetRows(wxd_Window_t* editor, const char* const* rows, const int* kinds,
                                         const char* const* access_rows, int count, int changed_from);
 

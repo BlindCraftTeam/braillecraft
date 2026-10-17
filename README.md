@@ -55,7 +55,10 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   line does not show (at the end of a line) or on an empty last line, and what you type goes in there. You type,
   delete, cut, paste and undo (100 steps) there as anywhere; a code next to the caret is removed whole, and the caret
   goes over a code at once. View, Codes (Alt+F3) switches to the coded view,
-  the running text with every code in brackets in rows of 42 characters (65 in a print document), and back, with the caret kept in place. Control+Page Up and
+  the running text with every code in rows of 42 characters (65 in a print document), and back, with the caret kept
+  in place. In the coded view each code is drawn in a smaller print font inside a rounded box, whatever the document's
+  font, as in the original: a style begin as `<name>`, a style end as `</name>`, a hard space as `[']`, a marked
+  hyphen as `[-]`, any other code in its brackets. Control+Page Up and
   Control+Page Down go to the same line on the previous or next page (Global, Shortcut Preferences sets what Page Up
   and Page Down do).
 - **Translation.** Print to braille and braille to print with 657 translation tables for 188 languages and braille
@@ -181,6 +184,10 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   numbers stand on even and odd pages of the file, which pages have a running head or foot, the lines and cells of
   the file's pages, and Read formatted braille without interpretation, which keeps the file's lines and pages as they
   are. Until that is on, importing formatted braille first says that it may be reformatted.
+- **Python Options.** Global, Python Options shows the original's dialog (its custom library path, Include
+  Built-In Library, logging level and log file, kept under the original's keys); BrailleCraft reads PDFs with its
+  own reader and runs no Python, so these have no effect on an import. The web build has the dialog too, and its
+  PDF Importer dialog, whose settings its PDF import takes.
 - **PDF import settings.** Global, PDF Importer: whether the dialog shows for each import, PDF/A markup, ledger
   tables, leader dots, a custom script, header and footer heights, font hints and the layout analysis values.
 - **Command line.** `braillecraft-desktop file.dxp` opens a file. Options before a file act on the files after
