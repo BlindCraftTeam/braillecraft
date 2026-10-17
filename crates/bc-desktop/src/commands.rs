@@ -976,7 +976,9 @@ fn read_import(bytes: &[u8], choice: &ImportChoice) -> Option<Shown> {
                 }
             };
             let (input, recipe) = match choice.kind {
-                FileKind::CodedText => (bytes.to_vec(), Recipe::CodedText(choice.code_page.clone())),
+                FileKind::CodedText => {
+                    (bytes.to_vec(), Recipe::CodedText(choice.code_page.clone(), settings_store::load_unknown_characters()))
+                }
                 FileKind::CodedBraille => (bytes.to_vec(), Recipe::CodedBraille),
                 FileKind::Orbit => (bytes.to_vec(), Recipe::Orbit),
                 _ => (north_american(bytes, encodings::find(&choice.encoding)), Recipe::FormattedBraille(settings_store::load_braide())),

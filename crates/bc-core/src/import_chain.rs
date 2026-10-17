@@ -31,8 +31,9 @@ pub enum Recipe {
     /// Formatted braille in North American braille ASCII, with the formatted braille import settings.
     FormattedBraille(braide::Settings),
     CodedBraille,
-    /// Coded text in the named code page (as `codepages::decode` names them).
-    CodedText(String),
+    /// Coded text in the named code page (as `codepages::decode` names them), with what a character that has no
+    /// internal code becomes (the Word importer's Unknown Characters setting: 0 "*", 1 nothing, 2 "{U+XXXX}").
+    CodedText(String, u8),
     Orbit,
 }
 
@@ -76,8 +77,8 @@ pub fn run(bytes: &[u8], recipe: &Recipe, files: &dyn Files) -> Imported {
             scan(BRAILLE_SCAN, &mut text, &mut out.errors);
         }
         Recipe::CodedBraille => scan(BRAILLE_SCAN, &mut text, &mut out.errors),
-        Recipe::CodedText(page) => {
-            text = coded_text_bytes(&text, page);
+        Recipe::CodedText(page, unknown) => {
+            text = coded_text_bytes(&text, page, *unknown);
             scan(PRINT_SCAN, &mut text, &mut out.errors);
         }
         Recipe::Orbit => {
@@ -127,8 +128,9 @@ fn nemeth(files: &dyn Files, text: &mut Vec<u8>, errors: &mut Vec<String>, optio
 }
 
 /// Coded text as internal text: decoded in its code page (a byte order mark at the start dropped), each zero-width
-/// joiner taken out unless it follows the Malayalam virama, then encoded.
-fn coded_text_bytes(bytes: &[u8], page: &str) -> Vec<u8> {
+/// joiner taken out unless it follows the Malayalam virama, then encoded; a character with no internal code becomes
+/// "*", nothing or "{U+XXXX}" as `unknown` says.
+fn coded_text_bytes(bytes: &[u8], page: &str, unknown: u8) -> Vec<u8> {
     let text = crate::codepages::decode(page, bytes);
     let text = text.strip_prefix('\u{feff}').unwrap_or(&text);
     let mut kept = String::with_capacity(text.len());
@@ -139,7 +141,19 @@ fn coded_text_bytes(bytes: &[u8], page: &str) -> Vec<u8> {
         }
         prev = c;
     }
-    crate::internal::encode_lossy(&kept, b'?')
+    let mut out = Vec::with_capacity(kept.len());
+    let mut one = [0u8; 4];
+    for c in kept.chars() {
+        match crate::internal::encode(c.encode_utf8(&mut one)) {
+            Ok(b) => out.extend_from_slice(&b),
+            Err(_) => match unknown {
+                0 => out.push(b'*'),
+                1 => {}
+                _ => out.extend_from_slice(format!("{{U+{:04X}}}", c as u32).as_bytes()),
+            },
+        }
+    }
+    out
 }
 
 /// Internal text with its codes in reverse order: each two-byte code stays one code, and a format code (0x1C to the
@@ -208,9 +222,18 @@ mod tests {
 
     #[test]
     fn coded_text_gets_codes_and_joins_hyphens() {
-        let got = run(b"$p Hello hyphen-\r\nated.", &Recipe::CodedText("WINDOWS-1252".into()), &Shipped);
+        let got = run(b"$p Hello hyphen-\r\nated.", &Recipe::CodedText("WINDOWS-1252".into(), 0), &Shipped);
         assert!(got.errors.is_empty(), "{:?}", got.errors);
         assert_eq!(got.text, b"\x1cp\x1fHello hyphenated.".to_vec());
+    }
+
+    #[test]
+    fn coded_text_marks_characters_with_no_code() {
+        // U+0378 is not a character at all, so the character table has no code for it.
+        let bytes = "a\u{378}b".as_bytes();
+        assert_eq!(coded_text_bytes(bytes, "UTF-8", 0), b"a*b".to_vec());
+        assert_eq!(coded_text_bytes(bytes, "UTF-8", 1), b"ab".to_vec());
+        assert_eq!(coded_text_bytes(bytes, "UTF-8", 2), b"a{U+0378}b".to_vec());
     }
 
     #[test]

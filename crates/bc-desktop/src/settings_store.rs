@@ -482,6 +482,15 @@ pub fn keep_answer(section: &str, key: &str, answer: u32) {
     set(section, key, &(answer + 1).to_string());
 }
 
+/// The Word importer's Unknown Characters setting, which coded text import uses as well: its list words by position
+/// ("ignore" 0 marks with "*", "asterisc" 1 writes nothing, "hex" 2 the Unicode value, as the original program reads
+/// them); 0 when it is not kept.
+pub fn load_unknown_characters() -> u8 {
+    get("Word", "UnknownCharacters")
+        .and_then(|v| ["ignore", "asterisc", "hex"].iter().position(|w| w.eq_ignore_ascii_case(v.trim())))
+        .unwrap_or(0) as u8
+}
+
 const BRAIDE: &str = "FormattedBrailleImporter";
 /// Where page numbers stand, as the settings name them (0 none to 4 lower right).
 const CORNERS: [&str; 5] = ["NoPages", "UpperLeft", "UpperRight", "LowerLeft", "LowerRight"];
