@@ -17,17 +17,17 @@
 //!   and print formatting files); [skN] [l] then N blank lines (0 when not given; a negative N to the line -N from
 //!   the page end); [svsblN] N blank lines after every line (1 when not given).
 //! - Words that do not fit go to the next line at the runover margin. Extra spaces are left out.
-//! - [pg] new page always (two in a row give a blank page); [top] new page if the page has text; [cpN:L] new page if
+//! - [pg] new page always (two in a row give a blank page); [top] new page once the page is started; [cpN:L] new page if
 //!   fewer than N + 1 lines remain, else a new line and L blank lines (braille 1 and 0, print 2 and 1, F0b).
 //! - [hdsN:L] ... [hde] centred heading: on a new page if fewer than N + 1 lines remain (braille 1, print 2), else
 //!   after L blank lines (braille 0, print 1); each heading line is centred on the whole line, (cells - length) / 2,
 //!   its words wrapping inside the right margin.
 //! - [fr] the next word flush right.
 //! - [es~name] ... [ee~name]: the style's begin and end codes from the document's styles, in place.
-//! - Braille page numbers: in the corner the document's page numbering names for even and odd pages, on a line of
-//!   their own at the top or bottom of the page, written with the numeric indicator and the letters a to j.
-//! INTERIM (spec 19 section 5 UNKNOWN, until traced): a word longer than a whole line is broken at the line end with
-//! no mark; a page number takes its line alone; codes this formatter does not lay out take no room.
+//! - Braille page numbers: in the corner the document's page numbering names for even and odd pages, on the first
+//!   or last line beside the text, which keeps three cells clear of them; [pgN~X] numbers the next page.
+//! - A word that does not fit breaks after its last hyphen that does; one longer than a line starts on the line.
+//! Codes this formatter does not lay out take no room.
 
 use crate::doctext::Shown;
 use crate::engine::StyleTable;
@@ -499,7 +499,6 @@ impl Formatter {
             self.word_marks.clear();
             return;
         }
-        let width = self.width();
         if self.flush_right {
             self.flush_right = false;
             let len = cells.len();
@@ -523,16 +522,30 @@ impl Formatter {
         let mut rest = cells;
         let mut k = 0;
         while !rest.is_empty() {
+            // Each line's own width (a page number's line is narrower).
+            let width = self.width();
             let used = self.line.text.chars().count();
             let has_text = self.line_has_text();
             let gap = usize::from(has_text && !self.touching);
             let start = if has_text { used + gap } else { self.start_col.max(used).max(self.rooms().0) };
-            if start + rest.len() > width && has_text {
+            let room = width.saturating_sub(start);
+            // A word that does not fit breaks after the last hyphen that does (INFERENCE: the reference also breaks
+            // where translation marks a break and after its hyphenation pair; only the hyphen cell is used here). A
+            // word longer than a whole line starts on this line when there is room after the space; else it goes to
+            // the next line, and a word longer than a line with nothing before it is cut at the line end.
+            let take = if rest.len() <= room {
+                rest.len()
+            } else if let Some(n) = rest[..room.min(rest.len())].iter().rposition(|c| c.0 == '-').map(|i| i + 1) {
+                n
+            } else if !has_text {
+                room.max(1)
+            } else if rest.len() > width && room >= 1 {
+                room
+            } else {
                 self.touching = false;
                 self.end_line(self.left + self.runover_offset);
                 continue;
-            }
-            let fits = width.saturating_sub(start).max(1);
+            };
             if has_text {
                 if gap == 1 {
                     self.put(' ', None);
@@ -542,7 +555,7 @@ impl Formatter {
                     self.put(' ', None);
                 }
             }
-            let (now, later) = rest.split_at(rest.len().min(fits));
+            let (now, later) = rest.split_at(take);
             for &(c, s) in now {
                 let col = self.line.text.chars().count();
                 self.place_word_marks(k, col);
@@ -1470,6 +1483,18 @@ mod tests {
             let doc = crate::dxfile::read(&std::fs::read(&p).unwrap()).unwrap();
             check_edits(&Shown::from_running(&doc.text), &Layout::braille(40, 25), 30);
         }
+    }
+
+    #[test]
+    fn a_word_that_does_not_fit_breaks_after_a_hyphen_and_a_long_word_starts_on_the_line() {
+        let pages = format(&m("aaa bbb-ccc"), &Layout::braille(8, 3), None);
+        assert_eq!(texts(&pages[0])[..2], ["aaa bbb-", "ccc"]);
+        // Longer than a line: as much as fits after the space, the rest on the next line.
+        let pages = format(&m("ab cdefghijk"), &Layout::braille(6, 3), None);
+        assert_eq!(texts(&pages[0])[..2], ["ab cde", "fghijk"]);
+        // Shorter than a line: to the next line whole.
+        let pages = format(&m("abcd efgh"), &Layout::braille(6, 3), None);
+        assert_eq!(texts(&pages[0])[..2], ["abcd", "efgh"]);
     }
 
     #[test]
