@@ -140,10 +140,31 @@ pub fn set_status_font(a: &app::App) {
     }
 }
 
+/// On Linux the accessibility application name (what Orca names its script after) is the program name GLib takes
+/// from the name the program was started by, so a start through the braillecraft symlink of the .desktop file would
+/// give "braillecraft" and a direct start "braillecraft-desktop". The name is set here to braillecraft-desktop, the
+/// executable's name on every system and the name of the JAWS scripts, the NVDA add-on and the Orca script; before
+/// GTK starts and again once it has, since GTK sets the name only when none is set.
+#[cfg(target_os = "linux")]
+fn set_program_name() {
+    use std::ffi::{c_char, CString};
+    #[link(name = "glib-2.0")]
+    extern "C" {
+        fn g_set_prgname(name: *const c_char);
+    }
+    let name = CString::new("braillecraft-desktop").unwrap();
+    unsafe { g_set_prgname(name.as_ptr()) }
+}
+
+#[cfg(not(target_os = "linux"))]
+fn set_program_name() {}
+
 fn main() {
+    set_program_name();
     // Linux: before GTK starts (see add_font). Elsewhere: once wxWidgets is running.
     let early = if cfg!(target_os = "linux") { Some(load_fonts()) } else { None };
     let _ = wxdragon::main(move |wx_app| {
+        set_program_name();
         let fonts = early.unwrap_or_else(load_fonts);
         match resource_dir("tables", "../../tables", "index.tsv") {
             Some(dir) => {
