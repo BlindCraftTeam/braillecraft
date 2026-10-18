@@ -63,8 +63,6 @@ pub enum EngineError {
     BadTable(String),
     /// The text holds a character with no code page 437 form.
     NotEncodable(char),
-    /// The table uses a part of the scanner that BrailleCraft does not have yet.
-    NotSupported(&'static str),
     /// A table source (.bmt) has a mistake: the line and what is wrong.
     Source(String),
 }
@@ -75,7 +73,6 @@ impl std::fmt::Display for EngineError {
             EngineError::Read(s) => write!(f, "A translation table could not be read: {s}"),
             EngineError::BadTable(s) => write!(f, "A translation table is damaged or of an unknown kind: {s}"),
             EngineError::NotEncodable(c) => write!(f, "The character {c} (U+{:04X}) cannot be translated.", *c as u32),
-            EngineError::NotSupported(s) => write!(f, "The translation table uses {s}, which BrailleCraft does not have yet."),
             EngineError::Source(s) => write!(f, "A translation table source has a mistake: {s}"),
         }
     }

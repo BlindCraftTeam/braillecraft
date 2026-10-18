@@ -108,6 +108,8 @@ struct Reader<'a> {
     la2: i64,
     /// What a read past the input gives: 0xFF01 for a document's codes, 0xFF7F for the bytes of a file.
     eof: i64,
+    /// The code read after a line end in byte mode 1 that was not part of it.
+    held: Option<i64>,
 }
 
 impl<'a> Reader<'a> {
@@ -129,10 +131,36 @@ impl<'a> Reader<'a> {
             was_stop: false,
             cc: 0,
             la2: 0,
+            held: None,
         };
-        r.la = r.raw(t);
-        r.la2 = r.line(t);
+        // The text layers read ahead; the byte modes read nothing until asked.
+        if t.binmod == 0 {
+            r.la = r.raw(t);
+            r.la2 = r.line(t);
+        }
         r
+    }
+
+    /// The next code as the table's input mode reads it: 0 through the text layers; 1 one byte at a time with a
+    /// line end (CR, LF, CR LF or LF CR) as one LF; 2 one byte at a time as it is. In modes 1 and 2 the end of the
+    /// input is 0xFF00.
+    fn code(&mut self, t: &ScanTable) -> i64 {
+        match t.binmod {
+            0 => self.next(t),
+            1 => {
+                let Some(c) = self.held.take().or_else(|| self.inp.next()) else { return 0xff00 };
+                if c == 0x0a || c == 0x0d {
+                    if let Some(d) = self.inp.next() {
+                        if (d != 0x0a && d != 0x0d) || d == c {
+                            self.held = Some(d);
+                        }
+                    }
+                    return 0x0a;
+                }
+                c
+            }
+            _ => self.inp.next().unwrap_or(0xff00),
+        }
     }
 
     /// One input code; at the end, the end code (every time it is asked).
@@ -683,7 +711,7 @@ impl<'a> Scanner<'a> {
             }
             let c0 = self.c[0];
             loop {
-                let c = self.rd.next(&self.t);
+                let c = self.rd.code(&self.t);
                 self.last = c;
                 if c == 0x1c {
                     self.flag_seen = true;
@@ -934,6 +962,22 @@ impl<'a> Scanner<'a> {
     }
 
     fn run(&mut self) -> Result<(), EngineError> {
+        if self.t.ninmod == 1 {
+            // The codes pass through as read, with no words made, then the end code.
+            loop {
+                let c = self.rd.code(&self.t);
+                if c == 0xff00 || c == 0xff01 {
+                    (self.out)(EOF_OUT);
+                    return Ok(());
+                }
+                (self.out)(c);
+            }
+        }
+        if self.t.spare == 1 || self.t.spare == 3 {
+            // The spare marking in front of the text.
+            (self.out)(0xff);
+            (self.out)(0x80);
+        }
         loop {
             let more = self.fill();
             if !more && self.ring.is_empty() {
@@ -1233,9 +1277,6 @@ fn file_codes(bytes: &[u8]) -> Vec<i64> {
 /// as its low byte until the end. The reference uses it on braille and print text files before the import rules.
 /// The bytes are read and the codes written one at a time, so the file is never held as codes.
 pub(crate) fn scan_file(t: &ScanTable, bytes: &[u8]) -> Result<Vec<u8>, EngineError> {
-    if t.binmod != 0 || t.ninmod != 0 || t.spare != 0 {
-        return Err(EngineError::NotSupported("import scan tables other than text mode"));
-    }
     let mut out = Vec::with_capacity(bytes.len() + bytes.len() / 8);
     let mut ended = false;
     {
@@ -1246,7 +1287,13 @@ pub(crate) fn scan_file(t: &ScanTable, bytes: &[u8]) -> Result<Vec<u8>, EngineEr
                 out.push((c & 0xff) as u8);
             }
         };
-        let mut s = Scanner::new(t.clone(), Box::new(FileCodes { bytes, i: 0, lead: None }), 0xff7f, None, Box::new(sink));
+        // The byte modes read the file's bytes as they are; text mode reads them as codes.
+        let codes: Box<dyn Iterator<Item = i64>> = if t.binmod == 0 {
+            Box::new(FileCodes { bytes, i: 0, lead: None })
+        } else {
+            Box::new(bytes.iter().map(|&b| i64::from(b)))
+        };
+        let mut s = Scanner::new(t.clone(), codes, 0xff7f, None, Box::new(sink));
         s.run()?;
     }
     Ok(out)
@@ -1302,6 +1349,30 @@ mod tests {
         ];
         for (text, want) in cases {
             assert_eq!(scan(&t, text), want.to_vec(), "{text}");
+        }
+    }
+
+    /// Input mode 1 reads bytes with line ends joined and mode 2 bytes as they are, both without the text layers
+    /// (runs of spaces kept); ninmod passes the codes through with no words made; spare 1 and 3 write FF 80 in
+    /// front of the text, spare 2 and 3 FF 7F at its end.
+    #[test]
+    fn byte_modes_pass_through_and_spare_marks() {
+        let base = table("import-print.sct");
+        let cases: [((i64, i64, i64), &[u8], &[u8]); 7] = [
+            ((1, 0, 0), b"Ab  c\nd\ne", b"Ab  c\nd"),
+            ((2, 0, 0), b"Ab  c\r\nd\re", b"Ab  c\r\nd"),
+            ((2, 1, 0), b"Ab  c\r\nd\re", b"Ab  c\r\nd"),
+            ((0, 1, 0), b"Ab c\r d\re", b"Ab c d"),
+            ((0, 0, 1), b"\xff\x80Ab c\r d\re", b"\xff\x80Ab c d"),
+            ((0, 0, 3), b"\xff\x80Ab c\r d\re\xff\x7f", b"\xff\x80Ab c d\xff\x7f"),
+            ((0, 0, 2), b"Ab c\r d\re\xff\x7f", b"Ab c d\xff\x7f"),
+        ];
+        for ((mode, nin, spare), codes, file) in cases {
+            let mut t = base.clone();
+            (t.binmod, t.ninmod, t.spare) = (mode, nin, spare);
+            let out: Vec<u8> = scan_bytes(&t, b"Ab  c\r\nd\re".to_vec(), None).unwrap().iter().map(|&c| c as u8).collect();
+            assert_eq!(out, codes.to_vec(), "codes, mode {mode} ninmod {nin} spare {spare}");
+            assert_eq!(scan_file(&t, b"Ab  c\r\nd").unwrap(), file.to_vec(), "file, mode {mode} ninmod {nin} spare {spare}");
         }
     }
 

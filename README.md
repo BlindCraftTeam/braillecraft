@@ -85,7 +85,8 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   codes, chosen by region and language (Document, Translation Tables) or by learning course (Learning Tables).
   Language codes in the text switch tables in the middle of a document. A table that switches web and mail addresses
   to computer braille writes each address between the computer braille codes, a full stop or comma after it left
-  outside, as the standard program does. Every character the built-in character
+  outside, as the standard program does; a table that reads its input byte by byte (the binary text export) reads it
+  that way, line ends joined or not, as the standard program does. Every character the built-in character
   table names translates (accented letters, £, €, œ, dashes, curly quotes and thousands more); File, Open (its file types
   listed, All Files chosen, starting in the folder last opened from) finds a
   file's kind from its name and content (formatted text, formatted braille, coded text, coded braille, PDF, PEF, a

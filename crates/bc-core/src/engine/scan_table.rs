@@ -9,7 +9,7 @@ use super::EngineError;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ScanTable {
-    /// How bytes are read (0: text; the other modes are not built).
+    /// How the input is read: 0 as text, 1 byte by byte with line ends joined, 2 byte by byte as it is.
     pub binmod: i64,
     /// 1: blanks at the end of a line are dropped.
     pub trailing_blanks: i64,
