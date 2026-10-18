@@ -34,6 +34,8 @@ pub struct UniMap {
     font_names: HashMap<String, usize>,
     /// The Chinese character tables by reading: Mandarin, Cantonese, Japanese, Korean (the fifth has no name).
     han: [Option<Table>; 5],
+    /// The most characters any sequence has after its first: how far ahead the mapping reads.
+    longest: usize,
     /// Lines that could not be read: file and line.
     pub errors: Vec<String>,
 }
@@ -117,6 +119,7 @@ impl UniMap {
             }
             match parse_mapping(line) {
                 Some((first, rest, value)) => {
+                    self.longest = self.longest.max(rest.len());
                     let entry = self.table(target).entry(first).or_default();
                     if rest.is_empty() {
                         entry.single = Some(value);
@@ -154,25 +157,41 @@ impl UniMap {
     /// characters (0 Mandarin to 3 Korean, -1 none); `unknown` the Unknown Characters setting (0 "*", 1 nothing, 2
     /// the hex value) for characters above U+FFFF the tables do not give.
     pub fn map(&self, input: &[u8], han: i32, unknown: u8) -> Vec<u8> {
-        let chars = utf8_values(input);
+        // The characters are read as they are needed; the ones ahead are held only as far as the longest sequence
+        // a table maps, not as a vector of every character of the text.
+        let window = self.longest;
+        let mut values = Values { bytes: input, at: 0 };
+        let mut ahead: std::collections::VecDeque<u32> = std::collections::VecDeque::with_capacity(window + 2);
         let mut out = Vec::with_capacity(input.len());
         let mut font: Option<usize> = None;
-        let mut i = 0;
-        while i < chars.len() {
-            let c = chars[i];
-            i += 1;
+        loop {
+            while ahead.len() <= window {
+                match values.next() {
+                    Some(v) => ahead.push_back(v),
+                    None => break,
+                }
+            }
+            let Some(c) = ahead.pop_front() else { break };
             match c {
                 0 | 0x1f => {}
                 0x1c => {
                     // A code: its plain ASCII characters up to 0x1F.
                     let mut text = Vec::new();
-                    while i < chars.len() && chars[i] != 0x1f {
-                        if (0x20..0x7f).contains(&chars[i]) {
-                            text.push(chars[i] as u8);
+                    loop {
+                        if ahead.is_empty() {
+                            match values.next() {
+                                Some(v) => ahead.push_back(v),
+                                None => break,
+                            }
                         }
-                        i += 1;
+                        let Some(v) = ahead.pop_front() else { break };
+                        if v == 0x1f {
+                            break;
+                        }
+                        if (0x20..0x7f).contains(&v) {
+                            text.push(v as u8);
+                        }
                     }
-                    i += 1;
                     if let Some(name) = text.strip_prefix(b"font~") {
                         font = self.font_names.get(&String::from_utf8_lossy(name).to_lowercase()).copied();
                     } else {
@@ -182,18 +201,21 @@ impl UniMap {
                     }
                 }
                 c if c < 0x20 => out.push(c as u8),
-                c => match self.lookup(c, &chars[i..], font, han) {
-                    Some((text, used)) => {
-                        out.extend_from_slice(text);
-                        i += used;
+                c => {
+                    let found = self.lookup(c, ahead.make_contiguous(), font, han);
+                    match found {
+                        Some((text, used)) => {
+                            out.extend_from_slice(text);
+                            ahead.drain(..used);
+                        }
+                        None if c < 0x10000 => put_utf8(&mut out, c),
+                        None => match unknown {
+                            0 => out.push(b'*'),
+                            1 => {}
+                            _ => out.extend_from_slice(format!("{{U+{c:08X}}}").as_bytes()),
+                        },
                     }
-                    None if c < 0x10000 => put_utf8(&mut out, c),
-                    None => match unknown {
-                        0 => out.push(b'*'),
-                        1 => {}
-                        _ => out.extend_from_slice(format!("{{U+{c:08X}}}").as_bytes()),
-                    },
-                },
+                }
             }
         }
         out
@@ -337,28 +359,37 @@ fn value(s: &[u8]) -> Vec<u8> {
     out
 }
 
-/// The characters of UTF-8 text read without validation, as the formatted text importer reads it: a lone trailing
-/// byte is itself, a first byte takes the bytes after it whatever they are, and a sequence the end cuts short ends
-/// the text.
-fn utf8_values(bytes: &[u8]) -> Vec<u32> {
-    let mut out = Vec::with_capacity(bytes.len());
-    let mut i = 0;
-    while i < bytes.len() {
-        let first = bytes[i];
+/// The characters of UTF-8 text, one at a time, read without validation as the formatted text importer reads it: a
+/// lone trailing byte is itself, a first byte takes the bytes after it whatever they are, and a sequence the end
+/// cuts short ends the text.
+struct Values<'a> {
+    bytes: &'a [u8],
+    at: usize,
+}
+
+impl Iterator for Values<'_> {
+    type Item = u32;
+
+    fn next(&mut self) -> Option<u32> {
+        let i = self.at;
+        if i >= self.bytes.len() {
+            return None;
+        }
+        let first = self.bytes[i];
         let extra = crate::pimbri::TRAILING[first as usize] as usize;
-        if i + extra >= bytes.len() && extra > 0 {
-            break;
+        if i + extra >= self.bytes.len() && extra > 0 {
+            self.at = self.bytes.len();
+            return None;
         }
         let mut acc: u32 = 0;
         for k in 0..extra {
-            acc = acc.wrapping_add(u32::from(bytes[i + k])).wrapping_mul(64);
+            acc = acc.wrapping_add(u32::from(self.bytes[i + k])).wrapping_mul(64);
         }
-        acc = acc.wrapping_add(u32::from(bytes[i + extra]));
+        acc = acc.wrapping_add(u32::from(self.bytes[i + extra]));
         let v = acc.wrapping_sub(crate::pimbri::UTF8_OFFSETS[extra]);
-        out.push(if v > 0x7fff_ffff { 0xfffd } else { v });
-        i += extra + 1;
+        self.at = i + extra + 1;
+        Some(if v > 0x7fff_ffff { 0xfffd } else { v })
     }
-    out
 }
 
 /// A character value as UTF-8 (values that are not Unicode characters written by the same rule, up to four bytes;

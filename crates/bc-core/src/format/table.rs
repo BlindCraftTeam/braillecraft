@@ -210,7 +210,7 @@ impl Image {
             .map(|k| Line {
                 text: self.cells[k].iter().map(|c| c.0).collect(),
                 sources: self.cells[k].iter().map(|c| c.1).collect(),
-                marks: self.marks[k].clone(),
+                marks: self.marks[k].iter().copied().collect(),
             })
             .collect()
     }
@@ -1733,7 +1733,7 @@ impl Collector {
 /// The table regions of a running text alone (no layout): the cells by row as the editor commands need them
 /// (Table Properties, Style Level, the "in a table" tests), from [htbs] to the first [htbe] (the standard one
 /// object swallows every word up to it, so tables do not nest).
-pub fn regions(pieces: &[Piece], braille: bool) -> Vec<TableRegion> {
+pub fn regions(pieces: impl Iterator<Item = Piece>, braille: bool) -> Vec<TableRegion> {
     let mut out = Vec::new();
     let mut table: Option<Collector> = None;
     let geometry = Geometry { first_depth: 25, other_depth: 25, width: 40, first_below_head: false };
@@ -1744,9 +1744,9 @@ pub fn regions(pieces: &[Piece], braille: bool) -> Vec<TableRegion> {
     for p in pieces {
         match &mut table {
             Some(t) => {
-                if !t.take(p) {
+                if !t.take(&p) {
                     let t = table.take().unwrap();
-                    let end = match p {
+                    let end = match &p {
                         Piece::Mark(m) => m + 6,
                         _ => t.last_mark().map_or(0, |m| m + 1),
                     };
@@ -1754,7 +1754,7 @@ pub fn regions(pieces: &[Piece], braille: bool) -> Vec<TableRegion> {
                 }
             }
             None => {
-                if let Piece::Code(code) = p {
+                if let Piece::Code(code) = &p {
                     if code.starts_with("htbs") {
                         table = Some(Collector::new(code, &(0, String::new()), braille, geometry));
                     }

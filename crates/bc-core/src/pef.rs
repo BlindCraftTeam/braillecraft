@@ -113,10 +113,10 @@ fn element<'a>(xml: &'a str, name: &str) -> Option<(&'a str, &'a str)> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::format::Line;
+    use crate::format::{Line, Marks, Sources};
 
     fn page(lines: &[&str]) -> Page {
-        Page { lines: lines.iter().map(|l| Line { text: l.to_string(), sources: vec![None; l.chars().count()], marks: Vec::new() }).collect(), ..Page::default() }
+        Page { lines: lines.iter().map(|l| Line { text: l.to_string(), sources: Sources::none(l.chars().count()), marks: Marks::default() }).collect(), ..Page::default() }
     }
 
     #[test]

@@ -381,6 +381,15 @@ pub fn with<R>(f: impl FnOnce(&mut App) -> R) -> R {
     APP.with(|a| f(a.borrow_mut().as_mut().expect("program state")))
 }
 
+/// Runs `f` with the state when it is free and answers what it gave, or None while the state is in use (a window
+/// asking for a document's rows while the program is giving it those rows).
+pub fn try_with_value<R>(f: impl FnOnce(&mut App) -> R) -> Option<R> {
+    APP.with(|a| {
+        let mut guard = a.try_borrow_mut().ok()?;
+        guard.as_mut().map(f)
+    })
+}
+
 /// Runs `f` with the state when it is free; for event handlers, which may fire while a command is running.
 pub fn try_with(f: impl FnOnce(&mut App)) {
     APP.with(|a| {
@@ -713,7 +722,7 @@ impl App {
         }
         // The editor's own pages, when it shows this document laid out the same way.
         let pages = if !d.ed.coded && d.ed_layout == layout_key && d.ed.doc == *value {
-            std::rc::Rc::new(d.ed.pages.clone())
+            d.ed.pages.clone()
         } else {
             std::rc::Rc::new(bc_core::format::format(value, &layout, Some(&styles)))
         };
@@ -732,33 +741,8 @@ impl App {
     /// What document `i` is laid out by: its cells per line and lines per page, its braille page numbers (a braille
     /// document), the first page whose number is shown, and its styles; with a key that changes when any of them does.
     pub fn page_layout(&self, i: usize) -> (u64, bc_core::format::Layout, bc_core::engine::StyleTable) {
-        use std::hash::{Hash, Hasher};
         let d = &self.docs[i];
-        let mut h = std::collections::hash_map::DefaultHasher::new();
-        (d.cells, d.lines, d.page_numbers, d.kind == DocKind::Braille, &d.styles, d.hyphen).hash(&mut h);
-        let braille = d.kind == DocKind::Braille;
-        let (cells, lines) = (d.cells.max(1) as usize, d.lines.max(1) as usize);
-        let mut layout = if braille {
-            bc_core::format::Layout::braille(cells, lines)
-        } else {
-            bc_core::format::Layout::print(cells, lines)
-        };
-        // Page numbers on even and odd pages, for print documents too (in digits, with no numeric indicator).
-        layout.numbers_even = bc_core::format::Corner::from_code(d.page_numbers[0]);
-        layout.numbers_odd = bc_core::format::Corner::from_code(d.page_numbers[1]);
-        layout.print_numbers_even = bc_core::format::Corner::from_code(d.page_numbers[2]);
-        layout.print_numbers_odd = bc_core::format::Corner::from_code(d.page_numbers[3]);
-        layout.first_number_shown = d.page_numbers[4].max(1) as usize;
-        // The document's hyphenation table (spec 36).
-        let choice = match d.hyphen {
-            Hyphen::None => 0,
-            Hyphen::Dashes => 1,
-            Hyphen::DashesHyphens => 2,
-            Hyphen::French => 3,
-            Hyphen::French113 => 4,
-        };
-        layout.hyphen = crate::translation::hyphen_table(choice, !braille);
-        (h.finish(), layout, crate::translation::style_table(&d.styles))
+        layout_for(d.cells, d.lines, d.page_numbers, d.kind == DocKind::Braille, &d.styles, d.hyphen)
     }
 
     /// Gives document `i`'s editing window its rows, line numbers and caret; the document is laid out again first
@@ -791,7 +775,9 @@ impl App {
         }
         d.area_stale = false;
         let area = d.area;
+        bc_core::memory::note("show (laid out)");
         area.show(&d.ed, &mut d.area_rows, line_numbers, keep_from_top, forms);
+        bc_core::memory::note("show (rows given to the window)");
     }
 
     /// Edits document `i` by `change` on its editor (typing, Backspace, Delete, a code put in): the document before
@@ -805,10 +791,7 @@ impl App {
             self.show_area(i, None);
             return;
         }
-        if d.undo.len() >= 100 {
-            d.undo.remove(0);
-        }
-        d.undo.push(before);
+        push_undo(&mut d.undo, before);
         d.redo.clear();
         d.dirty = true;
         d.last_line_key.clear();
@@ -832,7 +815,7 @@ impl App {
         let d = &mut self.docs[i];
         let Some((model, at)) = (if redo { d.redo.pop() } else { d.undo.pop() }) else { return false };
         let current = (d.ed.doc.clone(), d.ed.caret);
-        if redo { d.undo.push(current) } else { d.redo.push(current) }
+        if redo { push_undo(&mut d.undo, current) } else { push_undo(&mut d.redo, current) }
         d.ed.set_doc(model, at);
         d.dirty = true;
         d.last_line_key.clear();
@@ -899,4 +882,60 @@ mod tests {
         // Brackets typed in the text are text, even when they look like a code.
         assert_eq!(char_field(&Shown::plain("x[pg]y"), 1, false), "[");
     }
+}
+
+/// At most about this many bytes of undo or redo states are kept for one document.
+const UNDO_BUDGET: usize = 128 * 1024 * 1024;
+
+/// What a kept document state holds: its text and its code ranges.
+fn shown_bytes(s: &Shown) -> usize {
+    s.text.capacity() + (s.codes.capacity() + s.inner.capacity()) * std::mem::size_of::<(usize, usize)>()
+}
+
+/// Keeps a document state for Edit, Undo or Edit, Redo: one per edit, at most 100 (spec 30), and together at most
+/// about UNDO_BUDGET bytes, the oldest dropped first, so that a book's history stays within what the machine holds
+/// (plan line L1: a state is the whole text with its codes until B46 keeps the edits instead).
+fn push_undo(stack: &mut Vec<(Shown, usize)>, state: (Shown, usize)) {
+    stack.push(state);
+    while stack.len() > 100 || (stack.len() > 1 && stack.iter().map(|(s, _)| shown_bytes(s)).sum::<usize>() > UNDO_BUDGET) {
+        stack.remove(0);
+    }
+}
+
+/// What a document is laid out by, from its cells per line, lines per page, page numbers, kind, styles and
+/// hyphenation; with a key that changes when any of them does. A new document is laid out with this once, so a book
+/// is not laid out a second time at its first show (plan line L1).
+pub fn layout_for(
+    cells: u32,
+    lines: u32,
+    page_numbers: [u32; 5],
+    braille: bool,
+    styles: &[Style],
+    hyphen: Hyphen,
+) -> (u64, bc_core::format::Layout, bc_core::engine::StyleTable) {
+    use std::hash::{Hash, Hasher};
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    (cells, lines, page_numbers, braille, styles, hyphen).hash(&mut h);
+    let (cells, lines) = (cells.max(1) as usize, lines.max(1) as usize);
+    let mut layout = if braille {
+        bc_core::format::Layout::braille(cells, lines)
+    } else {
+        bc_core::format::Layout::print(cells, lines)
+    };
+    // Page numbers on even and odd pages, for print documents too (in digits, with no numeric indicator).
+    layout.numbers_even = bc_core::format::Corner::from_code(page_numbers[0]);
+    layout.numbers_odd = bc_core::format::Corner::from_code(page_numbers[1]);
+    layout.print_numbers_even = bc_core::format::Corner::from_code(page_numbers[2]);
+    layout.print_numbers_odd = bc_core::format::Corner::from_code(page_numbers[3]);
+    layout.first_number_shown = page_numbers[4].max(1) as usize;
+    // The document's hyphenation table (spec 36).
+    let choice = match hyphen {
+        Hyphen::None => 0,
+        Hyphen::Dashes => 1,
+        Hyphen::DashesHyphens => 2,
+        Hyphen::French => 3,
+        Hyphen::French113 => 4,
+    };
+    layout.hyphen = crate::translation::hyphen_table(choice, !braille);
+    (h.finish(), layout, crate::translation::style_table(styles))
 }

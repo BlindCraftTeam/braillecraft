@@ -132,7 +132,7 @@ impl Run {
 
 /// The runs of a braille line with no place in the document's text (all of it made by the formatter).
 pub fn runs(line: &str) -> Vec<Run> {
-    runs_mapped(line, &[], |_| None)
+    runs_mapped(line, None, |_| None)
 }
 
 /// The runs of a braille line given as North American ASCII braille, with each cell's position in the document's text
@@ -142,10 +142,10 @@ pub fn runs(line: &str) -> Vec<Run> {
 /// of its own, so a single blank between two placed cells counts as placed, as the text's own space does in the
 /// reference. `end_of` gives the end of the text a cell came from (its position plus the length of what it
 /// translates), which ends a run's span.
-pub fn runs_mapped(line: &str, sources: &[Option<usize>], end_of: impl Fn(usize) -> Option<usize>) -> Vec<Run> {
+pub fn runs_mapped(line: &str, sources: Option<&crate::format::Sources>, end_of: impl Fn(usize) -> Option<usize>) -> Vec<Run> {
     let cells: Vec<char> = line.chars().collect();
     let n = cells.len();
-    let source = |i: usize| sources.get(i).copied().flatten();
+    let source = |i: usize| sources.and_then(|s| s.get(i));
     let placed = |i: usize| {
         if cells[i] != ' ' {
             return source(i).is_some();
@@ -313,20 +313,20 @@ mod tests {
     #[test]
     fn runs_follow_the_text_places() {
         // "  ,! cat sat4" laid out from text "The cat sat." at 0; the indent has no place.
-        let sources = [None, None, Some(0), Some(1), None, Some(4), Some(5), Some(6), None, Some(8), Some(9), Some(10), Some(11)];
+        let sources: crate::format::Sources = [None, None, Some(0), Some(1), None, Some(4), Some(5), Some(6), None, Some(8), Some(9), Some(10), Some(11)].into_iter().collect();
         let end_of = |p: usize| Some(p + if p == 1 { 3 } else { 1 });
-        let r = runs_mapped("  ,! cat sat4", &sources, end_of);
+        let r = runs_mapped("  ,! cat sat4", Some(&sources), end_of);
         assert_eq!(r.iter().map(|r| (r.start, r.cells.as_str(), r.source)).collect::<Vec<_>>(), vec![(2, ",! cat sat4", Some((0, 12)))]);
         // A page number the formatter added starts a run of its own; a placed run before it ends there.
-        let sources = [Some(0), Some(1), None, None, None];
-        let r = runs_mapped("ab #a", &sources, |p| Some(p + 1));
+        let sources: crate::format::Sources = [Some(0), Some(1), None, None, None].into_iter().collect();
+        let r = runs_mapped("ab #a", Some(&sources), |p| Some(p + 1));
         assert_eq!(r.iter().map(|r| (r.start, r.cells.as_str(), r.source)).collect::<Vec<_>>(), vec![(0, "ab", Some((0, 2))), (3, "#a", None)]);
         // A hyphen the formatter added at the line end stays in the run, and its ink then comes from the cells.
-        let sources = [Some(0), Some(1), None];
-        let r = runs_mapped("ab-", &sources, |p| Some(p + 1));
+        let sources: crate::format::Sources = [Some(0), Some(1), None].into_iter().collect();
+        let r = runs_mapped("ab-", Some(&sources), |p| Some(p + 1));
         assert_eq!(r.iter().map(|r| (r.cells.as_str(), r.source)).collect::<Vec<_>>(), vec![("ab-", None)]);
         // A placed fill row is text, not full stops.
-        let lines = [runs_mapped("\"\"\"", &[Some(0), Some(1), Some(2)], |p| Some(p + 1))];
+        let lines = [runs_mapped("\"\"\"", Some(&[Some(0), Some(1), Some(2)].into_iter().collect::<crate::format::Sources>()), |p| Some(p + 1))];
         let items = page_items(&lines, &Placement::default(), false, |_, _| "quoted".into());
         assert_eq!(items[0].text, "quoted ");
     }

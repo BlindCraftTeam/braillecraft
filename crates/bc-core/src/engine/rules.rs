@@ -50,7 +50,8 @@ pub(crate) struct Engine<'a> {
     pub pos: usize,
     state: Vec<i128>,
     stack: [u128; 128],
-    pub out: Vec<i64>,
+    /// Where each output code goes (the writer, as the codes come).
+    pub out: &'a mut dyn FnMut(i64),
     m_consume: i64,
     m_out: Vec<u8>,
     m_rid: i64,
@@ -83,9 +84,8 @@ fn ring_index(pos: usize, d: i64) -> usize {
 }
 
 impl<'a> Engine<'a> {
-    pub fn new(t: Rc<RuleTable>, text: &[i64], style: Option<&'a StyleTable>, chitab: &'a Chitab) -> Engine<'a> {
+    pub fn new(t: Rc<RuleTable>, mut inp: Vec<i64>, style: Option<&'a StyleTable>, chitab: &'a Chitab, out: &'a mut dyn FnMut(i64)) -> Engine<'a> {
         let width = t.width.max(2);
-        let mut inp = text.to_vec();
         inp.push(EOF);
         Engine {
             default_char: t.tail[0],
@@ -115,7 +115,7 @@ impl<'a> Engine<'a> {
             pos: 0,
             state: vec![0; width],
             stack: [0; 128],
-            out: Vec::new(),
+            out,
             m_consume: 0,
             m_out: Vec::new(),
             m_rid: 0,
@@ -144,12 +144,12 @@ impl<'a> Engine<'a> {
 
     fn put(&mut self, c: i64) {
         if self.out_on() {
-            self.out.push(c);
+            (self.out)(c);
         }
     }
 
     pub fn emit(&mut self, c: i64) {
-        self.out.push(c);
+        (self.out)(c);
     }
 
     pub fn adv(&mut self) {

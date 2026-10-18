@@ -226,10 +226,13 @@ fn main() {
         // as does the Global, MCP Server setting; the files it names are opened once the window is up.
         let cl = command_line::read();
         control::start_at_launch(cl.control);
-        // Windows: the JAWS script set shipped beside the program is offered for installing first.
+        // Windows: the JAWS script set shipped beside the program is offered for installing first (not on a
+        // command line that runs without the editor, which no one is there to answer).
         #[cfg(windows)]
-        if let Some(dir) = resource_dir("jaws", "../../scripts/jaws", "braillecraft-desktop.jss") {
-            commands::jaws_start_up(&dir);
+        if !cl.is_batch() {
+            if let Some(dir) = resource_dir("jaws", "../../scripts/jaws", "braillecraft-desktop.jss") {
+                commands::jaws_start_up(&dir);
+            }
         }
 
         frame.on_menu(|e| {
@@ -266,9 +269,12 @@ fn main() {
             // Kept for the life of the program, which a picture run ends by being stopped.
             std::mem::forget(timer);
         }
+        // A command line that runs without the editor (every file came with an option) opens no start-up dialog:
+        // no one is there to answer it, and it held the /brf run on a computer with no embosser set up.
+        let batch = cl.is_batch();
         frame.on_activate(move |e| {
             if let WindowEventData::Activate(a) = &e {
-                if a.is_active() && !started.replace(true) {
+                if a.is_active() && !batch && !started.replace(true) {
                     match run_for_picture {
                         Some(cmd) => wxdragon::call_after(Box::new(move || commands::run(cmd, false))),
                         None => wxdragon::call_after(Box::new(commands::embosser_setup_at_start)),

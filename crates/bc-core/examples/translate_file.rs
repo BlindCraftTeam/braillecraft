@@ -34,6 +34,35 @@ impl Files for Shipped {
     }
 }
 
+/// The memory in use now (VmRSS), after the allocator has given back what it can (glibc malloc_trim), so what the
+/// structures hold is told apart from what a finished pass left in the allocator's arenas.
+fn live_rss_mb() -> u64 {
+    #[cfg(target_os = "linux")]
+    {
+        extern "C" {
+            fn malloc_trim(pad: usize) -> i32;
+        }
+        unsafe {
+            malloc_trim(0);
+        }
+    }
+    std::fs::read_to_string("/proc/self/status")
+        .ok()
+        .and_then(|s| s.lines().find(|l| l.starts_with("VmRSS:")).and_then(|l| l.split_whitespace().nth(1)?.parse::<u64>().ok()))
+        .unwrap_or(0)
+        / 1024
+}
+
+/// What the laid-out pages hold: lines, cells, and the bytes of their texts, cell sources and marks.
+fn pages_report(pages: &[bc_core::format::Page]) -> String {
+    let lines: usize = pages.iter().map(|p| p.lines.len()).sum();
+    let cells: usize = pages.iter().flat_map(|p| &p.lines).map(|l| l.sources.len()).sum();
+    let text: usize = pages.iter().flat_map(|p| &p.lines).map(|l| l.text.capacity()).sum();
+    let sources: usize = pages.iter().flat_map(|p| &p.lines).map(|l| l.sources.capacity() * 4).sum();
+    let marks: usize = pages.iter().flat_map(|p| &p.lines).map(|l| l.marks.capacity() * 8).sum();
+    format!("{} pages, {lines} lines, {cells} cells; text {} MB, sources {} MB, marks {} MB", pages.len(), text / 1_000_000, sources / 1_000_000, marks / 1_000_000)
+}
+
 fn peak_rss_mb() -> u64 {
     std::fs::read_to_string("/proc/self/status")
         .ok()
@@ -90,7 +119,9 @@ fn main() {
     let t = Instant::now();
     let print_pages = format(&shown, &Layout::print(65, 25), Some(&styles));
     println!("print layout: {:.2} s, {} pages, peak {} MB", t.elapsed().as_secs_f64(), print_pages.len(), peak_rss_mb());
+    println!("  pages hold: {}; live {} MB with the pages, document text {} MB", pages_report(&print_pages), live_rss_mb(), shown.text.capacity() / 1_000_000);
     drop(print_pages);
+    println!("  live {} MB without the pages", live_rss_mb());
 
     let t = Instant::now();
     let braille = tr.translate_marked(&shown.to_running(), Some(&styles), None).unwrap_or_else(|e| panic!("translate: {e:?}"));
@@ -100,5 +131,6 @@ fn main() {
     let braille_shown = Shown::from_running(&braille);
     let pages = format(&braille_shown, &Layout::braille(40, 25), Some(&styles));
     println!("braille layout: {:.2} s, {} pages, peak {} MB", t.elapsed().as_secs_f64(), pages.len(), peak_rss_mb());
+    println!("  pages hold: {}; live {} MB", pages_report(&pages), live_rss_mb());
     println!("first braille line: {:?}", pages.first().and_then(|p| p.lines.first()).map(|l| l.text.clone()).unwrap_or_default());
 }

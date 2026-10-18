@@ -34,6 +34,7 @@ pub mod import_chain;
 pub mod internal;
 pub mod lbf;
 pub mod markdown;
+pub mod memory;
 pub mod paths;
 pub mod menu_codes;
 pub mod printer_setup;

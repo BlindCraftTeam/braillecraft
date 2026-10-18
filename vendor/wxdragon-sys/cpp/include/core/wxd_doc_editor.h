@@ -6,10 +6,13 @@
 // Added for BrailleCraft: the document editing window, drawn by the program as the reference program's is (its
 // formatted view and coded view), with its own text for screen readers on each system.
 //
-// The window keeps no document. The program gives it the rows to draw (text rows, and page break rows that hold no
-// text), where the caret and the selection are (row and column), and the line number labels; the window draws them,
-// scrolls, keeps the system caret, and hands every key, typed character and click to the program. The text screen
-// readers get is the text rows, each followed by a line feed (page break rows are not in it).
+// The window keeps no document and no row text. The program tells it how many rows there are and the kind and
+// length of each (text rows, and page break rows that hold no text) and where the caret and the selection are (row
+// and column); the window asks the program for a row's text as it draws it, measures it or gives it to a screen
+// reader, keeping a bounded number of rows (a book of thousands of pages is not held a second time in the window:
+// plan line L1); it scrolls, keeps the system caret, and hands every key, typed character and click to the
+// program. The text screen readers get is the text rows, each followed by a line feed (page break rows are not in
+// it).
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,30 +31,40 @@ typedef void (*wxd_DocEditor_MouseFn)(void* data, int kind, int row, int col, in
 typedef void (*wxd_DocEditor_FocusFn)(void* data, bool focused);
 // The window is being destroyed: the program frees `data`.
 typedef void (*wxd_DocEditor_FreeFn)(void* data);
+// A row asked of the program: `which` 0 is the row's text as drawn (in it, a code of the coded view stands between
+// the characters U+E000 and U+E001: the window takes the markers out and draws the code in the code font inside a
+// box, spec 27 4a; the markers do not count as columns), 1 the text screen readers get for the row (the same length,
+// no markers: braille may be written in another form for screen readers than on screen), 2 the row's line number
+// label ("" for none). The answer is NUL-terminated UTF-8 and stays valid until the next call. NULL means the program
+// cannot answer now (it is busy giving the window its rows): the window then draws nothing for the row and keeps
+// nothing, and asks again later.
+typedef const char* (*wxd_DocEditor_RowFn)(void* data, int row, int which);
 
 // Makes the window as a child of `parent`.
 WXD_EXPORTED wxd_Window_t* wxd_DocEditor_Create(wxd_Window_t* parent, void* data, wxd_DocEditor_KeyFn key,
                                                 wxd_DocEditor_CharFn chr, wxd_DocEditor_MouseFn mouse,
-                                                wxd_DocEditor_FocusFn focus, wxd_DocEditor_FreeFn free_data);
+                                                wxd_DocEditor_FocusFn focus, wxd_DocEditor_FreeFn free_data,
+                                                wxd_DocEditor_RowFn row);
 
-// Sets the rows: `count` NUL-terminated UTF-8 texts, and for each its kind: 0 a text row, 1 a page break row (drawn
-// as a line across, no text). Replaces the earlier rows; `changed_from` is the first row that differs from before
-// (screen readers are told the text changed from there), or -1 when nothing changed. `access_rows`, when not NULL,
-// are `count` texts of the same lengths that screen readers get in place of the drawn rows (braille written in
-// another form for screen readers than on screen). In a row's text, a code of the coded view stands between the
-// characters U+E000 and U+E001: the window takes the markers out and draws the code in the code font inside a box
-// (spec 27 4a); the markers do not count as columns and are not in the text screen readers get.
-WXD_EXPORTED void wxd_DocEditor_SetRows(wxd_Window_t* editor, const char* const* rows, const int* kinds,
-                                        const char* const* access_rows, int count, int changed_from);
+// Sets the rows: `count` rows, with for each its kind (`kinds`: 0 a text row, 1 a page break row, drawn as a line
+// across with no text) and the length in characters of its text (`lengths`: 0 for a page break row); `longest` is
+// the longest row's length, for the window's width. The rows the window kept are let go; it asks the program for
+// each row again as it needs it. Screen readers are told the text changed when `changed_at` is 0 or more: at that
+// offset (in characters) of the text they get, `removed` went out and `inserted` came in (UTF-8; NULL for none).
+WXD_EXPORTED void wxd_DocEditor_SetRows(wxd_Window_t* editor, int count, const unsigned char* kinds,
+                                        const int* lengths, int longest, int changed_at, const char* removed,
+                                        const char* inserted);
 
-// Sets the line number column: `count` labels, one per row (NULL or "" for none). `width` 0 hides the column.
-WXD_EXPORTED void wxd_DocEditor_SetLineNumbers(wxd_Window_t* editor, const char* const* labels, int count, int width);
+// Shows the line number column `width` wide (the labels come from the row function), or hides it (`width` 0).
+WXD_EXPORTED void wxd_DocEditor_SetLineNumbers(wxd_Window_t* editor, int width);
 
 // Puts the caret at `row`, `col` and the selection's other end at `anchor_row`, `anchor_col` (the same place for no
 // selection); then scrolls so the caret row is shown (keeping it `keep_from_top` rows from the top when that is
-// zero or more). Screen readers are told the caret moved.
+// zero or more). `caret_row_text` is the caret row's text as drawn (as the row function gives it), kept for the row,
+// since the program may be unable to answer for it while it places the caret. Screen readers are told the caret
+// moved.
 WXD_EXPORTED void wxd_DocEditor_SetCaret(wxd_Window_t* editor, int row, int col, int anchor_row, int anchor_col,
-                                         int keep_from_top);
+                                         int keep_from_top, const char* caret_row_text);
 
 // The first row shown and the number of whole rows the window shows.
 WXD_EXPORTED int wxd_DocEditor_GetTopRow(wxd_Window_t* editor);

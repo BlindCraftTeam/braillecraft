@@ -110,13 +110,22 @@ fn strip_controls(e: &mut Element) {
     for c in &mut e.children {
         match c {
             Node::Text(t) => {
-                if t.chars().any(|ch| (ch as u32) < 0x20) {
-                    *t = t.chars().filter_map(|ch| match ch as u32 { 9 | 10 => Some(' '), 0..=31 => None, _ => Some(ch) }).collect();
+                if let std::borrow::Cow::Owned(s) = controls_stripped(t) {
+                    *t = s;
                 }
             }
             Node::Element(child) => strip_controls(child),
             Node::Pi(_) => {}
         }
+    }
+}
+
+/// The control characters step over one text: the text itself when it has none to change.
+fn controls_stripped(t: &str) -> std::borrow::Cow<'_, str> {
+    if t.chars().any(|ch| (ch as u32) < 0x20) {
+        std::borrow::Cow::Owned(t.chars().filter_map(|ch| match ch as u32 { 9 | 10 => Some(' '), 0..=31 => None, _ => Some(ch) }).collect())
+    } else {
+        std::borrow::Cow::Borrowed(t)
     }
 }
 
@@ -258,25 +267,33 @@ fn auto_tag(plain: &[u8], mode: u8, out: &mut Vec<u8>) {
 /// by its neighbours (a letter or digit before only: U+2019; after only: U+2018, or U+02BC when it was U+2019;
 /// both or neither: U+0027).
 pub fn quote_forms(text: &str, apostrophe: Option<char>, left: Option<char>, right: Option<char>) -> String {
-    let chars: Vec<char> = text.chars().collect();
-    let mut out = String::with_capacity(text.len());
-    for (k, &c) in chars.iter().enumerate() {
+    quote_forms_chars(text, apostrophe, left, right).collect()
+}
+
+/// The characters of the text with their quote forms, one at a time: a window of the character before and the one
+/// after, not a vector of every character of the text.
+pub fn quote_forms_chars(text: &str, apostrophe: Option<char>, left: Option<char>, right: Option<char>) -> impl Iterator<Item = char> + '_ {
+    let mut chars = text.chars().peekable();
+    let mut prev: Option<char> = None;
+    std::iter::from_fn(move || {
+        let c = chars.next()?;
         let replaced = match c {
             '\u{27}' => apostrophe,
             '\u{2018}' => left,
             '\u{2019}' => right,
             _ => {
-                out.push(c);
-                continue;
+                prev = Some(c);
+                return Some(c);
             }
         };
         if let Some(r) = replaced {
-            out.push(r);
-            continue;
+            prev = Some(c);
+            return Some(r);
         }
-        let before = k > 0 && chars[k - 1].is_alphanumeric();
-        let after = chars.get(k + 1).is_some_and(|n| n.is_alphanumeric());
-        out.push(match (before, after) {
+        let before = prev.is_some_and(|p| p.is_alphanumeric());
+        let after = chars.peek().is_some_and(|n| n.is_alphanumeric());
+        prev = Some(c);
+        Some(match (before, after) {
             (true, false) => '\u{2019}',
             (false, true) => {
                 if c == '\u{2019}' {
@@ -286,9 +303,8 @@ pub fn quote_forms(text: &str, apostrophe: Option<char>, left: Option<char>, rig
                 }
             }
             _ => '\u{27}',
-        });
-    }
-    out
+        })
+    })
 }
 
 // ------------------------------------------------------------------ the package's parts
@@ -1651,6 +1667,20 @@ struct Processor<'a> {
     table_col: usize,
 }
 
+/// What the tag processor reads of an element: its name, its attributes, and whether it has content (children in
+/// the tree; in the event stream, a tag that neither closes itself nor is followed at once by its end tag).
+struct TagView<'a> {
+    name: &'a str,
+    attrs: &'a [(String, String)],
+    has_content: bool,
+}
+
+impl TagView<'_> {
+    fn attr(&self, name: &str) -> Option<&str> {
+        self.attrs.iter().find(|(n, _)| n == name).map(|(_, v)| v.as_str())
+    }
+}
+
 impl<'a> Processor<'a> {
     fn flush_pending(&mut self) {
         if self.pending_newline {
@@ -1712,8 +1742,9 @@ impl<'a> Processor<'a> {
         self.map.entries.iter().find(|e| (e.element.is_empty() || e.element.eq_ignore_ascii_case(name)) && (e.class.is_empty() || e.class.eq_ignore_ascii_case(class))).cloned()
     }
 
-    fn start(&mut self, e: &Element) {
-        let name = e.name.as_str();
+    /// An element's start; `content` gives the text inside the element, for the few elements read whole here.
+    fn start(&mut self, e: &TagView, content: &dyn Fn() -> String) {
+        let name = e.name;
         self.after_tag = true;
         match name {
             "bc:checkbox" => {}
@@ -1748,7 +1779,7 @@ impl<'a> Processor<'a> {
             "bc:scannedpagebreak" => self.scanned = true,
             "bc:pagebreak" => {
                 if self.scanned {
-                    if e.children.is_empty() {
+                    if !e.has_content {
                         self.code("lea;f1");
                     } else {
                         self.code("lea");
@@ -1757,7 +1788,7 @@ impl<'a> Processor<'a> {
             }
             "bc:pageNumStart" | "bc:pageNumLRStart" | "bc:pageNumURStart" => {
                 if self.scanned {
-                    let digits: String = e.text().chars().filter(|c| c.is_ascii_digit()).collect();
+                    let digits: String = content().chars().filter(|c| c.is_ascii_digit()).collect();
                     let n: i64 = digits.parse().unwrap_or(0);
                     match name {
                         "bc:pageNumStart" => self.write(&format!("{O}lea;f0a{C}{n}")),
@@ -1811,8 +1842,8 @@ impl<'a> Processor<'a> {
 
     /// A mapped element's start (spec 28 6c): the class is the Word style name; the entry's mode decides what is
     /// written.
-    fn mapped_start(&mut self, e: &Element) {
-        let name = e.name.clone();
+    fn mapped_start(&mut self, e: &TagView) {
+        let name = e.name.to_string();
         let mut class = e.attr("class").unwrap_or("").to_string();
         if class.is_empty() && name == "p" {
             class = "Normal".into();
@@ -1825,16 +1856,15 @@ impl<'a> Processor<'a> {
             // No entry: the start tag is copied as text, as it was written (a self-closing tag whole, with no end
             // tag to follow).
             let mut raw = String::new();
-            let mut shallow = e.clone();
-            shallow.children.clear();
+            let shallow = Element { name: name.clone(), attrs: e.attrs.to_vec(), children: Vec::new() };
             serialize(&shallow, &mut raw);
-            if !e.children.is_empty() {
+            if e.has_content {
                 // The element has content: its start tag alone, not the self-closing form.
                 raw.truncate(raw.len() - 2);
                 raw.push('>');
             }
             self.write(&raw);
-            if !e.children.is_empty() {
+            if e.has_content {
                 self.stack.push(Open { name, entry: None, mode: 3, style: String::new() });
             }
             return;
@@ -1902,8 +1932,8 @@ impl<'a> Processor<'a> {
         self.stack.push(Open { name, entry: Some(entry), mode, style });
     }
 
-    fn end(&mut self, e: &Element) {
-        let name = e.name.as_str();
+    fn end(&mut self, e: &TagView) {
+        let name = e.name;
         self.after_tag = true;
         match name {
             "bc:note" => self.note_mode = !self.note_mode,
@@ -1920,7 +1950,7 @@ impl<'a> Processor<'a> {
             }
             n if Self::by_name(n) => {}
             _ => {
-                if e.children.is_empty() && self.stack.last().is_none_or(|o| o.name != name) {
+                if !e.has_content && self.stack.last().is_none_or(|o| o.name != name) {
                     // A self-closing tag with no entry was copied whole and opened nothing.
                     return;
                 }
@@ -1945,13 +1975,19 @@ impl<'a> Processor<'a> {
         }
     }
 
+    /// The elements handled whole at their start, whose content is not walked.
+    fn whole_at_start(name: &str) -> bool {
+        name.starts_with("bc:pageNum") || name == "bc:checkbox" || name == "bc:mathtype" || name == "bc:equation"
+    }
+
+    /// An element of the tree (the Word chain).
     fn element(&mut self, e: &Element) {
-        let self_closing = e.children.is_empty();
-        self.start(e);
-        if e.name == "bc:pagebreak" && self.scanned && !self_closing {
+        let view = TagView { name: &e.name, attrs: &e.attrs, has_content: !e.children.is_empty() };
+        self.start(&view, &|| e.text());
+        if e.name == "bc:pagebreak" && self.scanned && view.has_content {
             // The content is the print page number, as text.
             self.text(&e.text());
-        } else if e.name.starts_with("bc:pageNum") || e.name == "bc:checkbox" || e.name == "bc:mathtype" || e.name == "bc:equation" {
+        } else if Self::whole_at_start(&e.name) {
             // Handled whole at the start.
         } else {
             for c in &e.children {
@@ -1967,8 +2003,83 @@ impl<'a> Processor<'a> {
                 }
             }
         }
-        if !self_closing || !Self::by_name(&e.name) {
-            self.end(e);
+        if view.has_content || !Self::by_name(&e.name) {
+            self.end(&view);
+        }
+    }
+
+    /// The text as the reader gives it (the HTML and SGML chain): the same steps as over the tree, element by
+    /// element as its events arrive, so the text is never held as a tree. The control characters step runs on
+    /// each text as it comes.
+    fn stream(&mut self, reader: &mut docx::XmlReader) -> Result<(), String> {
+        while let Some(event) = reader.next_event()? {
+            match event {
+                docx::Event::Start { name, attrs, self_closing } => self.stream_element(name, attrs, self_closing, reader)?,
+                docx::Event::End(name) => return Err(format!("end tag {name} with nothing open")),
+                docx::Event::Text(t) | docx::Event::Cdata(t) => self.text(&controls_stripped(&t)),
+            }
+        }
+        Ok(())
+    }
+
+    /// One element of the stream, its start tag read; its content follows in the reader.
+    fn stream_element(&mut self, name: String, attrs: Vec<(String, String)>, self_closing: bool, reader: &mut docx::XmlReader) -> Result<(), String> {
+        // An end tag right after the start tag: the tree gave such an element no children, as a self-closing tag.
+        let mut has_content = !self_closing;
+        if has_content {
+            if let Some(docx::Event::End(n)) = reader.peek()? {
+                if *n == name {
+                    has_content = false;
+                    reader.next_event()?;
+                }
+            }
+        }
+        let page_text = name == "bc:pagebreak" && self.scanned;
+        // The content of the elements handled whole at their start, and of a scanned page break, read ahead.
+        let content = if has_content && (Self::whole_at_start(&name) || page_text) { subtree_text(reader, &name)? } else { String::new() };
+        let view = TagView { name: &name, attrs: &attrs, has_content };
+        self.start(&view, &|| content.clone());
+        if page_text && has_content {
+            self.text(&content);
+        } else if has_content && !Self::whole_at_start(&name) {
+            loop {
+                match reader.next_event()?.ok_or_else(|| format!("element {name} not closed"))? {
+                    docx::Event::Start { name: n, attrs: a, self_closing: s } => self.stream_element(n, a, s, reader)?,
+                    docx::Event::End(n) => {
+                        if n != name {
+                            return Err(format!("end tag {n} closes {name}"));
+                        }
+                        break;
+                    }
+                    docx::Event::Text(t) | docx::Event::Cdata(t) => self.text(&controls_stripped(&t)),
+                }
+            }
+        }
+        if has_content || !Self::by_name(&name) {
+            self.end(&view);
+        }
+        Ok(())
+    }
+}
+
+/// The text inside the element whose start tag was just read, up to and including its end tag.
+fn subtree_text(reader: &mut docx::XmlReader, name: &str) -> Result<String, String> {
+    let mut out = String::new();
+    let mut depth = 0usize;
+    loop {
+        match reader.next_event()?.ok_or_else(|| format!("element {name} not closed"))? {
+            docx::Event::Start { self_closing: false, .. } => depth += 1,
+            docx::Event::Start { .. } => {}
+            docx::Event::End(n) => {
+                if depth == 0 {
+                    if n != name {
+                        return Err(format!("end tag {n} closes {name}"));
+                    }
+                    return Ok(out);
+                }
+                depth -= 1;
+            }
+            docx::Event::Text(t) | docx::Event::Cdata(t) => out.push_str(&controls_stripped(&t)),
         }
     }
 }
@@ -2052,8 +2163,6 @@ pub fn import(bytes: &[u8], map_text: &str, opt: &Options) -> Result<Processed, 
 /// and spaces are treated as for Word). The text must read as XML (every tag closed), which the Markdown
 /// conversion guarantees; the control-character step runs first.
 pub fn process_html(html: &str, opt: &Options) -> Result<Processed, String> {
-    let mut tree = docx::read_xml(&format!("<bc-root>{html}</bc-root>"))?;
-    strip_controls(&mut tree);
     let map = StyleMap::default();
     let mut p = Processor {
         map: &map,
@@ -2076,16 +2185,9 @@ pub fn process_html(html: &str, opt: &Options) -> Result<Processed, String> {
         table_row: 1,
         table_col: 1,
     };
-    for c in &tree.children {
-        match c {
-            Node::Text(t) => p.text(t),
-            Node::Element(e) => p.element(e),
-            Node::Pi(text) => {
-                let t = text.replace('$', "\x1c").replace('`', "\x1f").replace("&quot;", "\"");
-                p.write(&t);
-            }
-        }
-    }
+    // The reader walks the text element by element: no tree of the whole document, no copy of its text.
+    let mut reader = docx::XmlReader::new(html);
+    p.stream(&mut reader)?;
     Ok(Processed { text: p.out, scrub_rules: String::new() })
 }
 

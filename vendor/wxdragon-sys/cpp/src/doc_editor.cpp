@@ -12,9 +12,14 @@
 #include <wx/caret.h>
 #include <wx/dcbuffer.h>
 #include <wx/scrolwin.h>
+#include <algorithm>
 #include <vector>
 #include "../include/wxdragon.h"
 #include "doc_editor_internal.h"
+
+// How many rows the window holds at once, each in the slot its number maps to: more than a screen of rows, so the
+// rows shown and the ones around them stay, and a bounded amount for a document of any length (plan line L1).
+static const int kCacheRows = 1024;
 
 // The window's Windows class name and its control id. Screen reader scripts tell the editing area apart from every
 // other window by its class (the reference program registers a class of its own for its editing window) and test
@@ -24,9 +29,12 @@ static const long kEditorStyle = wxWANTS_CHARS | wxVSCROLL | wxHSCROLL | wxBORDE
 static const wxWindowID kEditorId = 0;
 
 DocEditor::DocEditor(wxWindow* parent, void* data, wxd_DocEditor_KeyFn key, wxd_DocEditor_CharFn chr,
-                     wxd_DocEditor_MouseFn mouse, wxd_DocEditor_FocusFn focus, wxd_DocEditor_FreeFn free_data)
-    : m_data(data), m_key(key), m_char(chr), m_mouse(mouse), m_focus(focus), m_free(free_data)
+                     wxd_DocEditor_MouseFn mouse, wxd_DocEditor_FocusFn focus, wxd_DocEditor_FreeFn free_data,
+                     wxd_DocEditor_RowFn row)
+    : m_data(data), m_key(key), m_char(chr), m_mouse(mouse), m_focus(focus), m_free(free_data), m_row(row),
+      m_cache(kCacheRows), m_accessCache(kCacheRows), m_labelCache(kCacheRows)
 {
+    m_rowStart.assign(1, 0);
 #ifdef __WXMSW__
     // As wxScrolled<T>::Create does, then the window under a class registered as "BrailleCraftEditor" (with the
     // redraw styles, since the window repaints on a resize) instead of the shared wxWindow class.
@@ -163,7 +171,8 @@ bool DocEditor::SetFont(const wxFont& font)
     m_codeAscent = ch - cd;
     m_codeDescent = cd;
     m_codeRaise = (h - ch) / 2 - border;
-    m_extents.assign(m_rows.size(), std::vector<int>());
+    // The rows held keep their text; their measurements are made again in the new font.
+    for (RowEntry& e : m_cache) e.extents.clear();
     // The caret: a tenth of the row wide (1 to 5 pixels), the row less a twentieth above and below (spec 30).
     if (GetCaret()) GetCaret()->SetSize(wxClip(m_rowHeight / 10, 1, 5), wxMax(m_rowHeight - 2 * (m_rowHeight / 20), 1));
     SetScrollRate(m_charWidth, m_rowHeight);
@@ -195,26 +204,32 @@ static void SplitCodes(const wxString& in, wxString& out, std::vector<std::pair<
     }
 }
 
-void DocEditor::SetRows(std::vector<wxString> rows, std::vector<int> kinds, std::vector<wxString> access, int changedFrom)
+void DocEditor::SetRows(int count, const unsigned char* kinds, const int* lengths, int longest, int changedAt,
+                        const wxString& removed, const wxString& inserted)
 {
-    m_rows.resize(rows.size());
-    m_codes.resize(rows.size());
-    for (size_t r = 0; r < rows.size(); ++r) SplitCodes(rows[r], m_rows[r], m_codes[r]);
-    m_accessRows = std::move(access);
-    m_kinds = std::move(kinds);
-    m_kinds.resize(m_rows.size(), 0);
-    m_extents.clear();
-    m_extents.resize(m_rows.size());
-    m_accessibleText.clear();
-    m_accessibleValid = false;
+    m_rowCount = wxMax(count, 0);
+    m_kinds.assign(m_rowCount, 0);
+    m_rowStart.assign(m_rowCount + 1, 0);
+    int at = 0;
+    for (int r = 0; r < m_rowCount; ++r) {
+        m_kinds[r] = kinds && kinds[r] == 1 ? 1 : 0;
+        m_rowStart[r] = at;
+        // A text row and its line feed; a page break row holds nothing.
+        if (m_kinds[r] == 0) at += (lengths ? wxMax(lengths[r], 0) : 0) + 1;
+    }
+    m_rowStart[m_rowCount] = at;
+    m_longest = wxMax(longest, 0);
+    // The rows held are let go: the program gives each again as it is needed.
+    for (RowEntry& e : m_cache) e.row = -1;
+    for (TextEntry& e : m_accessCache) e.row = -1;
+    for (TextEntry& e : m_labelCache) e.row = -1;
     UpdateVirtualSize();
     Refresh();
-    if (changedFrom >= 0) AccessibleTextChanged(changedFrom);
+    if (changedAt >= 0) AccessibleTextChanged(changedAt, removed, inserted);
 }
 
-void DocEditor::SetLineNumbers(std::vector<wxString> labels, int width)
+void DocEditor::SetLineNumbers(int width)
 {
-    m_labels = std::move(labels);
     m_gutter = width > 0 ? FromDIP(width) : 0;
     UpdateVirtualSize();
     PlaceCaret();
@@ -223,10 +238,59 @@ void DocEditor::SetLineNumbers(std::vector<wxString> labels, int width)
 
 void DocEditor::UpdateVirtualSize()
 {
-    size_t longest = 0;
-    for (const auto& r : m_rows) longest = wxMax(longest, r.length());
-    const int width = m_gutter + m_margin + (int)(longest + 2) * m_charWidth;
-    SetVirtualSize(width, (int)m_rows.size() * m_rowHeight + m_rowHeight);
+    const int width = m_gutter + m_margin + (m_longest + 2) * m_charWidth;
+    SetVirtualSize(width, m_rowCount * m_rowHeight + m_rowHeight);
+}
+
+int DocEditor::RowLength(int row) const
+{
+    if (row < 0 || row >= m_rowCount || m_kinds[row] == 1) return 0;
+    return m_rowStart[row + 1] - m_rowStart[row] - 1;
+}
+
+// Row `row` as held, asked of the program when the window does not hold it. A row the program cannot give now is
+// answered as empty and not kept, so it is asked for again.
+DocEditor::RowEntry& DocEditor::Entry(int row)
+{
+    if (row < 0 || row >= m_rowCount) {
+        m_unanswered = RowEntry();
+        return m_unanswered;
+    }
+    RowEntry& e = m_cache[row % kCacheRows];
+    if (e.row == row) return e;
+    const char* given = m_kinds[row] == 1 ? "" : (m_row ? m_row(m_data, row, 0) : "");
+    if (!given) {
+        m_unanswered = RowEntry();
+        return m_unanswered;
+    }
+    e.row = row;
+    e.extents.clear();
+    SplitCodes(wxString::FromUTF8(given), e.text, e.codes);
+    return e;
+}
+
+const wxString& DocEditor::AccessRowText(int row)
+{
+    if (row < 0 || row >= m_rowCount || m_kinds[row] == 1) return m_empty;
+    TextEntry& e = m_accessCache[row % kCacheRows];
+    if (e.row == row) return e.text;
+    const char* given = m_row ? m_row(m_data, row, 1) : "";
+    if (!given) return m_empty;
+    e.row = row;
+    e.text = wxString::FromUTF8(given);
+    return e.text;
+}
+
+const wxString& DocEditor::Label(int row)
+{
+    if (row < 0 || row >= m_rowCount) return m_empty;
+    TextEntry& e = m_labelCache[row % kCacheRows];
+    if (e.row == row) return e.text;
+    const char* given = m_row ? m_row(m_data, row, 2) : "";
+    if (!given) return m_empty;
+    e.row = row;
+    e.text = wxString::FromUTF8(given);
+    return e.text;
 }
 
 // The x of each character boundary of row `row` (0 .. length), from the row's start: text measured in the window
@@ -235,12 +299,13 @@ void DocEditor::UpdateVirtualSize()
 const std::vector<int>& DocEditor::Extents(int row)
 {
     static const std::vector<int> none{0};
-    if (row < 0 || row >= (int)m_rows.size()) return none;
-    auto& e = m_extents[row];
+    if (row < 0 || row >= m_rowCount) return none;
+    RowEntry& entry = Entry(row);
+    auto& e = entry.extents;
     if (e.empty()) {
         wxClientDC dc(this);
-        const wxString& text = m_rows[row];
-        const auto& codes = m_codes[row];
+        const wxString& text = entry.text;
+        const auto& codes = entry.codes;
         const int n = (int)text.length();
         e.push_back(0);
         int x = 0, col = 0;
@@ -291,8 +356,16 @@ int DocEditor::ColumnAt(int row, int x)
     return last + (x - e[last] + m_charWidth / 2) / m_charWidth;
 }
 
-void DocEditor::SetCaretPlace(int row, int col, int anchorRow, int anchorCol, int keepFromTop)
+void DocEditor::SetCaretPlace(int row, int col, int anchorRow, int anchorCol, int keepFromTop, const wxString* caretRowText)
 {
+    // The caret row's text, given with the caret: the program may be unable to answer for it while the caret is
+    // placed, and the caret's x needs the row measured.
+    if (caretRowText && row >= 0 && row < m_rowCount) {
+        RowEntry& e = m_cache[row % kCacheRows];
+        e.row = row;
+        e.extents.clear();
+        SplitCodes(*caretRowText, e.text, e.codes);
+    }
     m_caretRow = row;
     m_caretCol = col;
     m_anchorRow = anchorRow;
@@ -371,7 +444,7 @@ void DocEditor::OnPaint(wxPaintEvent&)
     dc.Clear();
     dc.SetFont(GetFont());
     const int top = GetTopRow();
-    const int last = wxMin(top + GetVisibleRows() + 1, (int)m_rows.size() - 1);
+    const int last = wxMin(top + GetVisibleRows() + 1, m_rowCount - 1);
     const int width = GetVirtualSize().GetWidth() + GetClientSize().GetWidth();
     // The selection, from the earlier end to the later one.
     int r1 = m_anchorRow, c1 = m_anchorCol, r2 = m_caretRow, c2 = m_caretCol;
@@ -382,14 +455,14 @@ void DocEditor::OnPaint(wxPaintEvent&)
     const bool selection = r1 != r2 || c1 != c2;
     for (int row = top; row <= last; ++row) {
         const int y = row * m_rowHeight;
-        if (m_kinds[row] == 1) {
+        if (IsBreakRow(row)) {
             // The page break row: one line across the whole width at the text's baseline (spec 30). INFERENCE: its
             // pen is the window text colour, one pixel (spec 30 unknown: the page-break pen).
             dc.SetPen(wxPen(fore, 1));
             dc.DrawLine(0, y + m_ascent, width, y + m_ascent);
             continue;
         }
-        const wxString& text = m_rows[row];
+        const wxString& text = RowText(row);
         int from = 0, to = 0;
         if (selection && row >= r1 && row <= r2) {
             from = row == r1 ? c1 : 0;
@@ -423,7 +496,7 @@ void DocEditor::OnPaint(wxPaintEvent&)
     }
 #ifdef __WXOSX__
     // The caret, drawn here on macOS while the window has focus, in the window text colour.
-    if (m_hasFocus && m_blinkOn && m_caretRow < (int)m_rows.size()) {
+    if (m_hasFocus && m_blinkOn && m_caretRow < m_rowCount) {
         dc.SetPen(*wxTRANSPARENT_PEN);
         dc.SetBrush(wxBrush(fore));
         const int w = wxClip(m_rowHeight / 10, 1, 5), h = wxMax(m_rowHeight - 2 * (m_rowHeight / 20), 1);
@@ -439,10 +512,11 @@ void DocEditor::OnPaint(wxPaintEvent&)
         dc.DrawRectangle(vx, vy, m_gutter, GetClientSize().GetHeight() + m_rowHeight);
         dc.SetFont(wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT));
         dc.SetTextForeground(grey);
-        for (int row = top; row <= last && row < (int)m_labels.size(); ++row) {
-            if (m_labels[row].empty()) continue;
-            const wxSize size = dc.GetTextExtent(m_labels[row]);
-            dc.DrawText(m_labels[row], vx + m_gutter - size.GetWidth() - FromDIP(2),
+        for (int row = top; row <= last; ++row) {
+            const wxString& label = Label(row);
+            if (label.empty()) continue;
+            const wxSize size = dc.GetTextExtent(label);
+            dc.DrawText(label, vx + m_gutter - size.GetWidth() - FromDIP(2),
                         row * m_rowHeight + (m_rowHeight - size.GetHeight()) / 2);
         }
     }
@@ -455,8 +529,9 @@ void DocEditor::OnPaint(wxPaintEvent&)
 // whole with the part its start is in.
 void DocEditor::DrawPart(wxDC& dc, int row, int from, int to, bool selected, int y)
 {
-    const wxString& text = m_rows[row];
-    const auto& codes = m_codes[row];
+    const RowEntry& entry = Entry(row);
+    const wxString& text = entry.text;
+    const auto& codes = entry.codes;
     const wxColour fore = wxSystemSettings::GetColour(selected ? wxSYS_COLOUR_HIGHLIGHTTEXT : wxSYS_COLOUR_WINDOWTEXT);
     const int base = y + m_ascent;
     int col = from;
@@ -526,7 +601,7 @@ void DocEditor::OnMouse(wxMouseEvent& e)
     int x = 0, y = 0;
     CalcUnscrolledPosition(e.GetX(), e.GetY(), &x, &y);
     const int row = wxMax(y / m_rowHeight, 0);
-    const int col = ColumnAt(wxMin(row, (int)m_rows.size() - 1), x);
+    const int col = ColumnAt(wxMin(row, m_rowCount - 1), x);
     int kind = -1;
     if (e.GetEventType() == wxEVT_LEFT_DOWN) {
         SetFocus();
@@ -565,49 +640,97 @@ wxRect DocEditor::CaretRectOnScreen()
     return wxRect(p.x, p.y, wxMax(FromDIP(2), 1), m_rowHeight);
 }
 
-// The text screen readers get: each text row followed by a line feed; page break rows are not in it.
-const wxString& DocEditor::AccessibleText()
+// The text screen readers get: each text row followed by a line feed; page break rows are not in it. Its length is
+// known from the row lengths; a part of it is put together from the rows it covers.
+int DocEditor::AccessibleLength() const
 {
-    if (!m_accessibleValid) {
-        m_accessibleText.clear();
-        m_rowStart.assign(m_rows.size() + 1, 0);
-        size_t at = 0;
-        for (size_t r = 0; r < m_rows.size(); ++r) {
-            m_rowStart[r] = (int)at;
-            if (m_kinds[r] == 1) continue;
-            const wxString& text = m_accessRows.size() == m_rows.size() ? m_accessRows[r] : m_rows[r];
-            m_accessibleText += text;
-            m_accessibleText += '\n';
-            at += text.length() + 1;
+    return m_rowStart.empty() ? 0 : m_rowStart[m_rowCount];
+}
+
+int DocEditor::RowOfOffset(int offset) const
+{
+    if (m_rowCount <= 0) return 0;
+    offset = wxClip(offset, 0, AccessibleLength());
+    // The last row starting at or before the offset; among rows starting at the same place (page break rows start
+    // where the row after them does) the later one, which is the text row.
+    int r = (int)(std::upper_bound(m_rowStart.begin(), m_rowStart.begin() + m_rowCount, offset) - m_rowStart.begin()) - 1;
+    r = wxClip(r, 0, m_rowCount - 1);
+    while (r > 0 && m_kinds[r] == 1) --r;
+    return r;
+}
+
+wxString DocEditor::AccessibleText(int start, int end)
+{
+    const int n = AccessibleLength();
+    start = wxClip(start, 0, n);
+    end = wxClip(end, start, n);
+    wxString out;
+    int at = start;
+    int row = RowOfOffset(start);
+    while (at < end && row < m_rowCount) {
+        if (m_kinds[row] == 1) {
+            ++row;
+            continue;
         }
-        m_rowStart[m_rows.size()] = (int)at;
-        m_accessibleValid = true;
+        const int len = RowLength(row);
+        const int from = at - m_rowStart[row];
+        const int take = wxMin(len + 1 - from, end - at);
+        if (from < len) {
+            const wxString& text = AccessRowText(row);
+            out += text.Mid(from, wxMin(take, len - from));
+        }
+        if (from + take > len) out += '\n';
+        at += take;
+        ++row;
     }
-    return m_accessibleText;
+    return out;
+}
+
+wxUniChar DocEditor::AccessibleChar(int offset)
+{
+    if (offset < 0 || offset >= AccessibleLength()) return wxUniChar(0);
+    const int row = RowOfOffset(offset);
+    const int col = offset - m_rowStart[row];
+    if (col >= RowLength(row)) return wxUniChar('\n');
+    const wxString& text = AccessRowText(row);
+    return col < (int)text.length() ? text[col] : wxUniChar(' ');
+}
+
+int DocEditor::LineOfOffset(int offset) const
+{
+    const int row = RowOfOffset(offset);
+    int line = 0;
+    for (int r = 0; r < row; ++r) {
+        if (m_kinds[r] == 0) ++line;
+    }
+    return line;
+}
+
+int DocEditor::RowOfLine(int line) const
+{
+    int seen = 0;
+    for (int r = 0; r < m_rowCount; ++r) {
+        if (m_kinds[r] == 1) continue;
+        if (seen == line) return r;
+        ++seen;
+    }
+    return m_rowCount;
 }
 
 // The offset in the accessible text of row `row`, column `col` (a column past the row's end counts as its end).
 int DocEditor::OffsetOf(int row, int col)
 {
-    AccessibleText();
     if (row < 0) return 0;
-    if (row >= (int)m_rows.size()) return (int)m_accessibleText.length();
-    const int len = m_kinds[row] == 1 ? 0 : (int)m_rows[row].length();
-    return m_rowStart[row] + wxClip(col, 0, len);
+    if (row >= m_rowCount) return AccessibleLength();
+    return m_rowStart[row] + wxClip(col, 0, RowLength(row));
 }
 
 // The row and column of an offset in the accessible text.
 void DocEditor::PlaceOf(int offset, int* row, int* col)
 {
-    AccessibleText();
-    int r = 0;
-    for (size_t k = 0; k < m_rows.size(); ++k) {
-        if (m_kinds[k] == 1) continue;
-        if (m_rowStart[k] <= offset) r = (int)k;
-        else break;
-    }
+    const int r = RowOfOffset(offset);
     *row = r;
-    *col = wxMax(offset - m_rowStart[r], 0);
+    *col = wxClip(offset - m_rowStart[r], 0, RowLength(r));
 }
 
 // The window rectangle (client coordinates) of row `row` from column `from` to column `to`.
@@ -628,42 +751,39 @@ static DocEditor* Ed(wxd_Window_t* w)
 
 wxd_Window_t* wxd_DocEditor_Create(wxd_Window_t* parent, void* data, wxd_DocEditor_KeyFn key,
                                    wxd_DocEditor_CharFn chr, wxd_DocEditor_MouseFn mouse,
-                                   wxd_DocEditor_FocusFn focus, wxd_DocEditor_FreeFn free_data)
+                                   wxd_DocEditor_FocusFn focus, wxd_DocEditor_FreeFn free_data,
+                                   wxd_DocEditor_RowFn row)
 {
     wxWindow* p = reinterpret_cast<wxWindow*>(parent);
     if (!p) return nullptr;
-    return reinterpret_cast<wxd_Window_t*>(new DocEditor(p, data, key, chr, mouse, focus, free_data));
+    return reinterpret_cast<wxd_Window_t*>(new DocEditor(p, data, key, chr, mouse, focus, free_data, row));
 }
 
-void wxd_DocEditor_SetRows(wxd_Window_t* editor, const char* const* rows, const int* kinds,
-                           const char* const* access_rows, int count, int changed_from)
+void wxd_DocEditor_SetRows(wxd_Window_t* editor, int count, const unsigned char* kinds, const int* lengths,
+                           int longest, int changed_at, const char* removed, const char* inserted)
 {
     DocEditor* e = Ed(editor);
     if (!e) return;
-    std::vector<wxString> r, a;
-    std::vector<int> k;
-    r.reserve(count);
-    k.reserve(count);
-    for (int i = 0; i < count; ++i) {
-        r.push_back(wxString::FromUTF8(rows[i] ? rows[i] : ""));
-        k.push_back(kinds ? kinds[i] : 0);
-        if (access_rows) a.push_back(wxString::FromUTF8(access_rows[i] ? access_rows[i] : ""));
+    e->SetRows(count, kinds, lengths, longest, changed_at, wxString::FromUTF8(removed ? removed : ""),
+               wxString::FromUTF8(inserted ? inserted : ""));
+}
+
+void wxd_DocEditor_SetLineNumbers(wxd_Window_t* editor, int width)
+{
+    if (DocEditor* e = Ed(editor)) e->SetLineNumbers(width);
+}
+
+void wxd_DocEditor_SetCaret(wxd_Window_t* editor, int row, int col, int anchor_row, int anchor_col, int keep_from_top,
+                            const char* caret_row_text)
+{
+    DocEditor* e = Ed(editor);
+    if (!e) return;
+    if (caret_row_text) {
+        const wxString text = wxString::FromUTF8(caret_row_text);
+        e->SetCaretPlace(row, col, anchor_row, anchor_col, keep_from_top, &text);
+    } else {
+        e->SetCaretPlace(row, col, anchor_row, anchor_col, keep_from_top, nullptr);
     }
-    e->SetRows(std::move(r), std::move(k), std::move(a), changed_from);
-}
-
-void wxd_DocEditor_SetLineNumbers(wxd_Window_t* editor, const char* const* labels, int count, int width)
-{
-    DocEditor* e = Ed(editor);
-    if (!e) return;
-    std::vector<wxString> l;
-    for (int i = 0; i < count; ++i) l.push_back(wxString::FromUTF8(labels && labels[i] ? labels[i] : ""));
-    e->SetLineNumbers(std::move(l), width);
-}
-
-void wxd_DocEditor_SetCaret(wxd_Window_t* editor, int row, int col, int anchor_row, int anchor_col, int keep_from_top)
-{
-    if (DocEditor* e = Ed(editor)) e->SetCaretPlace(row, col, anchor_row, anchor_col, keep_from_top);
 }
 
 int wxd_DocEditor_GetTopRow(wxd_Window_t* editor)
@@ -722,7 +842,7 @@ void wxd_DocEditor_SetAccessibleName(wxd_Window_t* editor, const char* name)
 #if !defined(__WXGTK__) && !defined(__WXMSW__) && !defined(__WXOSX__)
 void DocEditor::AccessibleInit() {}
 void DocEditor::AccessibleDone() {}
-void DocEditor::AccessibleTextChanged(int) {}
+void DocEditor::AccessibleTextChanged(int, const wxString&, const wxString&) {}
 void DocEditor::AccessibleCaretMoved() {}
 void DocEditor::AccessibleNameChanged() {}
 #endif

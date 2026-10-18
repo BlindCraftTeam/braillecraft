@@ -211,29 +211,30 @@ private:
 
 // The units of the window's text (spec 27 section 6): a character; a word, ending at white space; a line and a
 // paragraph, one row; a page, one formatted page (the rows between page break rows); the document.
+// A word never crosses a row (the line feed ends it), so it is found in the row's own text; a line is a row.
 int UnitStart(DocEditor* e, int offset, TextUnit unit)
 {
-    const wxString& text = e->AccessibleText();
-    const int n = (int)text.length();
+    const int n = e->AccessibleLength();
     offset = wxClip(offset, 0, n);
+    int row = 0, col = 0;
+    e->PlaceOf(offset, &row, &col);
+    const int rowStart = e->OffsetOf(row, 0);
     switch (unit) {
     case TextUnit_Character:
         return offset;
     case TextUnit_Format:
     case TextUnit_Word: {
-        int s = offset;
-        // Back over the spaces before the word to its start.
-        while (s > 0 && (text[s - 1] == ' ' || text[s - 1] == '\t') && !(s < n && text[s] != ' ' && text[s] != '\n'))
-            --s;
-        while (s > 0 && text[s - 1] != ' ' && text[s - 1] != '\n' && text[s - 1] != '\t') --s;
-        return s;
+        const wxString& text = e->AccessRowText(row);
+        const int len = wxMin(e->RowLength(row), (int)text.length());
+        int s = wxMin(col, len);
+        // Back over the spaces before the word to its start (a column at the row's end stands on its line feed).
+        while (s > 0 && (text[s - 1] == ' ' || text[s - 1] == '\t') && !(s < len && text[s] != ' ')) --s;
+        while (s > 0 && text[s - 1] != ' ' && text[s - 1] != '\t') --s;
+        return rowStart + s;
     }
     case TextUnit_Line:
-    case TextUnit_Paragraph: {
-        int s = offset;
-        while (s > 0 && text[s - 1] != '\n') --s;
-        return s;
-    }
+    case TextUnit_Paragraph:
+        return rowStart;
     case TextUnit_Page: {
         int row = 0, col = 0;
         e->PlaceOf(offset, &row, &col);
@@ -249,26 +250,28 @@ int UnitStart(DocEditor* e, int offset, TextUnit unit)
 
 int UnitEnd(DocEditor* e, int offset, TextUnit unit)
 {
-    const wxString& text = e->AccessibleText();
-    const int n = (int)text.length();
+    const int n = e->AccessibleLength();
     offset = wxClip(offset, 0, n);
+    int row = 0, col = 0;
+    e->PlaceOf(offset, &row, &col);
+    const int rowStart = e->OffsetOf(row, 0);
     switch (unit) {
     case TextUnit_Character:
         return wxMin(offset + 1, n);
     case TextUnit_Format:
     case TextUnit_Word: {
-        int en = offset;
-        while (en < n && text[en] != ' ' && text[en] != '\n' && text[en] != '\t') ++en;
-        while (en < n && (text[en] == ' ' || text[en] == '\t')) ++en;
-        if (en < n && text[en] == '\n' && en == offset) ++en;
-        return en;
+        const wxString& text = e->AccessRowText(row);
+        const int len = wxMin(e->RowLength(row), (int)text.length());
+        int en = wxMin(col, len);
+        while (en < len && text[en] != ' ' && text[en] != '\t') ++en;
+        while (en < len && (text[en] == ' ' || text[en] == '\t')) ++en;
+        // At the row's end the unit is its line feed.
+        if (en == len && en == col) return wxMin(rowStart + en + 1, n);
+        return rowStart + en;
     }
     case TextUnit_Line:
-    case TextUnit_Paragraph: {
-        int en = offset;
-        while (en < n && text[en] != '\n') ++en;
-        return wxMin(en + 1, n);
-    }
+    case TextUnit_Paragraph:
+        return wxMin(rowStart + e->RowLength(row) + 1, n);
     case TextUnit_Page: {
         int row = 0, col = 0;
         e->PlaceOf(offset, &row, &col);
@@ -349,7 +352,7 @@ public:
         *out = nullptr;
         DocEditor* e = Ed();
         if (!e) return UIA_E_ELEMENTNOTAVAILABLE;
-        wxString hay = e->AccessibleText().Mid(m_start, m_end - m_start);
+        wxString hay = e->AccessibleText(m_start, m_end);
         wxString needle(text);
         if (ignoreCase) {
             hay.MakeLower();
@@ -388,7 +391,7 @@ public:
         for (int row = r1; row <= r2 && row < e->RowCount(); ++row) {
             if (e->IsBreakRow(row)) continue;
             const int from = row == r1 ? c1 : 0;
-            const int to = row == r2 ? c2 : (int)e->RowText(row).length();
+            const int to = row == r2 ? c2 : e->RowLength(row);
             wxRect r = e->RowRect(row, from, wxMax(to, from));
             if (!r.Intersects(client)) continue;
             const wxPoint p = e->ClientToScreen(r.GetPosition());
@@ -413,7 +416,7 @@ public:
         if (!e) return UIA_E_ELEMENTNOTAVAILABLE;
         int len = m_end - m_start;
         if (maxLength >= 0 && maxLength < len) len = maxLength;
-        *out = SysAllocString(e->AccessibleText().Mid(m_start, len).wc_str());
+        *out = SysAllocString(e->AccessibleText(m_start, m_start + len).wc_str());
         return S_OK;
     }
     HRESULT STDMETHODCALLTYPE Move(TextUnit unit, int count, int* moved) override
@@ -423,7 +426,7 @@ public:
         DocEditor* e = Ed();
         if (!e) return UIA_E_ELEMENTNOTAVAILABLE;
         const bool degenerate = m_start == m_end;
-        const int n = (int)e->AccessibleText().length();
+        const int n = e->AccessibleLength();
         int at = UnitStart(e, m_start, unit);
         while (count > 0 && at < n) {
             const int next = UnitEnd(e, at, unit);
@@ -452,7 +455,7 @@ public:
         *moved = 0;
         DocEditor* e = Ed();
         if (!e) return UIA_E_ELEMENTNOTAVAILABLE;
-        const int n = (int)e->AccessibleText().length();
+        const int n = e->AccessibleLength();
         int at = which == TextPatternRangeEndpoint_Start ? m_start : m_end;
         while (count > 0 && at < n) {
             const int start = UnitStart(e, at, unit);
@@ -567,7 +570,7 @@ HRESULT Provider::get_DocumentRange(ITextRangeProvider** out)
     if (!out) return E_INVALIDARG;
     *out = nullptr;
     if (!m_editor) return UIA_E_ELEMENTNOTAVAILABLE;
-    *out = new TextRange(this, 0, (int)m_editor->AccessibleText().length());
+    *out = new TextRange(this, 0, m_editor->AccessibleLength());
     return S_OK;
 }
 
@@ -599,7 +602,7 @@ void DocEditor::AccessibleDone()
     m_accessible = nullptr;
 }
 
-void DocEditor::AccessibleTextChanged(int)
+void DocEditor::AccessibleTextChanged(int, const wxString&, const wxString&)
 {
     RaiseUiaEvent(this, UIA_Text_TextChangedEventId);
 }

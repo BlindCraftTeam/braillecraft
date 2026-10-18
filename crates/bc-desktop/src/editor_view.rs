@@ -1,7 +1,8 @@
 //! The editing area: the program-drawn editing window (vendor/wxdragon-sys wxd_doc_editor.h) showing a document's
 //! editor model (bc_core::editor), as the reference program draws its own editing window (spec 27, spec 30). The
-//! window draws the rows it is given, keeps the system caret and gives screen readers its text; every key, typed
-//! character and click comes back here and is carried out on the model (documents.rs).
+//! window is told how many rows there are and asks for a row's text as it draws, measures or reads it (so a book's
+//! rows are not held a second time in the window, plan line L1); it keeps the system caret and gives screen readers
+//! its text; every key, typed character and click comes back here and is carried out on the model (documents.rs).
 
 use std::ffi::{c_void, CString};
 use std::os::raw::{c_char, c_int};
@@ -54,6 +55,38 @@ extern "C" fn free_key(data: *mut c_void) {
     }
 }
 
+thread_local! {
+    /// The last row given to a window: the window copies it at once, so one is kept at a time.
+    static ROW_ANSWER: std::cell::RefCell<Option<CString>> = const { std::cell::RefCell::new(None) };
+}
+
+/// A row the window asks for: `which` 0 as drawn, 1 as screen readers get it, 2 its line number label. NULL while
+/// the program state is in use (the window asked during a call of the program's own: it asks again later).
+extern "C" fn on_row(data: *mut c_void, row: c_int, which: c_int) -> *const c_char {
+    let key = key_of(data);
+    let row = row.max(0) as usize;
+    let answer = crate::app::try_with_value(|a| {
+        let i = a.index_of(key)?;
+        let d = &a.docs[i];
+        let ed = &d.ed;
+        Some(match which {
+            2 => match ed.row(row) {
+                Some(Row::Line { line, .. }) => (line + 1).to_string(),
+                _ => String::new(),
+            },
+            1 => row_form(ed, row, &ed.row_text(row), d.area_rows.forms.access, false),
+            _ => row_form(ed, row, &ed.row_text(row), d.area_rows.forms.paint, true),
+        })
+    });
+    match answer.flatten() {
+        Some(text) => ROW_ANSWER.with(|c| {
+            let mut c = c.borrow_mut();
+            c.insert(CString::new(text.replace('\0', " ")).unwrap_or_default()).as_ptr()
+        }),
+        None => std::ptr::null(),
+    }
+}
+
 /// Makes the editing window of document `key` in `parent`.
 pub fn create(parent: &impl WxWidget, key: u64) -> Area {
     let data = Box::into_raw(Box::new(key)) as *mut c_void;
@@ -66,18 +99,37 @@ pub fn create(parent: &impl WxWidget, key: u64) -> Area {
             Some(on_mouse),
             Some(on_focus),
             Some(free_key),
+            Some(on_row),
         )
     };
     Area(window)
 }
 
-/// What the window was last given, so a change gives it only what is new.
+/// What the window was last given, so a change gives it only what is new: the text screen readers get (each row
+/// and a line feed; the next text is compared with it to tell them the stretch that changed), the rows' kinds, the
+/// forms the rows are written in (the window asks for rows in them), and whether the line number column is shown.
 #[derive(Default)]
 pub struct ShownRows {
-    rows: Vec<String>,
-    access: Vec<String>,
-    kinds: Vec<c_int>,
-    labels: Vec<String>,
+    access_text: String,
+    kinds: Vec<u8>,
+    paint_id: Option<String>,
+    pub forms: CellForms,
+    line_numbers: Option<bool>,
+}
+
+/// Where `old` and `new` differ: the offset in characters of the first difference, and the stretch of each from
+/// there that is not shared with the other's end.
+fn changed_stretch(old: &str, new: &str) -> (usize, String, String) {
+    let mut p = old.bytes().zip(new.bytes()).take_while(|(a, b)| a == b).count();
+    while !old.is_char_boundary(p) {
+        p -= 1;
+    }
+    let (ot, nt) = (&old[p..], &new[p..]);
+    let mut s = ot.bytes().rev().zip(nt.bytes().rev()).take_while(|(a, b)| a == b).count();
+    while !ot.is_char_boundary(ot.len() - s) || !nt.is_char_boundary(nt.len() - s) {
+        s -= 1;
+    }
+    (old[..p].chars().count(), ot[..ot.len() - s].to_string(), nt[..nt.len() - s].to_string())
 }
 
 /// How a braille document's cells are written in the window (Global, Internationalization): as the document holds
@@ -133,57 +185,66 @@ impl Area {
         if self.0.is_null() {
             return;
         }
+        last.forms = forms;
+        // The rows' kinds and lengths, and the text screen readers get, row by row: the window holds none of the
+        // rows (it asks for each as it needs it, on_row), so a long document costs it only a few bytes a row.
         let count = ed.rows();
-        let mut rows = Vec::with_capacity(count);
-        let mut access = Vec::new();
-        let separate = forms.paint.map(|e| &e.id) != forms.access.map(|e| &e.id);
-        let mut kinds = Vec::with_capacity(count);
-        let mut labels = Vec::with_capacity(if line_numbers { count } else { 0 });
+        let mut kinds: Vec<u8> = Vec::with_capacity(count);
+        let mut lengths: Vec<c_int> = Vec::with_capacity(count);
+        let mut now = String::with_capacity(last.access_text.len());
+        let mut longest = ed.row_width();
         for r in 0..count {
-            let row = ed.row(r);
-            let text = ed.row_text(r);
-            if separate {
-                access.push(row_form(ed, r, &text, forms.access, false));
-            }
-            rows.push(row_form(ed, r, &text, forms.paint, true));
-            kinds.push(c_int::from(matches!(row, Some(Row::Break { .. }))));
-            if line_numbers {
-                labels.push(match row {
-                    Some(Row::Line { line, .. }) => (line + 1).to_string(),
-                    _ => String::new(),
-                });
+            match ed.row(r) {
+                Some(Row::Line { .. }) | Some(Row::Coded { .. }) => {
+                    let access = row_form(ed, r, &ed.row_text(r), forms.access, false);
+                    let len = access.chars().count();
+                    kinds.push(0);
+                    lengths.push(len as c_int);
+                    longest = longest.max(len);
+                    now.push_str(&access);
+                    now.push('\n');
+                }
+                _ => {
+                    kinds.push(1);
+                    lengths.push(0);
+                }
             }
         }
-        if rows != last.rows || kinds != last.kinds || access != last.access {
-            let changed_from = rows
-                .iter()
-                .zip(&last.rows)
-                .zip(kinds.iter().zip(&last.kinds))
-                .enumerate()
-                .take_while(|(k, ((a, b), (c, d)))| a == b && c == d && access.get(*k) == last.access.get(*k))
-                .count();
-            let cstrings = |v: &[String]| -> Vec<CString> { v.iter().map(|s| CString::new(s.replace('\0', " ")).unwrap_or_default()).collect() };
-            let (c, ca) = (cstrings(&rows), cstrings(&access));
-            let p: Vec<*const c_char> = c.iter().map(|s| s.as_ptr()).collect();
-            let pa: Vec<*const c_char> = ca.iter().map(|s| s.as_ptr()).collect();
-            // The screen reader text, when it is written otherwise than what is drawn.
-            let access_ptr = if pa.is_empty() { std::ptr::null() } else { pa.as_ptr() };
-            unsafe { ffi::wxd_DocEditor_SetRows(self.0, p.as_ptr(), kinds.as_ptr(), access_ptr, p.len() as c_int, changed_from as c_int) };
-            last.rows = rows;
-            last.access = access;
+        let paint_id = forms.paint.map(|e| e.id.clone());
+        if now != last.access_text || kinds != last.kinds || paint_id != last.paint_id || last.line_numbers.is_none() {
+            // Screen readers are told the stretch that changed.
+            let (at, removed, inserted) = changed_stretch(&last.access_text, &now);
+            let removed = CString::new(removed.replace('\0', " ")).unwrap_or_default();
+            let inserted = CString::new(inserted.replace('\0', " ")).unwrap_or_default();
+            unsafe {
+                ffi::wxd_DocEditor_SetRows(
+                    self.0,
+                    count as c_int,
+                    kinds.as_ptr(),
+                    lengths.as_ptr(),
+                    longest as c_int,
+                    at as c_int,
+                    removed.as_ptr(),
+                    inserted.as_ptr(),
+                )
+            };
+            last.access_text = now;
             last.kinds = kinds;
+            last.paint_id = paint_id;
         }
-        if labels != last.labels {
-            let c: Vec<CString> = labels.iter().map(|s| CString::new(s.as_str()).unwrap_or_default()).collect();
-            let p: Vec<*const c_char> = c.iter().map(|s| s.as_ptr()).collect();
+        if last.line_numbers != Some(line_numbers) {
             let width = if line_numbers { LINE_NUMBER_WIDTH } else { 0 };
-            unsafe { ffi::wxd_DocEditor_SetLineNumbers(self.0, p.as_ptr(), p.len() as c_int, width) };
-            last.labels = labels;
+            unsafe { ffi::wxd_DocEditor_SetLineNumbers(self.0, width) };
+            last.line_numbers = Some(line_numbers);
         }
         let (row, col) = ed.caret_place();
         let (arow, acol) = ed.place(ed.anchor);
         let keep = keep_from_top.map_or(-1, |k| k as c_int);
-        unsafe { ffi::wxd_DocEditor_SetCaret(self.0, row as c_int, col as c_int, arow as c_int, acol as c_int, keep) };
+        // The caret row's text goes with the caret: the window cannot ask for it while the program is in here.
+        let caret_row = CString::new(row_form(ed, row, &ed.row_text(row), forms.paint, true).replace('\0', " ")).unwrap_or_default();
+        unsafe {
+            ffi::wxd_DocEditor_SetCaret(self.0, row as c_int, col as c_int, arow as c_int, acol as c_int, keep, caret_row.as_ptr())
+        };
     }
 
     /// The first row shown and the number of whole rows shown.

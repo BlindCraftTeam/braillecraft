@@ -82,9 +82,9 @@ fn text_of(codes: &[i64]) -> String {
 
 /// The three reading layers. The table is passed in on each call because format words met while scanning can
 /// change its line, space and paragraph modes.
-struct Reader {
-    inp: Vec<i64>,
-    ip: usize,
+struct Reader<'a> {
+    /// The input codes, read once each in order: a large file is never held as a vector of codes.
+    inp: Box<dyn Iterator<Item = i64> + 'a>,
     pend: i64,
     ff_i: usize,
     lines: i64,
@@ -105,11 +105,10 @@ struct Reader {
     eof: i64,
 }
 
-impl Reader {
-    fn new(t: &ScanTable, codes: Vec<i64>, eof: i64) -> Reader {
+impl<'a> Reader<'a> {
+    fn new(t: &ScanTable, codes: Box<dyn Iterator<Item = i64> + 'a>, eof: i64) -> Reader<'a> {
         let mut r = Reader {
             inp: codes,
-            ip: 0,
             eof,
             pend: 0xff00,
             ff_i: 0,
@@ -133,13 +132,7 @@ impl Reader {
 
     /// One input code; at the end, the end code (every time it is asked).
     fn byte(&mut self) -> i64 {
-        match self.inp.get(self.ip) {
-            Some(&c) => {
-                self.ip += 1;
-                c
-            }
-            None => self.eof,
-        }
+        self.inp.next().unwrap_or(self.eof)
     }
 
     fn raw(&mut self, t: &ScanTable) -> i64 {
@@ -421,7 +414,7 @@ struct Scanner<'a> {
     /// The next free place in the shared character buffer, and the ring slot of the next word to write.
     pos: usize,
     head: usize,
-    rd: Reader,
+    rd: Reader<'a>,
     /// The output characters: [0] flag, [1] capital sign, [2] two-character format word, [3] format word,
     /// [4] capital termination, [8] the nxsls setting.
     c: [i64; 9],
@@ -436,11 +429,12 @@ struct Scanner<'a> {
     caps_enabled: bool,
     cessation_on: i64,
     queue: std::collections::VecDeque<i64>,
-    out: Vec<i64>,
+    /// Where each output code goes: the caller's vector of codes, or a file's bytes.
+    out: Box<dyn FnMut(i64) + 'a>,
 }
 
 impl<'a> Scanner<'a> {
-    fn new(t: ScanTable, codes: Vec<i64>, eof: i64, styles: Option<&'a StyleTable>) -> Scanner<'a> {
+    fn new(t: ScanTable, codes: Box<dyn Iterator<Item = i64> + 'a>, eof: i64, styles: Option<&'a StyleTable>, out: Box<dyn FnMut(i64) + 'a>) -> Scanner<'a> {
         let rd = Reader::new(&t, codes, eof);
         // Capital signs are written only when words are folded and the table has a capital sign.
         let caps_enabled = t.fold_words != 2 && t.out_cap != 0;
@@ -473,7 +467,7 @@ impl<'a> Scanner<'a> {
             caps_enabled,
             cessation_on,
             queue: Default::default(),
-            out: Vec::new(),
+            out,
         }
     }
 
@@ -908,22 +902,22 @@ impl<'a> Scanner<'a> {
     /// Writes a code (a two-byte code first byte first), then whatever was queued.
     fn put(&mut self, c: i64) {
         if c > 0xff {
-            self.out.push(c >> 8);
-            self.out.push(c & 0xff);
+            (self.out)(c >> 8);
+            (self.out)(c & 0xff);
         } else {
-            self.out.push(c);
+            (self.out)(c);
         }
         while let Some(q) = self.queue.pop_front() {
-            self.out.push(q);
+            (self.out)(q);
         }
     }
 
     fn end_of_input(&mut self) {
         if self.t.spare > 1 {
-            self.out.push(0xff);
-            self.out.push(0x7f);
+            (self.out)(0xff);
+            (self.out)(0x7f);
         }
-        self.out.push(EOF_OUT);
+        (self.out)(EOF_OUT);
     }
 
     fn run(&mut self) -> Result<(), EngineError> {
@@ -1135,63 +1129,104 @@ impl<'a> Scanner<'a> {
     }
 }
 
-/// The scanner's output for `codes` (code page 437 codes): the codes the rule engine reads, ending with 0x100.
-pub(crate) fn scan(t: &ScanTable, codes: Vec<i64>, styles: Option<&StyleTable>) -> Result<Vec<i64>, EngineError> {
-    let mut s = Scanner::new(t.clone(), codes, 0xff01, styles);
-    s.run()?;
-    Ok(s.out)
+/// The scanner's output for internal text given as its bytes (two-byte codes as their two bytes, first byte
+/// first), the end code left out: the codes the rule engine reads. The bytes are read one at a time, so the text is
+/// never held as eight-byte codes before the scan.
+pub(crate) fn scan_bytes(t: &ScanTable, bytes: Vec<u8>, styles: Option<&StyleTable>) -> Result<Vec<i64>, EngineError> {
+    let mut out = Vec::with_capacity(bytes.len() + bytes.len() / 8);
+    {
+        let sink = |c: i64| {
+            if c != super::chars::EOF {
+                out.push(c);
+            }
+        };
+        let mut s = Scanner::new(t.clone(), Box::new(bytes.into_iter().map(i64::from)), 0xff01, styles, Box::new(sink));
+        s.run()?;
+    }
+    Ok(out)
 }
 
-/// The codes the scanner reads from the bytes of a file: a line end (CR, LF, CR LF or LF CR) is one LF; a byte
-/// marked as the first of a two-byte code makes one code with the byte after it (a later first byte starts it
-/// again; after 0x9C, a byte with a one-byte capital gives that capital, any other byte stays 0x9C and the byte);
-/// a first byte at the end of the file is dropped.
-fn file_codes(bytes: &[u8]) -> Vec<i64> {
-    let mut lines = Vec::with_capacity(bytes.len());
-    let mut i = 0;
-    while i < bytes.len() {
-        let c = bytes[i];
-        i += 1;
+/// The codes the scanner reads from the bytes of a file, one at a time: a line end (CR, LF, CR LF or LF CR) is one
+/// LF; a byte marked as the first of a two-byte code makes one code with the byte after it (a later first byte
+/// starts it again; after 0x9C, a byte with a one-byte capital gives that capital, any other byte stays 0x9C and
+/// the byte); a first byte at the end of the file is dropped.
+struct FileCodes<'a> {
+    bytes: &'a [u8],
+    i: usize,
+    lead: Option<i64>,
+}
+
+impl FileCodes<'_> {
+    /// The next byte as a code, line ends joined; None at the end.
+    fn line_code(&mut self) -> Option<i64> {
+        let c = *self.bytes.get(self.i)?;
+        self.i += 1;
         if c == b'\n' || c == b'\r' {
             // The other line-end byte right after it belongs to the same line end.
-            if let Some(&d) = bytes.get(i) {
+            if let Some(&d) = self.bytes.get(self.i) {
                 if (d == b'\n' || d == b'\r') && d != c {
-                    i += 1;
+                    self.i += 1;
                 }
             }
-            lines.push(0x0a);
+            Some(0x0a)
         } else {
-            lines.push(i64::from(c));
+            Some(i64::from(c))
         }
     }
-    let mut out = Vec::with_capacity(lines.len());
-    let mut lead: Option<i64> = None;
-    for c in lines {
-        if super::chars::flags(c) & 0x20 != 0 {
-            lead = Some(c << 8);
-            continue;
-        }
-        match lead.take() {
-            None => out.push(c),
-            Some(0x9c00) => {
-                let upper = super::chars::kind(c).2;
-                out.push(if upper == 0x9c { 0x9c00 | c } else { upper });
+}
+
+impl Iterator for FileCodes<'_> {
+    type Item = i64;
+
+    fn next(&mut self) -> Option<i64> {
+        loop {
+            let c = self.line_code()?;
+            if super::chars::flags(c) & 0x20 != 0 {
+                self.lead = Some(c << 8);
+                continue;
             }
-            Some(l) => out.push(l | c),
+            return Some(match self.lead.take() {
+                None => c,
+                Some(0x9c00) => {
+                    let upper = super::chars::kind(c).2;
+                    if upper == 0x9c {
+                        0x9c00 | c
+                    } else {
+                        upper
+                    }
+                }
+                Some(l) => l | c,
+            });
         }
     }
-    out
+}
+
+#[cfg(test)]
+fn file_codes(bytes: &[u8]) -> Vec<i64> {
+    FileCodes { bytes, i: 0, lead: None }.collect()
 }
 
 /// The import scan of a file: the bytes read through the scanner with `t` (no styles), each code it gives written
 /// as its low byte until the end. The reference uses it on braille and print text files before the import rules.
+/// The bytes are read and the codes written one at a time, so the file is never held as codes.
 pub(crate) fn scan_file(t: &ScanTable, bytes: &[u8]) -> Result<Vec<u8>, EngineError> {
     if t.binmod != 0 || t.ninmod != 0 || t.spare != 0 || t.icb != 0 {
         return Err(EngineError::NotSupported("import scan tables other than text mode"));
     }
-    let mut s = Scanner::new(t.clone(), file_codes(bytes), 0xff7f, None);
-    s.run()?;
-    Ok(s.out.iter().take_while(|&&c| c != EOF_OUT).map(|&c| (c & 0xff) as u8).collect())
+    let mut out = Vec::with_capacity(bytes.len() + bytes.len() / 8);
+    let mut ended = false;
+    {
+        let sink = |c: i64| {
+            if c == EOF_OUT {
+                ended = true;
+            } else if !ended {
+                out.push((c & 0xff) as u8);
+            }
+        };
+        let mut s = Scanner::new(t.clone(), Box::new(FileCodes { bytes, i: 0, lead: None }), 0xff7f, None, Box::new(sink));
+        s.run()?;
+    }
+    Ok(out)
 }
 
 #[cfg(test)]

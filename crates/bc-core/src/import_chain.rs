@@ -113,35 +113,75 @@ pub const SGML_RULE_SCRIPTS: [&str; 2] = ["sgml-spaces.rules", "sgml-post.rules"
 
 /// Runs the recipe over the file's bytes.
 pub fn run(bytes: &[u8], recipe: &Recipe, files: &dyn Files) -> Imported {
+    run_with(bytes, recipe, files, &mut |_, _| {})
+}
+
+/// Runs the recipe over the file's bytes and reports each step as it finishes: the step's name and the size of
+/// the text after it (for a progress window, and for the large-document measurements).
+pub fn run_with(bytes: &[u8], recipe: &Recipe, files: &dyn Files, progress: &mut dyn FnMut(&str, usize)) -> Imported {
     let mut out = Imported::default();
-    let mut text = bytes.to_vec();
-    let script = |name: &str, text: &mut Vec<u8>, errors: &mut Vec<String>| match files.rule_script(name) {
-        Ok(mut s) => match s.run(text) {
-            Ok(t) => *text = t,
-            Err(e) => errors.push(format!("{name}: {e}")),
-        },
-        Err(e) => errors.push(format!("{name}: {e}")),
+    // The chains that read the file's bytes as they are take no copy of them.
+    match recipe {
+        Recipe::Docx(opt, map, unknown) => {
+            docx(bytes, opt, map, *unknown, files, &mut out, progress);
+            return out;
+        }
+        Recipe::Html(opt, unknown) => {
+            let html = String::from_utf8_lossy(bytes);
+            let html = match html {
+                std::borrow::Cow::Borrowed(h) => std::borrow::Cow::Borrowed(h.strip_prefix('\u{feff}').unwrap_or(h)),
+                std::borrow::Cow::Owned(h) => std::borrow::Cow::Owned(h.strip_prefix('\u{feff}').map(str::to_string).unwrap_or(h)),
+            };
+            html_chain(html, opt, *unknown, files, &mut out, progress);
+            return out;
+        }
+        Recipe::Markdown(opt, unknown) => {
+            let markdown = String::from_utf8_lossy(bytes);
+            let markdown = markdown.strip_prefix('\u{feff}').unwrap_or(&markdown);
+            let html = crate::markdown::to_html(markdown);
+            progress("markdown to html", html.len());
+            html_chain(std::borrow::Cow::Owned(html), opt, *unknown, files, &mut out, progress);
+            return out;
+        }
+        _ => {}
+    }
+    let mut text = match recipe {
+        // Coded text is decoded straight from the file's bytes.
+        Recipe::CodedText(page, unknown) => coded_text_bytes(bytes, page, *unknown),
+        _ => bytes.to_vec(),
     };
-    let scan = |name: &str, text: &mut Vec<u8>, errors: &mut Vec<String>| {
+    let script =|name: &str, text: &mut Vec<u8>, errors: &mut Vec<String>, progress: &mut dyn FnMut(&str, usize)| {
+        match files.rule_script(name) {
+            Ok(mut s) => match s.run(text) {
+                Ok(t) => *text = t,
+                Err(e) => errors.push(format!("{name}: {e}")),
+            },
+            Err(e) => errors.push(format!("{name}: {e}")),
+        }
+        progress(name, text.len());
+    };
+    let scan = |name: &str, text: &mut Vec<u8>, errors: &mut Vec<String>, progress: &mut dyn FnMut(&str, usize)| {
         match files.scan_table(name).and_then(|t| crate::engine::import_scan(&t, text).map_err(|e| format!("{e:?}"))) {
             Ok(t) => *text = t,
             Err(e) => errors.push(format!("{name}: {e}")),
         }
+        progress(name, text.len());
     };
     match recipe {
         Recipe::FormattedBraille(settings) => {
             if settings.preserve {
-                script("page-end-blanks.rules", &mut text, &mut out.errors);
+                script("page-end-blanks.rules", &mut text, &mut out.errors, progress);
             }
             let (t, w) = braide::braide(&text, *settings);
             text = t;
             out.warnings = w;
-            scan(BRAILLE_SCAN, &mut text, &mut out.errors);
+            progress("braide", text.len());
+            scan(BRAILLE_SCAN, &mut text, &mut out.errors, progress);
         }
-        Recipe::CodedBraille => scan(BRAILLE_SCAN, &mut text, &mut out.errors),
-        Recipe::CodedText(page, unknown) => {
-            text = coded_text_bytes(&text, page, *unknown);
-            scan(PRINT_SCAN, &mut text, &mut out.errors);
+        Recipe::CodedBraille => scan(BRAILLE_SCAN, &mut text, &mut out.errors, progress),
+        Recipe::CodedText(..) => {
+            progress("coded text", text.len());
+            scan(PRINT_SCAN, &mut text, &mut out.errors, progress);
         }
         Recipe::FormattedText(unknown) => {
             // The importer's substitution set is the code page family the file's first 512 bytes look like (-1, its
@@ -151,6 +191,7 @@ pub fn run(bytes: &[u8], recipe: &Recipe, files: &dyn Files) -> Imported {
                 Ok(f) => text = crate::pimbri::pimbri(&text, set, &f),
                 Err(e) => out.errors.push(format!("text factors: {e}")),
             }
+            progress("pimbri", text.len());
             match files.unimap_tables() {
                 Ok(tables) => {
                     let refs: Vec<(&str, &[u8])> = tables.iter().map(|(n, b)| (n.as_str(), b.as_slice())).collect();
@@ -158,34 +199,21 @@ pub fn run(bytes: &[u8], recipe: &Recipe, files: &dyn Files) -> Imported {
                 }
                 Err(e) => out.errors.push(format!("unimap: {e}")),
             }
+            progress("unimap", text.len());
             text = coded_text_bytes(&text, "UTF-8", *unknown);
-            scan(PRINT_SCAN, &mut text, &mut out.errors);
+            progress("coded text", text.len());
+            scan(PRINT_SCAN, &mut text, &mut out.errors, progress);
         }
         Recipe::Orbit => {
-            script("orbit-lines.rules", &mut text, &mut out.errors);
-            scan(BRAILLE_SCAN, &mut text, &mut out.errors);
-            nemeth(files, &mut text, &mut out.errors, true);
+            script("orbit-lines.rules", &mut text, &mut out.errors, progress);
+            scan(BRAILLE_SCAN, &mut text, &mut out.errors, progress);
+            nemeth(files, &mut text, &mut out.errors, true, progress);
             out.text = text;
             return out;
         }
-        Recipe::Docx(opt, map, unknown) => {
-            docx(&text, opt, map, *unknown, files, &mut out);
-            return out;
-        }
-        Recipe::Html(opt, unknown) => {
-            let html = String::from_utf8_lossy(&text);
-            let html = html.strip_prefix('\u{feff}').unwrap_or(&html);
-            html_chain(html, opt, *unknown, files, &mut out);
-            return out;
-        }
-        Recipe::Markdown(opt, unknown) => {
-            let markdown = String::from_utf8_lossy(&text);
-            let markdown = markdown.strip_prefix('\u{feff}').unwrap_or(&markdown);
-            html_chain(&crate::markdown::to_html(markdown), opt, *unknown, files, &mut out);
-            return out;
-        }
+        Recipe::Docx(..) | Recipe::Html(..) | Recipe::Markdown(..) => unreachable!("run above"),
     }
-    script("ninit-codes.rules", &mut text, &mut out.errors);
+    script("ninit-codes.rules", &mut text, &mut out.errors, progress);
     // Tables to outlines is optional in the recipes: it runs when it is there. The optional maths step that follows
     // it in the recipes is not part of the reference program's installation, so there is nothing to run.
     if let Ok(mut s) = files.rule_script("table-outline.rules") {
@@ -193,12 +221,13 @@ pub fn run(bytes: &[u8], recipe: &Recipe, files: &dyn Files) -> Imported {
             Ok(t) => text = t,
             Err(e) => out.errors.push(format!("table-outline.rules: {e}")),
         }
+        progress("table-outline.rules", text.len());
     }
     for _ in 0..3 {
-        script("normalize-spaces.rules", &mut text, &mut out.errors);
+        script("normalize-spaces.rules", &mut text, &mut out.errors, progress);
     }
     if matches!(recipe, Recipe::FormattedBraille(_)) {
-        nemeth(files, &mut text, &mut out.errors, false);
+        nemeth(files, &mut text, &mut out.errors, false, progress);
     }
     out.text = text;
     out
@@ -208,24 +237,30 @@ pub fn run(bytes: &[u8], recipe: &Recipe, files: &dyn Files) -> Imported {
 /// map (so no scrub rules), then the entity, element, space, emphasis, code and post scripts, the character map, the
 /// Han script, the character step (no apostrophe override) with the quotes script, the hyperlinks step, the optional
 /// tables script, and spaces normalised three times. The control-character step runs inside the tag processor.
-fn html_chain(html: &str, opt: &crate::word::Options, unknown: u8, files: &dyn Files, out: &mut Imported) {
-    let script = |name: &str, text: &mut Vec<u8>, errors: &mut Vec<String>| match files.rule_script(name) {
-        Ok(mut s) => match s.run(text) {
-            Ok(t) => *text = t,
+fn html_chain(html: std::borrow::Cow<str>, opt: &crate::word::Options, unknown: u8, files: &dyn Files, out: &mut Imported, progress: &mut dyn FnMut(&str, usize)) {
+    let script = |name: &str, text: &mut Vec<u8>, errors: &mut Vec<String>, progress: &mut dyn FnMut(&str, usize)| {
+        match files.rule_script(name) {
+            Ok(mut s) => match s.run(text) {
+                Ok(t) => *text = t,
+                Err(e) => errors.push(format!("{name}: {e}")),
+            },
             Err(e) => errors.push(format!("{name}: {e}")),
-        },
-        Err(e) => errors.push(format!("{name}: {e}")),
+        }
+        progress(name, text.len());
     };
-    let processed = match crate::word::process_html(html, opt) {
+    let processed = match crate::word::process_html(&html, opt) {
         Ok(p) => p,
         Err(e) => {
             out.errors.push(e);
             return;
         }
     };
+    // The HTML text (the Markdown conversion's own string) is not held through the steps that follow.
+    drop(html);
     let mut text = processed.text.into_bytes();
+    progress("tag processor", text.len());
     for name in ["word-entities.rules", "word-elements.rules", "sgml-spaces.rules", "word-emphasis.rules", "word-codes.rules", "sgml-post.rules"] {
-        script(name, &mut text, &mut out.errors);
+        script(name, &mut text, &mut out.errors, progress);
     }
     match files.unimap_tables() {
         Ok(tables) => {
@@ -234,21 +269,23 @@ fn html_chain(html: &str, opt: &crate::word::Options, unknown: u8, files: &dyn F
         }
         Err(e) => out.errors.push(format!("unimap: {e}")),
     }
-    script("word-han-chars.rules", &mut text, &mut out.errors);
+    progress("unimap", text.len());
+    script("word-han-chars.rules", &mut text, &mut out.errors, progress);
     // utf8dusci with no arguments: the quotes classed by their neighbours, no apostrophe override.
-    let unicode = String::from_utf8_lossy(&text).into_owned();
-    let unicode = crate::word::quote_forms(&unicode, None, None, None);
-    text = coded_text_bytes(unicode.as_bytes(), "UTF-8", unknown);
-    script("word-quotes.rules", &mut text, &mut out.errors);
+    text = quotes_to_internal(&text, None, unknown);
+    progress("utf8dusci", text.len());
+    script("word-quotes.rules", &mut text, &mut out.errors, progress);
     text = crate::word::hyperlinks(&text, opt.hyperlinks, opt.remove_duplicates, if opt.auto_tag_cbc { 1 } else { 0 });
+    progress("hyperlinks", text.len());
     if let Ok(mut s) = files.rule_script("table-outline.rules") {
         match s.run(&text) {
             Ok(t) => text = t,
             Err(e) => out.errors.push(format!("table-outline.rules: {e}")),
         }
+        progress("table-outline.rules", text.len());
     }
     for _ in 0..3 {
-        script("normalize-spaces.rules", &mut text, &mut out.errors);
+        script("normalize-spaces.rules", &mut text, &mut out.errors, progress);
     }
     out.text = text;
 }
@@ -260,13 +297,16 @@ fn html_chain(html: &str, opt: &crate::word::Options, unknown: u8, files: &dyn F
 /// publishers' page script when print pages are the publishers', the user codes script when codes are allowed,
 /// the hyperlinks step, the math spacing scripts when spaces are added, the function spacing script, the dashes
 /// script when dash spaces are removed, the tables script, and spaces normalised once.
-fn docx(bytes: &[u8], opt: &crate::word::Options, map: &str, unknown: u8, files: &dyn Files, out: &mut Imported) {
-    let script = |name: &str, text: &mut Vec<u8>, errors: &mut Vec<String>| match files.rule_script(name) {
-        Ok(mut s) => match s.run(text) {
-            Ok(t) => *text = t,
+fn docx(bytes: &[u8], opt: &crate::word::Options, map: &str, unknown: u8, files: &dyn Files, out: &mut Imported, progress: &mut dyn FnMut(&str, usize)) {
+    let script = |name: &str, text: &mut Vec<u8>, errors: &mut Vec<String>, progress: &mut dyn FnMut(&str, usize)| {
+        match files.rule_script(name) {
+            Ok(mut s) => match s.run(text) {
+                Ok(t) => *text = t,
+                Err(e) => errors.push(format!("{name}: {e}")),
+            },
             Err(e) => errors.push(format!("{name}: {e}")),
-        },
-        Err(e) => errors.push(format!("{name}: {e}")),
+        }
+        progress(name, text.len());
     };
     let map_text = match files.word_map(map) {
         Ok(t) => t,
@@ -283,6 +323,7 @@ fn docx(bytes: &[u8], opt: &crate::word::Options, map: &str, unknown: u8, files:
         }
     };
     let mut text = processed.text.into_bytes();
+    progress("tag processor", text.len());
     if !processed.scrub_rules.is_empty() {
         match RuleScript::from_bytes(processed.scrub_rules.as_bytes(), None) {
             Ok(mut s) => match s.run(&text) {
@@ -291,9 +332,10 @@ fn docx(bytes: &[u8], opt: &crate::word::Options, map: &str, unknown: u8, files:
             },
             Err(e) => out.errors.push(format!("style map rules: {e}")),
         }
+        progress("style map rules", text.len());
     }
     for name in ["word-tags.rules", "word-entities.rules", "word-chars.rules", "word-elements.rules", "word-emphasis.rules", "word-codes.rules"] {
-        script(name, &mut text, &mut out.errors);
+        script(name, &mut text, &mut out.errors, progress);
     }
     match files.unimap_tables() {
         Ok(tables) => {
@@ -302,40 +344,42 @@ fn docx(bytes: &[u8], opt: &crate::word::Options, map: &str, unknown: u8, files:
         }
         Err(e) => out.errors.push(format!("unimap: {e}")),
     }
-    script("word-han-chars.rules", &mut text, &mut out.errors);
-    script("word-kana.rules", &mut text, &mut out.errors);
+    progress("unimap", text.len());
+    script("word-han-chars.rules", &mut text, &mut out.errors, progress);
+    script("word-kana.rules", &mut text, &mut out.errors, progress);
     // utf8dusci(U+02BC,U+2018,U+2019): the apostrophe override only, the quotes classed by their neighbours.
-    let unicode = String::from_utf8_lossy(&text).into_owned();
-    let unicode = crate::word::quote_forms(&unicode, Some('\u{2bc}'), None, None);
-    text = coded_text_bytes(unicode.as_bytes(), "UTF-8", unknown);
-    script("word-quotes.rules", &mut text, &mut out.errors);
+    text = quotes_to_internal(&text, Some('\u{2bc}'), unknown);
+    progress("utf8dusci", text.len());
+    script("word-quotes.rules", &mut text, &mut out.errors, progress);
     if opt.print_pages == crate::word::PrintPages::Publishers {
-        script("word-publisher-pages.rules", &mut text, &mut out.errors);
+        script("word-publisher-pages.rules", &mut text, &mut out.errors, progress);
     }
     if opt.codes {
-        script("word-user-codes.rules", &mut text, &mut out.errors);
+        script("word-user-codes.rules", &mut text, &mut out.errors, progress);
     }
     text = crate::word::hyperlinks(&text, opt.hyperlinks, opt.remove_duplicates, if opt.auto_tag_cbc { 1 } else { 0 });
+    progress("hyperlinks", text.len());
     if opt.add_spaces {
-        script("word-math-spacing.rules", &mut text, &mut out.errors);
-        script("word-math-spacing-2.rules", &mut text, &mut out.errors);
+        script("word-math-spacing.rules", &mut text, &mut out.errors, progress);
+        script("word-math-spacing-2.rules", &mut text, &mut out.errors, progress);
     }
-    script("word-functions.rules", &mut text, &mut out.errors);
+    script("word-functions.rules", &mut text, &mut out.errors, progress);
     if opt.remove_dash_spaces {
-        script("word-dashes.rules", &mut text, &mut out.errors);
+        script("word-dashes.rules", &mut text, &mut out.errors, progress);
     }
     // The tables script is optional in the recipe and is shipped, so it runs.
-    script("word-tables.rules", &mut text, &mut out.errors);
-    script("normalize-spaces.rules", &mut text, &mut out.errors);
+    script("word-tables.rules", &mut text, &mut out.errors, progress);
+    script("normalize-spaces.rules", &mut text, &mut out.errors, progress);
     out.text = text;
 }
 
 /// The Nemeth-in-UEB scripts: the first, the text reversed, the second on the reversed text, reversed back. In the
 /// Orbit recipe the two scripts are optional (run when they are there).
-fn nemeth(files: &dyn Files, text: &mut Vec<u8>, errors: &mut Vec<String>, optional: bool) {
+fn nemeth(files: &dyn Files, text: &mut Vec<u8>, errors: &mut Vec<String>, optional: bool, progress: &mut dyn FnMut(&str, usize)) {
     for (k, name) in ["nemeth-in-ueb-1.rules", "nemeth-in-ueb-2.rules"].into_iter().enumerate() {
         if k == 1 {
             *text = reversed(text);
+            progress("reversed", text.len());
         }
         match files.rule_script(name) {
             Ok(mut s) => match s.run(text) {
@@ -345,8 +389,45 @@ fn nemeth(files: &dyn Files, text: &mut Vec<u8>, errors: &mut Vec<String>, optio
             Err(_) if optional => {}
             Err(e) => errors.push(format!("{name}: {e}")),
         }
+        progress(name, text.len());
     }
     *text = reversed(text);
+    progress("reversed", text.len());
+}
+
+/// The character step (utf8dusci) over the UTF-8 text the character map gives: the quote forms, then as for coded
+/// text in UTF-8 (a byte order mark at the start dropped, the zero-width joiners taken out unless after the
+/// Malayalam virama, each character encoded), in one pass over the characters with no whole-text string between
+/// the steps.
+fn quotes_to_internal(text: &[u8], apostrophe: Option<char>, unknown: u8) -> Vec<u8> {
+    let unicode = String::from_utf8_lossy(text);
+    let mut chars = crate::word::quote_forms_chars(&unicode, apostrophe, None, None).peekable();
+    if chars.peek() == Some(&'\u{feff}') {
+        chars.next();
+    }
+    let mut out = Vec::with_capacity(text.len());
+    let mut prev = '\0';
+    let mut one = [0u8; 4];
+    for c in chars {
+        if c != '\u{200d}' || prev == '\u{0d4d}' {
+            encode_char(&mut out, c, &mut one, unknown);
+        }
+        prev = c;
+    }
+    out
+}
+
+/// One character as internal text; a character with no internal code becomes "*", nothing or "{U+XXXX}" as
+/// `unknown` says.
+fn encode_char(out: &mut Vec<u8>, c: char, one: &mut [u8; 4], unknown: u8) {
+    match crate::internal::encode(c.encode_utf8(one)) {
+        Ok(b) => out.extend_from_slice(&b),
+        Err(_) => match unknown {
+            0 => out.push(b'*'),
+            1 => {}
+            _ => out.extend_from_slice(format!("{{U+{:04X}}}", c as u32).as_bytes()),
+        },
+    }
 }
 
 /// Coded text as internal text: decoded in its code page (a byte order mark at the start dropped), each zero-width
@@ -355,25 +436,15 @@ fn nemeth(files: &dyn Files, text: &mut Vec<u8>, errors: &mut Vec<String>, optio
 fn coded_text_bytes(bytes: &[u8], page: &str, unknown: u8) -> Vec<u8> {
     let text = crate::codepages::decode(page, bytes);
     let text = text.strip_prefix('\u{feff}').unwrap_or(&text);
-    let mut kept = String::with_capacity(text.len());
+    // The joiners are taken out and the characters encoded in one pass: no kept copy of the text.
+    let mut out = Vec::with_capacity(text.len());
     let mut prev = '\0';
+    let mut one = [0u8; 4];
     for c in text.chars() {
         if c != '\u{200d}' || prev == '\u{0d4d}' {
-            kept.push(c);
+            encode_char(&mut out, c, &mut one, unknown);
         }
         prev = c;
-    }
-    let mut out = Vec::with_capacity(kept.len());
-    let mut one = [0u8; 4];
-    for c in kept.chars() {
-        match crate::internal::encode(c.encode_utf8(&mut one)) {
-            Ok(b) => out.extend_from_slice(&b),
-            Err(_) => match unknown {
-                0 => out.push(b'*'),
-                1 => {}
-                _ => out.extend_from_slice(format!("{{U+{:04X}}}", c as u32).as_bytes()),
-            },
-        }
     }
     out
 }
@@ -381,31 +452,44 @@ fn coded_text_bytes(bytes: &[u8], page: &str, unknown: u8) -> Vec<u8> {
 /// Internal text with its codes in reverse order: each two-byte code stays one code, and a format code (0x1C to the
 /// next 0x1F) stays whole and in its own order.
 pub fn reversed(bytes: &[u8]) -> Vec<u8> {
-    let mut units: Vec<&[u8]> = Vec::with_capacity(bytes.len());
+    // One bit per byte says whether a unit (a byte, or a two-byte code with its first byte) starts there: an
+    // eighth of the text, where a slice per unit would be sixteen times it (a large book is reversed twice).
+    let mut starts = vec![0u8; bytes.len() / 8 + 1];
     let mut i = 0;
     while i < bytes.len() {
-        let n = if crate::internal::is_first_byte(bytes[i]) && i + 1 < bytes.len() { 2 } else { 1 };
-        units.push(&bytes[i..i + n]);
-        i += n;
+        starts[i / 8] |= 1 << (i % 8);
+        i += if crate::internal::is_first_byte(bytes[i]) && i + 1 < bytes.len() { 2 } else { 1 };
     }
+    let is_start = |i: usize| starts[i / 8] & (1 << (i % 8)) != 0;
+    // The start of the unit that ends at `end`.
+    let unit_start = |end: usize| if end >= 2 && !is_start(end - 1) { end - 2 } else { end - 1 };
     let mut out = Vec::with_capacity(bytes.len());
-    let mut k = units.len();
-    while k > 0 {
-        k -= 1;
-        if units[k] == [0x1f] {
+    let mut end = bytes.len();
+    while end > 0 {
+        let start = unit_start(end);
+        if bytes[start..end] == [0x1f] {
             // Back to the code's start, written forward.
-            let end = k;
-            while k > 0 && units[k] != [0x1c] {
-                k -= 1;
+            let mut s = start;
+            while s > 0 && bytes[s..unit_end(bytes, s, &is_start)] != [0x1c] {
+                s = unit_start(s);
             }
-            for u in &units[k..=end] {
-                out.extend_from_slice(u);
-            }
+            out.extend_from_slice(&bytes[s..end]);
+            end = s;
         } else {
-            out.extend_from_slice(units[k]);
+            out.extend_from_slice(&bytes[start..end]);
+            end = start;
         }
     }
     out
+}
+
+/// The end of the unit that starts at `start`, given the unit-start map.
+fn unit_end(bytes: &[u8], start: usize, is_start: &dyn Fn(usize) -> bool) -> usize {
+    if start + 1 < bytes.len() && !is_start(start + 1) {
+        start + 2
+    } else {
+        start + 1
+    }
 }
 
 #[cfg(test)]

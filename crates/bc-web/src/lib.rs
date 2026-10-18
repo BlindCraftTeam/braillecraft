@@ -1264,7 +1264,7 @@ pub fn formatted_braille(text: &str, cells: u32, lines: u32, shown_cells: &str, 
     let shown: Vec<String> = serde_json::from_str(shown_cells).map_err(error)?;
     let cell_of = |c: char| shown.iter().position(|s| s.contains(c));
     let mut out = Vec::new();
-    for page in laid_out(text, cells, lines, true) {
+    for page in laid_out(text, cells, lines, true).iter() {
         for line in &page.lines {
             for c in line.text.trim_end_matches(' ').chars() {
                 let cell = if c == ' ' || c == '\u{a0}' { Some(0) } else { cell_of(c) };
@@ -1506,10 +1506,82 @@ pub fn set_page_numbering(numbers: Vec<u32>) {
     NUMBERING.with(|c| c.set(n));
 }
 
+/// The pages last laid out, kept with the document they came from: the status line asks for the layout at every
+/// caret move and key, and a textbook-sized document takes seconds to lay out whole, so the same document gives
+/// the same pages back, and an edited one is laid out again only from the page the edit is on (bc_core::format::
+/// reformat, as the desktop editor does), with the trail that makes that possible.
+struct KeptLayout {
+    doc: Shown,
+    layout: bc_core::format::Layout,
+    pages: std::rc::Rc<Vec<bc_core::format::Page>>,
+    trail: bc_core::format::Trail,
+}
+
+thread_local! {
+    static LAYOUT: std::cell::RefCell<Option<KeptLayout>> = const { std::cell::RefCell::new(None) };
+}
+
+/// The one edit that turns `old` into `new`, as character positions: the places `from` to `old_to` of `old` became
+/// `from` to `new_to` of `new` (the longest common start and end kept).
+fn edit_span(old: &str, new: &str) -> (usize, usize, usize) {
+    let (ob, nb) = (old.as_bytes(), new.as_bytes());
+    let mut start = ob.iter().zip(nb).take_while(|(a, b)| a == b).count();
+    while start > 0 && (!old.is_char_boundary(start) || !new.is_char_boundary(start)) {
+        start -= 1;
+    }
+    let most = ob.len().min(nb.len()) - start;
+    let mut end = ob.iter().rev().zip(nb.iter().rev()).take(most).take_while(|(a, b)| a == b).count();
+    while end > 0 && (!old.is_char_boundary(ob.len() - end) || !new.is_char_boundary(nb.len() - end)) {
+        end -= 1;
+    }
+    let from = old[..start].chars().count();
+    let old_to = from + old[start..ob.len() - end].chars().count();
+    let new_to = from + new[start..nb.len() - end].chars().count();
+    (from, old_to, new_to)
+}
+
 /// A document's pages: a braille document in braille pages, a print document in print pages, with the active
 /// document's page numbering (as the desktop program lays them out for the view, File Print and File Emboss).
-fn laid_out(text: &str, cells: u32, lines: u32, braille: bool) -> Vec<bc_core::format::Page> {
-    bc_core::format::format(&shown_of(text), &page_layout(cells, lines, braille), None)
+/// The pages of the document last laid out are kept (KeptLayout).
+fn laid_out(text: &str, cells: u32, lines: u32, braille: bool) -> std::rc::Rc<Vec<bc_core::format::Page>> {
+    let shown = shown_of(text);
+    let layout = page_layout(cells, lines, braille);
+    LAYOUT.with(|kept| {
+        let mut kept = kept.borrow_mut();
+        if let Some(k) = kept.as_mut() {
+            if k.layout == layout && k.doc == shown {
+                return k.pages.clone();
+            }
+            if k.layout == layout {
+                // The same document with one edit: laid out again from the page the edit is on, when the codes
+                // outside the edit are the old ones moved (a code that changed its place or extent elsewhere, as a
+                // bracket run becoming text, is a whole new layout).
+                let (from, old_to, new_to) = edit_span(&k.doc.text, &shown.text);
+                let delta = new_to as isize - old_to as isize;
+                let moved = |&(s, e): &(usize, usize)| if s >= old_to { ((s as isize + delta) as usize, (e as isize + delta) as usize) } else { (s, e) };
+                let outside = |c: &&(usize, usize)| c.1 <= from || c.0 >= old_to;
+                let old_outside: Vec<(usize, usize)> = k.doc.codes.iter().filter(outside).map(moved).collect();
+                let new_outside: Vec<(usize, usize)> = shown.codes.iter().filter(|c| c.1 <= from || c.0 >= new_to).copied().collect();
+                if old_outside == new_outside {
+                    let old = std::mem::take(&mut *kept);
+                    let (pages, trail) = match old {
+                        Some(KeptLayout { pages, trail, .. }) => {
+                            let pages = std::rc::Rc::try_unwrap(pages).unwrap_or_else(|rc| (*rc).clone());
+                            bc_core::format::reformat(pages, trail, &shown, &layout, None, from, old_to, new_to)
+                        }
+                        None => bc_core::format::format_traced(&shown, &layout, None),
+                    };
+                    let pages = std::rc::Rc::new(pages);
+                    *kept = Some(KeptLayout { doc: shown, layout, pages: pages.clone(), trail });
+                    return pages;
+                }
+            }
+        }
+        let (pages, trail) = bc_core::format::format_traced(&shown, &layout, None);
+        let pages = std::rc::Rc::new(pages);
+        *kept = Some(KeptLayout { doc: shown, layout, pages: pages.clone(), trail });
+        pages
+    })
 }
 
 /// The page layout a document is laid out with: its page size and the active document's page numbering.

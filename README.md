@@ -371,6 +371,11 @@ step does. The installers are made by the scripts in `packaging` (WiX 5 on Windo
 
 ## Notes
 
+- Large documents: a textbook of 1,500 pages (6 MB of Markdown) opens in about 2 seconds and lays out in about 1
+  second; the import, the layout, the translation and the editing window read the text in windows rather than
+  holding copies of it, so the whole program stays near 200 MB with such a book open, and the batch command line
+  translates it to BRF in under 300 MB. A test in the core crate makes a book of that size and holds every pass to a
+  bound. The web build keeps the same passes under the browser's memory ceiling.
 - Commits carry the author's name only, with no generated-by or co-author lines.
 
 ## License and credits

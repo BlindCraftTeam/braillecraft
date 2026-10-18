@@ -11,16 +11,18 @@
 class DocEditor : public wxScrolledCanvas {
 public:
     DocEditor(wxWindow* parent, void* data, wxd_DocEditor_KeyFn key, wxd_DocEditor_CharFn chr,
-              wxd_DocEditor_MouseFn mouse, wxd_DocEditor_FocusFn focus, wxd_DocEditor_FreeFn free_data);
+              wxd_DocEditor_MouseFn mouse, wxd_DocEditor_FocusFn focus, wxd_DocEditor_FreeFn free_data,
+              wxd_DocEditor_RowFn row);
     ~DocEditor() override;
 
     bool SetFont(const wxFont& font) override;
     bool AcceptsFocus() const override { return true; }
     bool AcceptsFocusFromKeyboard() const override { return true; }
 
-    void SetRows(std::vector<wxString> rows, std::vector<int> kinds, std::vector<wxString> access, int changedFrom);
-    void SetLineNumbers(std::vector<wxString> labels, int width);
-    void SetCaretPlace(int row, int col, int anchorRow, int anchorCol, int keepFromTop);
+    void SetRows(int count, const unsigned char* kinds, const int* lengths, int longest, int changedAt,
+                 const wxString& removed, const wxString& inserted);
+    void SetLineNumbers(int width);
+    void SetCaretPlace(int row, int col, int anchorRow, int anchorCol, int keepFromTop, const wxString* caretRowText);
     void PlaceCaret();
     int GetTopRow() const;
     int GetVisibleRows() const;
@@ -28,16 +30,30 @@ public:
     int CaretCol() const { return m_caretCol; }
     int AnchorRow() const { return m_anchorRow; }
     int AnchorCol() const { return m_anchorCol; }
-    int RowCount() const { return (int)m_rows.size(); }
+    int RowCount() const { return m_rowCount; }
     int RowHeight() const { return m_rowHeight; }
-    const wxString& RowText(int row) const { return m_rows[row]; }
-    bool IsBreakRow(int row) const { return row >= 0 && row < (int)m_kinds.size() && m_kinds[row] == 1; }
+    bool IsBreakRow(int row) const { return row >= 0 && row < m_rowCount && m_kinds[row] == 1; }
+    // The length in characters of row `row`'s text (0 for a page break row), known without the text.
+    int RowLength(int row) const;
+    // Row `row`'s text as drawn (codes without their markers), asked of the program when the window does not hold it.
+    const wxString& RowText(int row) { return Entry(row).text; }
     wxRect CaretRectOnScreen();
 
-    // The accessible text and the maps between its offsets and rows and columns.
-    const wxString& AccessibleText();
+    // The text screen readers get (each text row and a line feed; page break rows not in it), by parts, and the
+    // maps between its offsets and rows and columns. The whole is never held: a part is put together from the rows
+    // it covers when it is asked for.
+    int AccessibleLength() const;
+    wxString AccessibleText(int start, int end);
+    wxUniChar AccessibleChar(int offset);
+    // Screen readers' text of row `row` (empty for a page break row).
+    const wxString& AccessRowText(int row);
     int OffsetOf(int row, int col);
     void PlaceOf(int offset, int* row, int* col);
+    // The row holding offset `offset` of the accessible text.
+    int RowOfOffset(int offset) const;
+    // The line (0-based, text rows only) holding offset `offset`, and the row of line `line`.
+    int LineOfOffset(int offset) const;
+    int RowOfLine(int line) const;
     wxRect RowRect(int row, int from, int to);
     int ColumnAt(int row, int x);
     int ColumnX(int row, int col);
@@ -49,15 +65,15 @@ public:
         }
     }
 
-    // Per system (doc_editor_gtk.cpp, doc_editor_msw.cpp, doc_editor_osx.mm).
+    // Per system (doc_editor_gtk.cpp, doc_editor_msw.cpp, doc_editor_osx.mm). The text changed at offset `at` of
+    // the accessible text: `removed` went out there and `inserted` came in.
     void AccessibleInit();
     void AccessibleDone();
-    void AccessibleTextChanged(int fromRow);
+    void AccessibleTextChanged(int at, const wxString& removed, const wxString& inserted);
     void AccessibleCaretMoved();
     void AccessibleNameChanged();
     void* m_accessible = nullptr;
-    // What screen readers were last told: the text, the caret and the selection's ends (offsets in the text).
-    wxString m_accessiblePrevious;
+    // What screen readers were last told: the caret and the selection's ends (offsets in the text).
     int m_accessibleCaret = -1;
     int m_accessibleAnchor = -1;
     int m_accessibleCaretSelection = -1;
@@ -75,6 +91,20 @@ public:
 #endif
 
 private:
+    // A row the window holds: its text as drawn, the column ranges of its codes, and the x of each character
+    // boundary once measured. The window holds a bounded number of rows (each in the slot its number maps to).
+    struct RowEntry {
+        int row = -1;
+        wxString text;
+        std::vector<std::pair<int, int>> codes;
+        std::vector<int> extents;
+    };
+    struct TextEntry {
+        int row = -1;
+        wxString text;
+    };
+    RowEntry& Entry(int row);
+    const wxString& Label(int row);
     void UpdateVirtualSize();
     const std::vector<int>& Extents(int row);
     void ShowRow(int row, int keepFromTop);
@@ -93,14 +123,21 @@ private:
     wxd_DocEditor_FocusFn m_focus;
     wxd_DocEditor_FreeFn m_free;
 
-    std::vector<wxString> m_rows;
-    // What screen readers get in place of each row, when it differs from what is drawn (empty otherwise).
-    std::vector<wxString> m_accessRows;
-    std::vector<int> m_kinds;
-    // Per row, the column ranges (from, to) showing a code: drawn in the code font inside a box (spec 27 4a).
-    std::vector<std::vector<std::pair<int, int>>> m_codes;
-    std::vector<std::vector<int>> m_extents;
-    std::vector<wxString> m_labels;
+    wxd_DocEditor_RowFn m_row;
+
+    int m_rowCount = 0;
+    // Per row: its kind (0 text, 1 page break), and the offset of its start in the accessible text (one more entry,
+    // the text's length; a page break row starts where the next row does).
+    std::vector<unsigned char> m_kinds;
+    std::vector<int> m_rowStart;
+    int m_longest = 0;
+    // The rows held: as drawn, as screen readers get them, and their line number labels.
+    std::vector<RowEntry> m_cache;
+    std::vector<TextEntry> m_accessCache;
+    std::vector<TextEntry> m_labelCache;
+    // A row the program could not give now: used once, not kept.
+    RowEntry m_unanswered;
+    wxString m_empty;
     int m_gutter = 0;
     int m_margin = 4;
     int m_rowHeight = 16;
@@ -116,10 +153,6 @@ private:
     int m_codePad = 0;
     int m_codeRaise = 0;
     int m_caretRow = 0, m_caretCol = 0, m_anchorRow = 0, m_anchorCol = 0;
-
-    wxString m_accessibleText;
-    std::vector<int> m_rowStart;
-    bool m_accessibleValid = false;
 
     // The Cursor Locator (spec 24 2d.2): how far out the rectangle is now, and whether it is drawn.
     wxTimer m_locator;

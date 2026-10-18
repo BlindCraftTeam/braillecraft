@@ -877,8 +877,10 @@ fn open_path_asking(path: &Path, ask: bool) -> Option<u64> {
         FileKind::Pdf => open_pdf(&path)?,
         kind => {
             let shown = read_import(&bytes, &choice)?;
+            bc_core::memory::note("import");
             let doc_kind = if kind.is_braille() { DocKind::Braille } else { DocKind::Print };
             let key = documents::new_document(doc_kind, Some(name), &shown);
+            bc_core::memory::note("new document (laid out)");
             app::with(|a| {
                 if let Some(i) = a.index_of(key) {
                     a.docs[i].dirty = false;
@@ -1526,7 +1528,7 @@ fn brf_bytes(pages: &[bc_core::format::Page], shown_in: &encodings::Encoding, ch
     for page in pages {
         for line in &page.lines {
             let text = line.text.trim_end_matches(' ');
-            for (c, source) in text.chars().zip(&line.sources) {
+            for (c, source) in text.chars().zip(line.sources.iter()) {
                 // A space and a hard space are the blank cell.
                 let cell = match c {
                     ' ' | '\u{a0}' => Some(0),
@@ -2310,7 +2312,7 @@ fn ink_job(
                 // The end of the text a cell came from: the next place any cell of the page has, but not past a
                 // space or a code. INFERENCE: the reference counts the cell's own item (spec 25 20.3); the layout
                 // here keeps only each cell's start.
-                let mut places: Vec<usize> = page.lines.iter().flat_map(|l| l.sources.iter().flatten().copied()).collect();
+                let mut places: Vec<usize> = page.lines.iter().flat_map(|l| l.sources.iter().flatten()).collect();
                 places.sort_unstable();
                 places.dedup();
                 let end_of = |p: usize| {
@@ -2321,7 +2323,7 @@ fn ink_job(
                 let runs: Vec<Vec<ink::Run>> = lines
                     .iter()
                     .enumerate()
-                    .map(|(n, line)| ink::runs_mapped(line, page.lines.get(n).map_or(&[][..], |l| &l.sources[..]), &end_of))
+                    .map(|(n, line)| ink::runs_mapped(line, page.lines.get(n).map(|l| &l.sources), &end_of))
                     .collect();
                 let back = layout.interpoint && (k + 1) % 2 == 0;
                 ink::page_items(&runs, &place, back, |n, run| {
@@ -2354,15 +2356,49 @@ fn translate_document() {
 /// File, Translate on the active document: the new document's key, or the message saying why none was made (empty
 /// when there is no document).
 pub fn translate_active() -> Result<u64, String> {
-    let Some((text, kind, tables, initial, template, styles, numbers, name, untitled)) = app::with(|a| {
-        a.doc().map(|d| {
-            let (codes, template, styles) = (d.initial_codes.clone(), d.template.clone(), d.styles.clone());
-            let (name, numbers) = (d.name.clone(), d.page_numbers);
-            (d.shown(), d.kind, d.tables.clone(), codes, template, styles, numbers, name, d.untitled)
-        })
-    }) else {
+    let Some(key) = app::with(|a| a.doc().map(|d| d.key)) else {
         return Err(String::new());
     };
+    translate_from(translate_input(key).ok_or_else(String::new)?)
+}
+
+/// What File, Translate reads from a document: its text with codes, its kind, tables, initial codes, template,
+/// styles, page numbering, name and whether it is untitled. The command line takes these out of a document and
+/// closes it before the translation is made, so a book and its translation are not both laid out at once (plan
+/// line L1).
+pub struct TranslateInput {
+    text: bc_core::doctext::Shown,
+    kind: DocKind,
+    tables: [String; 4],
+    initial: String,
+    template: String,
+    styles: Vec<Style>,
+    numbers: [u32; 5],
+    name: String,
+    untitled: bool,
+}
+
+/// The translation inputs of the document with this key.
+pub fn translate_input(key: u64) -> Option<TranslateInput> {
+    app::with(|a| {
+        let d = &a.docs[a.index_of(key)?];
+        Some(TranslateInput {
+            text: d.shown(),
+            kind: d.kind,
+            tables: d.tables.clone(),
+            initial: d.initial_codes.clone(),
+            template: d.template.clone(),
+            styles: d.styles.clone(),
+            numbers: d.page_numbers,
+            name: d.name.clone(),
+            untitled: d.untitled,
+        })
+    })
+}
+
+/// File, Translate from a document's inputs: the new document's key, or the message saying why none was made.
+pub fn translate_from(input: TranslateInput) -> Result<u64, String> {
+    let TranslateInput { text, kind, tables, initial, template, styles, numbers, name, untitled } = input;
     let style_table = translation::style_table(&styles);
     if text.text.trim().is_empty() {
         return Err("The file that you are trying to translate is empty.".into());

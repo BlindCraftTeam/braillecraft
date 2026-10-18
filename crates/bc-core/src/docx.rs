@@ -208,28 +208,96 @@ impl Element {
     }
 }
 
-/// The root element of an XML text. The reader takes the declaration, comments, processing instructions and CDATA,
-/// the five named entities and numeric references; it keeps names as written and does not check the document
-/// beyond matching end tags.
+/// One event of an XML text as the reader walks it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Event {
+    /// A start tag: the element's name as written, its attributes in order, and whether the tag closes itself.
+    Start { name: String, attrs: Vec<(String, String)>, self_closing: bool },
+    End(String),
+    /// Text with its entities decoded.
+    Text(String),
+    /// A CDATA section, as written.
+    Cdata(String),
+}
+
+/// A reader of XML events over a text, one event at a time: it holds no copy of the text and builds no tree, so
+/// a chain that reads element by element (the tag processor of the HTML chain) keeps only the event in hand.
+/// It passes over the declaration, comments and processing instructions, decodes the five named entities and
+/// numeric references, keeps names as written and does not check the document beyond what `read_xml` checks.
+pub struct XmlReader<'a> {
+    text: &'a str,
+    pos: usize,
+    peeked: Option<Event>,
+}
+
+impl<'a> XmlReader<'a> {
+    pub fn new(text: &'a str) -> XmlReader<'a> {
+        XmlReader { text, pos: 0, peeked: None }
+    }
+
+    /// The next event; None at the end of the text.
+    pub fn next_event(&mut self) -> Result<Option<Event>, String> {
+        if let Some(e) = self.peeked.take() {
+            return Ok(Some(e));
+        }
+        loop {
+            let rest = &self.text[self.pos..];
+            if rest.is_empty() {
+                return Ok(None);
+            }
+            let Some(after) = rest.strip_prefix('<') else {
+                let end = rest.find('<').unwrap_or(rest.len());
+                self.pos += end;
+                return Ok(Some(Event::Text(decode_entities(&rest[..end]))));
+            };
+            if after.starts_with("!--") {
+                self.pos += rest[4..].find("-->").map(|q| q + 4 + 3).ok_or("comment not closed")?;
+            } else if after.starts_with("![CDATA[") {
+                let end = rest[9..].find("]]>").map(|q| q + 9).ok_or("CDATA not closed")?;
+                self.pos += end + 3;
+                return Ok(Some(Event::Cdata(rest[9..end].to_string())));
+            } else if after.starts_with('?') {
+                self.pos += rest[2..].find("?>").map(|q| q + 2 + 2).ok_or("processing instruction not closed")?;
+            } else if after.starts_with('!') {
+                self.pos += rest.find('>').map(|q| q + 1).ok_or("declaration not closed")?;
+            } else if let Some(end_tag) = after.strip_prefix('/') {
+                let end = end_tag.find('>').ok_or("end tag not closed")?;
+                let name = end_tag[..end].trim().to_string();
+                self.pos += 2 + end + 1;
+                return Ok(Some(Event::End(name)));
+            } else {
+                let (name, attrs, self_closing, taken) = start_tag(rest)?;
+                self.pos += taken;
+                return Ok(Some(Event::Start { name, attrs, self_closing }));
+            }
+        }
+    }
+
+    /// The next event without taking it.
+    pub fn peek(&mut self) -> Result<Option<&Event>, String> {
+        if self.peeked.is_none() {
+            self.peeked = self.next_event()?;
+        }
+        Ok(self.peeked.as_ref())
+    }
+}
+
+/// The root element of an XML text, built from the reader's events: text at the root that is only whitespace is
+/// left out, and the last element at the root is the one given.
 pub fn read_xml(text: &str) -> Result<Element, String> {
-    let chars: Vec<char> = text.chars().collect();
-    let mut p = 0;
+    let mut reader = XmlReader::new(text);
     let mut stack: Vec<Element> = vec![Element::default()];
-    while p < chars.len() {
-        if chars[p] == '<' {
-            if chars[p..].starts_with(&['<', '!', '-', '-']) {
-                p = find(&chars, p + 4, "-->").map(|q| q + 3).ok_or("comment not closed")?;
-            } else if chars[p..].starts_with(&['<', '!', '[', 'C', 'D', 'A', 'T', 'A', '[']) {
-                let end = find(&chars, p + 9, "]]>").ok_or("CDATA not closed")?;
-                push_text(&mut stack, chars[p + 9..end].iter().collect());
-                p = end + 3;
-            } else if chars[p..].starts_with(&['<', '?']) {
-                p = find(&chars, p + 2, "?>").map(|q| q + 2).ok_or("processing instruction not closed")?;
-            } else if chars[p..].starts_with(&['<', '!']) {
-                p = chars[p..].iter().position(|&c| c == '>').map(|q| p + q + 1).ok_or("declaration not closed")?;
-            } else if chars[p..].starts_with(&['<', '/']) {
-                let end = chars[p..].iter().position(|&c| c == '>').map(|q| p + q).ok_or("end tag not closed")?;
-                let name: String = chars[p + 2..end].iter().collect::<String>().trim().to_string();
+    while let Some(event) = reader.next_event()? {
+        match event {
+            Event::Start { name, attrs, self_closing } => {
+                let element = Element { name, attrs, children: Vec::new() };
+                if self_closing {
+                    stack.last_mut().ok_or("element with nothing open")?.children.push(Node::Element(element));
+                } else {
+                    stack.push(element);
+                }
+            }
+            Event::End(name) => {
                 let done = stack.pop().ok_or("end tag with nothing open")?;
                 if done.name != name {
                     return Err(format!("end tag {name} closes {}", done.name));
@@ -238,23 +306,13 @@ pub fn read_xml(text: &str) -> Result<Element, String> {
                     Some(parent) => parent.children.push(Node::Element(done)),
                     None => return Err("end tag with nothing open".into()),
                 }
-                p = end + 1;
-            } else {
-                let (element, close, next) = start_tag(&chars, p)?;
-                if close {
-                    stack.last_mut().ok_or("element with nothing open")?.children.push(Node::Element(element));
-                } else {
-                    stack.push(element);
+            }
+            Event::Text(t) => {
+                if stack.len() > 1 || !t.trim().is_empty() {
+                    push_text(&mut stack, t);
                 }
-                p = next;
             }
-        } else {
-            let end = chars[p..].iter().position(|&c| c == '<').map_or(chars.len(), |q| p + q);
-            let raw: String = chars[p..end].iter().collect();
-            if stack.len() > 1 || !raw.trim().is_empty() {
-                push_text(&mut stack, decode_entities(&raw));
-            }
-            p = end;
+            Event::Cdata(t) => push_text(&mut stack, t),
         }
     }
     let mut root = stack.pop().ok_or("no root element")?;
@@ -268,11 +326,6 @@ pub fn read_xml(text: &str) -> Result<Element, String> {
     }
 }
 
-fn find(chars: &[char], from: usize, pat: &str) -> Option<usize> {
-    let pat: Vec<char> = pat.chars().collect();
-    (from..chars.len().saturating_sub(pat.len() - 1)).find(|&k| chars[k..k + pat.len()] == pat[..])
-}
-
 fn push_text(stack: &mut [Element], text: String) {
     if let Some(top) = stack.last_mut() {
         if let Some(Node::Text(t)) = top.children.last_mut() {
@@ -283,39 +336,35 @@ fn push_text(stack: &mut [Element], text: String) {
     }
 }
 
-/// A start tag at `p`: the element with its attributes, whether it closes itself, and the place after it.
-fn start_tag(chars: &[char], p: usize) -> Result<(Element, bool, usize), String> {
-    let mut q = p + 1;
-    let name_end = (q..chars.len()).find(|&k| chars[k].is_whitespace() || chars[k] == '>' || chars[k] == '/').ok_or("start tag not closed")?;
-    let mut element = Element { name: chars[q..name_end].iter().collect(), ..Element::default() };
-    q = name_end;
+/// The start tag at the start of `s`: the name, the attributes, whether the tag closes itself, and the length of
+/// text it takes.
+fn start_tag(s: &str) -> Result<(String, Vec<(String, String)>, bool, usize), String> {
+    let name_end = s[1..].char_indices().find(|&(_, c)| c.is_whitespace() || c == '>' || c == '/').map(|(k, _)| k + 1).ok_or("start tag not closed")?;
+    let name = s[1..name_end].to_string();
+    let mut attrs = Vec::new();
+    let mut q = name_end;
     loop {
-        while q < chars.len() && chars[q].is_whitespace() {
-            q += 1;
-        }
-        match chars.get(q) {
+        q += s[q..].len() - s[q..].trim_start().len();
+        match s[q..].chars().next() {
             None => return Err("start tag not closed".into()),
-            Some('>') => return Ok((element, false, q + 1)),
+            Some('>') => return Ok((name, attrs, false, q + 1)),
             Some('/') => {
-                if chars.get(q + 1) == Some(&'>') {
-                    return Ok((element, true, q + 2));
+                if s[q..].starts_with("/>") {
+                    return Ok((name, attrs, true, q + 2));
                 }
                 return Err("slash in a start tag".into());
             }
             Some(_) => {
-                let eq = (q..chars.len()).find(|&k| chars[k] == '=').ok_or("attribute without a value")?;
-                let name: String = chars[q..eq].iter().collect::<String>().trim().to_string();
+                let eq = s[q..].find('=').map(|k| q + k).ok_or("attribute without a value")?;
+                let attr = s[q..eq].trim().to_string();
                 let mut v = eq + 1;
-                while v < chars.len() && chars[v].is_whitespace() {
-                    v += 1;
-                }
-                let quote = *chars.get(v).ok_or("attribute value cut short")?;
+                v += s[v..].len() - s[v..].trim_start().len();
+                let quote = s[v..].chars().next().ok_or("attribute value cut short")?;
                 if quote != '"' && quote != '\'' {
-                    return Err(format!("attribute {name} without quotes"));
+                    return Err(format!("attribute {attr} without quotes"));
                 }
-                let end = (v + 1..chars.len()).find(|&k| chars[k] == quote).ok_or("attribute value not closed")?;
-                let raw: String = chars[v + 1..end].iter().collect();
-                element.attrs.push((name, decode_entities(&raw)));
+                let end = s[v + 1..].find(quote).map(|k| v + 1 + k).ok_or("attribute value not closed")?;
+                attrs.push((attr, decode_entities(&s[v + 1..end])));
                 q = end + 1;
             }
         }

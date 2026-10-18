@@ -213,7 +213,6 @@ impl Translator {
         languages: Option<&Languages>,
         brackets: bool,
     ) -> Result<String, EngineError> {
-        let out = self.engine_output(text, styles, languages, brackets)?;
         let mut w = writer::Writer::new(
             &self.chitab,
             self.rules.tail[2],
@@ -222,28 +221,30 @@ impl Translator {
             self.line_flags,
             self.output_mode,
         );
-        for c in out {
-            w.put(c);
-        }
+        // The engine's codes go to the writer as they come: no vector of the whole output between them.
+        self.engine_run(text, styles, languages, brackets, &mut |c| w.put(c))?;
         w.put(EOF);
         Ok(w.text())
     }
 
-    /// The scanner and the rule engine, with table switches: the codes handed to the writer.
-    fn engine_output(
+    /// The scanner and the rule engine, with table switches: each code handed to `out` as it comes.
+    fn engine_run(
         &self,
         text: &str,
         style: Option<&StyleTable>,
         languages: Option<&Languages>,
         brackets: bool,
-    ) -> Result<Vec<i64>, EngineError> {
-        let text = if brackets { text.replace('[', "\u{1c}").replace(']', "\u{1f}") } else { text.to_string() };
-        // Internal text, two-byte codes as their two bytes, first byte first, as the scanner reads them.
-        let codes: Vec<i64> = crate::internal::encode(&text).map_err(EngineError::NotEncodable)?.into_iter().map(i64::from).collect();
-        // The scanner gets the document's styles too, as the reference hands its scanner the same style lookup.
-        let codes: Vec<i64> = scanner::scan(&self.scan, codes, style)?.into_iter().filter(|&c| c != EOF).collect();
+        out: &mut dyn FnMut(i64),
+    ) -> Result<(), EngineError> {
+        let text: std::borrow::Cow<str> =
+            if brackets { std::borrow::Cow::Owned(text.replace('[', "\u{1c}").replace(']', "\u{1f}")) } else { std::borrow::Cow::Borrowed(text) };
+        // Internal text, two-byte codes as their two bytes, first byte first, as the scanner reads them; the scanner
+        // gets the document's styles too, as the reference hands its scanner the same style lookup.
+        let bytes = crate::internal::encode(&text).map_err(EngineError::NotEncodable)?;
+        drop(text);
+        let codes = scanner::scan_bytes(&self.scan, bytes, style)?;
         let mut stack: Vec<Rc<RuleTable>> = vec![self.rules.clone()];
-        let mut e = rules::Engine::new(self.rules.clone(), &codes, style, &self.chitab);
+        let mut e = rules::Engine::new(self.rules.clone(), codes, style, &self.chitab, out);
         let mut r = e.run();
         while r == 0x15 {
             if e.name_len < 1 {
@@ -277,12 +278,11 @@ impl Translator {
                 rest.extend_from_slice(&e.inp[e.ip..tail_end]);
             }
             rest.retain(|&x| x < 256);
-            let out = std::mem::take(&mut e.out);
-            e = rules::Engine::new(stack.last().unwrap().clone(), &rest, style, &self.chitab);
-            e.out = out;
+            let out = e.out;
+            e = rules::Engine::new(stack.last().unwrap().clone(), rest, style, &self.chitab, out);
             r = e.run();
         }
-        Ok(e.out)
+        Ok(())
     }
 }
 

@@ -36,6 +36,7 @@ pub fn run(cl: &CommandLine) -> bool {
     let mut opened = false;
     for action in &cl.actions {
         let Some(key) = commands::open_path(&action.file) else { continue };
+        note_memory("open");
         if action.mode == Mode::Open {
             opened = true;
             continue;
@@ -68,10 +69,20 @@ fn carry_out(key: u64, mode: &Mode, cl: &CommandLine, copies: u32) -> Step {
         _ => false,
     };
     let key = if translate {
-        documents::activate_key(key);
-        let made = commands::translate_active();
-        // The opened document is closed either way; the translation stands in its place.
+        // The opened document gives up what the translation needs and is closed before the translation is made,
+        // so a book and its braille are not both laid out at once; the translation stands in its place.
+        let input = commands::translate_input(key);
         documents::destroy(key);
+        bc_core::memory::release();
+        note_memory("close of the opened document");
+        let made = match input {
+            Some(input) => {
+                let made = commands::translate_from(input);
+                note_memory("translation");
+                made
+            }
+            None => Err(String::new()),
+        };
         match made {
             Ok(k) => k,
             Err(e) => {
@@ -136,6 +147,12 @@ fn carry_out(key: u64, mode: &Mode, cl: &CommandLine, copies: u32) -> Step {
         }
         Mode::Open | Mode::NotAvailable(_) => {}
     }
+    note_memory("output");
     documents::destroy(key);
     Step::Next
+}
+
+/// The batch steps' memory notes (BRAILLECRAFT_MEMORY set; plan line L1).
+fn note_memory(step: &str) {
+    bc_core::memory::note(step);
 }

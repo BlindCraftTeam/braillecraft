@@ -32,17 +32,6 @@ static NSString* NS(const wxString& s)
     return [NSString stringWithUTF8String:b.data() ? b.data() : ""];
 }
 
-// The line (0-based) holding offset `offset` of the text.
-static NSInteger LineOf(const wxString& text, int offset)
-{
-    NSInteger line = 0;
-    const int n = wxMin(offset, (int)text.length());
-    for (int k = 0; k < n; ++k) {
-        if (text[k] == '\n') ++line;
-    }
-    return line;
-}
-
 // A rectangle of the window (client coordinates) in screen coordinates as Cocoa counts them (from the bottom of the
 // main screen).
 static NSRect ScreenRect(DocEditor* e, const wxRect& r)
@@ -76,13 +65,13 @@ static NSRect ScreenRect(DocEditor* e, const wxRect& r)
 - (id)accessibilityValue
 {
     DocEditor* e = EditorOf(self);
-    return e ? NS(e->AccessibleText()) : @"";
+    return e ? NS(e->AccessibleText(0, e->AccessibleLength())) : @"";
 }
 
 - (NSInteger)accessibilityNumberOfCharacters
 {
     DocEditor* e = EditorOf(self);
-    return e ? (NSInteger)e->AccessibleText().length() : 0;
+    return e ? (NSInteger)e->AccessibleLength() : 0;
 }
 
 - (NSRange)accessibilitySelectedTextRange
@@ -114,7 +103,7 @@ static NSRect ScreenRect(DocEditor* e, const wxRect& r)
     if (!e) return @"";
     const int a = e->OffsetOf(e->AnchorRow(), e->AnchorCol());
     const int c = e->OffsetOf(e->CaretRow(), e->CaretCol());
-    return NS(e->AccessibleText().Mid(wxMin(a, c), abs(a - c)));
+    return NS(e->AccessibleText(wxMin(a, c), wxMax(a, c)));
 }
 
 - (NSRange)accessibilityVisibleCharacterRange
@@ -130,35 +119,31 @@ static NSRect ScreenRect(DocEditor* e, const wxRect& r)
 - (NSInteger)accessibilityInsertionPointLineNumber
 {
     DocEditor* e = EditorOf(self);
-    return e ? LineOf(e->AccessibleText(), e->OffsetOf(e->CaretRow(), e->CaretCol())) : 0;
+    return e ? e->LineOfOffset(e->OffsetOf(e->CaretRow(), e->CaretCol())) : 0;
 }
 
 - (NSInteger)accessibilityLineForIndex:(NSInteger)index
 {
     DocEditor* e = EditorOf(self);
-    return e ? LineOf(e->AccessibleText(), (int)index) : 0;
+    return e ? e->LineOfOffset((int)index) : 0;
 }
 
 - (NSRange)accessibilityRangeForLine:(NSInteger)line
 {
     DocEditor* e = EditorOf(self);
     if (!e) return NSMakeRange(0, 0);
-    const wxString& text = e->AccessibleText();
-    const int n = (int)text.length();
-    int start = 0;
-    for (NSInteger l = 0; l < line && start < n; ++start) {
-        if (text[start] == '\n') ++l;
-    }
-    int end = start;
-    while (end < n && text[end] != '\n') ++end;
-    if (end < n) ++end;
+    const int n = e->AccessibleLength();
+    const int row = e->RowOfLine((int)line);
+    if (row >= e->RowCount()) return NSMakeRange((NSUInteger)n, 0);
+    const int start = e->OffsetOf(row, 0);
+    const int end = wxMin(start + e->RowLength(row) + 1, n);
     return NSMakeRange((NSUInteger)start, (NSUInteger)(end - start));
 }
 
 - (NSString*)accessibilityStringForRange:(NSRange)range
 {
     DocEditor* e = EditorOf(self);
-    return e ? NS(e->AccessibleText().Mid((int)range.location, (int)range.length)) : @"";
+    return e ? NS(e->AccessibleText((int)range.location, (int)(range.location + range.length))) : @"";
 }
 
 - (NSRect)accessibilityFrameForRange:(NSRange)range
@@ -168,7 +153,7 @@ static NSRect ScreenRect(DocEditor* e, const wxRect& r)
     int r1 = 0, c1 = 0, r2 = 0, c2 = 0;
     e->PlaceOf((int)range.location, &r1, &c1);
     e->PlaceOf((int)(range.location + range.length), &r2, &c2);
-    if (r2 != r1) c2 = (int)e->RowText(r1).length();
+    if (r2 != r1) c2 = e->RowLength(r1);
     return ScreenRect(e, e->RowRect(r1, c1, wxMax(c2, c1 + 1)));
 }
 
@@ -276,7 +261,7 @@ void DocEditor::AccessibleDone()
     m_accessible = nullptr;
 }
 
-void DocEditor::AccessibleTextChanged(int)
+void DocEditor::AccessibleTextChanged(int, const wxString&, const wxString&)
 {
     if (m_accessible) NSAccessibilityPostNotification((__bridge id)m_accessible, NSAccessibilityValueChangedNotification);
 }

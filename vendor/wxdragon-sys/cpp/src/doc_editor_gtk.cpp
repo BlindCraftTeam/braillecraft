@@ -83,27 +83,25 @@ gchar* bc_get_text(AtkText* t, gint start, gint end)
 {
     DocEditor* e = EditorOf(t);
     if (!e) return g_strdup("");
-    const wxString& text = e->AccessibleText();
-    const int n = (int)text.length();
+    const int n = e->AccessibleLength();
     if (end < 0 || end > n) end = n;
     start = wxClip(start, 0, n);
     if (end < start) end = start;
-    return Utf8(text.Mid(start, end - start));
+    return Utf8(e->AccessibleText(start, end));
 }
 
 gint bc_get_character_count(AtkText* t)
 {
     DocEditor* e = EditorOf(t);
-    return e ? (gint)e->AccessibleText().length() : 0;
+    return e ? (gint)e->AccessibleLength() : 0;
 }
 
 gunichar bc_get_character_at_offset(AtkText* t, gint offset)
 {
     DocEditor* e = EditorOf(t);
     if (!e) return 0;
-    const wxString& text = e->AccessibleText();
-    if (offset < 0 || offset >= (int)text.length()) return 0;
-    return (gunichar)text[offset].GetValue();
+    if (offset < 0 || offset >= e->AccessibleLength()) return 0;
+    return (gunichar)e->AccessibleChar(offset).GetValue();
 }
 
 gint bc_get_caret_offset(AtkText* t)
@@ -127,30 +125,39 @@ bool IsWordChar(wxUniChar c)
     return !(c == ' ' || c == '\n' || c == '\t');
 }
 
-// The start and end of the text unit of kind `g` at `offset`.
-void UnitAt(const wxString& text, gint offset, AtkTextGranularity g, gint* start, gint* end)
+// The start and end of the text unit of kind `g` at `offset`. A word never crosses a row (its line feed is not a
+// word character), so it is found in the row's own text; a line is a row with its line feed.
+void UnitAt(DocEditor* e, gint offset, AtkTextGranularity g, gint* start, gint* end)
 {
-    const int n = (int)text.length();
+    const int n = e->AccessibleLength();
     offset = wxClip(offset, 0, n);
     int s = offset, en = offset;
+    int row = 0, col = 0;
+    e->PlaceOf(offset, &row, &col);
+    const int rowStart = e->OffsetOf(row, 0);
+    const int len = e->RowLength(row);
     switch (g) {
     case ATK_TEXT_GRANULARITY_CHAR:
         en = wxMin(offset + 1, n);
         break;
-    case ATK_TEXT_GRANULARITY_WORD:
+    case ATK_TEXT_GRANULARITY_WORD: {
         // The word the offset is in, with the spaces after it (as GTK's text view gives it).
-        while (s > 0 && IsWordChar(text[s - 1])) --s;
-        while (en < n && IsWordChar(text[en])) ++en;
-        while (en < n && text[en] == ' ') ++en;
+        const wxString& text = e->AccessRowText(row);
+        int c1 = col, c2 = col;
+        while (c1 > 0 && c1 - 1 < (int)text.length() && IsWordChar(text[c1 - 1])) --c1;
+        while (c2 < len && c2 < (int)text.length() && IsWordChar(text[c2])) ++c2;
+        while (c2 < len && c2 < (int)text.length() && text[c2] == ' ') ++c2;
+        s = rowStart + c1;
+        en = rowStart + c2;
         break;
+    }
     case ATK_TEXT_GRANULARITY_LINE:
     case ATK_TEXT_GRANULARITY_SENTENCE:
     case ATK_TEXT_GRANULARITY_PARAGRAPH:
     default:
         // A row, with its line feed (each row is one line of the editing window).
-        while (s > 0 && text[s - 1] != '\n') --s;
-        while (en < n && text[en] != '\n') ++en;
-        if (en < n) ++en;
+        s = rowStart;
+        en = wxMin(rowStart + len + 1, n);
         break;
     }
     *start = s;
@@ -162,9 +169,8 @@ gchar* bc_get_string_at_offset(AtkText* t, gint offset, AtkTextGranularity g, gi
     *start = *end = 0;
     DocEditor* e = EditorOf(t);
     if (!e) return g_strdup("");
-    const wxString& text = e->AccessibleText();
-    UnitAt(text, offset, g, start, end);
-    return Utf8(text.Mid(*start, *end - *start));
+    UnitAt(e, offset, g, start, end);
+    return Utf8(e->AccessibleText(*start, *end));
 }
 
 AtkTextGranularity GranularityOf(AtkTextBoundary b)
@@ -189,9 +195,8 @@ gchar* bc_get_text_before_offset(AtkText* t, gint offset, AtkTextBoundary b, gin
     *start = *end = 0;
     DocEditor* e = EditorOf(t);
     if (!e) return g_strdup("");
-    const wxString& text = e->AccessibleText();
     gint s = 0, en = 0;
-    UnitAt(text, offset, GranularityOf(b), &s, &en);
+    UnitAt(e, offset, GranularityOf(b), &s, &en);
     if (s == 0) return g_strdup("");
     return bc_get_string_at_offset(t, s - 1, GranularityOf(b), start, end);
 }
@@ -201,11 +206,10 @@ gchar* bc_get_text_after_offset(AtkText* t, gint offset, AtkTextBoundary b, gint
     *start = *end = 0;
     DocEditor* e = EditorOf(t);
     if (!e) return g_strdup("");
-    const wxString& text = e->AccessibleText();
     gint s = 0, en = 0;
-    UnitAt(text, offset, GranularityOf(b), &s, &en);
-    if (en >= (int)text.length()) {
-        *start = *end = (gint)text.length();
+    UnitAt(e, offset, GranularityOf(b), &s, &en);
+    if (en >= e->AccessibleLength()) {
+        *start = *end = (gint)e->AccessibleLength();
         return g_strdup("");
     }
     return bc_get_string_at_offset(t, en, GranularityOf(b), start, end);
@@ -274,7 +278,7 @@ gchar* bc_get_selection(AtkText* t, gint n, gint* start, gint* end)
     *start = *end = 0;
     DocEditor* e = EditorOf(t);
     if (!e || n != 0 || !SelectionOf(e, start, end)) return nullptr;
-    return Utf8(e->AccessibleText().Mid(*start, *end - *start));
+    return Utf8(e->AccessibleText(*start, *end));
 }
 
 gboolean bc_set_selection(AtkText* t, gint n, gint start, gint end)
@@ -370,7 +374,6 @@ void DocEditor::AccessibleInit()
     }
     // Made now, so screen readers find this object from the start.
     gtk_widget_get_accessible(w);
-    m_accessiblePrevious = AccessibleText();
 }
 
 void DocEditor::AccessibleDone()
@@ -379,26 +382,18 @@ void DocEditor::AccessibleDone()
     m_accessible = nullptr;
 }
 
-void DocEditor::AccessibleTextChanged(int)
+void DocEditor::AccessibleTextChanged(int at, const wxString& removed, const wxString& inserted)
 {
     AtkObject* acc = AccessibleOf(this);
-    const wxString now = AccessibleText();
-    const wxString before = m_accessiblePrevious;
-    m_accessiblePrevious = now;
     if (!acc) return;
-    // Only the stretch that changed: what is before it and after it is the same in both.
-    const size_t a = before.length(), b = now.length();
-    size_t p = 0;
-    while (p < a && p < b && before[p] == now[p]) ++p;
-    size_t s = 0;
-    while (s < a - p && s < b - p && before[a - 1 - s] == now[b - 1 - s]) ++s;
-    if (a - s > p) {
-        const wxScopedCharBuffer gone = before.Mid(p, a - s - p).utf8_str();
-        g_signal_emit_by_name(acc, "text-remove", (gint)p, (gint)(a - s - p), gone.data());
+    // Only the stretch that changed (the program found it: what is before it and after it is the same as before).
+    if (!removed.empty()) {
+        const wxScopedCharBuffer gone = removed.utf8_str();
+        g_signal_emit_by_name(acc, "text-remove", (gint)at, (gint)removed.length(), gone.data());
     }
-    if (b - s > p) {
-        const wxScopedCharBuffer put = now.Mid(p, b - s - p).utf8_str();
-        g_signal_emit_by_name(acc, "text-insert", (gint)p, (gint)(b - s - p), put.data());
+    if (!inserted.empty()) {
+        const wxScopedCharBuffer put = inserted.utf8_str();
+        g_signal_emit_by_name(acc, "text-insert", (gint)at, (gint)inserted.length(), put.data());
     }
 }
 

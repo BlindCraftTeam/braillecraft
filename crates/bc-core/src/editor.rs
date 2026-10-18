@@ -54,7 +54,7 @@ pub struct Editor {
     pub coded: bool,
     pub coded_width: usize,
     /// The laid-out pages (formatted view; empty in the coded view).
-    pub pages: Vec<Page>,
+    pub pages: std::rc::Rc<Vec<Page>>,
     /// The text screen readers get: the formatted page lines, or the coded rows (spec 27 section 6).
     pub view: View,
     pub caret: usize,
@@ -76,7 +76,7 @@ impl Editor {
             styles,
             coded,
             coded_width,
-            pages: Vec::new(),
+            pages: std::rc::Rc::new(Vec::new()),
             view: View::default(),
             caret: 0,
             anchor: 0,
@@ -99,14 +99,14 @@ impl Editor {
     fn relayout_edit(&mut self, edit: Option<(usize, usize, usize)>) {
         self.len = self.doc.text.chars().count();
         if self.coded {
-            self.pages = Vec::new();
+            self.pages = std::rc::Rc::new(Vec::new());
             self.trail = Trail::default();
             self.view = View::coded(&self.doc, self.coded_width);
             self.page_rows = Vec::new();
         } else {
             let (pages, trail) = match edit {
                 Some((from, old_to, new_to)) => reformat(
-                    std::mem::take(&mut self.pages),
+                    std::rc::Rc::try_unwrap(std::mem::take(&mut self.pages)).unwrap_or_else(|p| (*p).clone()),
                     std::mem::take(&mut self.trail),
                     &self.doc,
                     &self.layout,
@@ -115,9 +115,14 @@ impl Editor {
                     old_to,
                     new_to,
                 ),
-                None => format_traced(&self.doc, &self.layout, self.styles.as_ref()),
+                None => {
+                    // The old pages and trail go before the new ones are made, so a book is not held twice (L1).
+                    self.pages = std::rc::Rc::new(Vec::new());
+                    self.trail = Trail::default();
+                    format_traced(&self.doc, &self.layout, self.styles.as_ref())
+                }
             };
-            self.pages = pages;
+            self.pages = std::rc::Rc::new(pages);
             self.trail = trail;
             self.view = View::new(&self.pages);
             let mut at = 0;
@@ -201,12 +206,26 @@ impl Editor {
     pub fn row_text(&self, row: usize) -> String {
         match self.row(row) {
             Some(Row::Line { page, line }) => self.pages[page].lines[line].text.clone(),
-            Some(Row::Coded { row }) => {
-                let start = self.view.lines[row].2;
-                let end = self.view.line_end(row);
-                self.view.text.chars().skip(start).take(end - start).filter(|&c| c != '\n').collect()
-            }
+            Some(Row::Coded { row }) => self.view.line_text(row).chars().filter(|&c| c != '\n').collect(),
             _ => String::new(),
+        }
+    }
+
+    /// The length in characters of screen row `row`'s text (0 for a page break row).
+    pub fn row_len(&self, row: usize) -> usize {
+        match self.row(row) {
+            Some(Row::Line { page, line }) => self.pages[page].lines[line].text.chars().count(),
+            Some(Row::Coded { row }) => self.view.line_text(row).chars().filter(|&c| c != '\n').count(),
+            _ => 0,
+        }
+    }
+
+    /// The most characters a screen row can hold: the coded view's row width, or the layout's cells per line.
+    pub fn row_width(&self) -> usize {
+        if self.coded {
+            self.coded_width
+        } else {
+            self.layout.cells
         }
     }
 
@@ -228,7 +247,7 @@ impl Editor {
     /// coded view every character stands for a document place (the characters showing a code for the code's start).
     pub fn row_sources(&self, row: usize) -> Vec<Option<usize>> {
         match self.row(row) {
-            Some(Row::Line { page, line }) => self.pages[page].lines[line].sources.clone(),
+            Some(Row::Line { page, line }) => self.pages[page].lines[line].sources.iter().collect(),
             Some(Row::Coded { row }) => {
                 let start = self.view.lines[row].2;
                 let n = self.row_text(row).chars().count();
@@ -336,7 +355,7 @@ impl Editor {
     /// Whether row `row` has a cell from the document (Up and Down pass over the others, spec 27 5a).
     fn row_has_text(&self, row: usize) -> bool {
         match self.row(row) {
-            Some(Row::Line { page, line }) => self.pages[page].lines[line].sources.iter().any(Option::is_some),
+            Some(Row::Line { page, line }) => self.pages[page].lines[line].sources.any(),
             Some(Row::Coded { .. }) => true,
             _ => false,
         }
@@ -371,7 +390,7 @@ impl Editor {
                 let (row, _) = self.caret_place();
                 match self.row(row) {
                     Some(Row::Line { page, line }) => {
-                        self.pages[page].lines[line].sources.iter().flatten().next().copied().unwrap_or(self.caret)
+                        self.pages[page].lines[line].sources.first().unwrap_or(self.caret)
                     }
                     _ => self.pos_at(row, 0),
                 }

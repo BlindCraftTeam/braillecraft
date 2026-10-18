@@ -120,17 +120,158 @@ impl Layout {
     }
 }
 
-/// One line of a page: its cells, and for each cell the character position in the document it came from (None for
+/// The document place each cell of a line came from, four bytes a cell: the pages of a large document are mostly
+/// these, and a place fits in 32 bits (a document under four thousand million characters). A cell the formatter
+/// added (indentation, the space between words, page numbers) has no place.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Sources(Vec<u32>);
+
+const NO_SOURCE: u32 = u32::MAX;
+
+fn pack_place(s: Option<usize>) -> u32 {
+    s.map_or(NO_SOURCE, |s| s as u32)
+}
+
+fn unpack_place(s: u32) -> Option<usize> {
+    (s != NO_SOURCE).then_some(s as usize)
+}
+
+impl Sources {
+    /// `n` cells with no place.
+    pub fn none(n: usize) -> Sources {
+        Sources(vec![NO_SOURCE; n])
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    pub fn capacity(&self) -> usize {
+        self.0.capacity()
+    }
+
+    /// The place of cell `i`: None past the line's end or for a cell with no place.
+    pub fn get(&self, i: usize) -> Option<usize> {
+        self.0.get(i).copied().and_then(unpack_place)
+    }
+
+    pub fn set(&mut self, i: usize, s: Option<usize>) {
+        self.0[i] = pack_place(s);
+    }
+
+    pub fn push(&mut self, s: Option<usize>) {
+        self.0.push(pack_place(s));
+    }
+
+    pub fn pop(&mut self) -> Option<Option<usize>> {
+        self.0.pop().map(unpack_place)
+    }
+
+    /// `n` cells, the ones added with no place.
+    pub fn resize(&mut self, n: usize) {
+        self.0.resize(n, NO_SOURCE);
+    }
+
+    /// The place of each cell in order.
+    pub fn iter(&self) -> impl Iterator<Item = Option<usize>> + '_ {
+        self.0.iter().map(|&s| unpack_place(s))
+    }
+
+    /// Whether any cell has a place.
+    pub fn any(&self) -> bool {
+        self.0.iter().any(|&s| s != NO_SOURCE)
+    }
+
+    /// The first place on the line.
+    pub fn first(&self) -> Option<usize> {
+        self.iter().flatten().next()
+    }
+
+    /// Every place moved by `map`; None when one has nowhere to go.
+    pub fn map_places(&mut self, map: &impl Fn(usize) -> Option<usize>) -> Option<()> {
+        for s in &mut self.0 {
+            if *s != NO_SOURCE {
+                *s = pack_place(Some(map(*s as usize)?));
+            }
+        }
+        Some(())
+    }
+}
+
+impl Extend<Option<usize>> for Sources {
+    fn extend<I: IntoIterator<Item = Option<usize>>>(&mut self, iter: I) {
+        self.0.extend(iter.into_iter().map(pack_place));
+    }
+}
+
+impl FromIterator<Option<usize>> for Sources {
+    fn from_iter<I: IntoIterator<Item = Option<usize>>>(iter: I) -> Sources {
+        Sources(iter.into_iter().map(pack_place).collect())
+    }
+}
+
+/// Document positions that have no cell (a space, a line break, a code, the end of the document), each with the
+/// column (0-based) where the formatter's pen stood when it came to it, eight bytes a mark.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Marks(Vec<(u32, u32)>);
+
+impl Marks {
+    pub fn push(&mut self, mark: (usize, usize)) {
+        self.0.push((mark.0 as u32, mark.1 as u32));
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    pub fn capacity(&self) -> usize {
+        self.0.capacity()
+    }
+
+    /// Each mark as (position, column).
+    pub fn iter(&self) -> impl Iterator<Item = (usize, usize)> + '_ {
+        self.0.iter().map(|&(p, c)| (p as usize, c as usize))
+    }
+
+    /// Every position moved by `map`; None when one has nowhere to go.
+    pub fn map_places(&mut self, map: &impl Fn(usize) -> Option<usize>) -> Option<()> {
+        for m in &mut self.0 {
+            m.0 = map(m.0 as usize)? as u32;
+        }
+        Some(())
+    }
+}
+
+impl Extend<(usize, usize)> for Marks {
+    fn extend<I: IntoIterator<Item = (usize, usize)>>(&mut self, iter: I) {
+        self.0.extend(iter.into_iter().map(|(p, c)| (p as u32, c as u32)));
+    }
+}
+
+impl FromIterator<(usize, usize)> for Marks {
+    fn from_iter<I: IntoIterator<Item = (usize, usize)>>(iter: I) -> Marks {
+        Marks(iter.into_iter().map(|(p, c)| (p as u32, c as u32)).collect())
+    }
+}
+
+/// One line of a page: its cells, and for each cell the character position in the document it came from (none for
 /// cells the formatter added: indentation, the space between words, page numbers).
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Line {
     pub text: String,
-    pub sources: Vec<Option<usize>>,
-    /// Document positions that have no cell (a space, a line break, a code, the end of the document), each with the
-    /// column (0-based) where the formatter's pen stood when it came to it: the reference's formatter records the
-    /// same for a position it is asked about (spec 27 5b), so a caret can stand after the last letter
-    /// of a line on a space the line does not show, or on an empty last line.
-    pub marks: Vec<(usize, usize)>,
+    pub sources: Sources,
+    /// Document positions that have no cell, each with the column where the formatter's pen stood when it came to
+    /// it: the reference's formatter records the same for a position it is asked about (spec 27 5b), so a caret
+    /// can stand after the last letter of a line on a space the line does not show, or on an empty last line.
+    pub marks: Marks,
 }
 
 /// One laid-out page: all its lines (blank ones included, up to the lines per page) and the document position its
@@ -158,7 +299,7 @@ pub fn table_at(pages: &[Page], pos: usize) -> Option<&TableRegion> {
 /// The table regions of a document from its codes alone (no layout): what Table Properties and the cell moves
 /// read when the pages are not at hand.
 pub fn table_regions(doc: &Shown) -> Vec<TableRegion> {
-    table::regions(&pieces(doc, None), false)
+    table::regions(pieces(doc, None).iter(), false)
 }
 
 /// The font attribute of each character position of the document (bit 1 bold, 2 italic, 4 underline): set by
@@ -217,29 +358,142 @@ enum Piece {
     Break,
 }
 
+/// The pieces of a document, packed eight bytes each: a large document has a piece per character, and a layout
+/// keeps its pieces for the next edit (reformat), so a piece as an enum of thirty-two bytes would be the largest
+/// thing a document holds. The top three bits are the kind; a character piece holds the character and its place,
+/// a mark its place, a code the index of its text in the list of code texts.
+#[derive(Debug, Clone, Default)]
+pub struct Pieces {
+    packed: Vec<u64>,
+    codes: Vec<String>,
+    code_index: std::collections::HashMap<String, u32>,
+}
+
+const KIND_CHAR: u64 = 0;
+const KIND_SPACE: u64 = 1;
+const KIND_CODE: u64 = 2;
+const KIND_MARK: u64 = 3;
+const KIND_BREAK: u64 = 4;
+const PLACE_BITS: u64 = 0xffff_ffff;
+
+impl Pieces {
+    fn pack(&mut self, p: Piece) -> u64 {
+        match p {
+            Piece::Char(c, at) => (KIND_CHAR << 61) | (u64::from(c as u32) << 32) | (at as u64 & PLACE_BITS),
+            Piece::Space => KIND_SPACE << 61,
+            Piece::Code(code) => {
+                let k = match self.code_index.get(&code) {
+                    Some(&k) => k,
+                    None => {
+                        let k = self.codes.len() as u32;
+                        self.codes.push(code.clone());
+                        self.code_index.insert(code, k);
+                        k
+                    }
+                };
+                (KIND_CODE << 61) | u64::from(k)
+            }
+            Piece::Mark(at) => (KIND_MARK << 61) | (at as u64 & PLACE_BITS),
+            Piece::Break => KIND_BREAK << 61,
+        }
+    }
+
+    fn push(&mut self, p: Piece) {
+        let v = self.pack(p);
+        self.packed.push(v);
+    }
+
+    fn pop(&mut self) {
+        self.packed.pop();
+    }
+
+    /// Piece `i`, as an enum.
+    fn get(&self, i: usize) -> Piece {
+        let v = self.packed[i];
+        match v >> 61 {
+            KIND_CHAR => Piece::Char(char::from_u32(((v >> 32) & 0x1f_ffff) as u32).unwrap_or('\u{fffd}'), (v & PLACE_BITS) as usize),
+            KIND_SPACE => Piece::Space,
+            KIND_CODE => Piece::Code(self.codes[(v & PLACE_BITS) as usize].clone()),
+            KIND_MARK => Piece::Mark((v & PLACE_BITS) as usize),
+            _ => Piece::Break,
+        }
+    }
+
+    /// The place of piece `i` when it has one (a character or a mark).
+    fn place(&self, i: usize) -> Option<usize> {
+        let v = self.packed[i];
+        matches!(v >> 61, KIND_CHAR | KIND_MARK).then(|| (v & PLACE_BITS) as usize)
+    }
+
+    pub fn len(&self) -> usize {
+        self.packed.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.packed.is_empty()
+    }
+
+    fn iter(&self) -> impl Iterator<Item = Piece> + '_ {
+        (0..self.len()).map(|i| self.get(i))
+    }
+
+    /// Moves the places of the pieces from `from` on by `delta`.
+    fn shift_places(&mut self, from: usize, delta: isize) {
+        for v in &mut self.packed[from..] {
+            if matches!(*v >> 61, KIND_CHAR | KIND_MARK) {
+                let at = ((*v & PLACE_BITS) as isize + delta) as u64;
+                *v = (*v & !PLACE_BITS) | (at & PLACE_BITS);
+            }
+        }
+    }
+
+    /// The pieces in `range` replaced by `other`'s.
+    fn splice(&mut self, range: std::ops::Range<usize>, other: &Pieces) {
+        let packed: Vec<u64> = other.iter().map(|p| self.pack(p)).collect();
+        self.packed.splice(range, packed);
+    }
+}
+
+impl PartialEq for Pieces {
+    fn eq(&self, other: &Pieces) -> bool {
+        self.len() == other.len() && self.iter().zip(other.iter()).all(|(a, b)| a == b)
+    }
+}
+
+impl Eq for Pieces {}
+
 /// The document in pieces: its codes (the ranges the document marks as codes; a bracket elsewhere is text), with
 /// style codes as their begin or end codes; the editor's line breaks become [<] codes, or nothing after [p] and [l].
-fn pieces(doc: &Shown, styles: Option<&StyleTable>) -> Vec<Piece> {
-    let mut out = Vec::new();
-    let chars: Vec<char> = doc.text.chars().collect();
+/// The text is read once, character by character; no vector of its characters is made.
+fn pieces(doc: &Shown, styles: Option<&StyleTable>) -> Pieces {
+    let mut out = Pieces::default();
+    let total = doc.text.chars().count();
     let mut spans = doc.codes.iter().peekable();
-    let mut i = 0;
+    let mut chars = doc.text.chars().enumerate().peekable();
     let mut after_break_code = false;
-    while i < chars.len() {
+    while let Some(&(i, c)) = chars.peek() {
         if let Some(&&(start, end)) = spans.peek().filter(|s| s.0 == i) {
             spans.next();
-            let end = end.min(chars.len());
-            let code: String = chars[(start + 1).min(end)..end.saturating_sub(1).max(start + 1).min(end)].iter().collect();
+            // The code's text: the characters between its brackets.
+            let mut code = String::new();
+            while let Some(&(k, ch)) = chars.peek() {
+                if k >= end {
+                    break;
+                }
+                chars.next();
+                if k > start && k + 1 < end {
+                    code.push(ch);
+                }
+            }
             after_break_code = crate::doctext::breaks_line(&code);
             expand(&code, styles, &mut out, 0, start);
             // A code's place is where the pen stands once the code has done its work (a [p] at the start stands
             // where the paragraph's text starts). INFERENCE: the reference records a place when its input reaches it
             // (spec 27 5b); whether that is before or after a code's own effect is not traced.
             out.push(Piece::Mark(start));
-            i = end;
             continue;
         }
-        let c = chars[i];
+        chars.next();
         if c == '\n' || c == ' ' {
             out.push(Piece::Mark(i));
         }
@@ -249,25 +503,19 @@ fn pieces(doc: &Shown, styles: Option<&StyleTable>) -> Vec<Piece> {
                     out.push(Piece::Code("<".to_string()));
                 }
                 after_break_code = false;
-                i += 1;
             }
             ' ' => {
                 out.push(Piece::Space);
                 after_break_code = false;
-                i += 1;
             }
-            '\u{1d}' => {
-                out.push(Piece::Break);
-                i += 1;
-            }
+            '\u{1d}' => out.push(Piece::Break),
             c => {
                 out.push(Piece::Char(c, i));
                 after_break_code = false;
-                i += 1;
             }
         }
     }
-    out.push(Piece::Mark(chars.len()));
+    out.push(Piece::Mark(total));
     out
 }
 
@@ -275,9 +523,11 @@ fn pieces(doc: &Shown, styles: Option<&StyleTable>) -> Vec<Piece> {
 /// code is cells of the word it is in, and that of a [d~X] code cells that end the word (the reference's word
 /// reader takes both into the word); anything else stays a code. `depth` stops a style that names itself; `pos` is
 /// the code's place in the document, which its cells come from.
-fn expand(code: &str, styles: Option<&StyleTable>, out: &mut Vec<Piece>, depth: usize, pos: usize) {
+fn expand(code: &str, styles: Option<&StyleTable>, out: &mut Pieces, depth: usize, pos: usize) {
     if let Some(text) = code.strip_prefix("q~").or_else(|| code.strip_prefix("d~")) {
-        out.extend(text.chars().map(|c| Piece::Char(c, pos)));
+        for c in text.chars() {
+            out.push(Piece::Char(c, pos));
+        }
         if code.starts_with('d') {
             out.push(Piece::Space);
         }
@@ -409,7 +659,7 @@ impl Side {
 fn side_line(text: &str, side: Side, cells: usize) -> Line {
     let pad = side.start(text.chars().count(), cells);
     let text = format!("{}{text}", " ".repeat(pad));
-    Line { sources: vec![None; text.chars().count()], text, marks: Vec::new() }
+    Line { sources: Sources::none(text.chars().count()), text, marks: Marks::default() }
 }
 
 /// Words wrapped into lines of at most `width` cells.
@@ -701,9 +951,9 @@ impl Formatter {
             }
             for line in lines {
                 if self.page_start.is_none() {
-                    self.page_start = line.sources.iter().flatten().next().copied();
+                    self.page_start = line.sources.first();
                 }
-                if line.sources.iter().any(Option::is_some) {
+                if line.sources.any() {
                     self.pending_blank = 0;
                 }
                 self.push_line(line);
@@ -982,8 +1232,8 @@ impl Formatter {
         let dashes = self.layout.cells - len;
         let mut line = Line {
             text: "-".repeat(dashes),
-            sources: vec![None; dashes],
-            marks: Vec::new(),
+            sources: Sources::none(dashes),
+            marks: Marks::default(),
         };
         for &(c, s) in cells.iter().take(len) {
             line.text.push(c);
@@ -997,11 +1247,11 @@ impl Formatter {
     }
 
     fn line_has_text(&self) -> bool {
-        self.line.sources.iter().any(Option::is_some)
+        self.line.sources.any()
     }
 
     fn page_has_text(&self) -> bool {
-        self.line_has_text() || self.page.iter().any(|l| l.sources.iter().any(Option::is_some))
+        self.line_has_text() || self.page.iter().any(|l| l.sources.any())
     }
 
     fn put(&mut self, c: char, source: Option<usize>) {
@@ -1022,7 +1272,7 @@ impl Formatter {
             let mut text: Vec<char> = self.line.text.chars().collect();
             text[at] = c;
             self.line.text = text.into_iter().collect();
-            self.line.sources[at] = source;
+            self.line.sources.set(at, source);
             if source.is_some() {
                 self.pending_blank = 0;
             }
@@ -1095,11 +1345,11 @@ impl Formatter {
             let mut text: Vec<char> = line.text.chars().collect();
             if text.len() < col + len {
                 text.resize(col + len, ' ');
-                line.sources.resize(col + len, None);
+                line.sources.resize(col + len);
             }
             for (k, c) in number.chars().enumerate() {
                 text[col + k] = c;
-                line.sources[col + k] = None;
+                line.sources.set(col + k, None);
             }
             line.text = text.into_iter().collect();
         }
@@ -1113,11 +1363,11 @@ impl Formatter {
                 let mut cells: Vec<char> = line.text.chars().collect();
                 if cells.len() < col + len {
                     cells.resize(col + len, ' ');
-                    line.sources.resize(col + len, None);
+                    line.sources.resize(col + len);
                 }
                 for (k, c) in text.chars().enumerate() {
                     cells[col + k] = c;
-                    line.sources[col + k] = None;
+                    line.sources.set(col + k, None);
                 }
                 line.text = cells.into_iter().collect();
             }
@@ -1138,12 +1388,12 @@ impl Formatter {
             let width = placed.text.chars().count();
             if text.len() < width {
                 text.resize(width, ' ');
-                line.sources.resize(width, None);
+                line.sources.resize(width);
             }
             for (k, c) in placed.text.chars().enumerate() {
                 if c != ' ' {
                     text[k] = c;
-                    line.sources[k] = None;
+                    line.sources.set(k, None);
                 }
             }
             line.text = text.into_iter().collect();
@@ -1854,7 +2104,7 @@ impl Formatter {
                 let l = first.unwrap_or(1);
                 let after_head = n.get(2).copied().unwrap_or(l);
                 let after_blank = n.get(3).copied().unwrap_or(0);
-                let after_text = self.page.last().is_some_and(|l| l.sources.iter().any(Option::is_some));
+                let after_text = self.page.last().is_some_and(|l| l.sources.any());
                 let count = if !self.opened {
                     // The top of a page: N when it will carry a head, else P.
                     if !self.head.is_empty() && self.on_this_page(self.head_pages) { after_head } else { after_blank }
@@ -1967,12 +2217,12 @@ impl Formatter {
             // A centred line is centred on the whole line, rounding down; the right margin only narrows where its
             // words wrap.
             let pad = self.layout.cells.saturating_sub(len) / 2;
-            let mut centred = Line { text: " ".repeat(pad), sources: vec![None; pad], marks: Vec::new() };
+            let mut centred = Line { text: " ".repeat(pad), sources: Sources::none(pad), marks: Marks::default() };
             centred.text.push_str(&l.text);
-            centred.sources.extend(l.sources);
-            if let Some(s) = centred.sources.iter().flatten().next() {
+            centred.sources.extend(l.sources.iter());
+            if let Some(s) = centred.sources.first() {
                 if self.page_start.is_none() {
-                    self.page_start = Some(*s);
+                    self.page_start = Some(s);
                 }
             }
             self.push_line(centred);
@@ -2075,7 +2325,7 @@ impl Formatter {
     /// past the edit takes the old layout's later pages and stops.
     fn run_from(
         mut self,
-        pieces: &[Piece],
+        pieces: &Pieces,
         from: usize,
         mut word: Vec<(char, Option<usize>)>,
         checkpoints: &mut Vec<Checkpoint>,
@@ -2095,7 +2345,7 @@ impl Formatter {
                 }
                 self.new_page();
             }
-            self.step(&pieces[i], &mut word);
+            self.step(&pieces.get(i), &mut word);
             if std::mem::take(&mut self.keep_opened) {
                 self.keep_start = Some(i);
             }
@@ -2149,10 +2399,10 @@ impl Formatter {
             let marks = std::mem::take(&mut self.line.marks);
             // The last line of the last page that has text (or the page's first line).
             if let Some(page) = self.pages.last_mut() {
-                let at = page.lines.iter().rposition(|l| l.sources.iter().any(Option::is_some)).unwrap_or(0);
+                let at = page.lines.iter().rposition(|l| l.sources.any()).unwrap_or(0);
                 if let Some(last) = page.lines.get_mut(at) {
                     let col = last.text.chars().count();
-                    last.marks.extend(marks.into_iter().map(|(pos, _)| (pos, col)));
+                    last.marks.extend(marks.iter().map(|(pos, _)| (pos, col)));
                 }
             }
         }
@@ -2196,13 +2446,8 @@ pub fn format(doc: &Shown, layout: &Layout, styles: Option<&StyleTable>) -> Vec<
 
 /// Moves every document place on a line by `map`; None when one has nowhere to go.
 fn move_line(line: &mut Line, map: &impl Fn(usize) -> Option<usize>) -> Option<()> {
-    for s in line.sources.iter_mut().flatten() {
-        *s = map(*s)?;
-    }
-    for m in &mut line.marks {
-        m.0 = map(m.0)?;
-    }
-    Some(())
+    line.sources.map_places(map)?;
+    line.marks.map_places(map)
 }
 
 /// The formatter's state after the piece that finished a page: the piece to go on from, the pages made, the state
@@ -2219,7 +2464,7 @@ struct Checkpoint {
 /// reference drops its pages from the edit on and lays them out again; the ones before are kept).
 #[derive(Debug, Clone, Default)]
 pub struct Trail {
-    pieces: Vec<Piece>,
+    pieces: Pieces,
     checkpoints: Vec<Checkpoint>,
     layout: Option<Layout>,
 }
@@ -2300,12 +2545,12 @@ fn in_code(codes: &[(usize, usize)], p: usize) -> bool {
 
 /// The index of the first piece at or after document place `pos`; a piece with no place of its own (a code, a
 /// space) counts at the place of the piece before it.
-fn first_at(pieces: &[Piece], pos: usize) -> usize {
+fn first_at(pieces: &Pieces, pos: usize) -> usize {
     let key = |mut i: usize| loop {
-        match pieces[i] {
-            Piece::Char(_, at) | Piece::Mark(at) => return at,
-            _ if i == 0 => return 0,
-            _ => i -= 1,
+        match pieces.place(i) {
+            Some(at) => return at,
+            None if i == 0 => return 0,
+            None => i -= 1,
         }
     };
     let (mut lo, mut hi) = (0, pieces.len());
@@ -2365,21 +2610,11 @@ pub fn reformat(
     if end < len {
         mid.pop();
     }
-    for p in &mut mid {
-        match p {
-            Piece::Char(_, at) | Piece::Mark(at) => *at += start,
-            _ => {}
-        }
-    }
+    mid.shift_places(0, start as isize);
     let mid_len = mid.len();
-    old.splice(cut_from..cut_to, mid);
+    old.splice(cut_from..cut_to, &mid);
     if delta != 0 {
-        for p in &mut old[cut_from + mid_len..] {
-            match p {
-                Piece::Char(_, at) | Piece::Mark(at) => *at = (*at as isize + delta) as usize,
-                _ => {}
-            }
-        }
+        old.shift_places(cut_from + mid_len, delta);
     }
     let new = old;
     let same_before = cut_from;
@@ -2436,7 +2671,7 @@ pub fn reformat(
 /// when that cell is there and came from a place in the document; None otherwise.
 pub fn exact_position(pages: &[Page], page: usize, line: usize, column: usize) -> Option<usize> {
     let ln = pages.get(page.checked_sub(1)?)?.lines.get(line.checked_sub(1)?)?;
-    *ln.sources.get(column.checked_sub(1)?)?
+    ln.sources.get(column.checked_sub(1)?)
 }
 
 /// Edit, Goto, "go to the closest location": lines are counted through the document
@@ -2459,7 +2694,7 @@ pub fn closest_position(
             return None;
         }
         let ln = pages.get(g as usize / lpp)?.lines.get(g as usize % lpp)?;
-        *ln.sources.get(c as usize)?
+        ln.sources.get(c as usize)
     };
     let width = |g: i64| -> Option<usize> {
         (g >= 0 && (g as usize) < total).then(|| pages.get(g as usize / lpp).and_then(|p| p.lines.get(g as usize % lpp)))?.map(|l| l.sources.len())
@@ -2506,7 +2741,7 @@ pub fn position_of(pages: &[Page], page: usize, line: usize, column: usize) -> O
     let pg = pages.get(page.checked_sub(1)?)?;
     let ln = pg.lines.get(line.checked_sub(1)?)?;
     if let Some(s) = ln.sources.iter().skip(column.saturating_sub(1)).flatten().next() {
-        return Some(*s);
+        return Some(s);
     }
     // A place with no cell where the pen stood at or after the column (the first such), else the line's last.
     let col = column.saturating_sub(1);
@@ -2518,7 +2753,7 @@ pub fn position_of(pages: &[Page], page: usize, line: usize, column: usize) -> O
         return Some(s + 1);
     }
     let later = pages[page - 1].lines[line..].iter().chain(pages[page..].iter().flat_map(|p| &p.lines));
-    later.flat_map(|l| l.sources.iter().flatten()).next().copied()
+    later.flat_map(|l| l.sources.iter().flatten()).next()
 }
 
 /// The page, line and column (all 1-based, the line counted on its page) of a character position in the document:
@@ -2530,13 +2765,13 @@ pub fn locate(pages: &[Page], pos: usize) -> (usize, usize, usize) {
     for (p, page) in pages.iter().enumerate() {
         for (l, line) in page.lines.iter().enumerate() {
             // A place with no cell: where the formatter's pen stood (spec 27 5b).
-            if let Some(&(_, col)) = line.marks.iter().find(|m| m.0 == pos) {
+            if let Some((_, col)) = line.marks.iter().find(|m| m.0 == pos) {
                 return (p + 1, l + 1, col + 1);
             }
             for (c, s) in line.sources.iter().enumerate() {
                 match s {
-                    Some(s) if *s == pos => return (p + 1, l + 1, c + 1),
-                    Some(s) if *s < pos => before = Some((p + 1, l + 1, c + 2)),
+                    Some(s) if s == pos => return (p + 1, l + 1, c + 1),
+                    Some(s) if s < pos => before = Some((p + 1, l + 1, c + 2)),
                     Some(_) => return before.unwrap_or((p + 1, l + 1, c + 1)),
                     None => {}
                 }
@@ -2717,22 +2952,22 @@ mod tests {
             let expected: Vec<usize> = pieces(&doc, None)
                 .iter()
                 .filter_map(|piece| match piece {
-                    Piece::Code(c) if matches!(split_code(c).0, "tls" | "rfs") => {
+                    Piece::Code(c) if matches!(split_code(&c).0, "tls" | "rfs") => {
                         running = true;
                         None
                     }
-                    Piece::Code(c) if matches!(split_code(c).0, "tle" | "rfe") => {
+                    Piece::Code(c) if matches!(split_code(&c).0, "tle" | "rfe") => {
                         running = false;
                         None
                     }
-                    Piece::Char(_, at) if !running => Some(*at),
+                    Piece::Char(_, at) if !running => Some(at),
                     _ => None,
                 })
                 .collect();
             for layout in [Layout::print(80, 50), Layout::braille(40, 25)] {
                 let pages = format(&doc, &layout, None);
                 let placed: Vec<usize> =
-                    pages.iter().flat_map(|pg| &pg.lines).flat_map(|l| l.sources.iter().flatten().copied()).collect();
+                    pages.iter().flat_map(|pg| &pg.lines).flat_map(|l| l.sources.iter().flatten()).collect();
                 if placed != expected {
                     let k = placed.iter().zip(&expected).position(|(a, b)| a != b).unwrap_or(placed.len().min(expected.len()));
                     let at = expected.get(k).or(placed.get(k)).copied().unwrap_or(0);
@@ -2929,7 +3164,7 @@ mod tests {
 
     #[test]
     fn goto_exact_and_closest_as_specified() {
-        let line = |s: &[Option<usize>]| Line { sources: s.to_vec(), ..Line::default() };
+        let line = |s: &[Option<usize>]| Line { sources: s.iter().copied().collect(), ..Line::default() };
         // Two pages of three lines; page 1 line 2 is blank; page 2 line 1 has a page number cell (no place).
         let pages = vec![
             Page { lines: vec![line(&[Some(0), Some(1), Some(2)]), line(&[]), line(&[Some(4), None, Some(6)])], ..Page::default() },

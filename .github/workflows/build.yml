@@ -52,6 +52,12 @@ jobs:
       - name: Tests
         run: cargo test --workspace
 
+      # A book-sized document through the import, the layout and the translation, with a bound on the memory each
+      # pass may take (crates/bc-core/tests/large_document.rs); on its own, so no other test adds to the peak.
+      - name: Large document memory bounds
+        if: runner.os == 'Linux'
+        run: cargo test --release -p bc-core --test large_document -- --ignored --test-threads=1
+
       # Windows' own tables for the code pages formatted text and coded text use, written by Windows itself
       # (examples/windows_code_pages.rs), kept as the windows-code-pages artifact.
       - name: Windows code page tables

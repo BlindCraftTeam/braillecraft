@@ -63,7 +63,13 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
     let braille = kind == DocKind::Braille;
     // The coded view's rows are 42 characters for a braille document and 65 for a print one (spec 27 4b); the page
     // size is set from the document's own when it is first shown (App::show_area).
-    let ed = Editor::new(shown.clone(), bc_core::format::Layout::braille(40, 25), None, view.codes, if braille { 42 } else { 65 });
+    let template = crate::translation::default_template();
+    let page_numbers = crate::translation::template_page_numbers(&template);
+    let styles = crate::translation::template_style_list(&template);
+    let (cells, lines) = if braille { (40, 25) } else { (80, 50) };
+    // Laid out once, with the document's own layout, so a book is not laid out again at its first show (L1).
+    let (ed_layout, layout, style_table) = app::layout_for(cells, lines, page_numbers, braille, &styles, Hyphen::Dashes);
+    let ed = Editor::new(shown.clone(), layout, Some(style_table), view.codes, if braille { 42 } else { 65 });
     let doc = Doc {
         key,
         page,
@@ -80,20 +86,20 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
         tables: crate::translation::template_tables(&crate::translation::default_template())
             .unwrap_or_else(|| crate::translation::DEFAULT_TABLES.map(str::to_string)),
         initial_codes: String::new(),
-        template: crate::translation::default_template(),
-        cells: if braille { 40 } else { 80 },
-        lines: if braille { 25 } else { 50 },
-        page_numbers: crate::translation::template_page_numbers(&crate::translation::default_template()),
+        template,
+        cells,
+        lines,
+        page_numbers,
         pages: None,
         ed,
-        ed_layout: 0,
+        ed_layout,
         undo: Vec::new(),
         redo: Vec::new(),
         area_rows: editor_view::ShownRows::default(),
         area_stale: true,
         view,
         hyphen: Hyphen::Dashes,
-        styles: crate::translation::template_style_list(&crate::translation::default_template()),
+        styles,
         file_settings: Vec::new(),
         file_styles: Vec::new(),
         highlight_anchor: None,
@@ -131,6 +137,8 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
         area.set_focus();
         activate_key(key);
     }));
+    // The memory the open freed on the way goes back to the system (plan line L1).
+    bc_core::memory::release();
     key
 }
 
@@ -523,7 +531,7 @@ fn page_move(a: &mut app::App, i: usize, down: bool, control: bool, extend: bool
                 let lines = ed.pages[p].lines.len();
                 Some(ed.pos_at(ed.page_row(p) + line.min(lines.saturating_sub(1)), col))
             } else {
-                let first = ed.pages[p].lines.iter().flat_map(|l| l.sources.iter().flatten()).next().copied();
+                let first = ed.pages[p].lines.iter().flat_map(|l| l.sources.iter().flatten()).next();
                 Some(first.unwrap_or_else(|| ed.pos_at(ed.page_row(p), 0)))
             }
         }

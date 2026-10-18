@@ -295,7 +295,7 @@ fn draw_page<D: DeviceContext>(job: &Job, fit_found: &mut Option<Fit>, dc: &D, g
         if !line.text.trim().is_empty() {
             // The line in runs of one font attribute, each drawn in its style where the one before ended (spec 24 3c).
             let text: Vec<char> = line.text.trim_end().chars().collect();
-            let attr_of = |k: usize| line.sources.get(k).copied().flatten().and_then(|s| job.attributes.get(s).copied()).unwrap_or(0);
+            let attr_of = |k: usize| line.sources.get(k).and_then(|s| job.attributes.get(s).copied()).unwrap_or(0);
             let (mut x, mut k) = (text_x, 0);
             while k < text.len() {
                 let attr = attr_of(k);

@@ -31,12 +31,17 @@ impl Files for Shipped {
     }
 }
 
-/// The process's peak resident memory in kilobytes, from the kernel's status file (Linux only; 0 elsewhere).
-fn peak_rss_kb() -> u64 {
+/// A field of the kernel's status file for this process, in kilobytes (Linux only; 0 elsewhere): VmHWM is the peak
+/// resident memory, VmRSS the resident memory now.
+fn status_kb(field: &str) -> u64 {
     std::fs::read_to_string("/proc/self/status")
         .ok()
-        .and_then(|s| s.lines().find(|l| l.starts_with("VmHWM:")).and_then(|l| l.split_whitespace().nth(1)?.parse().ok()))
+        .and_then(|s| s.lines().find(|l| l.starts_with(field)).and_then(|l| l.split_whitespace().nth(1)?.parse().ok()))
         .unwrap_or(0)
+}
+
+fn peak_rss_kb() -> u64 {
+    status_kb("VmHWM:")
 }
 
 fn main() {
@@ -70,7 +75,19 @@ fn main() {
     });
     let before = peak_rss_kb();
     let start = Instant::now();
-    let got = import_chain::run(&bytes, &recipe, &Shipped(tables));
+    // Each step as it finishes: the text size after it, the memory in use and the peak so far.
+    let mut last = Instant::now();
+    let mut steps = |name: &str, len: usize| {
+        println!(
+            "  step {name:<24} {:>9} bytes  {:.2} s  live {} MB  peak {} MB",
+            len,
+            last.elapsed().as_secs_f64(),
+            status_kb("VmRSS:") / 1024,
+            status_kb("VmHWM:") / 1024
+        );
+        last = Instant::now();
+    };
+    let got = import_chain::run_with(&bytes, &recipe, &Shipped(tables), &mut steps);
     let took = start.elapsed();
     let text = bc_core::internal::decode(&got.text);
     println!("file: {path} ({} bytes), kind: {kind}", bytes.len());
