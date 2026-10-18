@@ -4421,10 +4421,9 @@ async function codeList() {
   if (chosen) insertCodes(`[${chosen[0]}${d.text(22)}]`);
 }
 
-// Document, Hyphen Table: the document's table; a change marks the document changed and lays the document out
-// again.
+// Document, Hyphen Table: the document's table; a change lays the document out again and, as in the standard
+// program, does not mark the document as changed (spec 36 section 12).
 function setHyphen(id) {
-  if (doc.hyphen !== id) doc.dirty = true;
   doc.hyphen = id;
   refreshMenus();
   syncHyphenation();

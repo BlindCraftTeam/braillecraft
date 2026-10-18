@@ -4053,9 +4053,10 @@ fn set_hyphen(id: i32) {
                 2904 => Hyphen::French,
                 _ => Hyphen::French113,
             };
+            // The standard program lays the document out again with the table chosen and does not mark it as
+            // changed (spec 36 section 12).
             if d.hyphen != chosen {
                 d.hyphen = chosen;
-                d.dirty = true;
                 d.area_stale = true;
             }
         }
