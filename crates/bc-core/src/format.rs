@@ -494,6 +494,8 @@ fn pieces(doc: &Shown, styles: Option<&StyleTable>) -> Pieces {
                 }
             }
             after_break_code = crate::doctext::breaks_line(&code);
+            // A code under another of its names in the code list is the same code (spec 19 section 10).
+            let code = canonical_code(&code);
             // A code's place is where the pen stands before the code does its work: the standard program records the
             // asked-for place before its code switch (spec 19 section 9). Table codes keep theirs after them.
             let table_code = in_table || code.starts_with("htbs");
@@ -573,6 +575,28 @@ fn expand(code: &str, styles: Option<&StyleTable>, out: &mut Pieces, depth: usiz
 }
 
 /// A code's name and its numbers: "ind5" is ("ind", [5]), "hds1:0" is ("hds", [1, 0]).
+/// The names the code list (dolcn.xml) gives a code beside the one this formatter reads, each with that one: the
+/// French and Spanish names and the degree sign for [#] (spec 19 section 10).
+const CODE_ALIASES: [(&str, &str); 37] = [
+    ("pl", "sl"), ("\u{b0}", "#"), ("cd", "fr"), ("rd", "fr"), ("aln", "ind"), ("rtb", "ctb"), ("cbc", "hds"),
+    ("ttc", "hds"), ("cbp", "hde"), ("ttt", "hde"), ("htc", "tls"), ("tlc", "tls"), ("htt", "tle"), ("tlp", "tle"),
+    ("etb", "stb"), ("ftb", "stb"), ("psac", "ptys"), ("psc", "ptys"), ("psap", "ptye"), ("pst", "ptye"), ("po", "lea"),
+    ("md", "rm"), ("fc", "sd"), ("ld", "sd"), ("siimp", "ifprt"), ("sibrl", "ifbrl"), ("mf", "wb"), ("vp", "wb"),
+    ("mf-no", "wb-no"), ("vp-no", "wb-no"), ("mf-cb", "wb-cb"), ("vp-cb", "wb-cb"), ("rnc", "kps"), ("rnp", "kpe"),
+    ("rnt", "kpe"), ("cu", "pi"), ("im", "pi"),
+];
+
+/// A code with its name in the form this formatter reads: the name (up to a digit, ':', ';', '~' or '=', as the
+/// standard program's code reader takes it) replaced when it is another name of the same code.
+fn canonical_code(code: &str) -> String {
+    let end = code.find(|c: char| c.is_ascii_digit() || matches!(c, ':' | ';' | '~' | '=')).unwrap_or(code.len());
+    let (name, rest) = code.split_at(end);
+    match CODE_ALIASES.iter().find(|(alias, _)| alias.eq_ignore_ascii_case(name)) {
+        Some((_, real)) => format!("{real}{rest}"),
+        None => code.to_string(),
+    }
+}
+
 fn split_code(code: &str) -> (&str, Vec<i64>) {
     let end = code.find(|c: char| c.is_ascii_digit() || c == '-' || c == ':').unwrap_or(code.len());
     let (name, rest) = code.split_at(end);
@@ -761,6 +785,12 @@ struct Formatter {
     head_reserve: Option<usize>,
     head_retried: bool,
     head_overflow: bool,
+    /// [vcsD:N] vertical centering (spec 19 section 10): N / D of a page's free lines go above its text, the page laid
+    /// out again once with them (center_top) when it closes with lines free; [vce] ends it.
+    vcenter: Option<(usize, usize)>,
+    center_top: Option<usize>,
+    center_done: bool,
+    center_overflow: Option<usize>,
     /// Where page numbers go on odd and even pages and the first number shown; [svpnp] and [svpfd] change them from
     /// the next page.
     numbers_odd: Corner,
@@ -875,6 +905,9 @@ struct Formatter {
     cb_cont: String,
     hyphen_override: Option<char>,
     last_word: Vec<char>,
+    /// [ifprt] in a braille document or [ifbrl] in a print document: the next item (a word or a code) is dropped
+    /// (pgifmt cases 0x68, 0x69; the document object's +0x94 is 1 for a print document).
+    skip_next: bool,
 }
 
 impl Formatter {
@@ -896,6 +929,10 @@ impl Formatter {
             head_reserve: None,
             head_retried: false,
             head_overflow: false,
+            vcenter: None,
+            center_top: None,
+            center_done: false,
+            center_overflow: None,
             numbers_odd: layout.numbers_odd,
             numbers_even: layout.numbers_even,
             first_number_shown: layout.first_number_shown,
@@ -966,6 +1003,7 @@ impl Formatter {
             cb_cont: "_&".into(),
             hyphen_override: None,
             last_word: Vec::new(),
+            skip_next: false,
         }
     }
 
@@ -1221,6 +1259,12 @@ impl Formatter {
             self.head_rows = rows;
             let after = if self.layout.braille { 0 } else { 2 } + self.blank_between;
             for _ in 0..after.min(self.capacity().saturating_sub(self.page.len() + 1)) {
+                self.page.push(Line::default());
+            }
+        }
+        // A page laid out again for vertical centering: its blank lines above the text.
+        if let Some(k) = self.center_top.take() {
+            for _ in 0..k.min(self.capacity().saturating_sub(self.page.len() + 1)) {
                 self.page.push(Line::default());
             }
         }
@@ -1480,6 +1524,19 @@ impl Formatter {
         let number = self.number_text();
         let mut lines = std::mem::take(&mut self.page);
         let room = self.usable();
+        // Vertical centering (pgifmt at the page's close): with lines free above the foot, (usable lines - the
+        // lines used - 1) * N / D blank lines go at the top when the page is laid out again; once per page.
+        if let Some((num, den)) = self.vcenter.filter(|_| !self.center_done) {
+            let used = lines.iter().rposition(|l| !l.text.is_empty() || l.sources.any()).map_or(0, |k| k + 1);
+            let avail = room.saturating_sub(usize::from(self.page_foot.is_some()));
+            if avail > used + 1 {
+                let skip = (room - (used + 1)) * num / den;
+                if skip >= 1 {
+                    self.center_overflow = Some(skip);
+                }
+            }
+        }
+        self.center_done = false;
         lines.resize(self.layout.lines.max(room), Line::default());
         // An anticipatory head ([svant] 1 or 3) is written as it stands when the page closes, over the rows it was
         // given at the opening. When its line count changed, the page is laid out again once with that many rows
@@ -1665,6 +1722,10 @@ impl Formatter {
 
     /// Places one word (its cells and their sources), wrapping it to the runover margin when it does not fit.
     fn word(&mut self, cells: &[(char, Option<usize>)]) {
+        if std::mem::take(&mut self.skip_next) {
+            self.word_marks.clear();
+            return;
+        }
         if let Some((_, r)) = &mut self.running {
             r.push(cells.iter().map(|c| c.0).collect());
             self.word_marks.clear();
@@ -1883,6 +1944,14 @@ impl Formatter {
     }
 
     fn code(&mut self, code: &str) {
+        if std::mem::take(&mut self.skip_next) {
+            return;
+        }
+        // [ifprt] keeps the next item only in a print document, [ifbrl] only in a braille one.
+        if code == "ifprt" || code == "ifbrl" {
+            self.skip_next = (code == "ifprt") == self.layout.braille;
+            return;
+        }
         // [htbfmtN:FFF] the options pair N and the automatic layout letters FFF of the next table (spec 35 1.1);
         // [htbs...] starts a table; [htbe] outside a table is nothing.
         if let Some(rest) = code.strip_prefix("htbfmt") {
@@ -2274,6 +2343,14 @@ impl Formatter {
             // [pntr] roman and [pnta] arabic page numbers, from the next number taken (case 0x76, 0x77).
             "pntr" => self.roman = true,
             "pnta" => self.roman = false,
+            // [vcsD:N] vertical centering, N of D parts of a page's free lines above its text (D 2, N 1, N at most
+            // D); [vce] ends it (cases 0xa8, 0xa7).
+            "vcs" => {
+                let den = n.first().copied().unwrap_or(2).max(1) as usize;
+                let num = (n.get(1).copied().unwrap_or(1).max(1) as usize).min(den);
+                self.vcenter = Some((num, den));
+            }
+            "vce" => self.vcenter = None,
             // [svlesN:M:L:P] the print page line (N 0 American, 1 British), continuation letters (M 1 none), the bottom
             // tolerance L and where the text after the line starts (P 0, 1, 2); alone, the file's values 0:0:2:0
             // (case 0x8a: N and M 0..1, L 0..4, P 0..2; a value not given stays).
@@ -2659,6 +2736,18 @@ impl Formatter {
                 made = n;
                 continue;
             }
+            if let Some(skip) = self.center_overflow.take() {
+                let (at, state, w, n) = page_from.clone();
+                let mut pages = std::mem::take(&mut self.pages);
+                pages.truncate(n);
+                self = Formatter { pages, ..state };
+                self.center_top = Some(skip);
+                self.center_done = true;
+                word = w;
+                i = at;
+                made = n;
+                continue;
+            }
             made = self.pages.len();
             let at = i;
             page_from = (at, self.snapshot(), word.clone(), made);
@@ -2674,12 +2763,17 @@ impl Formatter {
         }
         // The last page closes in `end`: when its anticipatory head changed its line count, it is laid out again.
         let (at, state, w, n) = page_from;
-        let (mut pages, head_change) = self.end(word);
-        if let Some(rows) = head_change {
+        let (mut pages, head_change, center) = self.end(word);
+        if head_change.is_some() || center.is_some() {
             pages.truncate(n);
             let mut again = Formatter { pages, ..state };
-            again.head_reserve = Some(rows);
-            again.head_retried = true;
+            if let Some(rows) = head_change {
+                again.head_reserve = Some(rows);
+                again.head_retried = true;
+            } else if let Some(skip) = center {
+                again.center_top = Some(skip);
+                again.center_done = true;
+            }
             return again.run_from(pieces, at, w, checkpoints, None);
         }
         pages
@@ -2687,7 +2781,7 @@ impl Formatter {
 
     /// Lays out the last word and what is still open, and gives the pages, with the head's line count when the last
     /// page's anticipatory head changed it (Formatter::run_from lays that page out again).
-    fn end(mut self, word: Vec<(char, Option<usize>)>) -> (Vec<Page>, Option<usize>) {
+    fn end(mut self, word: Vec<(char, Option<usize>)>) -> (Vec<Page>, Option<usize>, Option<usize>) {
         // A table without [htbe] runs to the end of the document (spec 35 1.3).
         if let Some(end) = self.table.as_ref().map(|t| t.last_mark().map_or(0, |m| m + 1)) {
             self.lay_table(end);
@@ -2718,7 +2812,8 @@ impl Formatter {
             self.finish_page();
         }
         let change = std::mem::take(&mut self.head_overflow).then(|| self.head.len());
-        (self.pages, change)
+        let center = self.center_overflow.take();
+        (self.pages, change, center)
     }
 }
 
@@ -2738,6 +2833,8 @@ fn is_layout(code: &str) -> bool {
         || code.starts_with("svgrn")
         || (code.starts_with("pv") && code[2..].starts_with(|c: char| c.is_ascii_digit() || c == '~'))
         || code == "pv"
+        || code == "ifprt"
+        || code == "ifbrl"
         || (code.starts_with("lea") && code[3..].starts_with(|c: char| c.is_ascii_alphabetic() || c == '~' || c == ':'))
         || code == ">"
         || matches!(
@@ -2746,7 +2843,7 @@ fn is_layout(code: &str) -> bool {
                 | "kbs" | "kbe" | "kpf" | "tab" | "run"
                 | "svpnp" | "svpfd" | "hi" | "hl" | "lea" | "svrlb" | "svprg" | "sl" | "st" | "ki"
                 | "tls" | "tle" | "tld" | "rfs" | "rfe" | "rfd" | "svrhp" | "svrfp" | "svrhs" | "svrfs" | "kps" | "kpe" | "sc"
-                | "ctb" | "tas" | "taa" | "svmts" | "lps" | "lpr" | "svlma" | "skn" | "sd" | "pm" | "svant" | "pntr" | "pnta" | "svles"
+                | "ctb" | "tas" | "taa" | "svmts" | "lps" | "lpr" | "svlma" | "skn" | "sd" | "pm" | "svant" | "pntr" | "pnta" | "svles" | "vcs" | "vce"
         )
 }
 
@@ -3601,6 +3698,37 @@ mod tests {
         // A list: level 1 starts at cell 1 and runs over to cell 3, each level two cells further in.
         let pages = format(&m("[hi1:3:0:2:2][hl1]aaa bbb ccc[hl2]aaa bbb ccc[hi]x"), &Layout::braille(9, 8), None);
         assert_eq!(texts(&pages[0])[..6], ["aaa bbb", "  ccc", "  aaa bbb", "    ccc", "x", ""]);
+    }
+
+    #[test]
+    fn vertical_centering_puts_part_of_the_free_lines_above() {
+        // Ten lines, two used: (10 - 2 - 1) / 2 = 3 blank lines above, a later page not centred after [vce].
+        let pages = format(&m("[vcs]a\nb[pg][vce]c"), &Layout::braille(10, 10), None);
+        assert_eq!(texts(&pages[0])[..6], ["", "", "", "a", "b", ""]);
+        assert_eq!(texts(&pages[1])[0], "c");
+        // [vcs3:2]: two thirds above.
+        let pages = format(&m("[vcs3:2]a"), &Layout::braille(10, 10), None);
+        assert_eq!(texts(&pages[0])[5], "a");
+    }
+
+    #[test]
+    fn ifprt_and_ifbrl_keep_the_next_item_for_one_kind_of_document() {
+        let braille = format(&m("a [ifprt]b [ifbrl]c d"), &Layout::braille(20, 2), None);
+        assert_eq!(texts(&braille[0])[0], "a c d");
+        let print = format(&m("a [ifprt]b [ifbrl]c d"), &Layout::print(20, 2), None);
+        assert_eq!(texts(&print[0])[0], "a b d");
+    }
+
+    #[test]
+    fn a_code_under_another_name_is_the_same_code() {
+        // [ttc] and [ttt] are the French names of [hds] and [hde]; [md] of [rm].
+        let a = format(&m("[ttc]Title[ttt]"), &Layout::braille(20, 2), None);
+        let b = format(&m("[hds]Title[hde]"), &Layout::braille(20, 2), None);
+        assert_eq!(texts(&a[0]), texts(&b[0]));
+        assert_eq!(canonical_code("md5"), "rm5");
+        assert_eq!(canonical_code("vp-no"), "wb-no");
+        assert_eq!(canonical_code("\u{b0}2"), "#2");
+        assert_eq!(canonical_code("rm2"), "rm2");
     }
 
     #[test]
