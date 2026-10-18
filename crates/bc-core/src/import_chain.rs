@@ -50,6 +50,13 @@ pub enum Recipe {
     /// A Word document (.docx): the Word importer's settings, the Word style map's file name (`word::map_file_name`
     /// of the template's "word:mws" text) and the Unknown Characters setting.
     Docx(crate::word::Options, String, u8),
+    /// HTML or SGML text that reads as XML (the HTML recipe: the tag processor with the SGML flag, then the entity,
+    /// element, space, emphasis, code and post scripts, the character map, the Han script, the character step, the
+    /// quotes script, the hyperlinks step with the Word importer's hyperlink settings, the optional tables script
+    /// and spaces normalised three times), with the Unknown Characters setting.
+    Html(crate::word::Options, u8),
+    /// A Markdown file (BrailleCraft's own addition): turned into HTML (`markdown::to_html`) and run as `Html`.
+    Markdown(crate::word::Options, u8),
 }
 
 /// The chain's result: the internal text, the steps that failed (each with its reason) and what the formatted
@@ -100,6 +107,9 @@ pub const WORD_RULE_SCRIPTS: [&str; 17] = [
 ];
 /// The Word style maps shipped as data (tables/word-styles), by their program names.
 pub const WORD_MAPS: [&str; 6] = ["default", "australian", "bana", "french", "russian", "uk-basic"];
+/// The HTML recipe's own rule scripts (the others it runs are the Word recipe's: entities, elements, emphasis, codes,
+/// Han characters and quotes).
+pub const SGML_RULE_SCRIPTS: [&str; 2] = ["sgml-spaces.rules", "sgml-post.rules"];
 
 /// Runs the recipe over the file's bytes.
 pub fn run(bytes: &[u8], recipe: &Recipe, files: &dyn Files) -> Imported {
@@ -162,6 +172,18 @@ pub fn run(bytes: &[u8], recipe: &Recipe, files: &dyn Files) -> Imported {
             docx(&text, opt, map, *unknown, files, &mut out);
             return out;
         }
+        Recipe::Html(opt, unknown) => {
+            let html = String::from_utf8_lossy(&text);
+            let html = html.strip_prefix('\u{feff}').unwrap_or(&html);
+            html_chain(html, opt, *unknown, files, &mut out);
+            return out;
+        }
+        Recipe::Markdown(opt, unknown) => {
+            let markdown = String::from_utf8_lossy(&text);
+            let markdown = markdown.strip_prefix('\u{feff}').unwrap_or(&markdown);
+            html_chain(&crate::markdown::to_html(markdown), opt, *unknown, files, &mut out);
+            return out;
+        }
     }
     script("ninit-codes.rules", &mut text, &mut out.errors);
     // Tables to outlines is optional in the recipes: it runs when it is there. The optional maths step that follows
@@ -180,6 +202,55 @@ pub fn run(bytes: &[u8], recipe: &Recipe, files: &dyn Files) -> Imported {
     }
     out.text = text;
     out
+}
+
+/// The HTML recipe (spec 28 section 15, imp-sgml): the tag processor over the text with the SGML flag and no style
+/// map (so no scrub rules), then the entity, element, space, emphasis, code and post scripts, the character map, the
+/// Han script, the character step (no apostrophe override) with the quotes script, the hyperlinks step, the optional
+/// tables script, and spaces normalised three times. The control-character step runs inside the tag processor.
+fn html_chain(html: &str, opt: &crate::word::Options, unknown: u8, files: &dyn Files, out: &mut Imported) {
+    let script = |name: &str, text: &mut Vec<u8>, errors: &mut Vec<String>| match files.rule_script(name) {
+        Ok(mut s) => match s.run(text) {
+            Ok(t) => *text = t,
+            Err(e) => errors.push(format!("{name}: {e}")),
+        },
+        Err(e) => errors.push(format!("{name}: {e}")),
+    };
+    let processed = match crate::word::process_html(html, opt) {
+        Ok(p) => p,
+        Err(e) => {
+            out.errors.push(e);
+            return;
+        }
+    };
+    let mut text = processed.text.into_bytes();
+    for name in ["word-entities.rules", "word-elements.rules", "sgml-spaces.rules", "word-emphasis.rules", "word-codes.rules", "sgml-post.rules"] {
+        script(name, &mut text, &mut out.errors);
+    }
+    match files.unimap_tables() {
+        Ok(tables) => {
+            let refs: Vec<(&str, &[u8])> = tables.iter().map(|(n, b)| (n.as_str(), b.as_slice())).collect();
+            text = crate::unimap::UniMap::read(&refs).map(&text, -1, unknown);
+        }
+        Err(e) => out.errors.push(format!("unimap: {e}")),
+    }
+    script("word-han-chars.rules", &mut text, &mut out.errors);
+    // utf8dusci with no arguments: the quotes classed by their neighbours, no apostrophe override.
+    let unicode = String::from_utf8_lossy(&text).into_owned();
+    let unicode = crate::word::quote_forms(&unicode, None, None, None);
+    text = coded_text_bytes(unicode.as_bytes(), "UTF-8", unknown);
+    script("word-quotes.rules", &mut text, &mut out.errors);
+    text = crate::word::hyperlinks(&text, opt.hyperlinks, opt.remove_duplicates, if opt.auto_tag_cbc { 1 } else { 0 });
+    if let Ok(mut s) = files.rule_script("table-outline.rules") {
+        match s.run(&text) {
+            Ok(t) => text = t,
+            Err(e) => out.errors.push(format!("table-outline.rules: {e}")),
+        }
+    }
+    for _ in 0..3 {
+        script("normalize-spaces.rules", &mut text, &mut out.errors);
+    }
+    out.text = text;
 }
 
 /// The Word recipe (spec 28 section 3 and 15): the package through the stylesheet's rules, the page-break fix, the
@@ -388,6 +459,24 @@ mod tests {
             count += 1;
         }
         assert!(count > 0, "no sample Word documents in {dir}");
+    }
+
+    /// A Markdown document goes through the HTML recipe: headings, paragraphs, lists, emphasis and links come out as
+    /// text with codes and no step fails.
+    #[test]
+    fn a_markdown_document_imports() {
+        let md = "# Title\n\nSome *text* and a [link](http://example.org/) with Tom's \"quotes\" & more.\n\n- first\n- second\n\n## Second\n\nA `code` word and **strong** text.\n";
+        let got = run(md.as_bytes(), &Recipe::Markdown(crate::word::Options::default(), 0), &Shipped);
+        assert!(got.errors.is_empty(), "{:?}", got.errors);
+        let text = crate::internal::decode(&got.text);
+        // Observed 2026-10-17: the headings and paragraphs take the h1., h2. and para. styles, emphasis the fts
+        // and fte codes, the list the list. style with level codes and line codes, inline code the compinline
+        // style, and the link its text with the URL in parentheses (the Hyperlinks action "both").
+        assert!(text.starts_with("\x1ces~h1.\x1fTitle\x1cee~h1.\x1f\x1ces~para.\x1fSome \x1cfts~i\x1ftext\x1cfte~i\x1f and a "), "{text}");
+        assert!(text.contains("link (http://example.org/)"), "{text}");
+        assert!(text.contains(" with Tom's \"quotes\" & more.\x1cee~para.\x1f\x1ces~list.\x1f\x1chl1\x1ffirst\x1cl\x1f\x1chl1\x1fsecond\x1cl\x1f\x1cee~list.\x1f"), "{text}");
+        assert!(text.contains("\x1ces~h2.\x1fSecond\x1cee~h2.\x1f\x1ces~para.\x1fA \x1ces~compinline\x1fcode\x1cee~compinline\x1f word and \x1cfts~b\x1fstrong\x1cfte~b\x1f text.\x1cee~para.\x1f"), "{text}");
+        assert!(!text.contains("<p>") && !text.contains("</"), "tags left: {text}");
     }
 
     #[test]

@@ -2387,6 +2387,20 @@ async function readImport(bytes, choice) {
     if (imported.errors) await message(imported.errors);
     return { braille: false, running: imported.running, template };
   }
+  // A Markdown file becomes HTML and goes through the HTML recipe, with the Word importer's hyperlink and
+  // unknown-character settings.
+  if (choice.kind === "Markdown") {
+    let imported;
+    try {
+      await importFiles();
+      imported = core.import_markdown(bytes, JSON.stringify(wordOptions()), unknownCharacters());
+    } catch (err) {
+      statusLine.textContent = String(err.message ?? err);
+      return null;
+    }
+    if (imported.errors) await message(imported.errors);
+    return { braille: false, running: imported.running, template };
+  }
   if (CHAIN_KINDS.includes(choice.kind)) {
     let imported;
     try {

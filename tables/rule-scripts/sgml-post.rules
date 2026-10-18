@@ -1,0 +1,17 @@
+| Superfluous style codes removed after the HTML and SGML import: a paragraph style around a note style, or around a span, is reduced
+| This should be run last, after conversion to txx
+| States:
+|  1 = outside para.
+|  2 = inside para.
+|  3 = inside a note. within a para.
+
+|028es|~para.|031|028es|~span|031|028es|~note.|031~|028es|~note.|031~1~3~
+|028es|~para.|031|028es|~note.|031~|028es|~note.|031~1~3~
+|028es|~para.|031~|028es|~para.|031~1~2~
+| Rules for state 2
+|028es|~note.|031~|028ee|~para.|031|028es|~note.|031~2~3~
+|028ee|~para.|031~|028ee|~para.|031~2~1~
+| Rules for state 3
+|028ee|~note.|031|028ee|~span|031|028ee|~para.|031~|028ee|~note.|031~3~1~
+|028ee|~note.|031|028ee|~para.|031~|028ee|~note.|031~3~1~
+|028ee|~note.|031~|028ee|~note.|031|028es|~para.|031~3~1~

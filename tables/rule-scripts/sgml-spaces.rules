@@ -1,0 +1,409 @@
+| Spaces and line endings made regular for the HTML and SGML import: runs of spaces and line endings collapse, line endings become spaces, except inside lit and pre tags
+| The net effect of this table is to eliminate all spaces and line endings
+| that follow another space or line ending, except within <lit> ... </lit>
+| (or pre) tags.  Surviving line endings are also turned into spaces, again
+| except within lit/pre tags.
+| As later defined (>=1995-12-28), also downcases within actual tags,
+| eliminates all after spaces within tags, and converts some HTML tags
+| to ICADD equivalents
+| ---
+|     font), and change to entrefs so resulting file is true ASCII;
+|     1998-9-23 convert numeric entrefs 160-255 to name form;
+|     discard undefined lower controls
+|     tags (such as "img") to survive as LF's;
+|     retain alt="..." text in generated <note><tnote>...</tnote></note> tags
+|     eliminate entref processing and consideration of elements
+|     in upper or partially upper case (now handled in prior step);
+|     eliminate rules to discard lower controls (now done in encut8)
+|     2007-8-17 MPG: Treat <u> as <other> (-> fts~u...fte~u)
+| 2007-9-7 MPG: Add special treatment for <a href>
+| 2007-9-11 MPG: Fixes for <a> introduced by last change
+| 2007-12-28 MPG: Remove <img>
+|     form, including [es~...] and [ee~...] as well as [<] and [>] commands, may
+|     already be present in the input, and if so should be copied through
+| ---
+| States: 1 = after space (or line beginning) outside lit tags
+|   2 = not after space or line beginning outside lit tags
+|   3 = inside <lit> ... </lit>
+|   4 = outside lit, but within a noncomment tag
+|   5 = inside lit, and within a noncomment tag
+|   6 = outside lit, within alt= within a noncomment tag
+|   7 = inside lit, within alt= within a noncomment tag
+|   8 = outside lit, within href= within a noncomment tag
+|   9 = inside <a>...</a>
+|  10 = inside <...> within <a>...</a>
+|  11 = inside alt within <a>...</a>
+|   -2 = outside lit, within a noncomment after space
+|   -3 = inside lit, within a noncomment after space
+|   -4 = within a nested < ... > within state -2 (for complex "!doctype"s)
+|   -5 = inside <a ...>, like -2 but check for href
+|   -6 = within a <a...> with a link
+|   -7 = within <... > after space, within <a>...</a>
+| ---
+| Rules for state 1:
+ ~~1~ | ignore all spaces
+|010~~1~
+!~!~1~2~ | on most nonspaces, copy & transition to state 2
+"~"~1~2~
+#~#~1~2~
+$~$~1~2~
+%~%~1~2~
+&~&~1~2~
+'~'~1~2~
+(~(~1~2~
+)~)~1~2~
+*~*~1~2~
++~+~1~2~
+,~,~1~2~
+-~-~1~2~
+.~.~1~2~
+/~/~1~2~
+0~0~1~2~
+1~1~1~2~
+2~2~1~2~
+3~3~1~2~
+4~4~1~2~
+5~5~1~2~
+6~6~1~2~
+7~7~1~2~
+8~8~1~2~
+9~9~1~2~
+:~:~1~2~
+;~;~1~2~
+<lit>~<lit>~1~3~ | except that <lit> or <pre> causes transition to state 3
+<pre>~<lit>~1~3~
+<!--~<!--~1~2~ | pass comments
+<ipp ~<ipp ~1~ | and "variable" ipp codes
+<ipp|010~<ipp ~1~ | and "variable" ipp codes
+<p>~<para>~1~2~
+<p ~<para>~1~-2~
+<p|010~<para>~1~-2~
+<i>~<it>~1~2~
+<i ~<it>~1~-2~
+<i|010~<it>~1~-2~
+<u>~<other>~1~2~
+<u ~<other>~1~-2~
+<u|010~<other>~1~-2~
+</p>~</para>~1~2~
+</p ~</para>~1~-2~
+</p|010~</para>~1~-2~
+</i>~</it>~1~2~
+</i ~</it>~1~-2~
+</i|010~</it>~1~-2~
+</u>~</other>~1~2~
+</u ~</other>~1~-2~
+</u|010~</other>~1~-2~
+<a ~<a>~1~-5~
+<a|010~<a>~1~-5~
+<a|013|010~<a>~1~-5~
+<a|013~<a>~1~-5~
+<img ~~1~-5~
+<~<~1~4~ | and sense beginning of other tags
+=~=~1~2~
+>~>~1~2~
+?~?~1~2~
+@~@~1~2~
+A~A~1~2~
+B~B~1~2~
+C~C~1~2~
+D~D~1~2~
+E~E~1~2~
+F~F~1~2~
+G~G~1~2~
+H~H~1~2~
+I~I~1~2~
+J~J~1~2~
+K~K~1~2~
+L~L~1~2~
+M~M~1~2~
+N~N~1~2~
+O~O~1~2~
+P~P~1~2~
+Q~Q~1~2~
+R~R~1~2~
+S~S~1~2~
+T~T~1~2~
+U~U~1~2~
+V~V~1~2~
+W~W~1~2~
+X~X~1~2~
+Y~Y~1~2~
+Z~Z~1~2~
+[~[~1~2~
+\~\~1~2~
+]~]~1~2~
+^~^~1~2~
+_~_~1~2~
+`~`~1~2~
+a~a~1~2~
+b~b~1~2~
+c~c~1~2~
+d~d~1~2~
+e~e~1~2~
+f~f~1~2~
+g~g~1~2~
+h~h~1~2~
+i~i~1~2~
+j~j~1~2~
+k~k~1~2~
+l~l~1~2~
+m~m~1~2~
+n~n~1~2~
+o~o~1~2~
+p~p~1~2~
+q~q~1~2~
+r~r~1~2~
+s~s~1~2~
+t~t~1~2~
+u~u~1~2~
+v~v~1~2~
+w~w~1~2~
+x~x~1~2~
+y~y~1~2~
+z~z~1~2~
+{~{~1~2~
+||~||~1~2~
+}~}~1~2~
+|~~|~~1~2~
+~~1~2~
+€~€~1~2~
+~~1~2~
+‚~‚~1~2~
+ƒ~ƒ~1~2~
+„~„~1~2~
+…~…~1~2~
+†~†~1~2~
+‡~‡~1~2~
+ˆ~ˆ~1~2~
+‰~‰~1~2~
+Š~Š~1~2~
+‹~‹~1~2~
+Œ~Œ~1~2~
+~~1~2~
+~~1~2~
+~~1~2~
+~~1~2~
+‘~‘~1~2~
+’~’~1~2~
+“~“~1~2~
+”~”~1~2~
+•~•~1~2~
+–~–~1~2~
+—~—~1~2~
+˜~˜~1~2~
+™~™~1~2~
+š~š~1~2~
+›~›~1~2~
+œ~œ~1~2~
+~~1~2~
+~~1~2~
+Ÿ~Ÿ~1~2~
+ ~ ~1~2~
+¡~¡~1~2~
+¢~¢~1~2~
+£~£~1~2~
+¤~¤~1~2~
+¥~¥~1~2~
+¦~¦~1~2~
+§~§~1~2~
+¨~¨~1~2~
+©~©~1~2~
+ª~ª~1~2~
+«~«~1~2~
+¬~¬~1~2~
+­~­~1~2~
+®~®~1~2~
+¯~¯~1~2~
+°~°~1~2~
+±~±~1~2~
+²~²~1~2~
+³~³~1~2~
+´~´~1~2~
+µ~µ~1~2~
+¶~¶~1~2~
+·~·~1~2~
+¸~¸~1~2~
+¹~¹~1~2~
+º~º~1~2~
+»~»~1~2~
+¼~¼~1~2~
+½~½~1~2~
+¾~¾~1~2~
+¿~¿~1~2~
+À~À~1~2~
+Á~Á~1~2~
+Â~Â~1~2~
+Ã~Ã~1~2~
+Ä~Ä~1~2~
+Å~Å~1~2~
+Æ~Æ~1~2~
+Ç~Ç~1~2~
+È~È~1~2~
+É~É~1~2~
+Ê~Ê~1~2~
+Ë~Ë~1~2~
+Ì~Ì~1~2~
+Í~Í~1~2~
+Î~Î~1~2~
+Ï~Ï~1~2~
+Ğ~Ğ~1~2~
+Ñ~Ñ~1~2~
+Ò~Ò~1~2~
+Ó~Ó~1~2~
+Ô~Ô~1~2~
+Õ~Õ~1~2~
+Ö~Ö~1~2~
+×~×~1~2~
+Ø~Ø~1~2~
+Ù~Ù~1~2~
+Ú~Ú~1~2~
+Û~Û~1~2~
+Ü~Ü~1~2~
+İ~İ~1~2~
+Ş~Ş~1~2~
+ß~ß~1~2~
+à~à~1~2~
+á~á~1~2~
+â~â~1~2~
+ã~ã~1~2~
+ä~ä~1~2~
+å~å~1~2~
+æ~æ~1~2~
+ç~ç~1~2~
+è~è~1~2~
+é~é~1~2~
+ê~ê~1~2~
+ë~ë~1~2~
+ì~ì~1~2~
+í~í~1~2~
+î~î~1~2~
+ï~ï~1~2~
+ğ~ğ~1~2~
+ñ~ñ~1~2~
+ò~ò~1~2~
+ó~ó~1~2~
+ô~ô~1~2~
+õ~õ~1~2~
+ö~ö~1~2~
+÷~÷~1~2~
+ø~ø~1~2~
+ù~ù~1~2~
+ú~ú~1~2~
+û~û~1~2~
+ü~ü~1~2~
+ı~ı~1~2~
+ş~ş~1~2~
+|255~|255~1~2~
+| Rules for state 2:
+ ~ ~2~1~ | at space, copy & revert to state 1
+|010~ ~2~1~
+<lit>~<lit>~2~3~
+<pre>~<lit>~2~3~
+<!--~<!--~2~
+<ipp ~<ipp ~2~
+<ipp|010~<ipp ~2~
+<p>~<para>~2~
+<p ~<para>~2~-2~
+<p|010~<para>~2~-2~
+<i>~<it>~2~
+<i ~<it>~2~-2~
+<i|010~<it>~2~-2~
+<u>~<other>~2~
+<u ~<other>~2~-2~
+<u|010~<other>~2~-2~
+</p>~</para>~2~
+</p ~</para>~2~-2~
+</p|010~</para>~2~-2~
+</i>~</it>~2~
+</i ~</it>~2~-2~
+</i|010~</it>~2~-2~
+</u>~</other>~2~
+</u ~</other>~2~-2~
+</u|010~</other>~2~-2~
+<a ~<a>~2~-5~
+<img ~~2~-5~
+<~<~2~4~
+| Rules for state 3:
+</lit>~</lit>~3~2~ | only this tag escapes, to state 2
+</pre>~</lit>~3~2~
+<!--~<!--~3~
+<ipp ~<ipp ~3~
+<ipp|010~<ipp ~3~
+<p>~<para>~3~
+<p ~<para>~3~-3~
+<p|010~<para>~3~-3~
+<i>~<it>~3~
+<i ~<it>~3~-3~
+<i|010~<it>~3~-3~
+<u>~<other>~3~
+<u ~<other>~3~-3~
+<u|010~<other>~3~-3~
+</p>~</para>~3~
+</p ~</para>~3~-3~
+</p|010~</para>~3~-3~
+</i>~</it>~3~
+</i ~</it>~3~-3~
+</i|010~</it>~3~-3~
+</u>~</other>~3~
+</u ~</other>~3~-3~
+</u|010~</other>~3~-3~
+<~<~3~5~
+| Rules for state 4:
+>~>~4~2~
+ ~>~4~-2~
+|010~>~4~-2~
+| Rules for state 5:
+>~>~5~3~
+ ~>~5~-3~
+|010~>~5~-3~
+| Rules for state 6:
+"~</tnote></note>~6~-2~
+| Rules for state 7:
+"~</tnote></note>~7~-3~
+| Rules for state 8:
+"~</bc:url>~8~-6~
+| Rules for state 9:
+</a>~</bc:linkedtext></a>~9~2~
+<~<~9~10~
+|010~ ~9~9~
+| Rules for state 10
+>~>~10~9~
+ ~>~10~-7~
+| Rules for state 11
+"~</tnote>~11~-7~
+| Rules for state 12 - copy all, reverting to prior state after |031:
+|031~|031~12~~)~
+| Rules for state -2:
+alt="~<note><tnote>~-2~6~
+Alt="~<note><tnote>~-2~6~
+ALT="~<note><tnote>~-2~6~
+<~~-2~-4~
+>~~-2~2~
+| Rules for state -3:
+alt="~<note><tnote>~-3~7~
+Alt="~<note><tnote>~-3~7~
+ALT="~<note><tnote>~-3~7~
+>~~-3~3~
+| Rules for state -4:
+>~~-4~-2~
+| Rules for state -5:
+alt="~<note><tnote>~-5~6~
+Alt="~<note><tnote>~-5~6~
+ALT="~<note><tnote>~-5~6~
+href="#~~-5~-5~
+Href="#~~-5~-5~
+HREF="#~~-5~-5~
+href="~<bc:url>~-5~8~
+Href="~<bc:url>~-5~8~
+HREF="~<bc:url>~-5~8~
+<~~-5~-4~
+>~~-5~2~
+| Rules for state -6:
+>~<bc:linkedtext>~-6~9~
+| Rules for state -7:
+>~~-7~9~
+alt="~<tnote>~-7~11~
+ALT="~<tnote>~-7~11~
+| Rules for any state:
+| Sensing beginning of native txx command (in any state):
+|028~|028~~12~(~ | to state 12 & push current state

@@ -36,6 +36,8 @@ pub enum FileKind {
     Pdf,
     /// Portable Embosser Format (BrailleCraft's own addition; the reference has no PEF).
     Pef,
+    /// Markdown (BrailleCraft's own addition): by the extension .md or .markdown; imported through the HTML chain.
+    Markdown,
     /// Rich Text Format: not supported, with its own message.
     Rtf,
     /// Music files (.lim, .mid): not supported by BrailleCraft.
@@ -68,6 +70,7 @@ impl FileKind {
             (FileKind::Xlsx, "Excel 2007-2019, 365"),
             (FileKind::OpenDocument, "OpenDocument"),
             (FileKind::Hangul, "Hangul Word Processor"),
+            (FileKind::Markdown, "Markdown"),
             (FileKind::Unsupported, "Unsupported file format"),
         ]
     }
@@ -106,6 +109,7 @@ fn by_extension(ext: &str) -> Option<FileKind> {
         "BRF" | "BFM" => FileKind::FormattedBraille,
         "PRF" | "PIM" => FileKind::FormattedText,
         "LIM" | "MID" => FileKind::Music,
+        "MD" | "MARKDOWN" => FileKind::Markdown,
         _ => return None,
     })
 }
@@ -341,6 +345,8 @@ mod tests {
     fn kinds_by_extension_then_content() {
         assert_eq!(detect("a.brf", b"anything"), FileKind::FormattedBraille);
         assert_eq!(detect("a.prf", b"anything"), FileKind::FormattedText);
+        assert_eq!(detect("notes.md", b"# Title\n\nText."), FileKind::Markdown);
+        assert_eq!(detect("notes.MARKDOWN", b"text"), FileKind::Markdown);
         assert_eq!(detect("a.txt", b"%PDF-1.4"), FileKind::Pdf);
         assert_eq!(detect("a.txt", b"Plain text, with words.\r\nAnd lines.\r\n"), FileKind::FormattedText);
         // Coded text: three or more $codes and more than | codes, no form feed.

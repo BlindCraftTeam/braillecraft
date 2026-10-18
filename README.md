@@ -97,7 +97,11 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   defaults: hard page breaks kept, language switches ignored, codes typed in Word as `[[*code*]]` taken as codes,
   duplicate hyperlinks removed and URLs tagged as computer notation) and the Global,
   Import Options settings (hyperlinks as text, URLs, both or hyperlink codes, duplicates removed, URLs tagged as
-  computer notation, spaces around signs of comparison, spaces around dashes, unknown characters). The web build opens files
+  computer notation, spaces around signs of comparison, spaces around dashes, unknown characters). Markdown files
+  (.md, .markdown) are imported too (a BrailleCraft addition): the Markdown becomes HTML and goes through the HTML
+  import steps, so headings become heading styles, paragraphs and lists their styles, emphasis and strong the
+  emphasis codes, inline code the computer-notation style, and links their text with the URL as the Import Options
+  hyperlink setting says. The web build opens files
   the same way, through the same import dialog and import steps, with its settings kept in the browser.
 - **Translated line.** Under the document, the braille (or the print) of the line you are on, updated as you write.
 - **View preferences.** A margin bell a chosen number of cells before the end of a braille line, which codes the

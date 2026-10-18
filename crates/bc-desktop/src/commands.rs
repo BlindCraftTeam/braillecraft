@@ -687,11 +687,12 @@ fn pick_file(insert: bool) -> Option<std::path::PathBuf> {
     const WORD: &str = "Word Documents (*.doc; *.docx)|*.doc;*.docx";
     const WORDPERFECT: &str = "WordPerfect Files (*.wp; *.wpd; *.wp5; *.wp6)|*.wp;*.wpd;*.wp5;*.wp6";
     const PEF: &str = "PEF Files (*.pef)|*.pef";
+    const MARKDOWN: &str = "Markdown Files (*.md; *.markdown)|*.md;*.markdown";
     const ALL: &str = "All Files (*.*)|*";
     let (title, types): (&str, &[&str]) = if insert {
-        ("Select file to insert\u{2026}", &[DOCUMENTS, BRF, GRAPHICS, MUSIC, WORD, WORDPERFECT, PEF, ALL])
+        ("Select file to insert\u{2026}", &[DOCUMENTS, BRF, GRAPHICS, MUSIC, WORD, WORDPERFECT, PEF, MARKDOWN, ALL])
     } else {
-        ("Open", &[DOCUMENTS, BRF, PDF, WORD, WORDPERFECT, PEF, ALL])
+        ("Open", &[DOCUMENTS, BRF, PDF, WORD, WORDPERFECT, PEF, MARKDOWN, ALL])
     };
     let folder = settings_store::get("AutoSave", "openPath").filter(|f| std::path::Path::new(f).is_dir());
     let f = app::frame();
@@ -1101,6 +1102,23 @@ fn read_import(bytes: &[u8], choice: &ImportChoice) -> Option<Shown> {
             let template = choice.template.clone().unwrap_or_else(translation::default_template);
             let map = translation::word_map_of_template(&template);
             let recipe = Recipe::Docx(word_options(), map, settings_store::load_unknown_characters());
+            let imported = bc_core::import_chain::run(bytes, &recipe, &files);
+            if !imported.errors.is_empty() {
+                message(&imported.errors.join("\n"));
+            }
+            Some(Shown::from_running(&bc_core::internal::decode(&imported.text)))
+        }
+        // A Markdown file becomes HTML and goes through the HTML recipe, with the Word importer's hyperlink and
+        // unknown-character settings.
+        FileKind::Markdown => {
+            let files = match translation::import_files() {
+                Ok(f) => f,
+                Err(e) => {
+                    message(&e);
+                    return None;
+                }
+            };
+            let recipe = Recipe::Markdown(word_options(), settings_store::load_unknown_characters());
             let imported = bc_core::import_chain::run(bytes, &recipe, &files);
             if !imported.errors.is_empty() {
                 message(&imported.errors.join("\n"));

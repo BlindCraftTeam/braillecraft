@@ -1627,7 +1627,12 @@ struct Open {
 /// The tag processor's state (spec 28 6c).
 struct Processor<'a> {
     map: &'a StyleMap,
-    pkg: &'a Package,
+    /// The Word package, for the style names a class is mapped through; none for the HTML and SGML chain.
+    pkg: Option<&'a Package>,
+    /// The SGML flag of the reference's tag processor (the recipe's third flag): the text's ampersands and angle
+    /// brackets are written as the entities the later scripts expect, since the tags of unmapped elements are
+    /// copied as text beside them.
+    sgml: bool,
     numbering: Numbering,
     opt: &'a Options,
     out: String,
@@ -1689,7 +1694,12 @@ impl<'a> Processor<'a> {
                 }
                 c => {
                     self.flush_pending();
-                    self.out.push(c);
+                    match c {
+                        '&' if self.sgml => self.out.push_str("&amp;"),
+                        '<' if self.sgml => self.out.push_str("&lt;"),
+                        '>' if self.sgml => self.out.push_str("&gt;"),
+                        c => self.out.push(c),
+                    }
                     self.text_seen = true;
                     self.after_tag = false;
                 }
@@ -1807,8 +1817,8 @@ impl<'a> Processor<'a> {
         if class.is_empty() && name == "p" {
             class = "Normal".into();
         }
-        if !class.is_empty() {
-            class = self.pkg.style_name(&class);
+        if let (false, Some(pkg)) = (class.is_empty(), self.pkg) {
+            class = pkg.style_name(&class);
         }
         let entry = self.find_entry(&name, &class);
         let Some(entry) = entry else {
@@ -2004,7 +2014,8 @@ pub fn import(bytes: &[u8], map_text: &str, opt: &Options) -> Result<Processed, 
     let numbering = Numbering::new(pkg.numbering.as_ref());
     let mut p = Processor {
         map: &map,
-        pkg: &pkg,
+        pkg: Some(&pkg),
+        sgml: false,
         numbering,
         opt,
         out: String::new(),
@@ -2033,6 +2044,49 @@ pub fn import(bytes: &[u8], map_text: &str, opt: &Options) -> Result<Processed, 
         }
     }
     Ok(Processed { text: p.out, scrub_rules: map.scrub_rules() })
+}
+
+/// The tag processor over HTML or SGML text (the HTML import chain's xmlproc step with the recipe's SGML flag and
+/// no style map, since the map file the reference names for it does not ship: every element is copied as its tag
+/// text for the chain's later scripts to turn into codes; the processing instructions, numeric entities, line ends
+/// and spaces are treated as for Word). The text must read as XML (every tag closed), which the Markdown
+/// conversion guarantees; the control-character step runs first.
+pub fn process_html(html: &str, opt: &Options) -> Result<Processed, String> {
+    let mut tree = docx::read_xml(&format!("<bc-root>{html}</bc-root>"))?;
+    strip_controls(&mut tree);
+    let map = StyleMap::default();
+    let mut p = Processor {
+        map: &map,
+        pkg: None,
+        sgml: true,
+        numbering: Numbering::new(None),
+        opt,
+        out: String::new(),
+        stack: Vec::new(),
+        text_seen: false,
+        after_tag: false,
+        pending_newline: false,
+        pending_spaces: 0,
+        note_mode: false,
+        scanned: opt.print_pages == PrintPages::Scanned,
+        parity: 1,
+        last_lng: String::new(),
+        last_font: String::new(),
+        level_written: false,
+        table_row: 1,
+        table_col: 1,
+    };
+    for c in &tree.children {
+        match c {
+            Node::Text(t) => p.text(t),
+            Node::Element(e) => p.element(e),
+            Node::Pi(text) => {
+                let t = text.replace('$', "\x1c").replace('`', "\x1f").replace("&quot;", "\"");
+                p.write(&t);
+            }
+        }
+    }
+    Ok(Processed { text: p.out, scrub_rules: String::new() })
 }
 
 #[cfg(test)]

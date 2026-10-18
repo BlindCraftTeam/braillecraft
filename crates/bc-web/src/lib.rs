@@ -101,7 +101,17 @@ pub fn import_file_names() -> Vec<String> {
     let maps = bc_core::import_chain::UNIMAP_TABLES.iter().map(|n| format!("unimap/{n}"));
     let word = bc_core::import_chain::WORD_RULE_SCRIPTS.iter().map(|n| format!("rule-scripts/{n}"));
     let styles = bc_core::import_chain::WORD_MAPS.iter().map(|n| format!("word-styles/{n}.map"));
-    scan.chain(bc_core::import_chain::RULE_SCRIPTS.iter().map(|n| format!("rule-scripts/{n}"))).chain(maps).chain(word).chain(styles).collect()
+    let sgml = bc_core::import_chain::SGML_RULE_SCRIPTS.iter().map(|n| format!("rule-scripts/{n}"));
+    scan.chain(bc_core::import_chain::RULE_SCRIPTS.iter().map(|n| format!("rule-scripts/{n}"))).chain(maps).chain(word).chain(styles).chain(sgml).collect()
+}
+
+/// A Markdown file through the HTML recipe (the Markdown turned into HTML first): the Word importer's settings as
+/// JSON of bc_core::word::Options (its hyperlink settings apply) and the Unknown Characters setting.
+#[wasm_bindgen]
+pub fn import_markdown(bytes: &[u8], options: &str, unknown: u8) -> Result<Imported, JsError> {
+    let opt: bc_core::word::Options = serde_json::from_str(options).map_err(error)?;
+    let got = bc_core::import_chain::run(bytes, &bc_core::import_chain::Recipe::Markdown(opt, unknown), &Fetched);
+    Ok(Imported { running: bc_core::internal::decode(&got.text), errors: got.errors.join("\n"), long_page: false, wide_line: false })
 }
 
 /// The Word style map a template text names (its "word:mws" pseudo-style), as a program data file name.

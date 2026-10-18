@@ -32,6 +32,7 @@ pub mod ink;
 pub mod import_chain;
 pub mod internal;
 pub mod lbf;
+pub mod markdown;
 pub mod menu_codes;
 pub mod printer_setup;
 pub mod range;
