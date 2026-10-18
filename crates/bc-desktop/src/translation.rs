@@ -71,6 +71,13 @@ pub fn html(running: &str) -> Result<Vec<u8>, String> {
     bc_core::html_export::html(&body, &mut scripts)
 }
 
+/// A Markdown file from a print document's running text (BrailleCraft's own addition): the HTML the HTML export
+/// writes, turned into Markdown (headings, paragraphs, emphasis, links, lists, tables, code).
+pub fn markdown(running: &str) -> Result<Vec<u8>, String> {
+    let html = html(running)?;
+    Ok(bc_core::markdown::from_html(&html).into_bytes())
+}
+
 /// The running text through the text export table (txxtxa with the binary scan table); when that table cannot be
 /// used, the body as the document file stores it, unchanged.
 fn text_export(running: &str) -> Vec<u8> {

@@ -2642,6 +2642,7 @@ const SAVE_TYPES = {
     ["Coded braille (*.bru)", "bru", "coded"],
     ["Refreshable braille (*.lbf)", "lbf", "refreshable"],
     ["eBraille (*.ebrl)", "ebrl", "ebraille"],
+    ["Markdown (*.md)", "md", "markdown"],
   ],
   print: [
     ["Print document (*.dxp)", "dxp", "document"],
@@ -2652,6 +2653,7 @@ const SAVE_TYPES = {
     ["HTML (*.htm)", "htm", "html"],
     ["LaTeX (*.tex)", "tex", "latex"],
     ["HTML with MathJax (*.htm)", "htm", "mathjax"],
+    ["Markdown (*.md)", "md", "markdown"],
   ],
 };
 
@@ -2825,6 +2827,22 @@ async function saveAs() {
           await fetchBytes("tables/rule-scripts/html-styles.rules"),
           await fetchBytes("tables/rule-scripts/html-fix.rules"),
         );
+        break;
+      case "markdown":
+        // Print: the HTML export turned into Markdown. Braille: the pages as Unicode braille in fenced blocks.
+        if (braille) {
+          const e = encodingNow();
+          const shownCells = e.cells.length ? e.cells : naCells();
+          bytes = core.markdown_braille(editorText(), doc.cells, doc.lines, JSON.stringify(shownCells));
+        } else {
+          bytes = core.markdown(
+            editorText(),
+            await fetchBytes("tables/rule-scripts/html-tags.rules"),
+            await fetchBytes("tables/rule-scripts/html-italics.rules"),
+            await fetchBytes("tables/rule-scripts/html-styles.rules"),
+            await fetchBytes("tables/rule-scripts/html-fix.rules"),
+          );
+        }
         break;
       default:
         // LaTeX, or HTML with MathJax: the text export table and that type's own rule script.

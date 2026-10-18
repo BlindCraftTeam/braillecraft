@@ -1256,6 +1256,9 @@ enum SaveType {
     Html,
     /// HTML with MathJax (.htm, spec 21): the text export table and the MathJax script between a fixed head and foot.
     HtmlMathJax,
+    /// Markdown (.md, BrailleCraft's own addition): a print document through the HTML export turned into Markdown; a
+    /// braille document's laid-out pages as Unicode braille in fenced code blocks.
+    Markdown,
     /// eBraille (.ebrl) for braille documents and EPUB 3 (.epub) for print documents (spec 23, bc_core::ebraille).
     EBraille,
     /// Portable Embosser Format (.pef, bc_core::pef): not in the reference program; the version 1 scope asks for it.
@@ -1274,6 +1277,7 @@ fn save_types(braille: bool) -> &'static [(&'static str, &'static str, SaveType)
             ("Refreshable braille (*.lbf)", "lbf", SaveType::Refreshable),
             ("eBraille (*.ebrl)", "ebrl", SaveType::EBraille),
             ("Portable Embosser Format (*.pef)", "pef", SaveType::Pef),
+            ("Markdown (*.md)", "md", SaveType::Markdown),
         ]
     } else {
         &[
@@ -1285,6 +1289,7 @@ fn save_types(braille: bool) -> &'static [(&'static str, &'static str, SaveType)
             ("HTML (*.htm)", "htm", SaveType::Html),
             ("LaTeX (*.tex)", "tex", SaveType::Latex),
             ("HTML with MathJax (*.htm)", "htm", SaveType::HtmlMathJax),
+            ("Markdown (*.md)", "md", SaveType::Markdown),
         ]
     }
 }
@@ -1367,6 +1372,8 @@ fn save(key: Option<u64>, as_new: bool) -> bool {
         SaveType::Latex => write_text_export(key, &chosen, translation::latex),
         SaveType::Html => write_text_export(key, &chosen, translation::html),
         SaveType::HtmlMathJax => write_text_export(key, &chosen, translation::mathjax),
+        SaveType::Markdown if braille => write_markdown_braille(key, &chosen),
+        SaveType::Markdown => write_text_export(key, &chosen, translation::markdown),
         SaveType::EBraille => crate::ebraille::save_as(key, &chosen),
         SaveType::Pef => write_pef(key, &chosen),
         SaveType::OlderDocument => write_document(key, &chosen, 0),
@@ -1748,6 +1755,29 @@ fn write_formatted(key: u64, path: &Path, braille: bool, choice: usize) -> bool 
         prf_bytes(&pages, bc_core::codepages::NAMES.get(choice).copied().unwrap_or("ISO-8859-1"))
     };
     if let Err(e) = std::fs::write(path, &out) {
+        message(&format!("{}: {e}", path.display()));
+        return false;
+    }
+    true
+}
+
+/// Save As Markdown for a braille document (BrailleCraft's own addition): the document laid out into pages, each
+/// page a fenced code block of its lines as Unicode braille patterns (a blank cell for a space), pages separated by
+/// a blank line.
+fn write_markdown_braille(key: u64, path: &Path) -> bool {
+    let Some((pages, enc)) = app::with(|a| {
+        let i = a.index_of(key)?;
+        let shown = a.docs[i].shown();
+        Some((a.laid_out(i, &shown), a.encoding()))
+    }) else {
+        return false;
+    };
+    let lines: Vec<Vec<String>> = pages
+        .iter()
+        .map(|p| p.lines.iter().map(|l| l.text.chars().map(|c| enc.cell_of(c).map_or('\u{2800}', |p| char::from_u32(0x2800 + p as u32).unwrap_or('\u{2800}'))).collect()).collect())
+        .collect();
+    let out = bc_core::markdown::braille_pages(&lines);
+    if let Err(e) = std::fs::write(path, out) {
         message(&format!("{}: {e}", path.display()));
         return false;
     }

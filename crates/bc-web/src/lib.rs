@@ -1239,6 +1239,26 @@ pub fn formatted_text(text: &str, cells: u32, lines: u32, code_page: &str) -> Ve
 /// character with no cell written '*'; each cell is written as `codes` gives it (one code point per cell, written as
 /// one byte when it is 0 to 255 and '#' otherwise), or as Unicode braille in UTF-8 when `codes` is empty; CR LF ends
 /// each line and a form feed each page.
+/// Save As Markdown for a print document (BrailleCraft's own addition): the HTML export turned into Markdown.
+#[wasm_bindgen]
+pub fn markdown(text: &str, tags: &[u8], italics: &[u8], styles: &[u8], fix: &[u8]) -> Result<Vec<u8>, JsError> {
+    let page = html(text, tags, italics, styles, fix)?;
+    Ok(bc_core::markdown::from_html(&page).into_bytes())
+}
+
+/// Save As Markdown for a braille document (BrailleCraft's own addition): the laid-out pages as Unicode braille in
+/// fenced code blocks; the shown cells name the character of each pattern in the document's encoding.
+#[wasm_bindgen]
+pub fn markdown_braille(text: &str, cells: u32, lines: u32, shown_cells: &str) -> Result<Vec<u8>, JsError> {
+    let shown: Vec<String> = serde_json::from_str(shown_cells).map_err(error)?;
+    let cell_of = |c: char| shown.iter().position(|s| s.contains(c));
+    let pages: Vec<Vec<String>> = laid_out(text, cells, lines, true)
+        .iter()
+        .map(|p| p.lines.iter().map(|l| l.text.chars().map(|c| cell_of(c).map_or('\u{2800}', |p| char::from_u32(0x2800 + p as u32).unwrap_or('\u{2800}'))).collect()).collect())
+        .collect();
+    Ok(bc_core::markdown::braille_pages(&pages).into_bytes())
+}
+
 #[wasm_bindgen]
 pub fn formatted_braille(text: &str, cells: u32, lines: u32, shown_cells: &str, codes: Vec<u32>) -> Result<Vec<u8>, JsError> {
     let shown: Vec<String> = serde_json::from_str(shown_cells).map_err(error)?;
