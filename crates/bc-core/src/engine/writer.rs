@@ -25,7 +25,9 @@ use super::chars::{kind, flags, latin1, parse_hex, split_lines};
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Chitab {
     unicode: HashMap<i64, i64>,
+    /// Two-byte codes: the capital of a small letter, and the small letter of a capital.
     upper2: HashMap<i64, i64>,
+    lower2: HashMap<i64, i64>,
 }
 
 /// BrailleCraft's own character table, built into the program.
@@ -58,6 +60,48 @@ impl Chitab {
         Chitab::parse_characters(CHARACTERS)
     }
 
+    /// The built-in character table, read once.
+    pub(crate) fn shared() -> &'static Chitab {
+        static TABLE: std::sync::OnceLock<Chitab> = std::sync::OnceLock::new();
+        TABLE.get_or_init(Chitab::builtin)
+    }
+
+    /// A small letter, as the scanner tells it (spec 07 section A9): a one-byte code by the code page, a two-byte
+    /// code when it has a capital in the table.
+    pub(crate) fn is_small(&self, c: i64) -> bool {
+        if c < 0x100 {
+            return kind(c).0 & 0x04 != 0;
+        }
+        self.upper2.get(&c).is_some_and(|&u| u != 0)
+    }
+
+    /// A capital letter: a one-byte code by the code page; 0x9C before a letter (a capital with no one-byte form);
+    /// a two-byte code whose small form in the table is 0x61 or more.
+    pub(crate) fn is_capital(&self, c: i64) -> bool {
+        if c < 0x100 {
+            return kind(c).0 & 0x08 != 0;
+        }
+        if c >> 8 == 0x9c {
+            return kind(c & 0xff).0 & 0x02 != 0;
+        }
+        self.lower2.get(&c).is_some_and(|&l| l >= 0x61)
+    }
+
+    /// The small form of a code: by the code page for a one-byte code and after 0x9C; from the table for a
+    /// two-byte code when its small form there is above 0x61; the code itself otherwise.
+    pub(crate) fn small(&self, c: i64) -> i64 {
+        if c < 0x100 {
+            return kind(c).1;
+        }
+        if c >> 8 == 0x9c {
+            return kind(c & 0xff).1;
+        }
+        match self.lower2.get(&c) {
+            Some(&l) if l > 0x61 => l,
+            _ => c,
+        }
+    }
+
     fn add(&mut self, code: i64, lower: Option<i64>, uni: Option<i64>, n: i64) {
         for i in 0..n {
             if let Some(u) = uni {
@@ -66,6 +110,9 @@ impl Chitab {
             if let Some(l) = lower {
                 if l + i >= 0x100 {
                     self.upper2.insert(l + i, code + i);
+                }
+                if code + i >= 0x100 {
+                    self.lower2.insert(code + i, l + i);
                 }
             }
         }

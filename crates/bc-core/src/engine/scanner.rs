@@ -21,29 +21,24 @@
 //! character when that is a full stop or a comma.
 
 use super::callbacks::StyleTable;
+use super::scan_table::{Font, ScanTable};
+use super::writer::Chitab;
+use super::EngineError;
 
 /// The computer-braille start and end strings written around an address (the scanner's two constant strings).
 const CB_START: [i64; 3] = [0x0e, 0x63, 0x0f];
 const CB_END: [i64; 4] = [0x0e, 0x2f, 0x63, 0x0f];
-use super::scan_table::{Font, ScanTable};
-use super::EngineError;
 
 pub(crate) const EOF_OUT: i64 = 0x100;
 
-fn is_lower(c: i64) -> bool {
-    (0x61..=0x7a).contains(&c)
-}
-
+// The A to Z tests below are for format-word and style names; the case of the text is told by the character
+// table (`Chitab::is_small`, `is_capital`, `small`).
 fn is_upper(c: i64) -> bool {
     (0x41..=0x5a).contains(&c)
 }
 
 fn is_digit(c: i64) -> bool {
     (0x30..=0x39).contains(&c)
-}
-
-fn is_letter(c: i64) -> bool {
-    is_lower(c) || is_upper(c)
 }
 
 /// A character that counts as neither capital nor small; no character in the character table is marked so.
@@ -448,6 +443,8 @@ struct Scanner<'a> {
     pos: usize,
     head: usize,
     rd: Reader<'a>,
+    /// The character table that tells capitals and small letters.
+    case: &'a Chitab,
     /// The output characters: [0] flag, [1] capital sign, [2] two-character format word, [3] format word,
     /// [4] capital termination, [8] the nxsls setting.
     c: [i64; 9],
@@ -467,7 +464,14 @@ struct Scanner<'a> {
 }
 
 impl<'a> Scanner<'a> {
-    fn new(t: ScanTable, codes: Box<dyn Iterator<Item = i64> + 'a>, eof: i64, styles: Option<&'a StyleTable>, out: Box<dyn FnMut(i64) + 'a>) -> Scanner<'a> {
+    fn new(
+        t: ScanTable,
+        codes: Box<dyn Iterator<Item = i64> + 'a>,
+        eof: i64,
+        styles: Option<&'a StyleTable>,
+        case: &'a Chitab,
+        out: Box<dyn FnMut(i64) + 'a>,
+    ) -> Scanner<'a> {
         let rd = Reader::new(&t, codes, eof);
         // Capital signs are written only when words are folded and the table has a capital sign.
         let caps_enabled = t.fold_words != 2 && t.out_cap != 0;
@@ -488,6 +492,7 @@ impl<'a> Scanner<'a> {
             pos: 0,
             head: 0,
             rd,
+            case,
             c,
             ring: Default::default(),
             end: false,
@@ -619,7 +624,7 @@ impl<'a> Scanner<'a> {
 
     /// The doubled part of a word: the longest run of letters before the hyphen equal to the run after it
     /// (small and capital letters alike; literal pairs skipped). Keeps the word's last value when none is longer.
-    fn dup_len(w: &mut Word) -> usize {
+    fn dup_len(case: &Chitab, w: &mut Word) -> usize {
         let m = w.hyph_pos as i64 - 1;
         let len = w.chars.len() as i64;
         let limit = m.min(len - m);
@@ -642,7 +647,8 @@ impl<'a> Scanner<'a> {
                     }
                 }
                 let a = ch(m - k + x);
-                if to_lower(a) != to_lower(ch(w.hyph_pos as i64 + j)) || a == 0x2d || !is_letter(a) {
+                let b = ch(w.hyph_pos as i64 + j);
+                if case.small(a) != case.small(b) || a == 0x2d || !(case.is_small(a) || case.is_capital(a)) {
                     bad = true;
                 }
                 j += 1;
@@ -703,9 +709,9 @@ impl<'a> Scanner<'a> {
             } else {
                 w.chars = vec![self.last];
                 w.after_space = 0;
-                if is_upper(self.last) {
+                if self.case.is_capital(self.last) {
                     w.kind = 1;
-                } else if is_lower(self.last) {
+                } else if self.case.is_small(self.last) {
                     w.kind = 0;
                 }
             }
@@ -727,7 +733,7 @@ impl<'a> Scanner<'a> {
                 if w.kind < 2 {
                     if n == 1 && w.chars[0] == c0 {
                         if c0 == 0x1c || (((c < 0x80 && c != 0x2c && c != 0x2e) || c == 0xf8) && !is_digit(c)) {
-                            if !is_letter(c) && c != 0x23 && c != 0xf8 && c0 != 0x1c {
+                            if !(self.case.is_small(c) || self.case.is_capital(c)) && c != 0x23 && c != 0xf8 && c0 != 0x1c {
                                 w.kind = 3;
                                 w.chars[0] = self.c[2];
                             } else {
@@ -741,10 +747,10 @@ impl<'a> Scanner<'a> {
                         }
                         if self.cessation_on == 1 && !Self::literal(&w, c) {
                             if w.kind == -1 {
-                                if is_lower(c) || is_upper(c) {
+                                if self.case.is_small(c) || self.case.is_capital(c) {
                                     break;
                                 }
-                            } else if !is_lower(c) && !is_upper(c) && c == 0x27 {
+                            } else if !self.case.is_small(c) && !self.case.is_capital(c) && c == 0x27 {
                                 break;
                             }
                         }
@@ -765,13 +771,13 @@ impl<'a> Scanner<'a> {
                 }
                 if w.kind == -1 {
                     if !Self::literal(&w, c) {
-                        if is_upper(c) {
+                        if self.case.is_capital(c) {
                             w.kind = 1;
-                        } else if is_lower(c) {
+                        } else if self.case.is_small(c) {
                             w.kind = 0;
                         }
                     }
-                } else if w.kind == 1 && !Self::literal(&w, c) && is_lower(c) {
+                } else if w.kind == 1 && !Self::literal(&w, c) && self.case.is_small(c) {
                     w.kind = 0;
                 }
                 w.chars.push(c);
@@ -913,21 +919,21 @@ impl<'a> Scanner<'a> {
         true
     }
 
-    fn next_not_caps(w: &Word, i: usize) -> bool {
+    fn next_not_caps(case: &Chitab, w: &Word, i: usize) -> bool {
         if i >= w.chars.len() {
             return false;
         }
         if w.chars[i] == 0x17 && i + 2 >= w.chars.len() {
             return true;
         }
-        !is_upper(w.chars[i]) && !case_neutral(w.chars[i])
+        !case.is_capital(w.chars[i]) && !case_neutral(w.chars[i])
     }
 
     /// Case folding: 0 to capitals (within the table's range), 1 to small letters, 2 as written.
     fn fold(&self, c: i64, mode: i64) -> i64 {
         match mode {
             0 if self.t.fold_lo <= c && c <= self.t.fold_hi => c - 0x20,
-            1 => to_lower(c),
+            1 => self.case.small(c),
             _ => c,
         }
     }
@@ -1078,13 +1084,15 @@ impl<'a> Scanner<'a> {
                     }
                     // A doubled word ("anak-anak"): the table's code in front of the first copy and the next code after
                     // the second.
-                    if w.hyph_pos != 0 && w.chars.get(w.hyph_pos).is_some_and(|&h| is_letter(h)) {
-                        Self::dup_len(&mut w);
+                    if w.hyph_pos != 0
+                        && w.chars.get(w.hyph_pos).is_some_and(|&h| self.case.is_small(h) || self.case.is_capital(h))
+                    {
+                        Self::dup_len(self.case, &mut w);
                     }
                     if w.dup < 2 && w.hyph_n > 1 {
                         while w.hyph_n > 0 && w.dup < 2 {
                             Self::next_hyphen(&mut w);
-                            Self::dup_len(&mut w);
+                            Self::dup_len(self.case, &mut w);
                             w.hyph_n -= 1;
                         }
                     }
@@ -1107,8 +1115,8 @@ impl<'a> Scanner<'a> {
                     let mut out_first = None;
                     let fold_words = self.t.fold_words;
                     if self.caps == 0 {
-                        if (fold_words == 0 || fold_words == 1) && is_upper(c) && self.caps_enabled {
-                            if i == w.chars.len() || Self::next_not_caps(&w, i) {
+                        if (fold_words == 0 || fold_words == 1) && self.case.is_capital(c) && self.caps_enabled {
+                            if i == w.chars.len() || Self::next_not_caps(self.case, &w, i) {
                                 // A capital letter.
                                 out_first = Some(self.c[1]);
                             } else {
@@ -1118,7 +1126,7 @@ impl<'a> Scanner<'a> {
                                 self.queue.push_back(self.c[1]);
                             }
                         }
-                    } else if !(fold_words == 0 || fold_words == 1) || is_lower(c) {
+                    } else if !(fold_words == 0 || fold_words == 1) || self.case.is_small(c) {
                         if self.caps == 1 {
                             self.caps = 0;
                         }
@@ -1127,7 +1135,7 @@ impl<'a> Scanner<'a> {
                         }
                     } else if (fold_words == 0 || fold_words == 1)
                         && self.cessation_on == 1
-                        && !is_upper(c)
+                        && !self.case.is_capital(c)
                         && !case_neutral(c)
                         && self.caps == 1
                     {
@@ -1199,7 +1207,12 @@ impl<'a> Scanner<'a> {
 /// The scanner's output for internal text given as its bytes (two-byte codes as their two bytes, first byte
 /// first), the end code left out: the codes the rule engine reads. The bytes are read one at a time, so the text is
 /// never held as eight-byte codes before the scan.
-pub(crate) fn scan_bytes(t: &ScanTable, bytes: Vec<u8>, styles: Option<&StyleTable>) -> Result<Vec<i64>, EngineError> {
+pub(crate) fn scan_bytes(
+    t: &ScanTable,
+    bytes: Vec<u8>,
+    styles: Option<&StyleTable>,
+    case: &Chitab,
+) -> Result<Vec<i64>, EngineError> {
     let mut out = Vec::with_capacity(bytes.len() + bytes.len() / 8);
     {
         let sink = |c: i64| {
@@ -1207,7 +1220,7 @@ pub(crate) fn scan_bytes(t: &ScanTable, bytes: Vec<u8>, styles: Option<&StyleTab
                 out.push(c);
             }
         };
-        let mut s = Scanner::new(t.clone(), Box::new(bytes.into_iter().map(i64::from)), 0xff01, styles, Box::new(sink));
+        let mut s = Scanner::new(t.clone(), Box::new(bytes.into_iter().map(i64::from)), 0xff01, styles, case, Box::new(sink));
         s.run()?;
     }
     Ok(out)
@@ -1293,7 +1306,7 @@ pub(crate) fn scan_file(t: &ScanTable, bytes: &[u8]) -> Result<Vec<u8>, EngineEr
         } else {
             Box::new(bytes.iter().map(|&b| i64::from(b)))
         };
-        let mut s = Scanner::new(t.clone(), codes, 0xff7f, None, Box::new(sink));
+        let mut s = Scanner::new(t.clone(), codes, 0xff7f, None, Chitab::shared(), Box::new(sink));
         s.run()?;
     }
     Ok(out)
@@ -1336,7 +1349,7 @@ mod tests {
     fn addresses_go_between_the_computer_braille_codes() {
         let mut t = table("import-print.sct");
         let scan = |t: &ScanTable, text: &str| -> Vec<u8> {
-            scan_bytes(t, text.bytes().collect(), None).unwrap().iter().map(|&c| c as u8).collect()
+            scan_bytes(t, text.bytes().collect(), None, Chitab::shared()).unwrap().iter().map(|&c| c as u8).collect()
         };
         assert_eq!(scan(&t, "mail me@example.org, then"), b"mail me@example.org, then".to_vec());
         t.icb = 1;
@@ -1370,10 +1383,23 @@ mod tests {
         for ((mode, nin, spare), codes, file) in cases {
             let mut t = base.clone();
             (t.binmod, t.ninmod, t.spare) = (mode, nin, spare);
-            let out: Vec<u8> = scan_bytes(&t, b"Ab  c\r\nd\re".to_vec(), None).unwrap().iter().map(|&c| c as u8).collect();
+            let out: Vec<u8> =
+                scan_bytes(&t, b"Ab  c\r\nd\re".to_vec(), None, Chitab::shared()).unwrap().iter().map(|&c| c as u8).collect();
             assert_eq!(out, codes.to_vec(), "codes, mode {mode} ninmod {nin} spare {spare}");
             assert_eq!(scan_file(&t, b"Ab  c\r\nd").unwrap(), file.to_vec(), "file, mode {mode} ninmod {nin} spare {spare}");
         }
+    }
+
+    /// The scanner's case tests (spec 07 section A9): one-byte codes by the code page, 0x9C before a letter as a
+    /// capital, two-byte codes by the character table's small-letter column.
+    #[test]
+    fn the_character_table_tells_capitals_and_small_letters() {
+        let case = Chitab::shared();
+        assert!(case.is_capital(0x41) && !case.is_small(0x41) && case.small(0x41) == 0x61);
+        assert!(case.is_capital(0x90) && case.small(0x90) == 0x82 && case.is_small(0x82));
+        assert!(case.is_capital(0x9c83) && case.small(0x9c83) == 0x83);
+        assert!(case.is_capital(0xb230) && case.small(0xb230) == 0xb231 && case.is_small(0xb231));
+        assert!(!case.is_capital(0x31) && !case.is_small(0x31) && case.small(0x31) == 0x31);
     }
 
     #[test]

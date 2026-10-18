@@ -54,7 +54,7 @@ pub struct ScanTable {
     pub modes: Vec<String>,
     /// More than this many all-capital words in a row make a capital passage (0: no passages).
     pub triple_caps: i64,
-    /// Doubled adjectives (not built; English tables have it off).
+    /// The code written in front of the first copy of a doubled word ("anak-anak"); 0: words are not doubled.
     pub dbl_adj: i64,
     pub cpe_fts: i64,
     pub cpe_l: i64,

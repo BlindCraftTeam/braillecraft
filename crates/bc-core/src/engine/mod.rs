@@ -239,7 +239,7 @@ impl Translator {
         // gets the document's styles too, as the reference hands its scanner the same style lookup.
         let bytes = crate::internal::encode(&text).map_err(EngineError::NotEncodable)?;
         drop(text);
-        let codes = scanner::scan_bytes(&self.scan, bytes, style)?;
+        let codes = scanner::scan_bytes(&self.scan, bytes, style, &self.chitab)?;
         let mut stack: Vec<Rc<RuleTable>> = vec![self.rules.clone()];
         let mut e = rules::Engine::new(self.rules.clone(), codes, style, &self.chitab, out);
         let mut r = e.run();
@@ -484,6 +484,21 @@ mod tests {
         assert_eq!(set.translator("enuncp").unwrap().translate("The cat sat.").unwrap(), ",! cat sat4");
         assert_eq!(set.translator("enuncb").unwrap().translate(",! cat sat4").unwrap(), "The cat sat.");
         assert!(set.translator("nosuch").is_err());
+    }
+
+    /// Accented capitals are capitals to the scanner (the character table tells it): the capital sign goes in front
+    /// and the letter is written small, as for A to Z.
+    #[test]
+    fn accented_capitals_get_the_capital_sign() {
+        let set = shipped_set();
+        let cases = [
+            ("enuncp", "École ÉCOLE Ñandú éa", ",^/ecole ,,^/ecole ,^]n&^/u ^/ea"),
+            ("enuncp", "the ÉCOLE IS big", "! ,,^/ecole ,,is big"),
+            ("amerc", "École Ñ", ",@ecole ,@n"),
+        ];
+        for (code, text, braille) in cases {
+            assert_eq!(set.translator(code).unwrap().translate(text).unwrap(), braille, "{code} {text}");
+        }
     }
 
     #[test]
