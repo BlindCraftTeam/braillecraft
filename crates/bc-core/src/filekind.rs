@@ -104,10 +104,61 @@ pub struct TextStats {
 }
 
 /// The extensions a file's kind is taken from before its content is looked at (the reference's extension table).
+/// The file kind override table shipped as tables/file-kinds.txt, in the form the standard program's own table
+/// has (spec 18 A3: lines "EXT" : METHOD_IMPORT_<kind>): an extension named there is read
+/// as that kind before the file's bytes are looked at.
+const FILE_KINDS: &str = include_str!("../../../tables/file-kinds.txt");
+
+/// The kind a method name of the override table stands for; None for a name the program has no kind for.
+fn kind_of_method(method: &str) -> Option<FileKind> {
+    Some(match method.strip_prefix("METHOD_IMPORT_")? {
+        "BRF" | "BRF_FOR_UEB" => FileKind::FormattedBraille,
+        "BRU" => FileKind::CodedBraille,
+        "OBF" => FileKind::Orbit,
+        "FORMATTED_TEXT" | "TXT" => FileKind::FormattedText,
+        "TXX" => FileKind::CodedText,
+        "WORD" | "WORDPORT" => FileKind::Word,
+        "OPENXML" => FileKind::Docx,
+        "SGML" => FileKind::Sgml,
+        "PDF" => FileKind::Pdf,
+        "DAISY" => FileKind::Daisy,
+        "OPENDOCUMENT" => FileKind::OpenDocument,
+        "EXCEL2007" => FileKind::Xlsx,
+        "TEX" => FileKind::Tex,
+        "HWP" => FileKind::Hangul,
+        "WP" => FileKind::WordPerfect,
+        "MIDI" | "LIME" => FileKind::Music,
+        "OTHER" | "UNSUPPORTED" => FileKind::Unsupported,
+        _ => return None,
+    })
+}
+
+/// The override table's entries: (extension in capitals, kind).
+fn file_kind_table() -> &'static [(String, FileKind)] {
+    static TABLE: std::sync::OnceLock<Vec<(String, FileKind)>> = std::sync::OnceLock::new();
+    TABLE.get_or_init(|| {
+        FILE_KINDS
+            .lines()
+            .filter_map(|line| {
+                let line = line.trim();
+                if line.starts_with('#') {
+                    return None;
+                }
+                let (ext, method) = line.split_once(':')?;
+                let ext = ext.trim().trim_matches('"').to_ascii_uppercase();
+                let kind = kind_of_method(method.trim().trim_end_matches(';').trim())?;
+                (!ext.is_empty()).then_some((ext, kind))
+            })
+            .collect()
+    })
+}
+
 fn by_extension(ext: &str) -> Option<FileKind> {
-    Some(match ext.to_ascii_uppercase().as_str() {
-        "BRF" | "BFM" => FileKind::FormattedBraille,
-        "PRF" | "PIM" => FileKind::FormattedText,
+    let upper = ext.to_ascii_uppercase();
+    if let Some((_, kind)) = file_kind_table().iter().find(|(e, _)| *e == upper) {
+        return Some(*kind);
+    }
+    Some(match upper.as_str() {
         "LIM" | "MID" => FileKind::Music,
         "MD" | "MARKDOWN" => FileKind::Markdown,
         _ => return None,

@@ -199,17 +199,29 @@ pub struct RuleScript {
     line_in: bool,
     line_out: bool,
     folder: Option<PathBuf>,
+    /// Files it may name, by name, given in place of a folder (the web build, which has no files on disk).
+    files: Option<std::rc::Rc<std::collections::HashMap<String, Vec<u8>>>>,
 }
 
 impl RuleScript {
     /// A script from its text; files it names are looked for in `folder`.
     pub fn from_bytes(data: &[u8], folder: Option<&Path>) -> Result<RuleScript, ScriptError> {
+        RuleScript::from_bytes_with(data, folder, None)
+    }
+
+    /// A script from its text; files it names are taken from `files` by name, or looked for in `folder`.
+    pub fn from_bytes_with(
+        data: &[u8],
+        folder: Option<&Path>,
+        files: Option<std::rc::Rc<std::collections::HashMap<String, Vec<u8>>>>,
+    ) -> Result<RuleScript, ScriptError> {
         let mut s = RuleScript {
             lists: vec![Vec::new(); 258],
             waiting: Default::default(),
             line_in: false,
             line_out: false,
             folder: folder.map(Path::to_path_buf),
+            files,
         };
         s.load(data, 0, 0)?;
         Ok(s)
@@ -245,6 +257,10 @@ impl RuleScript {
     }
 
     fn load_file(&mut self, name: &str, state: i32, next: i32) -> Result<(), ScriptError> {
+        if let Some(files) = &self.files {
+            let data = files.get(name).cloned().ok_or_else(|| error(0x8C, &format!("{name}: not among the files given")))?;
+            return self.load(&data, state, next);
+        }
         let path = match &self.folder {
             Some(f) => f.join(name),
             None => PathBuf::from(name),

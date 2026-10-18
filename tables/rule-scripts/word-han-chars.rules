@@ -5,20 +5,20 @@
 
 | Rules for switching to Japanese treatment of Han characters (state 2)
 | Rules to implement state 2 are in the script
-~han2jpn.sbt~2~~
+~han-japanese.rules~2~~
 
 | Rules for switching to Korean treatment of Han characters (state 3)
 | Rules to implement state 3 are in the script
-~han2kor.sbt~3~~
+~han-korean.rules~3~~
 
 | Rules for switching to Pinyin treatment of Han characters (state 4)
 | Rules to implement state 4 are in the script
-~han2pin.sbt~4~~
+~han-pinyin.rules~4~~
 
 | Rules for switching to Yue treatment of Han characters (state 5)
 | Rules to implement state 5 are in the script
-~han2yue.sbt~5~~
+~han-cantonese.rules~5~~
 
 | Rules for switching to Zhuyin treatment of Han characters (state 6)
 | Rules to implement state 5 are in the script
-~han2zhu.sbt~6~~
+~han-zhuyin.rules~6~~

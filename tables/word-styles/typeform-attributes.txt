@@ -1,0 +1,27 @@
+| Word typeform mapping attribute names and their normal forms (NAME -> VALUE)
+textColor:dark red     -> textColor:C00000
+textColor:red          -> textColorIsRed
+textColor:orange       -> textColor:FFC000
+textColor:yellow       -> textColor:FFFF00
+textColor:light green  -> textColor:92D050
+textColor:green        -> textColor:00B050
+textColor:light blue   -> textColor:00B0F0
+textColor:blue         -> textColor:0070C0
+textColor:dark blue    -> textColor:002060
+textColor:purple       -> textColor:7030A0
+
+highlight:yellow       -> highlight:yellow
+highlight:bright green -> highlight:green
+highlight:turquoise    -> highlight:cyan
+highlight:pink         -> highlight:magenta
+highlight:blue         -> highlight:blue
+highlight:red          -> highlight:red
+highlight:dark blue    -> highlight:darkBlue
+highlight:teal         -> highlight:darkCyan
+highlight:green        -> highlight:darkGreen
+highlight:violet       -> highlight:darkMagenta
+highlight:dark red     -> highlight:darkRed
+highlight:dark yellow  -> highlight:darkYellow
+highlight:gray-50%     -> highlight:darkGray
+highlight:gray-25%     -> highlight:lightGray
+highlight:black        -> highlight:black

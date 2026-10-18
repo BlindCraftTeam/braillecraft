@@ -2461,6 +2461,13 @@ function saveBraideSettings(s) {
   set("PreserveFormatting", s.preserve ? "yes" : "no");
 }
 
+// The document kind an imported file asked for itself (a "(this_is_a_braille_document)" or
+// "(this_is_a_print_document)" paragraph, taken out by the import): 1 braille, 0 print, -1 nothing, when the file's
+// own kind decides.
+function forcedKind(imported, kindBraille) {
+  return imported.forced_braille === 1 ? true : imported.forced_braille === 0 ? false : kindBraille;
+}
+
 // The Word importer's Unknown Characters setting, which coded text import uses: its list words by position
 // ("ignore" 0 marks with "*", "asterisc" 1 writes nothing, "hex" 2 the Unicode value); 0 when it is not kept.
 function unknownCharacters() {
@@ -2514,7 +2521,7 @@ async function readImport(bytes, choice) {
       return null;
     }
     if (imported.errors) await message(imported.errors);
-    return { braille: false, running: imported.running, template };
+    return { braille: forcedKind(imported, false), running: imported.running, template };
   }
   // A Markdown file becomes HTML and goes through the HTML recipe, with the Word importer's hyperlink and
   // unknown-character settings.
@@ -2528,7 +2535,7 @@ async function readImport(bytes, choice) {
       return null;
     }
     if (imported.errors) await message(imported.errors);
-    return { braille: false, running: imported.running, template };
+    return { braille: forcedKind(imported, false), running: imported.running, template };
   }
   if (CHAIN_KINDS.includes(choice.kind)) {
     let imported;
@@ -2541,7 +2548,7 @@ async function readImport(bytes, choice) {
     if (imported.long_page) await message("Page depth exceeded.");
     if (imported.wide_line) await message("Page width exceeded.");
     if (imported.errors) await message(imported.errors);
-    return { braille: choice.braille, running: imported.running, template };
+    return { braille: forcedKind(imported, choice.braille), running: imported.running, template };
   }
   await message(importRefusal(choice));
   return null;
@@ -4680,7 +4687,11 @@ const COMMANDS = {
   3115: () =>
     showDialog(1036, {
       memory: "",
-      setup: (d) => d.setItems(10, ["Ignore", "Mark from Word document", "Treat hard page breaks as print page breaks", "Use publishers' <ipp no=#> reference page tags"], 0),
+      setup(d) {
+        d.setItems(10, ["Ignore", "Mark from Word document", "Treat hard page breaks as print page breaks", "Use publishers' <ipp no=#> reference page tags"], 0);
+        // The kinds a UEB typeform mapping can be (the standard program's list).
+        for (const combo of [20, 23, 26, 29, 32, 35]) d.setItems(combo, ["(Unused)", "Font Is", "Font Contains", "Highlight Is", "Text Color Is", "Drop Shadow", "Outline"], 0);
+      },
     }),
   3110: pythonOptions,
   3116: pdfOptions,

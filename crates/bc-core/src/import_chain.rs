@@ -68,14 +68,51 @@ pub struct Imported {
     pub warnings: braide::Warnings,
 }
 
+/// The standard program's post-import step (megfdt.sbt, run after every text import): a paragraph of the style
+/// B-BodyText. or para. holding only "(this_is_a_braille_document)" or "(this_is_a_print_document)" is taken out
+/// of the running text, and the document is made of that kind. Answers the kind asked for: Some(true) braille,
+/// Some(false) print, None when the file says nothing. `running` is the text in its running form (codes marked
+/// 0x1C ... 0x1F), as the script's own patterns read it.
+pub fn forced_kind(running: &mut String) -> Option<bool> {
+    let mut forced = None;
+    for style in ["B-BodyText.", "para."] {
+        for (marker, braille) in [("(this_is_a_braille_document)", true), ("(this_is_a_print_document)", false)] {
+            let needle = format!("\x1ces~{style}\x1f{marker}\x1cee~{style}\x1f");
+            while let Some(at) = running.find(&needle) {
+                running.replace_range(at..at + needle.len(), "");
+                forced = Some(braille);
+            }
+        }
+    }
+    forced
+}
+
+#[cfg(test)]
+mod forced_kind_tests {
+    use super::forced_kind;
+
+    #[test]
+    fn a_marker_paragraph_forces_the_kind_and_goes() {
+        let mut t = "\x1ces~h1.\x1fTitle\x1cee~h1.\x1f\x1ces~para.\x1f(this_is_a_braille_document)\x1cee~para.\x1fBody\n".to_string();
+        assert_eq!(forced_kind(&mut t), Some(true));
+        assert_eq!(t, "\x1ces~h1.\x1fTitle\x1cee~h1.\x1fBody\n");
+        let mut p = "\x1ces~B-BodyText.\x1f(this_is_a_print_document)\x1cee~B-BodyText.\x1fText".to_string();
+        assert_eq!(forced_kind(&mut p), Some(false));
+        assert_eq!(p, "Text");
+        let mut none = "\x1ces~para.\x1f(this_is_a_braille_document) and more\x1cee~para.\x1f".to_string();
+        assert_eq!(forced_kind(&mut none), None);
+        assert!(none.contains("and more"));
+    }
+}
+
 const BRAILLE_SCAN: &str = "import-braille.sct";
 const PRINT_SCAN: &str = "import-print.sct";
 
 /// Every file a chain may read: the scan tables (tables/scan) and the rule scripts (tables/rule-scripts), for a
 /// caller that has to fetch them first.
 pub const SCAN_TABLES: [&str; 2] = [BRAILLE_SCAN, PRINT_SCAN];
-pub const UNIMAP_TABLES: [&str; 8] =
-    ["unimap.txt", "abd.txt", "lao.txt", "lisu.txt", "math12.txt", "suttony.txt", "vietnamese.txt", "welsh.txt"];
+pub const UNIMAP_TABLES: [&str; 9] =
+    ["unimap.txt", "abd.txt", "lao.txt", "lisu.txt", "math12.txt", "suttony.txt", "vietnamese.txt", "welsh.txt", "tibetan.txt"];
 pub const RULE_SCRIPTS: [&str; 7] = [
     "page-end-blanks.rules",
     "ninit-codes.rules",
@@ -86,7 +123,13 @@ pub const RULE_SCRIPTS: [&str; 7] = [
     "orbit-lines.rules",
 ];
 /// The Word recipe's rule scripts, in its order (the character map and the character steps come between them).
-pub const WORD_RULE_SCRIPTS: [&str; 17] = [
+pub const WORD_RULE_SCRIPTS: [&str; 22] = [
+    // The Han scripts word-han-chars.rules loads in its states 2 to 6.
+    "han-japanese.rules",
+    "han-korean.rules",
+    "han-pinyin.rules",
+    "han-cantonese.rules",
+    "han-zhuyin.rules",
     "word-tags.rules",
     "word-entities.rules",
     "word-chars.rules",

@@ -1,0 +1,8 @@
+# Use this file to force the program to recognize the file format of files with particular extensions.
+# Each line: "EXT" : METHOD_IMPORT_<kind>; where the kind is one of BRF, BRU, OBF, FORMATTED_TEXT, TXT, TXX, WORD,
+# OPENXML, SGML, PDF, DAISY, OPENDOCUMENT, EXCEL2007, PAGES, TEX, HWP, WP, MIDI, LIME, OTHER, UNSUPPORTED.
+
+"BRF" : METHOD_IMPORT_BRF;
+"BFM" : METHOD_IMPORT_BRF;
+"PRF" : METHOD_IMPORT_FORMATTED_TEXT;
+"PIM" : METHOD_IMPORT_FORMATTED_TEXT;

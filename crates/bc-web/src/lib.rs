@@ -90,7 +90,7 @@ fn derive(s: Shown) {
 
 thread_local! {
     /// The files the import chains read, as the page fetched them, by name.
-    static IMPORT_FILES: std::cell::RefCell<std::collections::HashMap<String, Vec<u8>>> = Default::default();
+    static IMPORT_FILES: std::cell::RefCell<std::rc::Rc<std::collections::HashMap<String, Vec<u8>>>> = Default::default();
 }
 
 /// The files the import chains read, for the page to fetch and hand in with `import_add_file`: "scan/<name>",
@@ -111,7 +111,7 @@ pub fn import_file_names() -> Vec<String> {
 pub fn import_markdown(bytes: &[u8], options: &str, unknown: u8) -> Result<Imported, JsError> {
     let opt: bc_core::word::Options = serde_json::from_str(options).map_err(error)?;
     let got = bc_core::import_chain::run(bytes, &bc_core::import_chain::Recipe::Markdown(opt, unknown), &Fetched);
-    Ok(Imported { running: bc_core::internal::decode(&got.text), errors: got.errors.join("\n"), long_page: false, wide_line: false })
+    Ok(imported_of(got, false, false))
 }
 
 /// The Word style map a template text names (its "word:mws" pseudo-style), as a program data file name.
@@ -127,14 +127,16 @@ pub fn word_map_name(template_text: &str) -> String {
 pub fn import_docx(bytes: &[u8], options: &str, map: &str, unknown: u8) -> Result<Imported, JsError> {
     let opt: bc_core::word::Options = serde_json::from_str(options).map_err(error)?;
     let got = bc_core::import_chain::run(bytes, &bc_core::import_chain::Recipe::Docx(opt, map.to_string(), unknown), &Fetched);
-    Ok(Imported { running: bc_core::internal::decode(&got.text), errors: got.errors.join("\n"), long_page: false, wide_line: false })
+    Ok(imported_of(got, false, false))
 }
 
 /// A file the import chains read (a name from `import_file_names`, without its folder) and its bytes.
 #[wasm_bindgen]
 pub fn import_add_file(name: &str, bytes: &[u8]) {
     let name = name.rsplit('/').next().unwrap_or(name).to_string();
-    IMPORT_FILES.with(|f| f.borrow_mut().insert(name, bytes.to_vec()));
+    IMPORT_FILES.with(|f| {
+        std::rc::Rc::make_mut(&mut f.borrow_mut()).insert(name, bytes.to_vec());
+    });
 }
 
 struct Fetched;
@@ -145,7 +147,9 @@ impl bc_core::import_chain::Files for Fetched {
     }
     fn rule_script(&self, name: &str) -> Result<bc_core::rule_script::RuleScript, String> {
         let bytes = self.scan_table(name)?;
-        bc_core::rule_script::RuleScript::from_bytes(&bytes, None).map_err(|e| e.to_string())
+        // The files a script names (the Han scripts of word-han-chars.rules) come from the same store.
+        let files = IMPORT_FILES.with(|f| f.borrow().clone());
+        bc_core::rule_script::RuleScript::from_bytes_with(&bytes, None, Some(files)).map_err(|e| e.to_string())
     }
     fn unimap_tables(&self) -> Result<Vec<(String, Vec<u8>)>, String> {
         bc_core::import_chain::UNIMAP_TABLES.iter().map(|n| self.scan_table(n).map(|b| (n.to_string(), b))).collect()
@@ -208,10 +212,28 @@ pub struct Imported {
     errors: String,
     long_page: bool,
     wide_line: bool,
+    /// The kind the file asked for: 1 braille, 0 print, -1 nothing (import_chain::forced_kind).
+    forced_braille: i8,
+}
+
+/// The chain's result for the page, the forced-kind step applied to the running text.
+fn imported_of(got: bc_core::import_chain::Imported, long_page: bool, wide_line: bool) -> Imported {
+    let mut running = bc_core::internal::decode(&got.text);
+    let forced_braille = match bc_core::import_chain::forced_kind(&mut running) {
+        Some(true) => 1,
+        Some(false) => 0,
+        None => -1,
+    };
+    Imported { running, errors: got.errors.join("\n"), long_page, wide_line, forced_braille }
 }
 
 #[wasm_bindgen]
 impl Imported {
+    /// The kind the file itself asked for: 1 braille, 0 print, -1 nothing (the file's kind decides then).
+    #[wasm_bindgen(getter)]
+    pub fn forced_braille(&self) -> i8 {
+        self.forced_braille
+    }
     /// The document text in running form (codes marked 0x1C ... 0x1F).
     #[wasm_bindgen(getter)]
     pub fn running(&self) -> String {
@@ -267,12 +289,8 @@ pub fn import_file(bytes: &[u8], kind: &str, code_page: &str, unknown: u8, braid
         _ => return Err(JsError::new(&format!("{filter} files are not read through an import chain."))),
     };
     let out = bc_core::import_chain::run(bytes, &recipe, &Fetched);
-    Ok(Imported {
-        running: bc_core::internal::decode(&out.text),
-        errors: out.errors.join("\n"),
-        long_page: out.warnings.long_page,
-        wide_line: out.warnings.wide_line,
-    })
+    let (long_page, wide_line) = (out.warnings.long_page, out.warnings.wide_line);
+    Ok(imported_of(out, long_page, wide_line))
 }
 
 /// The program's version, for the About box.

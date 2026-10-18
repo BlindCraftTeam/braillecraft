@@ -1,0 +1,9 @@
+| Han characters read as Japanese (state 2 of the Han script step)
+| Han: Japanese
+
+| This file is in the scrub file format, but it is a utf-8 file for editing purposes
+| Comments start with vertical bar, space
+| All other lines need two tildes.
+| Following rules are derived from kanjidic2.xml
+| Following rules are derived from JMdict_e.xml
+| The standard program ships this script with no rules of its own: the Japanese reading keeps the Han characters as they are.

@@ -206,6 +206,9 @@ enum Kept {
 const HYPERLINK_ITEMS: &[&str] = &["Text Only", "URLs Only", "Both Text and URLs", "Structured Hyperlinks"];
 const UNKNOWN_ITEMS: &[&str] = &["Mark with asterisk (*)", "Ignore", "Output Unicode value"];
 const PRINT_PAGE_ITEMS: &[&str] = &["Ignore", "Mark from Word document", "Treat hard page breaks as print page breaks", "Use publishers' <ipp no=#> reference page tags"];
+/// The kinds a UEB typeform mapping of the Word Importer can be (the standard program's list, spec 18 A3, with the
+/// attribute names tables/word-styles/typeform-attributes.txt normalises), for the combo boxes 20 to 35 of 1036.
+const TYPEFORM_KINDS: &[&str] = &["(Unused)", "Font Is", "Font Contains", "Highlight Is", "Text Color Is", "Drop Shadow", "Outline"];
 
 /// Global, Import Options (1037): spec 18 section 18.6.
 const KEPT_IMPORT_OPTIONS: &[Kept] = &[
@@ -631,7 +634,12 @@ pub fn run(id: i32, checked: bool) {
         }
         3114 => kept_settings_dialog(1035, KEPT_WORDPERFECT, |_| {}),
         3115 => {
-            kept_settings_dialog(1036, KEPT_WORD, |d| d.set_items(10, PRINT_PAGE_ITEMS, Some(0)));
+            kept_settings_dialog(1036, KEPT_WORD, |d| {
+                d.set_items(10, PRINT_PAGE_ITEMS, Some(0));
+                for combo in [20, 23, 26, 29, 32, 35] {
+                    d.set_items(combo, TYPEFORM_KINDS, Some(0));
+                }
+            });
         }
         3110 => crate::python_options::dialog(),
         3116 => crate::pdf_options::dialog(),
@@ -1057,9 +1065,9 @@ fn open_path_asking(path: &Path, ask: bool) -> Option<u64> {
     let key = match choice.kind {
         FileKind::Pdf => open_pdf(&path)?,
         kind => {
-            let shown = read_import(&bytes, &choice)?;
+            let (shown, forced) = read_import(&bytes, &choice)?;
             bc_core::memory::note("import");
-            let doc_kind = if kind.is_braille() { DocKind::Braille } else { DocKind::Print };
+            let doc_kind = if forced.unwrap_or(kind.is_braille()) { DocKind::Braille } else { DocKind::Print };
             let key = documents::new_document(doc_kind, Some(name), &shown);
             bc_core::memory::note("new document (laid out)");
             app::with(|a| {
@@ -1232,7 +1240,16 @@ fn global_setup_allowed((key, text): (&str, &str)) -> bool {
 /// A file's text as `choice` says to read it: text kinds in the chosen code page; braille kinds in the chosen braille
 /// encoding, shown in the display encoding (a form feed between pages becomes a line break). The kinds BrailleCraft
 /// cannot import say so.
-fn read_import(bytes: &[u8], choice: &ImportChoice) -> Option<Shown> {
+/// The imported text as the editor shows it, with the kind the file asked for (import_chain::forced_kind).
+fn shown_of(imported: &bc_core::import_chain::Imported) -> (Shown, Option<bool>) {
+    let mut running = bc_core::internal::decode(&imported.text);
+    let forced = bc_core::import_chain::forced_kind(&mut running);
+    (Shown::from_running(&running), forced)
+}
+
+/// The file through its import chain: the text shown, and the document kind the file itself asked for (None when
+/// it said nothing; the file's kind decides then).
+fn read_import(bytes: &[u8], choice: &ImportChoice) -> Option<(Shown, Option<bool>)> {
     let kind_name = FileKind::filters().iter().find(|f| f.0 == choice.kind).map_or("", |f| f.1);
     match choice.kind {
         FileKind::Unsupported | FileKind::Music => {
@@ -1272,7 +1289,7 @@ fn read_import(bytes: &[u8], choice: &ImportChoice) -> Option<Shown> {
             if !imported.errors.is_empty() {
                 message(&imported.errors.join("\n"));
             }
-            Some(Shown::from_running(&bc_core::internal::decode(&imported.text)))
+            Some(shown_of(&imported))
         }
         // A Word document goes through the Word recipe with the Global Word Importer and Import Options settings and
         // the style map the chosen template names.
@@ -1291,7 +1308,7 @@ fn read_import(bytes: &[u8], choice: &ImportChoice) -> Option<Shown> {
             if !imported.errors.is_empty() {
                 message(&imported.errors.join("\n"));
             }
-            Some(Shown::from_running(&bc_core::internal::decode(&imported.text)))
+            Some(shown_of(&imported))
         }
         // A Markdown file becomes HTML and goes through the HTML recipe, with the Word importer's hyperlink and
         // unknown-character settings.
@@ -1308,7 +1325,7 @@ fn read_import(bytes: &[u8], choice: &ImportChoice) -> Option<Shown> {
             if !imported.errors.is_empty() {
                 message(&imported.errors.join("\n"));
             }
-            Some(Shown::from_running(&bc_core::internal::decode(&imported.text)))
+            Some(shown_of(&imported))
         }
         _ => {
             message(&format!("BrailleCraft cannot import {kind_name} files yet."));
@@ -1392,9 +1409,8 @@ fn insert_file() {
         (Shown::from_running(&doc.text), doc.kind == bc_core::DocumentKind::Braille)
     } else {
         let Some(choice) = import_dialog(detected) else { return };
-        let braille = choice.kind.is_braille();
-        let Some(shown) = read_import(&bytes, &choice) else { return };
-        (shown, braille)
+        let Some((shown, forced)) = read_import(&bytes, &choice) else { return };
+        (shown, forced.unwrap_or(choice.kind.is_braille()))
     };
     if braille && !braille_doc {
         message("You cannot insert a Braille document into a print document.");
