@@ -1,0 +1,4 @@
+-- Option+H: the BrailleCraft keys for VoiceOver.
+on run
+	my speak("BrailleCraft keys, each with the Option key. 7, the translated line. 8, the current style; twice quickly in a table, the row and column. 9, the location: page, line and column. 0, the document name and status line. Comma, the position on the line; twice quickly, the characters to the end of the line. Period, the number of characters on the line; twice quickly, the left spaces. L, the last word on the line. Semicolon, the cursor to the translated line and back. T, the current table entry. C, whether a braille keyboard is connected. H, this list. The keys work in a document window; elsewhere they say not in document window. In VoiceOver Utility, General, Allow VoiceOver to be controlled with AppleScript must be on for VoiceOver to speak them in its own voice.")
+end run

@@ -190,7 +190,16 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   the translated line, Alt+U, Alt+I, Alt+P and Alt+W the braille document speaking, announcement and echo choices,
   Alt+C the braille keyboard, Alt with the arrows the table entries; F2, Alt+F3, Control+F8 and Control+H announce
   their new state; in a braille document typed and read characters are spoken as braille cell names; NVDA+H lists
-  the keys. The choices are also on the BrailleCraft page of NVDA's settings.
+  the keys. The choices are also on the BrailleCraft page of NVDA's settings. On macOS a set of VoiceOver scripts
+  comes in the application (`BrailleCraft.app/Contents/Resources/VoiceOver`) with `BrailleCraft.voprefs` beside the
+  application in the disk image: put BrailleCraft in Applications, turn on Allow VoiceOver to be controlled with
+  AppleScript in VoiceOver Utility, General, then import the file with File, Import Preferences (it is a Command
+  Assignments file, so it replaces your Keyboard Commander key assignments; export yours first). With the Keyboard
+  Commander on, the Option key with 7, 8, 9, 0, Comma, Period, Semicolon and C do what the JAWS keys do; L is the last
+  word on the line and T the table entry (End and the arrows are not commander keys), and H lists the keys. VoiceOver
+  has no hook for caret moves, typing or the program's own keys, so the braille-cell reading of lines and characters,
+  the Alt+U, I, P and W choices and the state announcements after F2, Alt+F3, Control+F8 and Control+H have no
+  VoiceOver counterpart. The scripts are for the desktop program; the web build has none.
 - **Formatted braille import settings.** Global, Formatted Braille Importer: where the braille and print page
   numbers stand on even and odd pages of the file, which pages have a running head or foot, the lines and cells of
   the file's pages, and Read formatted braille without interpretation, which keeps the file's lines and pages as they
@@ -215,7 +224,7 @@ to main runs the Build workflow. Open the repository on GitHub, then **Actions**
 | Artifact | What it holds |
 |---|---|
 | `braillecraft-windows-installer` | The Windows installer (.msi): the program, the braille fonts for every program, the JAWS scripts, the NVDA add-on, a desktop shortcut, and the .dxp and .dxb file types with Open, Print and Emboss. |
-| `braillecraft-macos-installer` | A disk image (.dmg) with BrailleCraft.app, for Apple Silicon Macs. Drag it to Applications. |
+| `braillecraft-macos-installer` | A disk image (.dmg) with BrailleCraft.app, for Apple Silicon Macs, beside `BrailleCraft.voprefs` and the VoiceOver key notes. Drag the application to Applications. |
 | `braillecraft-linux-packages` | A .deb (Debian, Ubuntu), an .rpm (Fedora and others) and an AppImage that runs without installing. |
 | `braillecraft-desktop-<system>` | The program as a plain folder, for trying it without an installer. |
 | `braillecraft-web` | The web build, to serve from any web server. |
@@ -261,6 +270,7 @@ step does. The installers are made by the scripts in `packaging` (WiX 5 on Windo
 | `ui/fonts` | The BrailleCraft Braille and SimBraille screen fonts, one pair per braille encoding. |
 | `scripts/jaws` | The JAWS scripts. |
 | `scripts/nvda` | The NVDA add-on (packed by `tools/nvda/make_addon.py`). |
+| `scripts/voiceover` | The VoiceOver scripts for macOS (compiled, with `BrailleCraft.voprefs`, by `tools/voiceover/build.py`). |
 | `packaging` | Icons and the installers for Windows, macOS and Linux. |
 | `tools` | The generators for menus, dialogs, fonts, icons, templates, language lists and the web tables. |
 | `vendor/wxdragon-sys` | wxDragon's wxWidgets binding with what BrailleCraft needs added: printing, the drawn editing window with its text for screen readers on each system (UI Automation, the macOS accessibility interface, ATK), the Cursor Locator, and About box texts a screen reader reaches by Tab. The list is in `CHANGES-BrailleCraft.txt`. |

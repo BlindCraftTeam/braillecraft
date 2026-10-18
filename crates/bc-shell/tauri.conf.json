@@ -1,7 +1,7 @@
 {
   "productName": "BrailleCraft",
   "version": "0.1.0",
-  "identifier": "net.jb11.braillecraft",
+  "identifier": "dev.blindcraft.braillecraft",
   "build": {
     "frontendDist": "../../ui"
   },

@@ -31,6 +31,10 @@ done
 for name in braillecraft print-document braille-document; do
   iconutil -c icns "$icons/$name.iconset" -o "$app/Contents/Resources/$name.icns"
 done
+# The VoiceOver scripts, compiled, with the preferences file that binds them to Keyboard Commander keys
+# (tools/voiceover/build.py); the scripts are run from the installed application in Applications.
+python3 "$here/../../tools/voiceover/build.py" "$app/Contents/Resources/VoiceOver"
+rm -r "$app/Contents/Resources/VoiceOver/src"
 
 # Unsigned: an ad-hoc signature keeps Apple Silicon willing to run it; Gatekeeper still asks at first launch.
 codesign --force --deep --sign - "$app"
@@ -38,6 +42,9 @@ codesign --force --deep --sign - "$app"
 mkdir -p "$stage/dmg"
 cp -R "$app" "$stage/dmg/"
 ln -s /Applications "$stage/dmg/Applications"
+# The VoiceOver preferences file and its notes beside the application, for VoiceOver Utility, Import Preferences.
+cp "$app/Contents/Resources/VoiceOver/BrailleCraft.voprefs" "$stage/dmg/BrailleCraft.voprefs"
+cp "$app/Contents/Resources/VoiceOver/README.txt" "$stage/dmg/VoiceOver keys.txt"
 hdiutil create -volname "BrailleCraft $version" -srcfolder "$stage/dmg" -ov -format UDZO \
   "$out/BrailleCraft-$version-$(uname -m).dmg"
 rm -rf "$stage"
