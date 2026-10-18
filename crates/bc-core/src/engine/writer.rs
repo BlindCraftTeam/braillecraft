@@ -102,17 +102,22 @@ impl Chitab {
         }
     }
 
+    /// One line of the table: `n` codes from `code` (spec 07 section A9, the character table reader). The Unicode
+    /// form steps with the code; the small-letter code steps only when it is above 0x60 or the code is below 0x61,
+    /// else every code of the line has the same small letter; a small letter above 0x60 gets the code as its
+    /// capital.
     fn add(&mut self, code: i64, lower: Option<i64>, uni: Option<i64>, n: i64) {
         for i in 0..n {
             if let Some(u) = uni {
                 self.unicode.insert(code + i, u + i);
             }
-            if let Some(l) = lower {
-                if l + i >= 0x100 {
-                    self.upper2.insert(l + i, code + i);
-                }
+            if let Some(l) = lower.filter(|&l| l != 0) {
+                let small = if l > 0x60 || code + i < 0x61 { l + i } else { l };
                 if code + i >= 0x100 {
-                    self.lower2.insert(code + i, l + i);
+                    self.lower2.insert(code + i, small);
+                }
+                if small > 0x60 && small >= 0x100 {
+                    self.upper2.insert(small, code + i);
                 }
             }
         }
@@ -585,7 +590,11 @@ impl<'a> Writer<'a> {
                             self.after = 0;
                         }
                         self.byte(v);
-                        if flags(v) & 0x20 == 0 && v > 0x1f && !self.in_code && self.after == 2 {
+                        // A code above 0xFF (the two-byte capital 0xB341 of 0x9F, the only one that comes here) is
+                        // looked up past the end of the code-page table by the standard program; the bytes there
+                        // have the lead-byte flag, so it counts as a lead byte (spec 07 section A9).
+                        let lead = v > 0xff || flags(v) & 0x20 != 0;
+                        if !lead && v > 0x1f && !self.in_code && self.after == 2 {
                             self.flush_coll();
                             self.after = 0;
                         }
@@ -697,6 +706,18 @@ mod tests {
         let long: Vec<i64> = std::iter::repeat(0x61).take(140).collect();
         assert_eq!(run(0, 0, 0x1c, &long), format!("{}-\n{} ", "a".repeat(130), "a".repeat(10)));
         assert_eq!(run(0, 1, 0x1c, &long), format!("{} ", "a".repeat(140)));
+    }
+
+    /// A line standing for several codes: the Unicode form steps with the code; the small letter steps only when it
+    /// is above 0x60 (or the code is below 0x61), and only a small letter above 0x60 gets a capital.
+    #[test]
+    fn a_counted_line_steps_its_small_letters_as_the_reference_does() {
+        let t = Chitab::parse_characters("b230\tb231\t100\t3\n9c5b\t5b\t-\t3\n");
+        assert_eq!((t.lower2[&0xb230], t.lower2[&0xb232]), (0xb231, 0xb233));
+        assert_eq!((t.upper2[&0xb231], t.upper2[&0xb233]), (0xb230, 0xb232));
+        assert_eq!((t.unicode[&0xb230], t.unicode[&0xb232]), (0x100, 0x102));
+        assert_eq!((t.lower2[&0x9c5b], t.lower2[&0x9c5d]), (0x5b, 0x5b));
+        assert!(!t.upper2.contains_key(&0x5b));
     }
 
     /// Collected format text (0x10 "a" to 0x10 "b"): 0x10 "c" writes it at once, "d" after the next printable code,
