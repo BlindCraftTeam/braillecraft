@@ -668,6 +668,33 @@ fn fold_index(n: i64, l: i64, y: i64, k: i64, last: bool, w: i64, at: &[i64; 9])
     None
 }
 
+/// The length of the word after a [>] or [fr] that is the next item from piece `at` (the piece ending a word): none
+/// when the next item is a word, or another code, or no word follows the code (spec 36 section 13).
+fn right_word_after(pieces: &Pieces, at: usize) -> Option<usize> {
+    let mut i = at;
+    while i < pieces.len() && matches!(pieces.get(i), Piece::Space | Piece::Mark(_)) {
+        i += 1;
+    }
+    match pieces.get(i) {
+        Piece::Code(c) if c == ">" || c == "fr" => {}
+        _ => return None,
+    }
+    i += 1;
+    while i < pieces.len() && matches!(pieces.get(i), Piece::Space | Piece::Mark(_)) {
+        i += 1;
+    }
+    let mut len = 0;
+    while i < pieces.len() {
+        match pieces.get(i) {
+            Piece::Char(..) => len += 1,
+            Piece::Break | Piece::Mark(_) => {}
+            _ => break,
+        }
+        i += 1;
+    }
+    (len > 0).then_some(len)
+}
+
 /// The piece after the first [kdtxe] from piece `from` (the end of the document when none): the end of a deferred
 /// note (spec 19 section 10.9; no nesting is counted).
 fn note_end(pieces: &Pieces, from: usize) -> usize {
@@ -1020,6 +1047,10 @@ struct Formatter {
     folds: (usize, usize, [i64; 9], Vec<char>),
     /// The levels of the major formatting context an [mfcs] opens: the largest [hlN] before its [mfce] (1 at least).
     mfc_levels: i64,
+    /// Whether an [mfcs] has been met in the document, and the length of the word after a [>] or [fr] that follows
+    /// the word being ended (spec 36 section 13): with a right margin of 6 that word's room is its length and one.
+    mfc_met: bool,
+    next_right_word: Option<usize>,
     /// [wlf~X] (spec 19 section 10.10): the line being filled is a whole-line fill: its style's fill cell, its left,
     /// centre and right fields, and the columns [>] marked on it (two at most).
     fill: Option<(char, [bool; 3], Vec<i64>)>,
@@ -1169,6 +1200,8 @@ impl Formatter {
             last_place: 0,
             folds: (0, 1, [0; 9], Vec::new()),
             mfc_levels: 1,
+            mfc_met: false,
+            next_right_word: None,
             fill: None,
             notes: Vec::new(),
             placing: None,
@@ -2234,7 +2267,23 @@ impl Formatter {
     }
 
     /// Places one word (its cells and their sources), wrapping it to the runover margin when it does not fit.
+    /// Lays out a word. After an [mfcs], a word placed with a right margin of 6 that a [>] or [fr] and a word follow
+    /// keeps only that word's length and one on the right (spec 36 section 13: the page number of a contents line).
     fn word(&mut self, cells: &[(char, Option<usize>)]) {
+        let next = self.next_right_word.take();
+        match next {
+            Some(len) if self.mfc_met && len > 0 && self.right.max(self.number_room) == 6 => {
+                let kept = (self.right, self.number_room);
+                self.right = len + 1;
+                self.number_room = 0;
+                self.lay_word(cells);
+                (self.right, self.number_room) = kept;
+            }
+            _ => self.lay_word(cells),
+        }
+    }
+
+    fn lay_word(&mut self, cells: &[(char, Option<usize>)]) {
         if std::mem::take(&mut self.skip_next) {
             self.word_marks.clear();
             return;
@@ -2756,6 +2805,7 @@ impl Formatter {
             // runover two cells past the last level ("exercisenemeth" at most 2 levels, "contents" its own third
             // and seventh values); [mfce] (0xb2) sets them back to [hi1:1] (spec 19 section 10.8).
             "mfcs" => {
+                self.mfc_met = true;
                 let kind = code.split_once('~').map_or("", |(_, x)| x);
                 let mut levels = self.mfc_levels;
                 let (third, seventh) = match kind {
@@ -3429,6 +3479,9 @@ impl Formatter {
                 }
             }
             self.piece_at = i;
+            if self.mfc_met && !word.is_empty() && matches!(piece, Piece::Space | Piece::Code(_)) {
+                self.next_right_word = right_word_after(pieces, i);
+            }
             self.step(&piece, &mut word);
             if std::mem::take(&mut self.keep_opened) {
                 self.keep_start = Some(i);
@@ -4573,6 +4626,16 @@ mod tests {
         let doc = "[kdtxp1~footnote]a[kdtxs~footnote][l]n1[l][kdtxe] b[lea]12 c";
         assert_eq!(lines(doc)[..2], ["a b", "n1"]);
         assert!(lines(doc)[2].ends_with("12"));
+    }
+
+    #[test]
+    fn a_contents_line_keeps_only_its_page_number_room_on_the_right() {
+        let l = Layout::braille(20, 4);
+        // 16 cells: past the margin of 6 (14), within the page number's 2 and one (17), only after an [mfcs].
+        let pages = format(&m("[mfcs~contents][rm6]aaaa bbbb ccc dd[fr]12"), &l, None);
+        assert_eq!(texts(&pages[0])[0], "aaaa bbbb ccc dd  12");
+        let pages = format(&m("[rm6]aaaa bbbb ccc dd[fr]12"), &l, None);
+        assert_eq!(texts(&pages[0])[..2], ["aaaa bbbb ccc", "dd                12"]);
     }
 
     #[test]
