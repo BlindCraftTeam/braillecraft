@@ -3,7 +3,11 @@
 const
 
 ;window classes
+; the reference layout stacks document windows in an MDI client window; BrailleCraft shows its documents as the
+; tabs of one tab control (class SysTabControl32, read by JAWS as a tab control: the active document's name is the
+; selected tab), so no window has the MDI client class and the tests against it never match
 	wcMDIClient = "MDIClient",
+	wcTabControl = "SysTabControl32",
 ; the editing area of a document window: the program's own drawn editing window, registered under its own class name
 ; ("Document Editing Window" to UI Automation), as the reference program's editing window has a class of its own
 	wcEditor = "BrailleCraftEditor",

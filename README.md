@@ -8,14 +8,16 @@ come with the program, and a braille display shows a braille document's cells ex
 
 ## Screenshots
 
-![The BrailleCraft window with a print document: the sentence "BrailleCraft translates print to braille and back."
+![The BrailleCraft window with a print document: across the top, the document's tab, Untitled Print Document 1,
+with a close button; below it the sentence "BrailleCraft translates print to braille and back."
 and a second sentence that wraps onto a third line. Below the text, the translated line shows the second sentence in
 contracted braille written in braille ASCII. The status line under it reads Current Style: None, Page 1, Line 2,
 Column 78, Keys 1.](docs/screenshots/desktop-print-document.png)
 
 *A print document. The translated line under the text shows the braille for the line the cursor is on.*
 
-![The same text after File, Translate: a second tab, Untitled Braille Document 1, beside the print document's tab;
+![The same text after File, Translate: a second tab, Untitled Braille Document 1, beside the print document's tab,
+each with a close button;
 four lines of six-dot braille cells in the braille font; the translated line below shows the print of the first
 line, "BrailleCraft translates print to braille and back."; the status line reads Current Style: None, Page 1,
 Line 1, Column 1, Keys 6.](docs/screenshots/desktop-braille-document.png)
@@ -57,8 +59,13 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
 
 ## What it does
 
-- **Documents.** Print documents and braille documents, each in its own window, with formatting codes and styles
-  kept apart from the text. Opens and saves .dxp (print) and .dxb (braille) documents, and opens text and braille
+- **Documents.** Print documents and braille documents, each in a tab of its own across the top of the window (as
+  a browser shows its pages), with formatting codes and styles kept apart from the text. The tab carries the
+  document's name; Ctrl+Tab and Ctrl+Shift+Tab move to the next and previous document, Ctrl+W (Cmd+W on macOS)
+  closes one, as does the close button on its tab (Linux and Windows) or a middle click on the tab; tabs are
+  dragged to reorder, or moved with Ctrl+Shift+Page Up and Page Down; the list at the end of the View menu names
+  the open documents in the same order. Screen readers read the tab bar as a tab list with the active document's
+  name as the selected tab. Opens and saves .dxp (print) and .dxb (braille) documents, and opens text and braille
   files (.txt, .brf, .brl), PEF (.pef) files and PDF files. A PDF becomes a print document: a tagged PDF through
   its structure (headings, paragraphs, lists, tables as styles and codes), any other PDF from its page layout
   (paragraphs, line breaks, and ledger tables of dates, text and amounts).
@@ -280,8 +287,9 @@ resources for the document, the commands, the tables, the templates and the embo
 ### Driving the running program
 
 The same tools can work on the documents you have open in BrailleCraft itself, with three more: `screenshot` (a
-picture of the program's windows), `key` (a key pressed in the program, with Ctrl, Shift and Alt) and `click`, plus
-`list_documents` and `activate_document`. Turn the server on in the program with **Global, MCP Server** (run it now,
+picture of the program's windows), `key` (a key pressed in the program, with Ctrl, Shift and Alt) and `click` (a
+click, or a drag with `to_x` and `to_y`, as when a tab is moved along the tab bar), plus `list_documents` (each
+open document with its tab's close button, where the system has one) and `activate_document`. Turn the server on in the program with **Global, MCP Server** (run it now,
 the port, and whether it starts with the program), or start the program with `braillecraft-desktop --control 7991`;
 then connect the agent to it:
 

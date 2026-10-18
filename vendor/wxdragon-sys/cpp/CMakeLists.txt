@@ -202,6 +202,7 @@ set(WXDRAGON_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/doc_editor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/doc_editor_gtk.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/doc_editor_msw.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/doc_tabs.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/progressdialog.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/propertygrid.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/radio_button.cpp

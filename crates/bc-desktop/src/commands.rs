@@ -813,7 +813,7 @@ fn open_dx_document(path: &Path) -> Option<u64> {
             };
             d.page_numbers = doc.page_numbering;
             // A document read from its file is a saved one: its title loses "New".
-            app::child_set_title(&d.frame, &d.full_name());
+            app::set_tab_title(&d.page, &d.full_name());
             // The document's own tables, kept as the file names them; only a
             // name the file leaves empty takes a new document's table. A table the shipped set does not have stays
             // named, and translating with it says so.
@@ -886,7 +886,7 @@ fn open_path_asking(path: &Path, ask: bool) -> Option<u64> {
                     // A file read from disk is not a new document; Save still asks for a name and type, as its
                     // file is not a document file.
                     a.docs[i].saved = true;
-                    app::child_set_title(&a.docs[i].frame, &a.docs[i].full_name());
+                    app::set_tab_title(&a.docs[i].page, &a.docs[i].full_name());
                 }
                 a.set_title();
             });
@@ -1485,7 +1485,7 @@ pub(crate) fn write_document(key: u64, path: &Path, version: u16) -> bool {
 }
 
 fn child_title_update(d: &app::Doc) {
-    app::child_set_title(&d.frame, &d.full_name());
+    app::set_tab_title(&d.page, &d.full_name());
 }
 
 /// The encodings Save As offers for formatted braille, in the reference program's order (spec 04d-B (a), (f)):
@@ -1690,7 +1690,7 @@ fn open_pef(path: &Path) -> Option<u64> {
             a.docs[i].dirty = false;
             a.docs[i].path = Some(path.to_path_buf());
             a.docs[i].saved = true;
-            app::child_set_title(&a.docs[i].frame, &a.docs[i].full_name());
+            app::set_tab_title(&a.docs[i].page, &a.docs[i].full_name());
         }
         a.set_title();
     });
@@ -1722,7 +1722,7 @@ fn open_pdf(path: &Path) -> Option<u64> {
             a.docs[i].dirty = false;
             a.docs[i].path = Some(path.to_path_buf());
             a.docs[i].saved = true;
-            app::child_set_title(&a.docs[i].frame, &a.docs[i].full_name());
+            app::set_tab_title(&a.docs[i].page, &a.docs[i].full_name());
         }
         a.set_title();
     });
@@ -1805,7 +1805,7 @@ pub fn exit_program() {
     }
     app::with(|a| {
         for d in a.docs.drain(..) {
-            d.frame.destroy();
+            d.page.destroy();
         }
         a.frame.destroy();
     });

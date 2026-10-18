@@ -247,7 +247,7 @@ fn fill(menu: &Menu, entries: &[Entry], items: &mut HashMap<i32, MenuItem>, foun
 }
 
 /// Builds the menu bar and puts it on the main window.
-pub fn install(frame: &MDIParentFrame) -> Menus {
+pub fn install(frame: &Frame) -> Menus {
     let mut items = HashMap::new();
     let mut found = Found::default();
     let mut builder = MenuBar::builder();

@@ -92,7 +92,12 @@ thread_local! {
     /// How many requests are being carried out on the main thread right now: above zero inside a request's own
     /// dialog, when only ui.* requests are served.
     static DEPTH: Cell<u32> = const { Cell::new(0) };
-    static TIMER: RefCell<Option<wxdragon::timer::Timer<MDIParentFrame>>> = const { RefCell::new(None) };
+    static TIMER: RefCell<Option<wxdragon::timer::Timer<Frame>>> = const { RefCell::new(None) };
+    /// The timer that runs the toolkit's deferred-call queue (what requests leave to run after their reply), apart
+    /// from the request timer: a dialog opened from that queue runs its own event loop inside this timer's tick,
+    /// and the system fires no timer again while its tick is running, so the request timer must be another one
+    /// for requests (a picture, a key, a click) to be served while the dialog is up.
+    static QUEUE_TIMER: RefCell<Option<wxdragon::timer::Timer<Frame>>> = const { RefCell::new(None) };
     static SHOTS: Cell<u32> = const { Cell::new(0) };
     /// Until when no request is taken, after one that leaves events behind (a command started, a window brought
     /// to the front, a key or a click), so the program has carried them out before the next request looks.
@@ -274,6 +279,17 @@ fn ensure_timer() {
         timer.start(30, false);
         *t.borrow_mut() = Some(timer);
     });
+    QUEUE_TIMER.with(|t| {
+        if t.borrow().is_some() {
+            return;
+        }
+        let timer = wxdragon::timer::Timer::new(&app::frame());
+        timer.on_tick(|_| {
+            wxdragon::app::process_main_thread_queue();
+        });
+        timer.start(30, false);
+        *t.borrow_mut() = Some(timer);
+    });
 }
 
 /// Whether a request named `method` may run while a menu command is being carried out (its dialog is open): the
@@ -292,10 +308,9 @@ fn runs_inside_request(method: &str) -> bool {
 /// a key pressed, a window brought to the front) are carried out before the request after it. While a request (or
 /// a menu command) is running, only the ui.* ones are taken.
 fn drain() {
-    // What earlier requests left to run after their reply (a menu command started by engine.execute) runs now,
-    // before the next request is taken: the toolkit runs that queue only when its main loop is idle, which a
-    // steady stream of requests never leaves it.
-    wxdragon::app::process_main_thread_queue();
+    // What earlier requests left to run after their reply (a menu command started by engine.execute) runs from
+    // QUEUE_TIMER: the toolkit runs that queue only when its main loop is idle, which a steady stream of requests
+    // never leaves it; and it runs apart from this timer so a dialog opened from it leaves this one ticking.
     if SETTLE.with(|t| t.get().is_some_and(|until| std::time::Instant::now() < until)) {
         return;
     }
@@ -412,6 +427,16 @@ fn documents_list() -> Value {
                         "path": d.path.as_ref().map(|p| p.display().to_string()),
                         "dirty": d.dirty,
                         "active": a.active == Some(i),
+                        // The document's tab and its close button, each as a point in the main window's
+                        // coordinates (for the click tool), where the system reports them (not on macOS).
+                        "tab": a.tabs.tab_rect(i).map(|r| {
+                            let at = a.frame.screen_to_client(Point::new(r.x + r.width / 2, r.y + r.height / 2));
+                            json!([at.x, at.y])
+                        }),
+                        "close_button": a.tabs.close_button_rect(i).map(|r| {
+                            let at = a.frame.screen_to_client(Point::new(r.x + r.width / 2, r.y + r.height / 2));
+                            json!([at.x, at.y])
+                        }),
                     })
                 })
                 .collect(),
@@ -784,6 +809,14 @@ fn dispatch(method: &str, p: &Value) -> Result<Value, String> {
                 "middle" => MouseButton::Middle,
                 _ => MouseButton::Left,
             };
+            // With `to_x` and `to_y`: a drag from the point to there (a tab dragged along the tab bar).
+            if let (Some(tx), Some(ty)) = (p.get("to_x").and_then(Value::as_i64), p.get("to_y").and_then(Value::as_i64)) {
+                let to = app::frame().client_to_screen(Point::new(tx as i32, ty as i32));
+                if !sim.mouse_drag_drop(at.x, at.y, to.x, to.y, button) {
+                    return Err("the drag could not be made".into());
+                }
+                return Ok(json!({"x": x, "y": y, "to_x": tx, "to_y": ty, "screen": [at.x, at.y, to.x, to.y]}));
+            }
             sim.mouse_move(at.x, at.y);
             let ok = if p.get("double").and_then(Value::as_bool).unwrap_or(false) { sim.mouse_dbl_click(button) } else { sim.mouse_click(button) };
             if !ok {

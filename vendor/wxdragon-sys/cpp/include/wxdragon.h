@@ -143,6 +143,8 @@ extern "C" {
 #include "core/wxd_screenshot.h"
 // Added for BrailleCraft: the drawn document editing window
 #include "core/wxd_doc_editor.h"
+// Added for BrailleCraft: the tab bar of the main window, one tab per open document
+#include "core/wxd_doc_tabs.h"
 
 // Sound support
 #include "core/wxd_sound.h"

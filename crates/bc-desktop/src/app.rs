@@ -10,7 +10,6 @@ use std::path::PathBuf;
 
 use bc_core::doctext::Shown;
 use wxdragon::prelude::*;
-use wxdragon_sys as ffi;
 
 use crate::dlg::Memory;
 use crate::encodings;
@@ -69,7 +68,9 @@ pub struct View {
 
 pub struct Doc {
     pub key: u64,
-    pub frame: MDIChildFrame,
+    /// The document's page in the tab bar across the main window (tabs.rs): it holds the editing area, the
+    /// translated line and the status line.
+    pub page: Panel,
     /// The editing area: the program-drawn editing window (editor_view), showing `ed`.
     pub area: crate::editor_view::Area,
     /// The document's status line, the window after the editing area (as in the reference program, where screen
@@ -351,7 +352,9 @@ impl Default for ViewPrefs {
 }
 
 pub struct App {
-    pub frame: MDIParentFrame,
+    pub frame: Frame,
+    /// The tab bar across the top of the window: one tab per document, in the order of `docs`.
+    pub tabs: crate::tabs::Tabs,
     pub menus: Menus,
     pub docs: Vec<Doc>,
     pub active: Option<usize>,
@@ -390,7 +393,7 @@ pub fn try_with(f: impl FnOnce(&mut App)) {
 }
 
 /// The main window, for parenting dialogs.
-pub fn frame() -> MDIParentFrame {
+pub fn frame() -> Frame {
     with(|a| a.frame)
 }
 
@@ -463,17 +466,12 @@ impl App {
         }
     }
 
-    /// The title bar: "BrailleCraft - [name -- New Print Document]". On Windows the system writes it from the
-    /// maximized document window's own title; elsewhere it is set here.
+    /// The title bar: "BrailleCraft - [name -- New Print Document]", as the reference program's title bar reads
+    /// with a document window maximized in it; the active document's tab carries the same name.
     pub fn set_title(&self) {
-        let name = self.doc().map(|d| d.full_name());
-        if cfg!(windows) {
-            self.frame.set_label("BrailleCraft");
-        } else {
-            match &name {
-                Some(n) => self.frame.set_label(&format!("BrailleCraft - [{n}]")),
-                None => self.frame.set_label("BrailleCraft"),
-            }
+        match self.doc().map(|d| d.full_name()) {
+            Some(n) => self.frame.set_label(&format!("BrailleCraft - [{n}]")),
+            None => self.frame.set_label("BrailleCraft"),
         }
     }
 
@@ -497,7 +495,7 @@ impl App {
             d.line.set_font(&f);
         }
         d.line.show(d.view.translated);
-        d.frame.layout();
+        d.page.layout();
         self.show_area(i, None);
         self.refresh_menus();
         self.docs[i].last_line_key.clear();
@@ -861,14 +859,9 @@ impl App {
     }
 }
 
-/// The child window's frame functions that the MDI child wrapper does not offer (it is a frame underneath).
-pub fn child_set_title(child: &MDIChildFrame, title: &str) {
-    let c = std::ffi::CString::new(title).unwrap_or_default();
-    unsafe { ffi::wxd_Frame_SetTitle(child.handle_ptr() as *mut ffi::wxd_Frame_t, c.as_ptr()) };
-}
-
-pub fn child_maximize(child: &MDIChildFrame) {
-    unsafe { ffi::wxd_Frame_Maximize(child.handle_ptr() as *mut ffi::wxd_Frame_t, true) };
+/// The tab text of the document whose page is `page`: its full name, after a rename, a save or an open.
+pub fn set_tab_title(page: &Panel, title: &str) {
+    crate::tabs::set_title(page, title);
 }
 
 #[cfg(test)]

@@ -26,6 +26,7 @@ mod python_options;
 mod print;
 mod settings_store;
 mod speech;
+mod tabs;
 mod translation;
 
 use std::path::{Path, PathBuf};
@@ -137,7 +138,7 @@ pub fn apply_status_font(a: &app::App, status: &StaticText) {
 pub fn set_status_font(a: &app::App) {
     for d in &a.docs {
         apply_status_font(a, &d.status);
-        d.frame.layout();
+        d.page.layout();
     }
 }
 
@@ -203,11 +204,14 @@ fn main() {
             translation::set_region(region);
         }
 
-        let frame = MDIParentFrame::builder().with_title("BrailleCraft").with_size(Size::new(1000, 720)).build();
+        let frame = Frame::builder().with_title("BrailleCraft").with_size(Size::new(1000, 720)).build();
         let menus = menu::install(&frame);
+        // The tab bar is the window's only child, so it fills the window; each document is a page of it.
+        let tabs = tabs::create(&frame);
 
         app::set(app::App {
             frame,
+            tabs,
             menus,
             docs: Vec::new(),
             active: None,
@@ -305,7 +309,7 @@ fn main() {
         if cl.is_batch() {
             app::with(|a| {
                 for d in a.docs.drain(..) {
-                    d.frame.destroy();
+                    d.page.destroy();
                 }
                 a.frame.destroy();
             });

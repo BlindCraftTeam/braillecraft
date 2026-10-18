@@ -66,3 +66,14 @@ Also added, in cpp/include/core/wxd_screenshot.h and cpp/src/screenshot.cpp (lis
 included from cpp/include/wxdragon.h):
 - wxd_App_SaveScreenshot: a picture of every shown top-level window of the program, read back from the screen
   (wxScreenDC) as one PNG file, for the control channel's screenshot tool (braillecraft-cli mcp --connect).
+
+Also added, in cpp/include/core/wxd_doc_tabs.h and cpp/src/doc_tabs.cpp (listed in cpp/CMakeLists.txt and included
+from cpp/include/wxdragon.h):
+- wxd_DocTabs_Create and the other wxd_DocTabs_ functions: the tab bar of the main window, a wxNotebook with one
+  tab per open document and the behaviour of a browser's tab bar: a close button in each tab (a real GTK button
+  packed into the tab's label box on Linux; the tab's image, hit-tested by the tab control, on Windows), a middle
+  click to close, tabs dragged to reorder (GTK's own reorderable tabs, put back and redone through the toolkit's
+  remove and insert so its page list stays in step; a drag across the tab row elsewhere), the keys Ctrl+Tab,
+  Ctrl+Shift+Tab, Ctrl+W and Ctrl+Shift+Page Up and Page Down while the tab bar has the focus, and callbacks to the
+  program for a selection change, a close request and a move; TabRect and CloseButtonRect give the screen
+  rectangles for a program that drives the window (the control channel).

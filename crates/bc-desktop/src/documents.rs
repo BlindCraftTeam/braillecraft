@@ -1,7 +1,7 @@
-//! Document windows: each open document is a child window holding the editing area (the program-drawn editing
-//! window, editor_view, as the reference program draws its own), under it the one-line translated line on yellow,
-//! and at the bottom the document's status line. The child windows sit maximized in the main window, as in the
-//! reference screenshots.
+//! Document windows: each open document is a page of the tab bar across the top of the main window (tabs.rs, a
+//! BrailleCraft addition in place of the document windows the reference program stacks in its main window),
+//! holding the editing area (the program-drawn editing window, editor_view, as the reference program draws its own),
+//! under it the one-line translated line on yellow, and at the bottom the document's status line.
 //!
 //! Every key, typed character and click in the editing area comes here and is carried out on the document's editor
 //! model (bc_core::editor), as the reference program's key handler does (spec 27 section 5, spec 30).
@@ -12,14 +12,14 @@ use bc_core::doctext::Shown;
 use bc_core::editor::{Editor, Move, Row};
 use wxdragon::prelude::*;
 
-use crate::app::{self, child_maximize, child_set_title, Doc, DocKind, Hyphen, View};
+use crate::app::{self, Doc, DocKind, Hyphen, View};
 use crate::editor_view;
 use crate::speech;
 
-/// Opens a new document window with `shown` (its text and codes). `name` None makes an untitled one ("Untitled
-/// Print Document 1").
+/// Opens a new document in a tab of its own with `shown` (its text and codes). `name` None makes an untitled one
+/// ("Untitled Print Document 1").
 pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
-    let (frame, key, name, untitled, view) = app::with(|a| {
+    let (tabs, key, name, untitled, view) = app::with(|a| {
         a.next_key += 1;
         let untitled = name.is_none();
         let name = name.unwrap_or_else(|| {
@@ -36,16 +36,16 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
             translated: if braille { v.braille_translated } else { v.print_translated },
             six_key: braille && v.six_key,
         };
-        (a.frame, a.next_key, name, untitled, view)
+        (a.tabs, a.next_key, name, untitled, view)
     });
 
-    let child = MDIChildFrame::builder(&frame).with_title(&name).build();
-    let area = editor_view::create(&child, key);
+    let page = Panel::builder(&tabs).build();
+    let area = editor_view::create(&page, key);
     // The status line is made right after the editing area and the translated line after it: screen reader scripts
     // find them as the next window and the one after (spec 17).
-    let status = StaticText::builder(&child).with_label("Current Style: None").build();
+    let status = StaticText::builder(&page).with_label("Current Style: None").build();
     app::with(|a| crate::apply_status_font(a, &status));
-    let line = TextCtrl::builder(&child).with_style(TextCtrlStyle::ReadOnly).build();
+    let line = TextCtrl::builder(&page).with_style(TextCtrlStyle::ReadOnly).build();
     line.set_background_color(Colour::new(255, 255, 0, 255));
     line.set_foreground_color(Colour::new(0, 0, 0, 255));
     line.set_accessibility_label("Translated line");
@@ -58,9 +58,7 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
     sizer.add(&area, 1, SizerFlag::Expand, 0);
     sizer.add(&line, 0, SizerFlag::Expand, 0);
     sizer.add(&status, 0, SizerFlag::Expand | SizerFlag::All, 2);
-    child.set_sizer(sizer, true);
-
-    wire(key, &child, area);
+    page.set_sizer(sizer, true);
 
     let braille = kind == DocKind::Braille;
     // The coded view's rows are 42 characters for a braille document and 65 for a print one (spec 27 4b); the page
@@ -68,7 +66,7 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
     let ed = Editor::new(shown.clone(), bc_core::format::Layout::braille(40, 25), None, view.codes, if braille { 42 } else { 65 });
     let doc = Doc {
         key,
-        frame: child,
+        page,
         area,
         status,
         line,
@@ -111,8 +109,8 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
         file_sections: Vec::new(),
         ebraille: Default::default(),
     };
+    let title = doc.full_name();
     app::with(|a| {
-        child_set_title(&doc.frame, &doc.full_name());
         a.docs.push(doc);
         // The document opens at its start, in the view Global, Default Views sets: the formatted view with View,
         // Codes off, else the coded view (spec 27 2a).
@@ -120,34 +118,35 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
         a.docs[i].select_doc(0, 0);
         a.set_view_codes(i, view.codes);
     });
-    child_maximize(&child);
-    child.show(true);
+    // The document's tab, last in the row and selected (the tab bar does not report the selection an add makes;
+    // the document is made the active one here).
+    tabs.add_page(&page, &title, true);
     activate_key(key);
     area.set_focus();
     // A dialog that was open (File, Open) gives focus back to the control it came from when it finishes closing;
     // the new document takes it once that is done.
-    // On macOS each document is a window of its own, and the system gives activation back to the window that had it
-    // before the dialog (the untitled document of a plain start), whose activation would make it the active document;
-    // the new document's window is brought to the front, as the View menu's list does.
-    let _ = area;
     wxdragon::call_after(Box::new(move || {
         // The document may have been closed before this runs: its windows are then gone.
-        let Some((child, area)) = live_windows(key) else { return };
-        child.raise();
-        child_maximize(&child);
+        let Some(area) = live_area(key) else { return };
         area.set_focus();
         activate_key(key);
     }));
     key
 }
 
-/// The document window and editing area of the document with this key, while it is open. A call put off until later
-/// (wxdragon::call_after) looks them up here, never keeps them: on macOS closing a document window activates it while
-/// it is being destroyed, and a window kept from then is gone when the call runs.
-fn live_windows(key: u64) -> Option<(MDIChildFrame, editor_view::Area)> {
+/// The editing area of the document with this key, while it is open. A call put off until later
+/// (wxdragon::call_after) looks it up here, never keeps it: a document closed meanwhile has no windows left.
+fn live_area(key: u64) -> Option<editor_view::Area> {
     let mut found = None;
-    app::try_with(|a| found = a.index_of(key).map(|i| (a.docs[i].frame, a.docs[i].area)));
+    app::try_with(|a| found = a.index_of(key).map(|i| a.docs[i].area));
     found
+}
+
+/// The key of the document at `index` in the document list (the order of the tabs), while the state is free.
+fn key_at(index: usize) -> Option<u64> {
+    let mut key = None;
+    app::try_with(|a| key = a.docs.get(index).map(|d| d.key));
+    key
 }
 
 /// The key code of the Shift key (WXK_SHIFT).
@@ -162,84 +161,123 @@ pub fn show_cursor_locator(key: u64) {
     }
 }
 
-/// Makes the document with this key the active one.
+/// Makes the document with this key the active one; its tab follows.
 pub fn activate_key(key: u64) {
     app::try_with(|a| {
         if let Some(i) = a.index_of(key) {
             a.active = Some(i);
+            if a.tabs.selection() != Some(i) {
+                a.tabs.change_selection(i);
+            }
             a.set_title();
             a.apply_view();
         }
     });
 }
 
-/// Brings document `index` to the front (View menu list).
+/// Brings document `index` to the front (View menu list, the control channel): its tab is selected and its editing
+/// area takes the keyboard.
 pub fn bring_to_front(index: usize) {
-    let target = app::with(|a| a.docs.get(index).map(|d| (d.frame, d.area, d.key)));
-    if let Some((frame, area, key)) = target {
-        frame.raise();
-        child_maximize(&frame);
-        area.set_focus();
+    let target = app::with(|a| a.docs.get(index).map(|d| (a.tabs, d.area, d.key)));
+    if let Some((tabs, area, key)) = target {
+        if tabs.selection() != Some(index) {
+            tabs.set_selection(index);
+        }
         activate_key(key);
+        area.set_focus();
     }
 }
 
-/// Closes the document with this key without asking (the caller has asked).
+/// Closes the document with this key without asking (the caller has asked): its tab and its page go, and the
+/// document the tab bar selects in its place becomes the active one.
 pub fn destroy(key: u64) {
-    let frame = app::with(|a| {
+    let removed = app::with(|a| {
         let i = a.index_of(key)?;
         let d = a.docs.remove(i);
-        a.active = if a.docs.is_empty() { None } else { Some(a.docs.len() - 1) };
-        Some(d.frame)
+        a.active = None;
+        Some((a.tabs, d.page, i))
     });
-    if let Some(f) = frame {
-        f.destroy();
+    let Some((tabs, page, i)) = removed else { return };
+    tabs.remove_page(i);
+    page.destroy();
+    let next = app::with(|a| {
+        let n = a.docs.len();
+        (n > 0).then(|| a.docs[tabs.selection().filter(|s| *s < n).unwrap_or(n - 1)].key)
+    });
+    match next {
+        Some(k) => {
+            activate_key(k);
+            if let Some(area) = live_area(k) {
+                area.set_focus();
+            }
+        }
+        None => app::with(|a| a.set_title()),
     }
     app::with(|a| {
-        a.set_title();
-        if let Some(d) = a.doc() {
-            let (f, area) = (d.frame, d.area);
-            child_maximize(&f);
-            area.set_focus();
-        }
         a.refresh_menus();
         a.update_status();
     });
+}
+
+/// The tab bar selected tab `index` (a click on it, the keys in the tab bar): its document becomes the active one
+/// and its editing area takes the keyboard once the tab bar has finished switching.
+pub fn tab_changed(index: usize) {
+    let Some(key) = key_at(index) else { return };
+    activate_key(key);
+    wxdragon::call_after(Box::new(move || {
+        if let Some(area) = live_area(key) {
+            area.set_focus();
+        }
+    }));
+}
+
+/// The close button of tab `index` (or a middle click on it, or Ctrl+W in the tab bar): as File, Close, with the
+/// question about unsaved changes.
+pub fn tab_close(index: usize) {
+    if let Some(key) = key_at(index) {
+        wxdragon::call_after(Box::new(move || crate::commands::close_document(Some(key))));
+    }
+}
+
+/// Tab `from` was moved to `to` (a drag, or Ctrl+Shift+Page Up or Page Down): the document list follows, so the
+/// View menu's list and every index agree with the tabs.
+pub fn tab_moved(from: usize, to: usize) {
+    app::try_with(|a| {
+        if from >= a.docs.len() || to >= a.docs.len() {
+            return;
+        }
+        let d = a.docs.remove(from);
+        a.docs.insert(to, d);
+        if let Some(active) = a.active {
+            a.active = Some(crate::tabs::moved_index(active, from, to));
+        }
+        a.refresh_menus();
+    });
+}
+
+/// Ctrl+Tab (forward) and Ctrl+Shift+Tab in the editing area: the next or previous document, wrapping.
+fn switch_tab(forward: bool) {
+    let (tabs, n) = app::with(|a| (a.tabs, a.docs.len()));
+    if n < 2 {
+        return;
+    }
+    let at = tabs.selection().unwrap_or(0);
+    bring_to_front(if forward { (at + 1) % n } else { (at + n - 1) % n });
+}
+
+/// Ctrl+Shift+Page Up and Page Down in the editing area: the document's tab one place left or right.
+fn move_tab(key: u64, up: bool) {
+    let Some((tabs, i, n)) = app::with(|a| a.index_of(key).map(|i| (a.tabs, i, a.docs.len()))) else { return };
+    let to = if up { i.checked_sub(1) } else { (i + 1 < n).then_some(i + 1) };
+    if let Some(to) = to {
+        tabs.move_page(i, to);
+    }
 }
 
 thread_local! {
     /// Shift was pressed with no other key since: letting it go shows the Cursor Locator when Global, View
     /// Preferences asks for it (spec 24 2d.2).
     static SHIFT_ALONE: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
-}
-
-fn wire(key: u64, child: &MDIChildFrame, area: editor_view::Area) {
-    child.on_activate(move |e| {
-        if let WindowEventData::Activate(a) = &e {
-            if a.is_active() {
-                activate_key(key);
-                // The editing area takes the keyboard when its document becomes active. On Linux the documents are
-                // pages of a notebook, which takes focus as it switches pages; focus is given once that is done.
-                let _ = area;
-                wxdragon::call_after(Box::new(move || {
-                    if let Some((_, area)) = live_windows(key) {
-                        area.set_focus();
-                    }
-                }));
-            }
-            a.event.skip(true);
-        }
-    });
-
-    child.on_close(move |e| {
-        // Closing a document window asks about unsaved changes, as File, Close does.
-        if let WindowEventData::General(ev) = &e {
-            if ev.can_veto() {
-                ev.veto();
-            }
-        }
-        wxdragon::call_after(Box::new(move || crate::commands::close_document(Some(key))));
-    });
 }
 
 // wxWidgets key codes and modifier bits.
@@ -272,6 +310,8 @@ const MOD_ALT: i32 = 1;
 const MOD_CONTROL: i32 = 2;
 const MOD_SHIFT: i32 = 4;
 const MOD_META: i32 = 8;
+/// The Control key itself on macOS, where MOD_CONTROL is the Command key (wxMOD_RAW_CONTROL).
+const MOD_RAW_CONTROL: i32 = 16;
 
 /// A key in the editing area of document `key` (spec 27 5a, spec 30): pressed (`code` above 0) or let go (`code`
 /// negated). True when it was carried out here; the others go on to the menus and the window.
@@ -297,6 +337,27 @@ pub fn area_key(key: u64, code: i32, _unicode: i32, mods: i32) -> bool {
                 done = true;
                 return;
             }
+        }
+        // The tab bar's keys (tabs.rs): Ctrl+Tab and Ctrl+Shift+Tab the next and previous document, Ctrl+W (Cmd+W
+        // on macOS) close the document, Ctrl+Shift+Page Up and Page Down move its tab. Each runs once the key has
+        // been dealt with, outside the state.
+        let raw_control = if cfg!(target_os = "macos") { mods & MOD_RAW_CONTROL != 0 } else { control };
+        if raw_control && code == TAB {
+            let forward = !shift;
+            wxdragon::call_after(Box::new(move || switch_tab(forward)));
+            done = true;
+            return;
+        }
+        if control && !shift && code == i32::from(b'W') {
+            wxdragon::call_after(Box::new(move || crate::commands::close_document(Some(key))));
+            done = true;
+            return;
+        }
+        if raw_control && shift && matches!(code, PAGE_UP | PAGE_DOWN) {
+            let up = code == PAGE_UP;
+            wxdragon::call_after(Box::new(move || move_tab(key, up)));
+            done = true;
+            return;
         }
         // Alt with a key belongs to the menus (Alt with the arrows moves between table cells in the reference, not
         // built: BrailleCraft has no tables yet).

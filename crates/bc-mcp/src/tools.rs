@@ -71,7 +71,7 @@ pub fn tool_definitions() -> Value {
         tool("redo", "Redo", "Redo the last undone change.", obj(json!({"steps": n("Steps (1)")}), &[]), false),
         tool("screenshot", "Screenshot", "A picture of the program's window (desktop program only).", obj(json!({}), &[]), true),
         tool("key", "Press key", "Press a key with modifiers in the program's editing window (desktop program only), e.g. {key: \"Down\"} or {key: \"F3\", alt: true}.", obj(json!({"key": s("Key name"), "shift": b("Shift"), "alt": b("Alt"), "ctrl": b("Ctrl")}), &["key"]), false),
-        tool("click", "Click", "Click at window coordinates (desktop program only).", obj(json!({"x": n("x"), "y": n("y")}), &["x", "y"]), false),
+        tool("click", "Click", "Click at window coordinates (desktop program only); with to_x and to_y, drag from the point to there (a tab moved along the tab bar). list_documents gives each tab's close button.", obj(json!({"x": n("x"), "y": n("y"), "button": s("left (default), middle or right"), "double": b("Double click"), "to_x": n("Drag to x"), "to_y": n("Drag to y")}), &["x", "y"]), false),
         tool("list_documents", "Open documents", "The documents open in the program and which is active (desktop program only).", obj(json!({}), &[]), true),
         tool("activate_document", "Activate document", "Make one of the open documents the active one, by its number from list_documents (desktop program only).", obj(json!({"index": n("Document number")}), &["index"]), false),
     ])
