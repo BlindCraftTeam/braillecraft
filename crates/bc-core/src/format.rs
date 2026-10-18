@@ -2409,7 +2409,9 @@ impl Formatter {
         if word_break == 0 {
             let room = width as i64 - col as i64 - gap as i64;
             let before = cells.len();
-            let bp = crate::hyphen::break_point(&table, crate::hyphen::Word { cells: &mut cells, flags: &mut flags }, 0, room, 0, self.wb_min, self.hyphen_override);
+            // The fourth value is the whole room (spec 36 section 14): a word longer than a whole line with no break
+            // point gets a hyphen after its last cell that is not a prefix indicator.
+            let bp = crate::hyphen::break_point(&table, crate::hyphen::Word { cells: &mut cells, flags: &mut flags }, 0, room, width as i64, self.wb_min, self.hyphen_override);
             if cells.len() > before {
                 self.shift_word_marks(bp.saturating_sub(1));
             }
@@ -2437,9 +2439,11 @@ impl Formatter {
             let col = self.start_col.max(used).max(self.rooms().0);
             let left = cells.len() - placed;
             let mut piece = width.saturating_sub(col).min(left);
-            if width < col + left && word_break == 0 {
+            // Every remainder longer than the line is searched again, in [wb-no] too (the standard program tests the
+            // mode only before the first piece, spec 36 section 14).
+            if width < col + left {
                 let before = cells.len();
-                let bp = crate::hyphen::break_point(&table, crate::hyphen::Word { cells: &mut cells, flags: &mut flags }, placed, (width as i64 - col as i64).max(0), 0, self.wb_min, self.hyphen_override);
+                let bp = crate::hyphen::break_point(&table, crate::hyphen::Word { cells: &mut cells, flags: &mut flags }, placed, (width as i64 - col as i64).max(0), width as i64, self.wb_min, self.hyphen_override);
                 if cells.len() > before {
                     self.shift_word_marks(bp.saturating_sub(1));
                 }
@@ -4122,7 +4126,8 @@ mod tests {
     #[test]
     fn a_heading_is_centred_and_a_word_longer_than_a_line_is_broken() {
         let pages = format(&m("[hds]ab[hde]abcdefghij"), &Layout::braille(6, 4), None);
-        assert_eq!(texts(&pages[0]), ["  ab", "abcdef", "ghij", ""]);
+        // Longer than the line: a hyphen after the last ordinary cell that leaves room for it (spec 36 section 14).
+        assert_eq!(texts(&pages[0]), ["  ab", "abcde-", "fghij", ""]);
     }
 
     #[test]
@@ -4315,9 +4320,10 @@ mod tests {
         assert_eq!(texts(&pages[0])[..2], ["aaa", "bbb-ccc"]);
         let pages = format(&m("aaa bbb\u{1d}ccc"), &Layout::braille(8, 3), None);
         assert_eq!(texts(&pages[0])[..2], ["aaa bbb-", "ccc"]);
-        // Longer than a line: as much as fits after the space, the rest on the next line.
+        // Longer than a line: as much as fits after the space with a hyphen, the rest on the next lines the same way
+        // (spec 36 section 14).
         let pages = format(&m("ab cdefghijk"), &Layout::braille(6, 3), None);
-        assert_eq!(texts(&pages[0])[..2], ["ab cde", "fghijk"]);
+        assert_eq!(texts(&pages[0])[..3], ["ab cd-", "efghi-", "jk"]);
         // Shorter than a line: to the next line whole.
         let pages = format(&m("abcd efgh"), &Layout::braille(6, 3), None);
         assert_eq!(texts(&pages[0])[..2], ["abcd", "efgh"]);
