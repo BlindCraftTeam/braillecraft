@@ -591,7 +591,7 @@ impl<'a> Writer<'a> {
                         }
                         self.byte(v);
                         // A code above 0xFF (the two-byte capital 0xB341 of 0x9F, the only one that comes here) is
-                        // looked up past the end of the code-page table by the standard program; the bytes there
+                        // looked up past the end of the code-page table; the bytes there
                         // have the lead-byte flag, so it counts as a lead byte (spec 07 section A9).
                         let lead = v > 0xff || flags(v) & 0x20 != 0;
                         if !lead && v > 0x1f && !self.in_code && self.after == 2 {

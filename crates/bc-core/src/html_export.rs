@@ -3,9 +3,9 @@
 //! step's input: the tag script (codes to tags), the italics script (underscore marks to <it> tags), the built-in
 //! `html_step` (the html and body tags, non-ASCII text as numeric references), the styles script (style tags to html
 //! elements), the fix script (html fixes, maths to LaTeX) and the built-in `fixlinks` (link text to anchors). The
-//! recipe's first, optional, translation table is not part of the standard installation, so it is not run.
+//! recipe's first, optional, translation table is not installed, so it is not run.
 //!
-//! The two built-in steps are ported byte for byte from the standard program (spec 21, the section of bytes read 2026-10-17).
+//! The two built-in steps follow spec 21 byte for byte ( the section of bytes read 2026-10-17).
 
 use crate::rule_script::RuleScript;
 

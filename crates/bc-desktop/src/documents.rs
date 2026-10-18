@@ -1,10 +1,10 @@
 //! Document windows: each open document is a page of the tab bar across the top of the main window (tabs.rs, a
-//! BrailleCraft addition in place of the document windows the reference program stacks in its main window),
-//! holding the editing area (the program-drawn editing window, editor_view, as the reference program draws its own),
+//! BrailleCraft addition in place of stacked document windows),
+//! holding the editing area (the program-drawn editing window, editor_view),
 //! under it the one-line translated line on yellow, and at the bottom the document's status line.
 //!
 //! Every key, typed character and click in the editing area comes here and is carried out on the document's editor
-//! model (bc_core::editor), as the reference program's key handler does (spec 27 section 5, spec 30).
+//! model (bc_core::editor; spec 27 section 5, spec 30).
 
 use std::collections::HashSet;
 
@@ -50,7 +50,7 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
     line.set_foreground_color(Colour::new(0, 0, 0, 255));
     line.set_accessibility_label("Translated line");
     speech::set_name(line.get_handle(), "Translated line");
-    // The name the reference program's document provider gives its editing area.
+    // The editing area's accessible name.
     area.set_accessible_name("Document Editing Window");
     line.show(view.translated);
 
@@ -375,7 +375,7 @@ pub fn area_key(key: u64, code: i32, _unicode: i32, mods: i32) -> bool {
             return;
         }
         // Alt with a key belongs to the menus; Alt with the arrows moves between table cells (handled with the
-        // arrows below, as the reference does).
+        // arrows below).
         if alt && !control {
             return;
         }

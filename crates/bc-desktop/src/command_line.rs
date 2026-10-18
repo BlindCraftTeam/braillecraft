@@ -1,6 +1,6 @@
-//! The command line at start-up, as the reference program carries it out (re/spec/26-installer.md section 26.5): each
+//! The command line at start-up (re/spec/26-installer.md section 26.5): each
 //! file given is opened; a file given after an option is then printed, embossed or saved as the option says, with
-//! the dialog skipped, translated first where the reference translates (a print document for /braille, /simulated
+//! the dialog skipped, translated first (a print document for /braille, /simulated
 //! and /brf; a braille document for /print and /prf), and closed. The document types the installer registers use
 //! this for their Print and Emboss verbs. When every file came with an option, the program ends afterwards without
 //! showing the editor.
@@ -59,7 +59,7 @@ enum Step {
     Stop,
 }
 
-/// One file with a mode: translated first where the reference does, laid out with /pagesize, then printed,
+/// One file with a mode: translated first where its mode needs it, laid out with /pagesize, then printed,
 /// embossed or saved; every document it made is closed afterwards.
 fn carry_out(key: u64, mode: &Mode, cl: &CommandLine, copies: u32) -> Step {
     let braille = app::with(|a| a.index_of(key).map(|i| a.docs[i].kind == DocKind::Braille)).unwrap_or(false);
@@ -116,7 +116,7 @@ fn carry_out(key: u64, mode: &Mode, cl: &CommandLine, copies: u32) -> Step {
         Mode::Print | Mode::Simulated => commands::print_with(Some(copies)),
         Mode::Braille(setup) => {
             // A setup named on the command line is the document's for this job; one that is not kept leaves the
-            // document neither embossed nor printed, as the reference does.
+            // document neither embossed nor printed.
             let usable = match setup {
                 Some(name) if crate::embosser::load_setup(name).is_some() => {
                     app::with(|a| {

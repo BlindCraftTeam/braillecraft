@@ -76,7 +76,7 @@ pub struct Font {
 }
 
 impl Font {
-    /// Reads a font line the way the reference reads it: two words, then two numbers (each a sign and digits at
+    /// Reads a font line: two words, then two numbers (each a sign and digits at
     /// its start); None when the line does not give all four.
     pub fn parse(text: &str) -> Option<Font> {
         let mut it = text.split_whitespace();
@@ -101,7 +101,7 @@ impl Font {
     }
 }
 
-/// The values after the "-ninit 6" line, read as the reference reads them: "|" and a space (or a line end) starts a
+/// The values after the "-ninit 6" line: "|" and a space (or a line end) starts a
 /// comment to the end of the line; "||" is "|"; "|" and exactly three digits is that byte (another "|" is kept, the
 /// three characters used up); a line that is only a comment gives no value; blanks at the end of a value are taken
 /// off. The file's line ends may be CR LF.

@@ -176,7 +176,7 @@ pub fn import_filters() -> String {
 }
 
 /// The code page a text file is imported in when none has been chosen: ISO-8859-1, as for a system that is not
-/// one of the four the standard program names.
+/// one of the four named systems.
 #[wasm_bindgen]
 pub fn default_import_code_page() -> String {
     bc_core::codepages::default_import(None).to_string()
@@ -376,7 +376,7 @@ fn remember(t: &mut Tracker, s: Shown) {
     }
 }
 
-/// The standard style commands on the editor's text (bc_core style_apply, spec 31), with the selection's anchor and
+/// The style commands on the editor's text (bc_core style_apply, spec 31), with the selection's anchor and
 /// the caret as UTF-16 places: `what` is "apply" (style `name`), "join-lines", "join-styles" or "new-paragraph".
 /// Answers JSON {"text": the editor's new text, "caret": UTF-16 place}, or an empty string when nothing changes.
 #[wasm_bindgen]
@@ -587,7 +587,7 @@ pub fn editor_running_place(r: u32) -> u32 {
     })
 }
 
-/// The Find and Replace fields: what the standard program says about one (empty when nothing; `replace` for the replace
+/// The Find and Replace fields: the message shown about one (empty when nothing; `replace` for the replace
 /// field), a field as running text, and a remembered text as the field shows it.
 #[wasm_bindgen]
 pub fn find_field_problem(field: &str, replace: bool) -> String {
@@ -624,7 +624,7 @@ pub fn editor_load(running: &str) -> String {
     })
 }
 
-/// A PDF imported as running text with codes (bc_core::pdf_import, the reference's PDF front end); `styles` are the
+/// A PDF imported as running text with codes (bc_core::pdf_import, the PDF front end); `styles` are the
 /// style names of the document it goes into, one per line; `options` the importer's options as JSON of
 /// bc_core::pdf_import::PdfOptions (Global, PDF Importer), empty for the defaults.
 #[wasm_bindgen]
@@ -1035,7 +1035,7 @@ impl Document {
     }
 
     /// A print document's page size as the file keeps it, [lines per page, characters per line]; 54 and 65 when the
-    /// file holds none, as the standard program lays such a document out (spec 05 section A10).
+    /// file holds none (spec 05 section A10).
     #[wasm_bindgen(getter)]
     pub fn print_page(&self) -> Vec<u32> {
         let (l, c) = if self.0.print_page.0 == 0 { dxfile::PRINT_PAGE_DEFAULT } else { self.0.print_page };
@@ -1117,7 +1117,7 @@ impl Document {
     }
 
     /// Document, Add Style (dialog 1025): a style named `name`, its codes typed in the dialog, or those of the style
-    /// `base` it is based on where a field is left empty. The reference message when the name cannot be used, else
+    /// `base` it is based on where a field is left empty. The message shown when the name cannot be used, else
     /// an empty string.
     pub fn add_style(&mut self, name: &str, base: &str, begin: &str, end: &str) -> String {
         if let Err(m) = check_style_name(name, &self.style_names()) {
@@ -1201,25 +1201,25 @@ fn codes_for_dialog(running: &str) -> String {
         .collect()
 }
 
-/// The checks Add Style makes on a new style's name, with the reference messages.
+/// The checks Add Style makes on a new style's name, with the messages shown.
 fn check_style_name(name: &str, names: &[String]) -> Result<(), String> {
     if let Some(p) = bc_core::doctext::style_name_problem(name) {
         return Err(p);
     }
-    // The standard list refuses a second style of the same name.
+    // The list refuses a second style of the same name.
     if names.iter().any(|n| n == name) {
         return Err("Unable to add style to style list.".into());
     }
     Ok(())
 }
 
-/// Document, Add Style: what the standard program says about the name typed (empty when it is accepted).
+/// Document, Add Style: the message shown about the name typed (empty when it is accepted).
 #[wasm_bindgen]
 pub fn style_name_problem(name: &str) -> String {
     bc_core::doctext::style_name_problem(name).unwrap_or_default()
 }
 
-/// Edit Style Codes: what the standard program says about a codes field (empty when it is accepted).
+/// Edit Style Codes: the message shown about a codes field (empty when it is accepted).
 #[wasm_bindgen]
 pub fn style_codes_problem(text: &str) -> String {
     bc_core::doctext::style_codes_problem(text).unwrap_or_default()
@@ -1323,7 +1323,7 @@ pub fn formatted_braille(text: &str, cells: u32, lines: u32, shown_cells: &str, 
 
 /// Save As coded braille (.bru) or coded text (.txt): the body as the document file stores it through the coding
 /// script (`script`, coded-braille.rules or coded-text.rules) and the line wrapping script (`wrap`,
-/// coded-wrap.rules), as the reference program makes these files (spec 04d-C, spec 20).
+/// coded-wrap.rules) (spec 04d-C, spec 20).
 #[wasm_bindgen]
 pub fn coded(text: &str, script: &[u8], wrap: &[u8]) -> Result<Vec<u8>, JsError> {
     use bc_core::rule_script::{run_all, RuleScript};
@@ -1348,7 +1348,7 @@ pub fn latex(text: &str, table: &str, script: &[u8]) -> Result<Vec<u8>, JsError>
 }
 
 /// Save As HTML with MathJax (.htm) for a print document (spec 21): as `latex` with the MathJax rule script
-/// (mathjax.rules), between the fixed head and foot the standard program writes.
+/// (mathjax.rules), between a fixed head and foot.
 #[wasm_bindgen]
 pub fn mathjax(text: &str, table: &str, script: &[u8]) -> Result<Vec<u8>, JsError> {
     let body = latex(text, table, script)?;
@@ -1932,7 +1932,7 @@ pub fn printer_setup_view(setup: &str) -> String {
 }
 
 /// The setup as Printer Setup's OK reads it: the paper by name, the orientation, and the margins as typed (the unit
-/// becomes millimetres when the left margin is typed in them). The new settings text, or the reference message when
+/// becomes millimetres when the left margin is typed in them). The new settings text, or the message shown when
 /// a margin is not a number of 0 or more.
 #[wasm_bindgen]
 pub fn printer_setup_read(setup: &str, paper: &str, landscape: bool, margins: Vec<String>) -> Result<String, JsError> {

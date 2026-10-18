@@ -87,8 +87,8 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   read with that table's own settings, until [lnb~Y] or a plain [lnb] (which goes back to the table before), the
   pairs nesting; a code for a language with no table goes back to the document's own table. A table that switches web and mail addresses
   to computer braille writes each address between the computer braille codes, a full stop or comma after it left
-  outside, as the standard program does; a table that reads its input byte by byte (the binary text export) reads it
-  that way, line ends joined or not, as the standard program does. Accented capitals (É, Ñ) and the other capitals the
+  outside; a table that reads its input byte by byte (the binary text export) reads it
+  that way, line ends joined or not. Accented capitals (É, Ñ) and the other capitals the
   character table pairs with a small letter (Ā, Cyrillic А) get the capital sign as A to Z do. Every character the built-in character
   table names translates (accented letters, £, €, œ, dashes, curly quotes and thousands more); File, Open (its file types
   listed, All Files chosen, starting in the folder last opened from) finds a
@@ -118,7 +118,7 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   zhuyin) ship as rule scripts, a file that holds a "(this_is_a_braille_document)" or "(this_is_a_print_document)"
   paragraph opens as that kind of document, and tables/file-kinds.txt names the file extensions read as a given
   kind before the file's bytes are looked at. The Global, Import Options, Word Importer, WordPerfect Importer and File Locations
-  dialogs keep their answers between runs, under the standard program's own setting names, and open with the
+  dialogs keep their answers between runs, under fixed setting names, and open with the
   standard defaults the first time. The web build opens files
   the same way, through the same import dialog and import steps, with its settings kept in the browser.
 - **Translated line.** Under the document, the braille (or the print) of the line you are on, updated as you write.
@@ -128,7 +128,7 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   translated, when the view changes, or when Shift is pressed alone.
 - **Braille pages.** Lines per page, cells per line, margins, centred headings and page numbering, shown in the
   status line as page, line and column. A page number shares the first or last line with text, which keeps three
-  cells clear of it; print documents get page numbers too, and [pg] and [pv] codes can renumber pages; [pntr] gives roman page numbers ([pnta] back to arabic), and the number sign, digits and roman indicator can be changed ([svgan], [svgrn]). Print page lines follow [svles]: the American or British line, letters on continuation pages or none, and how near the page end a print page change moves to the next page. Tab stops start where the standard program has them, take a fill ([stb], [#], [>]), and [ctb] moves them all to the line end; a table can carry a caption ([htbcs] ... [htbce]) drawn above its rows. Codes are read under every name the standard program's code list gives them (its French and Spanish names too); [ifprt] and [ifbrl] keep the next word only in a print or a braille document; [vcs] and [vce] centre the text of a page vertically. Dictionary-style guide words go in the foot ([meg], [mec], [med]), [lec] and [led] set and end the print page number on continuation pages, and [remw] drops the next word. Line-numbered poetry and prose work as in the standard program: [linenum] takes the next word as a line number on the right edge (or at a chosen cell and alignment), keeps room on the right for the widest number on the page, and [svpal] sets how the text after a number goes on; [rmN:O] sets the margin a line number cannot go below. Reference points ([rps] ... [rpe]) keep the braille and print page numbers of the text they mark, for a table of contents. Letter-format fold lines ([folds]) are left blank or filled with the fold character where the standard program puts them. A major formatting context ([mfcs] ... [mfce]) sets its level margins from the [hl] levels inside it. In a contents list with a right margin of 6, the last word of an entry can run up to its page number. Whole-line fills ([wlf], for box lines) put the text where the fill style says and fill the rest of the line, and a tab inside a centred heading is kept. Footnotes and endnotes written where they are referenced ([kdtxs] ... [kdtxe]) are held back and laid where [kdtxp] places them, or before the next print page number. Each document's styles (headings, lists, paragraphs) are laid out from its
+  cells clear of it; print documents get page numbers too, and [pg] and [pv] codes can renumber pages; [pntr] gives roman page numbers ([pnta] back to arabic), and the number sign, digits and roman indicator can be changed ([svgan], [svgrn]). Print page lines follow [svles]: the American or British line, letters on continuation pages or none, and how near the page end a print page change moves to the next page. Tab stops start at fixed default places, take a fill ([stb], [#], [>]), and [ctb] moves them all to the line end; a table can carry a caption ([htbcs] ... [htbce]) drawn above its rows. Codes are read under every name in the code list (French and Spanish names too); [ifprt] and [ifbrl] keep the next word only in a print or a braille document; [vcs] and [vce] centre the text of a page vertically. Dictionary-style guide words go in the foot ([meg], [mec], [med]), [lec] and [led] set and end the print page number on continuation pages, and [remw] drops the next word. Line-numbered poetry and prose work this way: [linenum] takes the next word as a line number on the right edge (or at a chosen cell and alignment), keeps room on the right for the widest number on the page, and [svpal] sets how the text after a number goes on; [rmN:O] sets the margin a line number cannot go below. Reference points ([rps] ... [rpe]) keep the braille and print page numbers of the text they mark, for a table of contents. Letter-format fold lines ([folds]) are left blank or filled with the fold character at the fold places. A major formatting context ([mfcs] ... [mfce]) sets its level margins from the [hl] levels inside it. In a contents list with a right margin of 6, the last word of an entry can run up to its page number. Whole-line fills ([wlf], for box lines) put the text where the fill style says and fill the rest of the line, and a tab inside a centred heading is kept. Footnotes and endnotes written where they are referenced ([kdtxs] ... [kdtxe]) are held back and laid where [kdtxp] places them, or before the next print page number. Each document's styles (headings, lists, paragraphs) are laid out from its
   own style list. Running heads go on the first lines of the pages they are set for and running feet on the last
   line, centred or at a side, beside the page numbers. Blocks kept together (a heading with the lines after it, a list
   item) move to the next page whole rather than break across one. Print page numbers marked in the text show in their corner,
@@ -145,7 +145,7 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   Table (None, Dashes, Dashes and Hyphens, French, French 113; the tables ship as data): at a break marked in the
   text, after or before a dash, after an internal hyphen, or (French, in braille documents) at a syllable break the
   table's automaton finds, with a hyphen inserted; a word longer than a whole line with no break point gets a hyphen after the last
-  cell that leaves room for it, as the standard program does; computer braille ([wb-cb], in force until [wb]) looks ahead as the standard program does: a word goes whole on the line, ends the line with a space and the continuation sign when the next computer braille word cannot follow it, moves whole to the next line, or breaks after punctuation with the continuation sign. Change Case works on the word at the caret when nothing is selected, and steps
+  cell that leaves room for it; computer braille ([wb-cb], in force until [wb]) looks ahead: a word goes whole on the line, ends the line with a space and the continuation sign when the next computer braille word cannot follow it, moves whole to the next line, or breaks after punctuation with the continuation sign. Change Case works on the word at the caret when nothing is selected, and steps
   lower case to a capital on each word to upper case and back. Six-key entry (F2) works in print documents too. Goto checks its numbers in the dialog,
   offers the closest location when a place has no text, and goes to a print page with Use reference page number. Add Style
   checks the name in the dialog, then opens Edit Style Codes for the codes, and a style that cannot be nested gets
@@ -197,7 +197,7 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   layout; a document whose printer the computer no longer has prints with the global printer after saying so.
   Printer Setup corrects a page size outside 7 to 160 characters and 1 to 100 lines and asks before taking it (Cancel
   returns to the field); a print document keeps that page size in its .dxp file (one without it is laid out at 54
-  lines of 65 characters, as the standard program does), apart from the page of its embosser setup; Global, Printer Setup and Global, Embosser Setup first say, once unless asked to repeat, that
+  lines of 65 characters), apart from the page of its embosser setup; Global, Printer Setup and Global, Embosser Setup first say, once unless asked to repeat, that
   they do not change the open document. The embosser setup sheet's General page offers the configuration location
   (current user or all users; kept with the setup) and its Device Settings page lists only the model's own firmware
   versions and shows the Braillo rows by the model's sub-model. A Tiger model is sent to its
@@ -259,7 +259,7 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   the file's pages, and Read formatted braille without interpretation, which keeps the file's lines and pages as they
   are. Until that is on, importing formatted braille first says that it may be reformatted.
 - **Python Options.** Global, Python Options shows the dialog (a custom library path, Include
-  Built-In Library, logging level and log file, kept under the standard keys); BrailleCraft reads PDFs with its
+  Built-In Library, logging level and log file, kept under their own keys); BrailleCraft reads PDFs with its
   own reader and runs no Python, so these have no effect on an import. The web build has the dialog too, and its
   PDF Importer dialog, whose settings its PDF import takes.
 - **PDF import settings.** Global, PDF Importer: whether the dialog shows for each import, PDF/A markup, ledger

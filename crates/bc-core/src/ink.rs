@@ -4,7 +4,7 @@
 //! program; the drawing itself is the program's.
 
 /// The pass choices of File Emboss for a TranSend SE embosser (dialog 1038 controls 17, 18 and 19, spec 25 17.1),
-/// as the job flags the reference gives each.
+/// with the job flags each gives.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PassChoice {
     InkAndBraille,
@@ -36,7 +36,7 @@ pub fn passes(flags: u32, ink_printer: &str, interline: bool) -> (bool, bool) {
 /// spec 25 14.3): the font's cell height in twips (twice the font size, 120 for Small, 240 for both Large, unless
 /// `font_size` gives another) and the step from one braille line to the next in twips (576 for Small and Large
 /// Overlapped; for Large Interline 850 with the Index driver, else 706; unless `vshift` gives another). The two
-/// overrides are the reference's ink_font_size and ink_vshift settings.
+/// overrides are the ink_font_size and ink_vshift settings.
 pub fn ink_font(size: usize, index_driver: bool, font_size: Option<i32>, vshift: Option<i32>) -> (i32, i32) {
     let font = font_size.unwrap_or(if size == 0 { 120 } else { 240 });
     let shift = vshift.unwrap_or(match size {
@@ -47,7 +47,7 @@ pub fn ink_font(size: usize, index_driver: bool, font_size: Option<i32>, vshift:
     (font * 2, shift)
 }
 
-/// The name of TranSend SE font size `size` as the reference's settings name it (spec 25 14.3).
+/// The name of TranSend SE font size `size` as the settings name it (spec 25 14.3).
 pub fn ink_font_key(size: usize) -> &'static str {
     match size {
         1 => "LargeInterline",
@@ -106,7 +106,7 @@ impl Placement {
     }
 }
 
-/// One run of cells of a braille line, as the reference walks a line for its ink (spec 25 20.2).
+/// One run of cells of a braille line, as a line is walked for its ink (spec 25 20.2).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Run {
     /// The cell it starts at, from 0.
@@ -136,7 +136,8 @@ pub fn runs(line: &str) -> Vec<Run> {
 }
 
 /// The runs of a braille line given as North American ASCII braille, with each cell's position in the document's text
-/// (`sources`, the layout's map; shorter or empty for none), as the reference makes them (spec 25 20.2): a run starts at a cell that is not blank and goes on across single blank cells; it ends before
+/// (`sources`, the layout's map; shorter or empty for none) (spec 25 20.2): a run starts at a cell that is not blank
+/// and goes on across single blank cells; it ends before
 /// two blank cells or a blank cell at the line end, and where the cells go from having a place in the text to having
 /// none or back (a hyphen as the line's last cell excepted). The layout gives the blank between two words no place
 /// of its own, so a single blank between two placed cells counts as placed, as the text's own space does in the
@@ -229,7 +230,7 @@ pub struct Item {
 /// ASCII braille, each with its runs (from `runs_mapped`, or `runs` for none): each run given its print by `print`
 /// (it is given the line number and the run: the back-translation of the run's span of document text, or of its cells
 /// for a run with no span), except that a run with no span that is a fill row gives full stops; each run's text ends
-/// in a space, as the reference sends it (spec 25 17.4 and 20.3).
+/// in a space, as it is sent (spec 25 17.4 and 20.3).
 pub fn page_items(lines: &[Vec<Run>], place: &Placement, back: bool, mut print: impl FnMut(usize, &Run) -> String) -> Vec<Item> {
     let mut items = Vec::new();
     for (n, line) in lines.iter().enumerate() {

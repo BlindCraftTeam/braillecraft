@@ -291,7 +291,7 @@ function removeSetup(name) {
   }
 }
 
-// New setups take the European order of default forms when the browser's region is one the reference counts as
+// New setups take the European order of default forms when the browser's region is one counted as
 // European (its country code begins with 3 or 4, spec 25 12.3); a language without a region takes its likely one.
 const european = () => {
   try {
@@ -304,7 +304,7 @@ const european = () => {
 
 // ------------------------------------------------------------------ the document
 
-// Global settings, as the desktop program keeps them; the defaults are the reference program's (spec 18).
+// Global settings, as the desktop program keeps them; the defaults are those of spec 18.
 const DEFAULT_VIEWS = {
   translated_font: "print",
   print_full_page: false,
@@ -730,7 +730,7 @@ function mnemonic(label) {
   return m ? m[1].toUpperCase() : null;
 }
 
-// The controls of dialog or sheet page `rid` built into `form`, in the reference program's order: each group box a
+// The controls of dialog or sheet page `rid` built into `form`, in resource order: each group box a
 // fieldset around the controls inside it, each label tied to the control after it, radio buttons in their groups.
 // OK and Cancel (ids 1 and 2) are left to the caller. Returns the controls by id (labels and texts included) and
 // the Alt+letter keys.
@@ -794,7 +794,7 @@ function buildControls(rid, form) {
         field.size = 6;
       }
       if (pendingLabel && !plain(pendingLabel.label).trim()) {
-        // A blank label (the reference fills some at run time) names nothing: the field is named by the text
+        // A blank label (some are filled at run time) names nothing: the field is named by the text
         // before it, else its group.
         controls.set(pendingLabel.id, document.createElement("span"));
         pendingLabel = null;
@@ -813,8 +813,8 @@ function buildControls(rid, form) {
         pendingLabel = null;
       } else {
         // A field with no label before it that stands on the row of a radio button or check box to its left (as Send
-        // to Printer: and its printer list do) is named by that control and placed beside it, as the reference draws
-        // it; any other is named by its group, as a screen reader would read it there.
+        // to Printer: and its printer list do) is named by that control and placed beside it;
+        // any other is named by its group, as a screen reader would read it there.
         const beside = spec.controls.find((r) => ["radio", "check"].includes(r.kind) && r.x < c.x && Math.abs(r.y - c.y) <= 3 && controls.has(r.id));
         if (beside) {
           field.setAttribute("aria-label", plain(beside.label));
@@ -1065,7 +1065,7 @@ function focusFirst(container) {
 // Dialog `rid` shown modally: `setup` fills it, `onOk` checks it. With `memory`, the values chosen last are put back
 // after `setup` and kept on OK, as the desktop program's settings dialogs do. Answers how it was closed and its
 // helpers.
-// Dialog controls whose values the standard program keeps between runs as settings (spec 18 section 18.6): per
+// Dialog controls whose values are kept between runs as settings (spec 18 section 18.6): per
 // dialog, [kind, control id, "Section.Key", words, default]. A flag is written "yes" or "no"; a choice (a combo box)
 // and radios (ids from the given one on, one per word) are written as the word at the chosen index; text as typed;
 // hundredths is a number shown with two decimals and kept in hundredths (the WordPerfect indent); seconds is shown as
@@ -1090,7 +1090,7 @@ const KEPT_SETTINGS = {
     ["hundredths", 16, "Wordperfect.Indent", null, 25],
     ["radios", 18, "WordPerfect.Units", ["Inches", "Centimeters"], 0],
   ],
-  // The UEB typeform mappings (controls 20 to 36) stay in the dialog memory: the standard program keeps them under
+  // The UEB typeform mappings (controls 20 to 36) stay in the dialog memory: they are kept under
   // no key the descriptor table names.
   1036: [
     ["flag", 6, "Word.CBC", null, false],
@@ -1202,7 +1202,7 @@ async function showDialog(rid, { title, setup, onOk, memory, after, closes = [] 
   const closed = closedPromise(dialog);
   setup?.(d);
   if (memory !== undefined) d.restore(store.json(`dialog.${rid}.${memory}`, null));
-  // The settings the standard program keeps between runs, over the dialog memory (spec 18 section 18.6).
+  // The settings kept between runs, over the dialog memory (spec 18 section 18.6).
   const kept = KEPT_SETTINGS[rid];
   if (kept) restoreKept(d, kept);
   after?.(d);
@@ -1246,7 +1246,7 @@ async function messageBox(text, yesNo = false, cancel = false, okCancel = false)
 }
 const message = (text) => messageBox(text, false);
 
-// A whole number field checked as the standard program checks one in its dialog (an onOk): string 2644 when it is not a
+// A whole number field checked as a dialog checks one (an onOk): string 2644 when it is not a
 // number, else `low` or `high` with the limit for %d when it is out of 1 ... 2147483647. On a failure the message is
 // shown, the field gets focus with its text selected, and the dialog stays open.
 async function checkNumber(d, field, low, high) {
@@ -1265,7 +1265,7 @@ const okCancel = (text) => messageBox(text, false, false, true);
 // Yes, No or Cancel: true, false, or null for Cancel.
 const yesNoCancel = async (text) => ({ ok: true, no: false })[await messageBox(text, true, true)] ?? null;
 
-// The dialog a menu command opens: the one titled "Menu: Item" (as the reference program titles them).
+// The dialog a menu command opens: the one titled "Menu: Item".
 function dialogFor(menuLabel, itemLabel) {
   const want = `${plain(menuLabel)}: ${plain(itemLabel)}`.replace(/\.\.\.$/, "").toLowerCase();
   for (const [rid, spec] of Object.entries(DIALOGS)) {
@@ -1279,7 +1279,7 @@ function dialogFor(menuLabel, itemLabel) {
 // ------------------------------------------------------------------ the embosser setup sheet
 
 // The setup sheet (dialogs 10000 to 10004, spec 25 2d): `setup` shown, a changed copy answered on OK (null when
-// cancelled). As in the reference (spec 25 15 and 16), all four pages are made; a change of model fills the forms and
+// cancelled). As spec 25 15 and 16 give, all four pages are made; a change of model fills the forms and
 // the Device Settings and Advanced pages from the new model, makes the port list follow its ports, shows or hides the
 // TranSend SE tab (only for a model with TranSend), and keeps the output, serial and TranSend SE values.
 async function editSetup(setup, cat) {
@@ -1360,7 +1360,7 @@ async function editSetup(setup, cat) {
   const advanced = built[3].d;
   const transend = built[2].d;
   const fill = (s, models) => fillSheet(general, device, advanced, s, cat, lists, models);
-  // The reference places Configuration location (8, 9) and Default Form (10, 11) at the same spot and shows
+  // The sheet places Configuration location (8, 9) and Default Form (10, 11) at the same spot and shows
   // Configuration location (audit print-emboss E10); the setup's form follows its model.
   general.hide(10);
   general.hide(11);
@@ -1437,7 +1437,7 @@ async function editSetup(setup, cat) {
   general.get(5).addEventListener("change", () => {
     const model = hasModel() ? general.selected(5) : "";
     if (model) {
-      // The setup as the pages show it, changed to the new model as the reference changes it (spec 25 18.3).
+      // The setup as the pages show it, changed to the new model (spec 25 18.3).
       const shown = readSheet(setup, shownModel);
       fill(JSON.parse(cat.with_model(JSON.stringify(shown), model, european())), false);
       shownModel = model;
@@ -1491,7 +1491,7 @@ function showGeneral(general, hasModel) {
 // own field is usable; the Serial group and Initialize Serial Port only for a port beginning "com", the serial
 // settings only while it is checked; Advanced's Send one character at a time (20) only for a port or a file.
 function showOutput(general, advanced, hasModel, tiger = false) {
-  // A model whose driver prints only through its system printer driver (the standard driver table marks the
+  // A model whose driver prints only through its system printer driver (the driver table marks the
   // Tiger driver alone) can only be sent to a printer: Write to Port and Write to File are disabled and the output
   // becomes Send to Printer (audit print-emboss E12).
   general.enable(14, hasModel && !tiger);
@@ -1533,7 +1533,7 @@ function readTranSend(d, s, lists) {
 }
 
 // Shows setup `s` on the sheet's pages. `models` is set when the sheet opens: the model list, the setup name and the
-// output are filled only then, because a change of model in the reference leaves them as they are (spec 25 15.3);
+// output are filled only then, because a change of model leaves them as they are (spec 25 15.3);
 // the forms, the serial settings and the other pages are filled each time.
 function fillSheet(general, device, advanced, s, cat, lists, models) {
   if (models) {
@@ -1541,7 +1541,7 @@ function fillSheet(general, device, advanced, s, cat, lists, models) {
     general.setItems(5, names, Math.max(0, names.indexOf(s.model)));
     general.setText(7, s.name);
     // A browser cannot list the system's printers, so the printer list holds the setup's own printer when it has
-    // one (web build); the reference adds no entry of its own to this list (spec 25 14.6).
+    // one (web build); no other entry is added to this list (spec 25 14.6).
     const [kind, value] = Object.entries(s.output)[0];
     general.setItems(16, kind === "Printer" && value ? [value] : [], 0);
     general.setRadio([13, 14, 15], kind === "Printer" ? 0 : kind === "Port" ? 1 : 2);
@@ -1597,7 +1597,7 @@ function fillSheet(general, device, advanced, s, cat, lists, models) {
   advanced.setText(24, String(s.control_delay));
 }
 
-// The General page's Configuration location choices, in the standard order; the second is the setup's all_users.
+// The General page's Configuration location choices, in their order; the second is the setup's all_users.
 const LOCATIONS = ["Current user", "All users on this computer"];
 
 // The version number chosen in the Device Settings version list (5), filled for `model`.
@@ -1607,7 +1607,7 @@ function chosenVersion(device, cat, model) {
   return single ? first : place === 0 ? 0 : place + first - 1;
 }
 
-// The Device Settings page as the standard program shows it (spec 25, resource 10002; the desktop program's show_device):
+// The Device Settings page (spec 25, resource 10002; the desktop program's show_device):
 // one group of controls per embosser driver at the same places, only the model's driver's group shown; the margin
 // rows, the interpoint box and the encoding rows by the driver and by whether escape codes are in use; the Braillo
 // rows by the model's SubModel number (15 to 18 for 1, 4, 5, 6 and 10; 19 to 23 for 9 and 11).
@@ -1706,7 +1706,7 @@ function showBlock(d, b) {
   d.setChecked(24, b.layout.interline !== 0);
 }
 
-// A page block corrected to the setup chosen in the list, as the standard program corrects it (none for no target).
+// A page block corrected to the setup chosen in the list (none for no target).
 function fitToChoice(d, cat, b) {
   const name = d.selected(7);
   const s = name && name !== NO_EMBOSSER ? loadSetup(name) : null;
@@ -1839,7 +1839,7 @@ function wirePageRange(d, radios, fields) {
   d.setRadio(radios, 0);
   d.enable(fields[0], false);
   d.enable(fields[1], false);
-  // The two fields sit beside their radio buttons in the reference and have no label of their own: each is named
+  // The two fields sit beside their radio buttons and have no label of their own: each is named
   // by its radio button.
   d.get(fields[0]).setAttribute("aria-label", d.get(radios[3]).closest("label").textContent);
   d.get(fields[1]).setAttribute("aria-label", d.get(radios[4]).closest("label").textContent);
@@ -1875,7 +1875,7 @@ async function chosenPages(d, radios, fields, braille, caret, from, to) {
       range = { kind: "pages", pages: [pageOf(caret) - 1] };
       break;
     case 2: {
-      // The selection laid out as a document of its own, all of its pages (as the standard program); no page: its
+      // The selection laid out as a document of its own, all of its pages; no page: its
       // message -1, which has no text.
       const part = core.editor_part(from, to);
       const n = core.page_count(part, doc.cells, doc.lines, braille);
@@ -1934,7 +1934,7 @@ async function print() {
     setup(d) {
       d.setText(7, "1");
       wirePageRange(d, PRINT_RANGE, [15, 16]);
-      // On a braille document the page-number choice reads "Braille page number(s)": the reference copies control
+      // On a braille document the page-number choice reads "Braille page number(s)": the dialog copies control
       // 13's text into control 12 (spec 24, 2a); control 13 itself is not used.
       if (braille) d.get(12).closest("label").lastChild.textContent = d.get(13).closest("label").textContent;
       d.hide(13);
@@ -2018,7 +2018,7 @@ async function printerSetup(global) {
       d.setItems(1138, ["Automatically Select"], 0);
       d.setRadio([1056, 1057], view.landscape ? 1 : 0);
       margins.forEach((c, i) => d.setText(c, view.margins[i]));
-      // The page size fields stay enabled for a braille document (the standard program only ignores their values there).
+      // The page size fields stay enabled for a braille document (only their values are ignored there).
       d.setText(2003, String(lines));
       d.setText(2005, String(chars));
       d.get(1026)?.addEventListener("click", () => message("In the browser, the printer and its own settings are chosen in the browser's print dialog when you print."));
@@ -2087,7 +2087,7 @@ async function sendSerial(setup, bytes) {
   }
 }
 
-// File, Emboss (dialog 1039, spec 25 2a): the checks before a job in the reference's order (spec 25 9.1), then the
+// File, Emboss (dialog 1039, spec 25 2a): the checks before a job in the order of spec 25 9.1, then the
 // document's laid-out pages in the chosen range, `copies` times, through its setup's byte pipeline. A serial port
 // goes through Web Serial where the browser has it; the browser reaches no printer queue, parallel port or USB
 // port, so those jobs, and Write to File, are saved as a file.
@@ -2425,7 +2425,7 @@ const GLOBAL_PRINTER_WARNING =
 const GLOBAL_EMBOSSER_WARNING =
   "Changes that you make through Global, Embosser Setup will not affect this document.  Use Document, Embosser Setup instead to change document settings.";
 
-// Global, Formatted Braille Importer, kept by the names the standard program keeps them by; a value that is missing
+// Global, Formatted Braille Importer, kept under fixed names; a value that is missing
 // or not understood keeps its default (main page numbers lower right, reference page numbers upper right, no running
 // head or foot, 30 lines of 40 cells, formatting not preserved).
 const BRAIDE_CORNERS = ["NoPages", "UpperLeft", "UpperRight", "LowerLeft", "LowerRight"];
@@ -2580,7 +2580,7 @@ async function templateTextNamed(name) {
 }
 
 // The Word importer's settings as the Global Word Importer (1036) and Import Options (1037) dialogs last kept them
-// (showDialog memory), the standard defaults where a dialog was never confirmed; the JSON shape of the core's
+// (showDialog memory), the defaults where a dialog was never confirmed; the JSON shape of the core's
 // Word options.
 function wordOptions() {
   const kept = (rid) => {
@@ -2604,7 +2604,7 @@ function wordOptions() {
     ignore_bold: flag(w, 14, false),
     ignore_italics: flag(w, 15, false),
     ignore_underline: flag(w, 16, false),
-    // The standard defaults (its settings descriptor table): language switches ignored, hard page breaks kept,
+    // The defaults (the settings descriptor table): language switches ignored, hard page breaks kept,
     // embedded codes [[*...*]] allowed, print page breaks ignored.
     ignore_lang: flag(w, 17, true),
     hard_pages: flag(w, 7, true),
@@ -2781,7 +2781,7 @@ async function translateDocument() {
 // The document's text as files keep it: braille in North American ASCII braille, whatever encoding it is shown in.
 const storedText = () => (doc.kind === "braille" ? toNA(editorText()) : editorText());
 
-// The Save As file types, in the reference program's order for each kind of document (spec 04d-B); the first is
+// The Save As file types, in a fixed order for each kind of document (spec 04d-B); the first is
 // chosen when the dialog opens, every time.
 const SAVE_TYPES = {
   braille: [
@@ -3223,9 +3223,9 @@ async function internationalization() {
   applyView();
 }
 
-// Global, PDF Importer (the standard XRC dialog 3116, as the desktop program shows it): the
+// Global, PDF Importer (XRC dialog 3116, as the desktop program shows it): the
 // settings kept under "PDF" with the standard keys and defaults (numbers in thousandths), the fields in the
-// dialog's order (its pages General, Headers, Footers, Fonts, Scraping Setup as groups). The standard dialog also
+// dialog's order (its pages General, Headers, Footers, Fonts, Scraping Setup as groups). The dialog also
 // shows a script choice, height units, header and footer trigger texts and "may be shorter" boxes that its code
 // never reads; those are shown too and do nothing, as there.
 const PDF_DEFAULTS = {
@@ -3326,7 +3326,7 @@ async function pdfOptions() {
     f.allTexts = input(form, "pdf-alltexts", "All Texts", s["PDFMiner.AllTexts"], "checkbox");
   });
   if (!ok) return;
-  // The number fields as the standard program checks them (a number from 0 to its limit); Line Overlap is shown and not
+  // The number fields checked as numbers (a number from 0 to its limit); Line Overlap is shown and not
   // read back.
   const num = (field, label, max, old) => {
     const v = Number(field.value.trim());
@@ -3374,7 +3374,7 @@ async function pdfOptions() {
   });
 }
 
-// Global, Python Options (the standard XRC dialog 3110): the custom library path, Include
+// Global, Python Options (XRC dialog 3110): the custom library path, Include
 // Built-In Library, the logging level and the log file, kept under "Python" with the standard keys and
 // defaults. BrailleCraft reads PDFs with its own reader and runs no Python, so these have no effect on an import.
 const PYTHON_LEVELS = ["Critical", "Error", "Warning", "Info", "Debug"];
@@ -3464,7 +3464,7 @@ async function viewPreferences() {
   store.set("sixkey.set", settings.sixKeySet);
 }
 
-// What the standard program says about a shortcut code field, or null when it is accepted: empty, longer than 99, or codes
+// The message shown about a shortcut code field, or null when it is accepted: empty, longer than 99, or codes
 // not properly started or ended (a code started inside a code, ended outside one, or left open).
 function shortcutFieldProblem(text) {
   if (text.length === 0) return "The shortcut string is empty.";
@@ -3625,7 +3625,7 @@ async function editStandard(id) {
 
 function toggleHighlight() {
   doc.highlight = doc.highlight === null || doc.highlight === undefined ? editor.selectionStart : null;
-  // The Keys field shows highlighting ("H"), as the reference rewrites it on this command.
+  // The Keys field shows highlighting ("H"), rewritten on this command.
   showStatus();
 }
 
@@ -3739,7 +3739,7 @@ async function gotoPosition() {
   showStatus();
 }
 
-// Edit, Find, Find Again and Replace, as the standard program (bc_core find, spec 32; the desktop program's find and
+// Edit, Find, Find Again and Replace (bc_core find, spec 32; the desktop program's find and
 // replace). The search is kept with the document.
 const SEARCH_QUESTIONS = {
   rest: "BrailleCraft was unable to find the text within the selected area.  Would you like to search the rest of the document?",
@@ -3984,7 +3984,7 @@ async function applyStyle() {
   if (result === "ok" && d.selected(7)) applyNamedStyle(d.selected(7));
 }
 
-// The standard style commands (the core's style_apply, spec 31) on the editor: "apply" (a style by name),
+// The style commands (the core's style_apply, spec 31) on the editor: "apply" (a style by name),
 // "join-lines", "join-styles", "new-paragraph"; the selection's anchor and the caret are passed, the new text and the
 // caret come back. Nothing happens when the core answers nothing (Join with no selection).
 function styleCommand(what, name = "") {
@@ -4003,7 +4003,7 @@ function styleCommand(what, name = "") {
   showTranslatedLine();
 }
 
-// The standard beep (a failure that shows no message), through the browser's audio.
+// The beep (a failure that shows no message), through the browser's audio.
 function beep() {
   try {
     const ctx = new AudioContext();
@@ -4251,7 +4251,7 @@ async function createTemplate() {
 
 // Table, Create Table and Table Properties (dialog 1062): the table settings, kept as the dialog's memory; Create
 // Table puts the table codes around the selection.
-// Table, Create and Table Properties, one command as in the standard program (bc_core table_cmd, spec 33; the desktop
+// Table, Create and Table Properties, one command (bc_core table_cmd, spec 33; the desktop
 // program's table_command): with the caret in a table it edits that table's start code, else it puts a new table at
 // the caret; a selection holding a table start or end code is refused.
 async function tableProperties() {
@@ -4701,7 +4701,7 @@ const COMMANDS = {
       memory: "",
       setup(d) {
         d.setItems(10, ["Ignore", "Mark from Word document", "Treat hard page breaks as print page breaks", "Use publishers' <ipp no=#> reference page tags"], 0);
-        // The kinds a UEB typeform mapping can be (the standard program's list).
+        // The kinds a UEB typeform mapping can be.
         for (const combo of [20, 23, 26, 29, 32, 35]) d.setItems(combo, ["(Unused)", "Font Is", "Font Contains", "Highlight Is", "Text Color Is", "Drop Shadow", "Outline"], 0);
       },
     }),

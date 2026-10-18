@@ -1,6 +1,6 @@
 //! Where an embossing job's bytes go (re/spec/25-emboss.md section 5): a file, a port (parallel, serial or USB
 //! printer device), or a printer queue that takes the bytes as they are. The file holds exactly the bytes a port
-//! would get. The reference program runs on Windows only; how ports and printer queues are reached on Linux and
+//! would get. How ports and printer queues are reached on Linux and
 //! macOS is BrailleCraft's own choice (spec 25 section 6).
 
 use std::io::Write;
@@ -30,7 +30,7 @@ pub enum Target {
     Printer(String),
 }
 
-/// Why the bytes could not be sent; each has the reference program's message.
+/// Why the bytes could not be sent; each has its own message.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Failure {
     /// The output file cannot be created (message 2380).
@@ -46,7 +46,7 @@ impl Failure {
         match self {
             Failure::File => "Embossing failed because the output file cannot be created. Please check to be sure that the path to the file exists and that you have permission to write to it.".into(),
             Failure::Port => "Embossing failed because the port cannot be opened. Please check the the port exists and is not in use by other software.".into(),
-            // The reference ends with the source line and file of the failure; here the system's own text stands there.
+            // The message ends with the system's own text for the failure.
             Failure::Printer(detail) => format!(
                 "BrailleCraft is unable to communicate with your braille embosser. Please check that it is correctly installed. For example, you my be attempting to output to a USB port that is not valid. In the event that there is another cause of this problem, you can report that embossing failed due to an error: {detail}"
             ),
@@ -81,7 +81,7 @@ pub trait Link {
 const ACK: u8 = 0x06;
 const NAK: u8 = 0x15;
 
-/// Sends the Typewriter driver's messages (emboss::typewriter_job) over `link` as the reference's writer does (spec
+/// Sends the Typewriter driver's messages (emboss::typewriter_job) over `link` (spec
 /// 25 21.2): before each message the status check (command 7; the embosser answers ACK and two bytes, asked again
 /// until both are 0; any other first byte ends the job), then the message, then its answer (bytes read until ACK; NAK
 /// ends the job). A failed answer gives the port message.
@@ -246,8 +246,8 @@ fn send_to_printer(name: &str, title: &str, bytes: &[u8]) -> Result<(), Failure>
     }
 }
 
-/// A printer the system has: its name and its driver. On Windows the driver is the printer's driver name, as the
-/// reference reads it (spec 25 14.1); elsewhere it is the printer's make and model as CUPS reports it, up to the
+/// A printer the system has: its name and its driver. On Windows the driver is the printer's driver name
+/// (spec 25 14.1); elsewhere it is the printer's make and model as CUPS reports it, up to the
 /// " - " CUPS puts before the driver's own name ("Epson LQ-590 - CUPS+Gutenprint v5.3.4" is "Epson LQ-590"), which
 /// is BrailleCraft's stand-in for the driver name.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -256,8 +256,8 @@ pub struct Printer {
     pub driver: String,
 }
 
-/// The system's local and connected printers in the order the system gives them (spec 25 14.1 and 14.6: the
-/// reference lists EnumPrinters local and connections, level 2).
+/// The system's local and connected printers in the order the system gives them (spec 25 14.1 and 14.6:
+/// EnumPrinters local and connections, level 2).
 #[cfg(windows)]
 pub fn printers() -> Vec<Printer> {
     use windows_sys::Win32::Graphics::Printing::{EnumPrintersW, PRINTER_ENUM_CONNECTIONS, PRINTER_ENUM_LOCAL, PRINTER_INFO_2W};

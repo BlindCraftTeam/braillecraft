@@ -39,7 +39,7 @@ pub struct DxDocument {
     pub kind: DocumentKind,
     pub version: u16,
     /// Braille page numbers on even and odd pages, print page numbers on even and odd pages, first page number. Held
-    /// as 32-bit numbers as the standard program holds them in a document (+0x478 ... +0x488); the file keeps 16 bits of each.
+    /// as 32-bit numbers in a document (+0x478 ... +0x488); the file keeps 16 bits of each.
     pub page_numbering: [u32; 5],
     pub translated_line: bool,
     pub six_key: bool,
@@ -67,7 +67,7 @@ pub struct DxDocument {
     /// The document's embosser page layout (settings +108); None when the file holds none.
     pub layout: Option<DxLayout>,
     /// A print document's page size from Document, Printer Setup: lines per page and characters per line (settings
-    /// +129 and +131, the document's +0x58c and +0x590; spec 05 section A10). The standard program reads 0 in either
+    /// +129 and +131, the document's +0x58c and +0x590; spec 05 section A10). 0 in either is read
     /// as no size, and a print document without one is laid out at 54 lines of 65 characters.
     pub print_page: (u16, u16),
 }
@@ -88,7 +88,7 @@ pub struct DxLayout {
     pub binding: u16,
     pub interpoint: bool,
     pub banner: u8,
-    /// 0 off, 1 ink and braille, 2 braille-only pass (read back as 1, as the reference loader does).
+    /// 0 off, 1 ink and braille, 2 braille-only pass (read back as 1).
     pub interline: u8,
     /// Byte +11: the setup's DoubleSizePrint (formatting block +0x24, the settings key of that name; spec 05
     /// section A10). The setup dialog and the model check set it to 0; kept as read.
@@ -100,7 +100,7 @@ pub struct DxLayout {
 const LAYOUT_AT: usize = 108;
 const LAYOUT_LEN: usize = 21;
 
-/// The layout in a settings block. As the reference loader takes it (spec 25 10.1): only when lines, cells and the
+/// The layout in a settings block, read (spec 25 10.1) only when lines, cells and the
 /// form name's first byte are all non-zero; interpoint and interline come back as 0 or 1.
 fn read_layout(s: &[u8]) -> Option<DxLayout> {
     let b = &s[LAYOUT_AT..LAYOUT_AT + LAYOUT_LEN];
@@ -121,7 +121,7 @@ fn read_layout(s: &[u8]) -> Option<DxLayout> {
     })
 }
 
-/// The 21 bytes the reference writer stores for a layout (spec 25 10.1: big-endian, the form name's first 9 bytes,
+/// The 21 bytes stored for a layout (spec 25 10.1: big-endian, the form name's first 9 bytes,
 /// no terminator).
 fn layout_bytes(l: &DxLayout) -> [u8; LAYOUT_LEN] {
     let mut b = [0u8; LAYOUT_LEN];
@@ -146,11 +146,11 @@ const EMBOSSER_KIND: u16 = 1;
 
 /// The settings block of a new document. Fields BrailleCraft sets itself (page numbering, body length, translated
 /// line, six-key entry, tables) are filled in when the document is written. The others:
-/// - +10 1 and +12 8: constants the reference writes (spec 05).
+/// - +10 1 and +12 8: constants written (spec 05).
 /// - +16 2 and +30 1201: placeholders the document overwrites: a new document takes +16 from its template's
-///   Hyphenation and +30 from Global Default Views (a print document 1201), as the reference does (spec 05 section
+///   Hyphenation and +30 from Global Default Views (a print document 1201; spec 05 section
 ///   A10).
-/// - +64 to +87: the Table of Contents settings the reference's loader sets for a document that has none (spec 05-B
+/// - +64 to +87: the Table of Contents settings a document that has none is given on loading (spec 05-B
 ///   (d), observed), the same values every sample holds: contents style 1, the three switches off, number top level
 ///   on, runover 4 and 2, left margins 1 and 1, increment 2, right margins 6 and 6, guide dots '"', maximum runover
 ///   off, 0, levels one through 99.
@@ -377,8 +377,8 @@ pub fn body_bytes(running: &str) -> Vec<u8> {
     crate::internal::encode_lossy(running, b'?')
 }
 
-/// The table names a document file in the older format (version 0) gives in place of newer ones (spec 04d-C, from
-/// the reference program's compatibility list): older print-to-braille table, its older scan table (empty: kept),
+/// The table names a document file in the older format (version 0) gives in place of newer ones (spec 04d-C, the
+/// compatibility list): older print-to-braille table, its older scan table (empty: kept),
 /// the newer table, its newer scan table (empty: any), and the code that must be in force for the older name to
 /// apply.
 const OLDER_TABLES: [(&str, &str, &str, &str, &str); 8] = [
@@ -394,8 +394,8 @@ const OLDER_TABLES: [(&str, &str, &str, &str, &str); 8] = [
 
 /// The tables as a document file in the older format names them: the print-to-braille table and its scan table
 /// changed to their older names where the compatibility list has them and its code is in force (`in_force` says
-/// whether a code word, such as "g1l", is among the document's initial codes; inferred from the list, the matcher is
-/// not traced, spec 04d-C); the braille-to-print pair is written as it is.
+/// whether a code word, such as "g1l", is in the document's initial codes: codes_hold; spec 04d-C); the
+/// braille-to-print pair is written as it is.
 pub fn older_table_names(tables: &[String; 4], in_force: impl Fn(&str) -> bool) -> [String; 4] {
     let mut out = tables.clone();
     for (old, old_scan, new, new_scan, code) in OLDER_TABLES {
@@ -408,6 +408,12 @@ pub fn older_table_names(tables: &[String; 4], in_force: impl Fn(&str) -> bool) 
         }
     }
     out
+}
+
+/// Whether `codes` (the document's initial codes) hold `word` anywhere, A to Z matched without case (spec 04d-C):
+/// "g1l" is found in "[G1L]" and in "[g1lx]" alike.
+pub fn codes_hold(codes: &str, word: &str) -> bool {
+    word.is_empty() || codes.to_ascii_lowercase().contains(&word.to_ascii_lowercase())
 }
 
 /// Writes a .dxp or .dxb file in the document's format version: 1, the version a document without embedded
@@ -451,15 +457,20 @@ pub fn write(doc: &DxDocument) -> Vec<u8> {
     s[PRINT_PAGE_AT + 2..PRINT_PAGE_AT + 4].copy_from_slice(&doc.print_page.1.to_be_bytes());
     out.extend_from_slice(&s);
     out.extend_from_slice(&body);
-    // The names as stored are sorted (spec 05-B (c)); a document read from a file keeps its order and index values,
-    // others are sorted by name with each name's place as its index (INTERIM: the reference lists the index values in
-    // its name table's own order, which is not traced).
+    // Style names are kept in a list sorted as they are inserted (case is ignored), each with the
+    // number of its style, the order styles were added; the codes are kept in that order (spec 05 section A10). A
+    // document read from a file keeps its order and numbers; for others the number is the style's place in the
+    // document's own list, so a style added later comes after the template's.
     let mut styles: Vec<&(String, String, String)> = doc.styles.iter().collect();
     let kept = doc.style_index.len() == styles.len();
-    if !kept {
-        styles.sort_by(|a, b| codes_bytes(&a.0).cmp(&codes_bytes(&b.0)));
-    }
-    let index: Vec<u16> = if kept { doc.style_index.clone() } else { (0..styles.len() as u16).collect() };
+    let index: Vec<u16> = if kept {
+        doc.style_index.clone()
+    } else {
+        let mut order: Vec<usize> = (0..styles.len()).collect();
+        order.sort_by(|&a, &b| name_order(&codes_bytes(&styles[a].0), &codes_bytes(&styles[b].0)));
+        styles = order.iter().map(|&i| styles[i]).collect();
+        order.iter().map(|&i| i as u16).collect()
+    };
     write_block(&mut out, Some(&index), &styles.iter().map(|s| codes_bytes(&s.0)).collect::<Vec<_>>());
     // Each style's codes go at the place its index value names, as they are read.
     let mut codes: Vec<Vec<u8>> = vec![Vec::new(); 2 * styles.len()];
@@ -491,9 +502,64 @@ pub fn write(doc: &DxDocument) -> Vec<u8> {
     out
 }
 
+/// The order of two style names: byte by byte, each lowered from A to Z and taken
+/// as a signed byte, the end of a name counting as 0 (so a byte from 0x80 sorts before the end and before ASCII).
+fn name_order(a: &[u8], b: &[u8]) -> std::cmp::Ordering {
+    let at = |n: &[u8], i: usize| n.get(i).map_or(0i8, |&c| c.to_ascii_lowercase() as i8);
+    let mut i = 0;
+    loop {
+        let (x, y) = (at(a, i), at(b, i));
+        if x != y || x == 0 {
+            return x.cmp(&y);
+        }
+        i += 1;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Names sort as they are inserted, case ignored; each keeps the number of its place in the
+    /// document's list and its codes go there.
+    #[test]
+    fn a_code_word_is_found_anywhere_in_the_initial_codes_without_case() {
+        assert!(codes_hold("[G1L]", "g1l"));
+        assert!(codes_hold("[ab][g1lx]", "g1l"));
+        assert!(!codes_hold("[g2]", "g1l"));
+        assert!(codes_hold("", ""));
+    }
+
+    #[test]
+    fn style_names_sort_without_case_and_keep_their_document_numbers() {
+        assert_eq!(name_order(b"Box", b"acronym"), std::cmp::Ordering::Greater);
+        assert_eq!(name_order(b"box", b"box-h1."), std::cmp::Ordering::Less);
+        assert_eq!(name_order(b"ab", b"ab\x80"), std::cmp::Ordering::Greater);
+        let doc = DxDocument {
+            kind: DocumentKind::Print,
+            version: 1,
+            page_numbering: [0; 5],
+            translated_line: false,
+            six_key: false,
+            tables: ["amerc".into(), "AMEDXP".into(), "AMEBPC".into(), "AMEDXB".into()],
+            text: "a".into(),
+            styles: vec![("para.".into(), "\x1cp\x1f".into(), String::new()), ("Box".into(), "\x1cbx\x1f".into(), String::new()), ("added".into(), "\x1cx\x1f".into(), String::new())],
+            style_index: Vec::new(),
+            coded_view: false,
+            hyphenation: 2,
+            view_font: 1201,
+            settings: Vec::new(),
+            embosser: String::new(),
+            sections: Vec::new(),
+            layout: None,
+            print_page: (0, 0),
+        };
+        let back = read(&write(&doc)).unwrap();
+        let names: Vec<&str> = back.styles.iter().map(|s| s.0.as_str()).collect();
+        assert_eq!(names, ["added", "Box", "para."]);
+        assert_eq!(back.style_index, [2, 1, 0]);
+        assert_eq!(back.styles[1].1, "\x1cbx\x1f");
+    }
 
     fn sample(kind: u16, body: &[u8]) -> Vec<u8> {
         let mut d = Vec::new();
@@ -619,17 +685,17 @@ mod tests {
         let sized = read(&write(&DxDocument { print_page: (40, 72), ..back.clone() })).unwrap();
         assert_eq!(sized.print_page, (40, 72));
         assert_eq!(&write(&DxDocument { print_page: (40, 72), ..back.clone() })[10 + 129..10 + 133], &[0, 40, 0, 72]);
-        // Styles are stored sorted by name.
+        // Styles are stored sorted by name, each with the number of its place in the document's list (para. first).
         assert_eq!(back.styles[0], ("bold".into(), "\x1ccs~b\x1f".into(), "\x1cce~b\x1f".into()));
         assert_eq!(back.styles[1].0, "para.");
-        assert_eq!(back.style_index, vec![0, 1]);
+        assert_eq!(back.style_index, vec![1, 0]);
         assert_eq!(&back.settings[64..88], &new_settings()[64..88]);
         assert_eq!(write(&back), bytes);
-        // Index values out of the names' order: each name keeps its own codes through a write and a read.
-        let shuffled = DxDocument { style_index: vec![1, 0], ..back.clone() };
+        // Other index values: each name keeps its own codes through a write and a read.
+        let shuffled = DxDocument { style_index: vec![0, 1], ..back.clone() };
         let again = read(&write(&shuffled)).unwrap();
         assert_eq!(again.styles, back.styles);
-        assert_eq!(again.style_index, vec![1, 0]);
+        assert_eq!(again.style_index, vec![0, 1]);
         // The older format differs only in its version number.
         let old = write(&DxDocument { version: 0, ..back.clone() });
         assert_eq!(old[9], 0);
@@ -674,7 +740,7 @@ mod tests {
         let bytes = write(&doc);
         let at = HEADER + 108;
         assert_eq!(&bytes[at..at + 21], b"\x00\x19\x00\x01\x00\x28\x00\x02\x01\x01\x02\x0011_w\0\0\0\0\0");
-        // Read back as the reference loader takes it: interline 2 comes back as 1.
+        // Read back: interline 2 comes back as 1.
         let back = read(&bytes).unwrap();
         assert_eq!(back.layout.as_ref().map(|l| (l.lines, l.cells, l.interline, l.form.as_str())), Some((25, 40, 1, "11_w")));
         // A layout with no lines, no cells or no form name is not taken.

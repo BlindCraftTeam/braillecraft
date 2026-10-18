@@ -1,5 +1,5 @@
 //! Word import: the .docx package turned into internal text with codes
-//! (spec 28 sections 3, 6 to 8, 12 and 14): the stylesheet's rules (ported element by element from its 76
+//! (spec 28 sections 3, 6 to 8, 12 and 14): the stylesheet's rules (element by element, from its 76
 //! templates), the page-break fix, the run combining (font attribute runs joined and written as code instructions),
 //! the style map (the text form of the shipped files and the XML form a document may carry), the tag processor
 //! (a scanner over the stylesheet's output text that writes the style codes) and the scrub rules it leaves for the
@@ -28,7 +28,7 @@ impl PrintPages {
     }
 }
 
-/// The Word importer's settings, with the standard defaults (its Global, Word Importer values).
+/// The Word importer's settings, with their defaults (the Global, Word Importer values).
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
 pub struct Options {
@@ -71,7 +71,7 @@ impl Default for Options {
             ignore_typeforms: false,
             hard_pages: true,
             skipped_lines: false,
-            // The standard defaults, from its settings descriptor table (spec 28 section 19): section Word,
+            // The defaults, from the settings descriptor table (spec 28 section 19): section Word,
             // PrintPages "none", the embedded codes key "yes", PreserveHardPageBreaks "yes", IgnoreLanguageSwitches "yes",
             // the rest "no"; section Hyperlinks, Action "both", RemoveDuplicates "yes", AutoTagCBC "yes"; section
             // ImportOptions, AddSpaces "no", RemoveDashSpaces "no".
@@ -98,7 +98,7 @@ pub fn map_file_name(name: &str) -> String {
         "francais" | "french" => "french".into(),
         "rus" | "russian" => "russian".into(),
         "ukbasic" | "uk-basic" => "uk-basic".into(),
-        // The standard own map (named after the program), an empty name and any name with no map shipped.
+        // The program's own map, an empty name and any name with no map shipped.
         _ => "default".into(),
     }
 }
@@ -1058,7 +1058,7 @@ fn attribute_bits(letters: &str) -> u32 {
         .fold(0, |a, b| a | b)
 }
 
-/// The code instructions written when attribute bits turn on and off, in the standard orders.
+/// The code instructions written when attribute bits turn on and off, in their orders.
 fn attribute_codes(from: u32, to: u32, braille_fonts: bool, out: &mut Vec<Node>) {
     let off = from & !to;
     let on = to & !from;
@@ -1260,7 +1260,7 @@ pub struct MapEntry {
     pub level: i64,
     pub despace: bool,
     pub no_center: bool,
-    /// The entry's aggregation field (the standard one field at +0x10): the text form starts it at the entry's
+    /// The entry's aggregation field (the one field at +0x10): the text form starts it at the entry's
     /// kind, 1 and 2 for a BuiltIn block's paragraph and any-element entries, 3 and 4 for a User block's, 0 for the
     /// alt text entries; the AggregationStyle key then overwrites the paragraph entry's value (None 0, SingleLevel
     /// 1, MultiLevel 2, Paragraphs 3), and at the block's end a 0 with a forward or backward flag becomes 1 (level
@@ -1547,7 +1547,7 @@ impl Numbering {
         self.abstracts.iter().find(|(id, _)| id == abs)?.1.iter().find(|l| l.ilvl == ilvl)
     }
 
-    /// The next number of list `num` at level `ilvl`, formatted; the standard debug text when the list is not
+    /// The next number of list `num` at level `ilvl`, formatted; a debug text when the list is not
     /// defined. Deeper levels start again.
     pub fn format(&mut self, num: &str, ilvl: usize) -> String {
         if self.level(num, ilvl).is_none() {
@@ -1645,7 +1645,7 @@ struct Processor<'a> {
     map: &'a StyleMap,
     /// The Word package, for the style names a class is mapped through; none for the HTML and SGML chain.
     pkg: Option<&'a Package>,
-    /// The SGML flag of the reference's tag processor (the recipe's third flag): the text's ampersands and angle
+    /// The SGML flag of the tag processor (the recipe's third flag): the text's ampersands and angle
     /// brackets are written as the entities the later scripts expect, since the tags of unmapped elements are
     /// copied as text beside them.
     sgml: bool,
@@ -2158,7 +2158,7 @@ pub fn import(bytes: &[u8], map_text: &str, opt: &Options) -> Result<Processed, 
 }
 
 /// The tag processor over HTML or SGML text (the HTML import chain's xmlproc step with the recipe's SGML flag and
-/// no style map, since the map file the reference names for it does not ship: every element is copied as its tag
+/// no style map, since the map file named for it does not ship: every element is copied as its tag
 /// text for the chain's later scripts to turn into codes; the processing instructions, numeric entities, line ends
 /// and spaces are treated as for Word). The text must read as XML (every tag closed), which the Markdown
 /// conversion guarantees; the control-character step runs first.

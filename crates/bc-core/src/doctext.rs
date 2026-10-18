@@ -1,12 +1,12 @@
 //! Document text as it is kept and as the editor shows it.
 //!
-//! A document is kept as the reference program keeps it: running text with its formatting codes inline, each code
+//! A document is kept as running text with its formatting codes inline, each code
 //! marked 0x1C code 0x1F (codes can nest: 0x1C hl4 0x1C es~para. 0x1F 0x1F). A bracket in the text is just a
 //! character, never a code. A document holds no line breaks of its own: a line ends where a code says so.
 //!
 //! The editor shows a document as `Shown`: the text with each code written in brackets, [code], and the list of the
 //! character ranges that are codes; brackets outside those ranges are text, as typed. The new-line code [<] is
-//! shown as a line break, which is also what Enter puts in (Enter inserts [<], as in the reference program), and
+//! shown as a line break, which is also what Enter puts in (Enter inserts [<]), and
 //! the codes that start a new line of their own ([p] new paragraph, [l] new line if not at the start of one) are
 //! followed by a line break that is the editor's own, not part of the document.
 
@@ -29,8 +29,8 @@ pub fn is_idle_code(code: &str) -> bool {
 /// The name Document, Add Style starts with.
 pub const NEW_STYLE_NAME: &str = "New Style Name";
 
-/// What the standard program says about a new style's name in Document, Add Style, or None when it is accepted: empty, longer
-/// than 31, still the starting name, or a character other than a letter, a digit, period, hyphen or underscore.
+/// What BrailleCraft says about a new style's name in Document, Add Style, or None when it is accepted: empty,
+/// longer than 31, still the starting name, or a character other than a letter, a digit, period, hyphen or underscore.
 pub fn style_name_problem(name: &str) -> Option<String> {
     if name.is_empty() {
         Some("The style name is empty.".into())
@@ -61,7 +61,7 @@ pub fn codes_properly_marked(text: &str) -> bool {
     !open
 }
 
-/// What the standard program says about a style's codes field (Edit Style Codes, codes shown in brackets), or None: longer
+/// What BrailleCraft says about a style's codes field (Edit Style Codes, codes shown in brackets), or None: longer
 /// than 1000, text outside the codes, codes not properly started or ended.
 pub fn style_codes_problem(text: &str) -> Option<String> {
     if text.chars().count() > 1000 {
@@ -297,8 +297,8 @@ impl Shown {
         names
     }
 
-    /// Layout, Apply Last Style: the name of the nearest paragraph style ended before `pos`, read from the text as
-    /// the standard program does (back from the caret or the selection start to the first style end code [ee~name] whose
+    /// Layout, Apply Last Style: the name of the nearest paragraph style ended before `pos`, read from the text
+    /// (back from the caret or the selection start to the first style end code [ee~name] whose
     /// name ends in "."; codes inside a code count too). None when there is none.
     pub fn last_paragraph_style_before(&self, pos: usize) -> Option<String> {
         let mut spans: Vec<(usize, usize)> = self.codes.iter().chain(self.inner.iter()).copied().filter(|c| c.0 < pos).collect();

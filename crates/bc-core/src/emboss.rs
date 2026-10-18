@@ -219,13 +219,13 @@ impl Writer<'_> {
     }
 
     /// The rightmost cell the embosser places: its setting, else the document's line with its binding margin
-    /// (INFERENCE: the reference's value when the field is not given was not traced).
+    /// (INFERENCE: the value when the field is not given).
     fn rightmost(&self) -> u32 {
         let o = self.o;
         if o.device_right > 0 { o.device_right } else { o.cells + o.binding }
     }
 
-    /// The left padding of a line (the reference's Generic send line): none when the job sets no padding; on a
+    /// The left padding of a line (the Generic driver's send line): none when the job sets no padding; on a
     /// single-sided job (and a booklet the Index does not lay out itself), and on the odd sides of an interpoint job,
     /// the binding margin, less the embosser's own left margin when the setup is not automated; on the even sides of
     /// an interpoint job, nothing when automated, else what is left on the right: rightmost - cells - binding.
@@ -319,7 +319,7 @@ impl Writer<'_> {
 
     fn side(&mut self, page: Option<&[String]>, odd: bool) {
         let o = self.o;
-        // The top margin is blank lines, less the embosser's own top margin setting (the reference's Generic open
+        // The top margin is blank lines, less the embosser's own top margin setting (the Generic driver's open
         // page).
         for _ in 0..o.top_margin.saturating_sub(o.device_top) {
             self.line_end();
@@ -364,9 +364,9 @@ pub fn job(o: &Options, pages: &[Option<Vec<String>>], copies: u32) -> Vec<u8> {
     job_sides(o, pages, copies, Sides::All)
 }
 
-/// The bytes of one braille pass that sends `which` sides. As in the reference every side goes through the writer and
+/// The bytes of one braille pass that sends `which` sides. Every side goes through the writer and
 /// the bytes of a side the pass does not send are dropped, so the line and page state runs on as in a whole job; the
-/// side flag turns over after each side through all the copies (Emb_Job_ClosePage). The start and end codes are sent
+/// side flag turns over after each side through all the copies (spec 25). The start and end codes are sent
 /// on every pass.
 pub fn job_sides(o: &Options, pages: &[Option<Vec<String>>], copies: u32, which: Sides) -> Vec<u8> {
     let mut w = Writer { o, t: char_table(o), out: Vec::new(), held: false };

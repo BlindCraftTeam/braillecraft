@@ -1,4 +1,4 @@
-//! The command line, as the reference program reads it (re/spec/26-installer.md section 26.5): the arguments in order;
+//! The command line, as it is read (re/spec/26-installer.md section 26.5): the arguments in order;
 //! an option sets the mode that applies to every file after it, until another option changes it; a file argument may
 //! hold wildcards (* and ?), one action per file found; settings options (copies, page size, template, prompt) apply
 //! to the whole run. When at least one file comes with a mode and none without, the run is a batch: the program does
@@ -16,7 +16,7 @@ pub enum Mode {
     /// /braille[:setup]: embossed with File Emboss's dialog skipped (a print document is translated first), with the
     /// embosser setup named when one is given.
     Braille(Option<String>),
-    /// /simulated (also /simulate, as the reference installer writes it): printed; a print document is translated
+    /// /simulated (also /simulate): printed; a print document is translated
     /// first, so its braille prints.
     Simulated,
     /// /prf:<file>: saved as formatted text (a braille document is translated first).
@@ -25,7 +25,7 @@ pub enum Mode {
     Brf(PathBuf),
     /// /lbf:<file>: saved as refreshable braille.
     Lbf(PathBuf),
-    /// An option the reference program has whose effect BrailleCraft does not carry out (its name, for the log):
+    /// An option whose effect BrailleCraft does not carry out (its name, for the log):
     /// /RemoveEmbosserInfo, /RemovePrinterInfo, /RemovePageInfo, /ebrl, /dumpstyles, /dumptemplate.
     NotAvailable(String),
 }
@@ -33,7 +33,7 @@ pub enum Mode {
 /// The /prompt setting: the answer given to "translation failed" while the run goes on.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Prompt {
-    /// Ask (the reference's preset reply 0).
+    /// Ask (preset reply 0).
     #[default]
     Ask,
     /// Go on with the next file (reply 1).
@@ -66,7 +66,7 @@ pub struct CommandLine {
     /// --control PORT (also /control:PORT): BrailleCraft's own option, the control channel for an AI agent
     /// (braillecraft-cli mcp --connect PORT) opened on 127.0.0.1 at that port; 0 lets the system pick one.
     pub control: Option<u16>,
-    /// Arguments that are neither an option nor a file found, and files that matched nothing, with the reference's
+    /// Arguments that are neither an option nor a file found, and files that matched nothing, with their
     /// log lines ("Ignoring command line parameter: %s", "Cannot open file %s").
     pub log: Vec<String>,
 }
@@ -105,7 +105,7 @@ pub fn parse(args: &[String], expand: impl Fn(&str) -> Vec<PathBuf>) -> CommandL
             let path = || value.clone().filter(|v| !v.is_empty()).map(PathBuf::from);
             match name.as_str() {
                 "print" => mode = Mode::Print,
-                // /braille takes its embosser setup after ":" only (the reference's kind 3: no "=").
+                // /braille takes its embosser setup after ":" only (option kind 3: no "=").
                 "braille" => mode = Mode::Braille(option(arg, false).and_then(|(_, v)| v).filter(|v| !v.is_empty())),
                 "simulated" | "simulate" => mode = Mode::Simulated,
                 "removeembosserinfo" | "removeprinterinfo" | "removepageinfo" | "ebrl" | "dumpstyles" | "dumpstyles_xml" | "dumptemplate" => {
@@ -164,8 +164,8 @@ pub fn parse(args: &[String], expand: impl Fn(&str) -> Vec<PathBuf>) -> CommandL
                         None => cl.log.push(format!("Ignoring command line parameter: {arg}")),
                     }
                 }
-                // Options of the reference program BrailleCraft has nothing for (its Word importer's style map, its
-                // debugging and automation hooks, its window title): kept out of the run, as noted.
+                // Options BrailleCraft has nothing for (a Word importer's style map, debugging and automation hooks, a
+                // window title): kept out of the run, as noted.
                 "wordstylemap" | "debug" | "api" | "title" => cl.log.push(format!("Not used by BrailleCraft: {arg}")),
                 // Not an option name: a file when it names one (on Linux and macOS a path starts with "/"); an unknown
                 // name with no path in it is an option the program does not know.

@@ -1,4 +1,4 @@
-//! Markdown import (BrailleCraft's own addition; the reference program has no Markdown import): a Markdown file is
+//! Markdown import (BrailleCraft's own addition): a Markdown file is
 //! turned into HTML and then goes through the HTML import chain, so a Markdown document imports exactly as the
 //! same content would import from HTML.
 

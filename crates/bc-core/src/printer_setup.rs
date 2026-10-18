@@ -23,7 +23,7 @@ pub struct PrinterSetup {
     pub landscape: bool,
     /// The margins in thousandths of an inch: left, top, right, bottom.
     pub margins: [i32; 4],
-    /// The margins are shown and typed in millimetres (else inches); the reference program keeps the unit with them.
+    /// The margins are shown and typed in millimetres (else inches); the unit is kept with them.
     pub metric: bool,
     /// The formatted page size Global, Printer Setup keeps (lines per page, characters per line).
     pub lines: u32,
@@ -32,7 +32,7 @@ pub struct PrinterSetup {
 
 impl Default for PrinterSetup {
     fn default() -> Self {
-        // The reference program's defaults: Letter paper (8.5 x 11 inches), and for a print document 54 lines of 65
+        // The defaults: Letter paper (8.5 x 11 inches), and for a print document 54 lines of 65
         // characters (spec 24, 2b and 3c). One-inch margins are the system page setup's default.
         PrinterSetup {
             printer: String::new(),
@@ -117,7 +117,7 @@ fn trim_number(s: &str) -> String {
     }
 }
 
-/// The least characters per line and lines per page Printer Setup allows: the standard MinPageWidth and
+/// The least characters per line and lines per page Printer Setup allows: the MinPageWidth and
 /// MinPageDepth settings for print, which nothing sets, so their defaults.
 pub const MIN_CHARS: u32 = 7;
 pub const MIN_LINES: u32 = 1;

@@ -1,4 +1,4 @@
-//! Hyphenation (spec 36): the hyphenation control tables (tables/hyphenation/*.hct, in the standard text form
+//! Hyphenation (spec 36): the hyphenation control tables (tables/hyphenation/*.hct, in their text form
 //! with the notice lines left out) and the break-point search of the page formatter: a break point marked in
 //! the text (the character U+001D after a cell), a break after or before a dash, after an internal hyphen, or
 //! (French tables) a break found by a right-to-left automaton over the word's characters, with a hyphen inserted.
@@ -12,7 +12,7 @@ pub struct HyphenTable {
     pub hyphen: char,
     /// The least length of a word the table applies to.
     pub min_word: usize,
-    /// The stored lengths of the standard program (section 2.2): cells before a dash break plus one, before an internal
+    /// The stored lengths (section 2.2): cells before a dash break plus one, before an internal
     /// hyphen less one, before an automaton break less one.
     pub min_dash: i64,
     pub min_hyphen: i64,
@@ -103,7 +103,7 @@ impl HyphenTable {
         }
     }
 
-    /// Reads a table in the standard text form (spec 36 section 2).
+    /// Reads a table in its text form (spec 36 section 2).
     pub fn parse(text: &str) -> Result<HyphenTable, String> {
         let lines = data_lines(text)?;
         let mut it = lines.into_iter();
@@ -163,10 +163,10 @@ pub struct Word<'a> {
     pub flags: &'a mut Vec<bool>,
 }
 
-/// The break-point search of the standard program (spec 36 section 5): how many cells of the word (from cell `start`) go on
+/// The break-point search (spec 36 section 5): how many cells of the word (from cell `start`) go on
 /// the current line, 0 for no break. A hyphen may be inserted into the word (its cell counted). `room` is the
 /// cells free on the line; `wb_min` the [wbN] override of the cells before an automaton break (-1 for the table's);
-/// `hyphen_override` the [svcbh] hyphen; `x` the fallback gate of the standard program (its callers leave it unset).
+/// `hyphen_override` the [svcbh] hyphen; `x` the fallback gate (its callers leave it unset).
 pub fn break_point(table: &HyphenTable, word: Word, start: usize, room: i64, x: i64, wb_min: i64, hyphen_override: Option<char>) -> usize {
     let n = word.cells.len() as i64;
     let cell = |i: i64| -> char { word.cells[(i - 1) as usize].0 };

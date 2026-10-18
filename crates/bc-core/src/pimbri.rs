@@ -1,5 +1,5 @@
-//! Formatted plain text (a page image laid out with spaces) into running text with style codes, as the reference
-//! program's formatted text importer does it.
+//! Formatted plain text (a page image laid out with spaces) into running text with style codes, as the formatted
+//! text importer does it.
 //!
 //! The input is read as UTF-8 (without any validation) page by page into a grid of at most 100 rows of 200 cells: a
 //! form feed or the end of the file ends a page, and so does the 100th line. Carriage returns and backspaces overprint
@@ -15,10 +15,10 @@
 //! letters get "_" marks, a dollar sign is doubled when it could be read as a code, and a hyphen at a line end is
 //! doubled when it is a real hyphen rather than a word broken over the line.
 //!
-//! The output line width is 0 and the style mode is on, which is how the standard program calls this importer; the
+//! The output line width is 0 and the style mode is on, which is how this importer is called; the
 //! width only matters for numbers inside codes that have no number in style mode, and for the layout of tables,
 //! which with width 0 are always written in the stacked form. Nothing therefore depends on the braille translator
-//! that the standard program consults for line widths.
+//! that would be consulted for line widths.
 //!
 //! What the importer recognises is steered by two factor files: the input factors (thresholds for headings, tables,
 //! blocks and so on) and the output factors (which codes to write). Both ship in tables/import.
@@ -69,7 +69,7 @@ impl Factors {
 const END_OF_FILE: i32 = 0x100;
 const COMMENT: i32 = 0x101;
 
-/// Reads factor files a character at a time. The standard program opens them as text files, so a carriage return and line
+/// Reads factor files a character at a time. They are opened as text files, so a carriage return and line
 /// feed pair is read as one line feed.
 struct FactorReader<'a> {
     data: &'a [u8],
@@ -114,7 +114,7 @@ impl FactorReader<'_> {
             return b'|' as i32;
         }
         // Three digits give a character code. Anything else (the three characters are used up all the same, up to
-        // the end of the file or a 0xFF byte, which the standard program takes for the end of the file) is a "|".
+        // the end of the file or a 0xFF byte, which is taken for the end of the file) is a "|".
         if d == -1 || d == 0xff {
             return b'|' as i32;
         }
@@ -232,7 +232,7 @@ fn read_factor_file(data: &[u8], header: &[u8]) -> Result<[i32; 100], String> {
     loop {
         let line = match r.line(81) {
             Ok(Some(l)) => l,
-            // The standard program reads an empty line here again and again without end; the port stops.
+            // Reading stops here rather than reading an empty line again and again without end.
             Ok(None) => return Err("the file ends before the line -1".to_string()),
             Err(()) => return Err("a line is too long".to_string()),
         };
@@ -702,7 +702,7 @@ struct Engine<'a> {
 /// Turns a formatted text file into running text with style codes (UTF-8, one line feed after each line).
 ///
 /// `set` is the substitution set for U+0080 to U+00FF (0 accents dropped, 1 code page 437 accented letters kept, 2
-/// every byte kept); below 0 it is taken from input factor 36, and outside 0 to 2 it becomes 0. The standard program
+/// every byte kept); below 0 it is taken from input factor 36, and outside 0 to 2 it becomes 0. The caller
 /// passes the code page its file typing guessed (0 Windows, 1 DOS, 2 Macintosh, -1 not known).
 pub fn pimbri(input: &[u8], set: i32, factors: &Factors) -> Vec<u8> {
     let mut e = Engine::new(input, set, factors);
@@ -978,12 +978,11 @@ impl<'a> Engine<'a> {
                     self.attrs[row][c] = 0;
                 } else {
                     ink[row] = true;
-                    // The stored value, the value the standard program compares with for "the same character again" (a
+                    // The stored value, the value compared with for "the same character again" (a
                     // replacement of 0x80 or more never compares equal), and the attributes.
                     let (stored, same, at) = if t == 0x100 {
-                        // The standard program reads one entry past the end of its 256-entry table here, into its own
-                        // engine fields: the attributes there are 0 and the replacement is a byte of a pointer, which
-                        // cannot be known. The port keeps U+0100.
+                        // One entry past the end of the 256-entry table is asked for here; it has no defined
+                        // attributes or replacement, so U+0100 is kept.
                         (0x100u16, 0x100i32, 0u32)
                     } else {
                         let (_, a, rep) = CHARS[t as usize];
@@ -1176,8 +1175,7 @@ impl<'a> Engine<'a> {
 
     fn alloc(&mut self) -> Option<usize> {
         if self.free < 0 {
-            // The standard program has no answer for running out of its 200 boxes (it reads before its box array); the port
-            // leaves the box out.
+            // Running out of the 200 boxes leaves the box out.
             return None;
         }
         let i = self.free as usize;
@@ -1547,7 +1545,7 @@ impl<'a> Engine<'a> {
         (b.left..=b.right).any(|c| self.lo(r, c) > 0x20)
     }
 
-    /// Moves the box's left edge to its first column with text. The standard program searches on without limit; the port
+    /// Moves the box's left edge to its first column with text. The search
     /// stops at the page's last column and leaves the edge when nothing is found.
     fn trim_left(&mut self, i: usize) {
         let b = self.bx(i);
@@ -1628,7 +1626,7 @@ impl<'a> Engine<'a> {
         let groups = self.row_groups(i);
         let n = groups.len();
         if n == 0 {
-            // Only rule lines: the standard program then works with values it never set. The port writes nothing.
+            // Only rule lines: nothing is written.
             return false;
         }
         let b = self.bx(i);
@@ -2642,8 +2640,8 @@ impl<'a> Engine<'a> {
         if self.width <= 0 || self.depth <= 0 {
             return;
         }
-        // A page whose cells are all blank by their low byte (for instance only U+2014) sends the standard program past
-        // the end of its page; the port writes nothing for it.
+        // A page whose cells are all blank by their low byte (for instance only U+2014)
+        // gives nothing.
         let any = (0..self.depth).any(|r| (0..self.width).any(|c| self.lo(r, c) > 0x20));
         if !any {
             return;
@@ -2681,7 +2679,7 @@ mod tests {
         Factors::shipped().expect("the shipped factor files parse")
     }
 
-    /// Runs the importer on lines joined with CR LF (and a final CR LF), as the reference would get them from a
+    /// Runs the importer on lines joined with CR LF (and a final CR LF), as they would come from a
     /// Windows text file, with the substitution set the input factors give.
     fn run(lines: &[&str]) -> String {
         let mut text = String::new();
@@ -2725,7 +2723,7 @@ mod tests {
         let book: &[u8] = include_bytes!("../../../tables/import/text-output-factors.txt");
         // The headers are checked: the output file is not an input file.
         assert!(Factors::parse(book, book).is_err());
-        // "-1" must be followed by "***"; the end of the file before "-1" is an error (the standard program loops).
+        // "-1" must be followed by "***"; the end of the file before "-1" is an error.
         assert!(Factors::parse(b"-pimbri i 1\r\n0 6\r\n-1 0\r\n", book).is_err());
         assert!(Factors::parse(b"-pimbri i 1\r\n0 6\r\n", book).is_err());
         // Comments, a value after non-digits (the minus is lost), an index of 100 or more ignored, "|065" is "A".

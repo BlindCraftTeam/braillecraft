@@ -1,5 +1,5 @@
-//! Prints the text lines of one page of a PDF after layout analysis (box and text), for checks against the
-//! reference's layout. Usage: pdf_lines FILE.pdf PAGE (0-based)
+//! Prints the text lines of one page of a PDF after layout analysis (box and text), for checks against an
+//! expected layout. Usage: pdf_lines FILE.pdf PAGE (0-based)
 
 fn main() {
     let a: Vec<String> = std::env::args().collect();

@@ -31,12 +31,12 @@ pub fn style_text(doc: &Shown, pos: i64) -> String {
     }
 }
 
-/// What a document's status line shows, in the reference program's order: the current style text, then the fields
+/// What a document's status line shows, in this order: the current style text, then the fields
 /// Page:, Line:, Column: (left out in coded view), the character at the caret, and Keys: (each label followed by its
 /// value with no space, as screen reader scripts read "Keys:" and the character after it).
 pub struct StatusLine {
     pub style: String,
-    /// Page, line and column (1-based); None in coded view (View, Codes), where the reference hides those fields.
+    /// Page, line and column (1-based); None in coded view (View, Codes), where those fields are hidden.
     pub location: Option<(usize, usize, usize)>,
     pub character: String,
     /// Six-key entry on: "Keys:6", else "Keys:1".
@@ -74,7 +74,7 @@ pub fn char_field(doc: &Shown, pos: i64, verbose: bool) -> String {
         return if doc.is_own_break(at) { char_field(doc, pos + 1, verbose) } else { "[<]".to_string() };
     }
     if let Some(code) = doc.code_at(at) {
-        // "es~" and "ee~" are matched in either case, as the reference compares them.
+        // "es~" and "ee~" are matched in either case.
         let head = code.get(..3).map(str::to_ascii_lowercase);
         return match head.as_deref() {
             Some("es~") => format!("<{}>", &code[3..]),

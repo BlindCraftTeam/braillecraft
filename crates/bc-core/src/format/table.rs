@@ -695,8 +695,8 @@ impl Collector {
 
     // ---------------------------------------------------------------- measuring (spec 35 5.1, 5.2)
 
-    /// The smallest width in which `text` fits in at most `lines_avail` lines broken at spaces (the recursion of
-    /// the standard program: a break at the last space before the even split point, then at each later space, the
+    /// The smallest width in which `text` fits in at most `lines_avail` lines broken at spaces (the recursion:
+    /// a break at the last space before the even split point, then at each later space, the
     /// narrowest kept), with the lines used and the text with its breaks as '\n'.
     fn count_columns(&self, text: &[(char, Option<usize>)], start: usize, indent: usize, lines_avail: i64, depth: usize) -> R<(usize, usize, Vec<(char, Option<usize>)>)> {
         if self.layout == 0 && depth > 10 {
@@ -1039,7 +1039,7 @@ impl Collector {
         let cols_to = if self.layout == TWOPAGE && self.col_fmt == 0 { self.boundary_cur } else { self.n_cols() };
         let rows = self.n_rows();
         if self.row_fmt == 0 && self.rows_fmt < rows && self.images.len() == 1 && self.geometry.first_depth < self.geometry.other_depth {
-            // A table that does not fit the rest of its first page starts on a new page (the standard test
+            // A table that does not fit the rest of its first page starts on a new page (the test
             // recomputes the same rows here and so always moves on).
             let n2 = self.format_columnar(false)?;
             if n2 < rows {
@@ -1097,7 +1097,7 @@ impl Collector {
         Ok(self.images.len() == 1 && self.geometry.first_below_head)
     }
 
-    /// Places cell (r, c) of the columnar layout (5.6, the standard cell writer): the underline under the last
+    /// Places cell (r, c) of the columnar layout (5.6, the cell writer): the underline under the last
     /// header row, the fences of a matrix, the text with its line breaks at the runover, the markers, the guide dots.
     fn place_cell(&mut self, r: usize, c: usize, row_line: &mut usize, _markers: bool) -> R<()> {
         let (rh, ch) = self.heads();
@@ -1836,7 +1836,7 @@ impl Collector {
 }
 
 /// The table regions of a running text alone (no layout): the cells by row as the editor commands need them
-/// (Table Properties, Style Level, the "in a table" tests), from [htbs] to the first [htbe] (the standard one
+/// (Table Properties, Style Level, the "in a table" tests), from [htbs] to the first [htbe] (the one
 /// object swallows every word up to it, so tables do not nest).
 pub fn regions(pieces: impl Iterator<Item = Piece>, braille: bool) -> Vec<TableRegion> {
     let mut out = Vec::new();

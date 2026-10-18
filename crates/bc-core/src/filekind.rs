@@ -1,10 +1,10 @@
-//! What kind of file is being opened, decided as the reference program decides it: first by a short table of
+//! What kind of file is being opened, decided first by a short table of
 //! extensions, then by the file's content: a document file by its signature, the containers and binary formats by
 //! their marks, and a text file by counts over its first 512 bytes (coded text, coded braille, formatted braille,
 //! formatted text). A sample holding a control byte other than tab, line feed, carriage return or form feed is not
 //! a supported file.
 
-/// The kinds of file an import can be (the reference's import methods, by its numbers).
+/// The kinds of file an import can be (the import methods, by their numbers).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FileKind {
     /// A print or braille document file (.dxp, .dxb, .dxt).
@@ -34,7 +34,7 @@ pub enum FileKind {
     Orbit,
     /// Portable Document Format (17).
     Pdf,
-    /// Portable Embosser Format (BrailleCraft's own addition; the reference has no PEF).
+    /// Portable Embosser Format (BrailleCraft's own addition).
     Pef,
     /// Markdown (BrailleCraft's own addition): by the extension .md or .markdown; imported through the HTML chain.
     Markdown,
@@ -85,7 +85,7 @@ impl FileKind {
     }
 }
 
-/// What the counts over a text file's first 512 bytes found (the reference's file statistics).
+/// What the counts over a text file's first 512 bytes found (the file statistics).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct TextStats {
     /// A form feed was seen.
@@ -103,8 +103,8 @@ pub struct TextStats {
     pub code_page: i32,
 }
 
-/// The extensions a file's kind is taken from before its content is looked at (the reference's extension table).
-/// The file kind override table shipped as tables/file-kinds.txt, in the form the standard program's own table
+/// The extensions a file's kind is taken from before its content is looked at (the extension table).
+/// The file kind override table shipped as tables/file-kinds.txt, in the form the built-in extension table
 /// has (spec 18 A3: lines "EXT" : METHOD_IMPORT_<kind>): an extension named there is read
 /// as that kind before the file's bytes are looked at.
 const FILE_KINDS: &str = include_str!("../../../tables/file-kinds.txt");
@@ -226,7 +226,7 @@ pub fn detect(name: &str, bytes: &[u8]) -> FileKind {
     kind_of_text(&s)
 }
 
-/// A text file's kind from its counts, in the reference's order: coded text, coded braille, formatted braille,
+/// A text file's kind from its counts, in this order: coded text, coded braille, formatted braille,
 /// formatted text.
 pub fn kind_of_text(s: &TextStats) -> FileKind {
     if !s.form_feed && s.dollars >= 3 && s.dollars > s.bars {
@@ -245,7 +245,7 @@ pub fn kind_of_text(s: &TextStats) -> FileKind {
 /// Counts over a sample of a text file; None when the sample holds a control byte other than tab, line feed, carriage
 /// return or form feed (not a text file).
 pub fn text_stats(sample: &[u8]) -> Option<TextStats> {
-    // The sample ends at its first NUL (the reference reads it as a C string after the control byte check).
+    // The sample ends at its first NUL (it is read as a C string after the control byte check).
     let mut s = TextStats::default();
     let (mut c, mut w, mut m) = (0i32, 0i32, 0i32);
     let (mut crs, mut lfs) = (0, 0);
@@ -385,7 +385,7 @@ fn braille_score(text: &[u8]) -> i32 {
     score
 }
 
-// The byte-class rows of the three code page families, taken from the reference program's data.
+// The byte-class rows of the three code page families.
 include!("../data/byteclasses.rs");
 
 #[cfg(test)]

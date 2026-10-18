@@ -1,6 +1,6 @@
 //! The tab bar across the top of the main window (a BrailleCraft addition the owner asked for): the open documents
-//! as tabs of one notebook (vendor/wxdragon-sys wxd_doc_tabs.h), a page per document, in place of the document
-//! windows the reference program stacks in its main window. The tab carries the document's full name and a close
+//! as tabs of one notebook (vendor/wxdragon-sys wxd_doc_tabs.h), a page per document, in place of document
+//! windows stacked in the main window. The tab carries the document's full name and a close
 //! button (Linux and Windows; a middle click closes everywhere); Ctrl+Tab and Ctrl+Shift+Tab move between the tabs,
 //! Ctrl+W (Cmd+W on macOS) closes, tabs are dragged to reorder, and Ctrl+Shift+Page Up and Page Down move the
 //! current tab. The notebook is the system's tab control, so screen readers read it as a tab list with the active

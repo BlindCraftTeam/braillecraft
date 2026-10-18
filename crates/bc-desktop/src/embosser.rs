@@ -24,7 +24,7 @@ thread_local! {
 
 /// Reads the embosser models from `folder` (embossers.txt, and myembossers.txt beside it if present), and the
 /// printers the TranSend SE page offers (transend-printers.txt; without it, or when it is not such a list, the
-/// supported and compatible choices offer no printer, as the reference's empty lists do).
+/// supported and compatible choices offer no printer: their lists are empty).
 pub fn load(folder: &Path) -> Result<usize, String> {
     let r = Catalog::read(&folder.join("embossers.txt"), Some(&folder.join("myembossers.txt")));
     let n = r.as_ref().map(|c| c.models.len()).map_err(Clone::clone);
@@ -83,8 +83,8 @@ pub fn with_catalog<R>(f: impl FnOnce(Result<&Catalog, &str>) -> R) -> R {
 
 pub use bc_core::emboss_setup::{find_model, form_name, form_name_with_prefix, Layout, Output, Setup, TranSendPrinters, BAUDS, CASES, HANDSHAKING, LINE_ENDS, PAGE_ENDS, PARITIES, TRANSEND_FILTERS};
 
-/// Whether new setups take the European order of default forms (spec 25 12.3): the reference tests the user locale's
-/// country code; here the region of the system's language (its canonical name, such as en_GB: the user locale on
+/// Whether new setups take the European order of default forms (spec 25 12.3): the user locale's country
+/// code decides; here the region of the system's language (its canonical name, such as en_GB: the user locale on
 /// Windows, the locale settings on macOS, LANG on Linux) is tested as bc_core::emboss_setup::a4_region does.
 fn european() -> bool {
     let name = wxdragon::translations::Locale::get_language_canonical_name(wxdragon::translations::Locale::get_system_language())
@@ -224,7 +224,7 @@ fn handle(d: &Dlg) -> Dlg {
 }
 
 /// Shows `s` on the sheet's pages. `models` is set when the sheet opens: the model list, the setup name and the output
-/// (printer list, port list, file name) are filled only then, because a change of model in the reference leaves
+/// (printer list, port list, file name) are filled only then, because a change of model leaves
 /// those as they are (spec 25 15.3); the forms, the serial settings and the other pages are filled each time.
 fn fill_sheet(general: &Dlg, device: &Dlg, advanced: &Dlg, s: &Setup, cat: &Catalog, models: bool) {
     let model = find_model(cat, &s.model);
@@ -321,10 +321,10 @@ fn fill_ports(general: &Dlg, model: Option<&Model>, port: Option<&str>) {
     general.set_items(17, &refs, chosen.map(|i| i as u32));
 }
 
-/// Page 10001 with or without a model, as the reference sets it on a change of model (spec 25 15.3): with none,
+/// Page 10001 with or without a model, as it is set on a change of model (spec 25 15.3): with none,
 /// every control below the model choice is greyed; with one, the setup name (6, 7), the form (10, 12) and Send to
-/// Printer (13) are usable again. INFERENCE: Write to Port and Write to File (14, 15) are made usable with them; the
-/// reference's code for them on a change of model was not found.
+/// Printer (13) are usable again. INFERENCE: Write to Port and Write to File (14, 15) are made usable with them
+/// on a change of model, which spec 25 15.3 does not say.
 fn show_general(general: &Dlg, has_model: bool) {
     if !has_model {
         for cid in 6..=31 {
@@ -337,13 +337,13 @@ fn show_general(general: &Dlg, has_model: bool) {
     }
 }
 
-/// The output controls for the output now chosen, as the reference sets them (spec 25 16.3): only the chosen
+/// The output controls for the output now chosen (spec 25 16.3): only the chosen
 /// output's own field is usable (the printer list, the port list, or the file name and its note); the Serial group
 /// and Initialize Serial Port only for a port whose name begins with "com", and the serial settings below it only
 /// while it is checked; Advanced's Send one character at a time (20) only for a port or a file. With no model none
 /// of them is usable.
 fn show_output(general: &Dlg, advanced: &Dlg, has_model: bool) {
-    // A model whose driver prints only through its system printer driver (the standard driver table marks the
+    // A model whose driver prints only through its system printer driver (the driver table marks the
     // Tiger driver alone) can only be sent to a printer: Write to Port and Write to File are disabled and the output
     // becomes Send to Printer (audit print-emboss E12).
     let tiger = has_model
@@ -372,7 +372,7 @@ fn show_output(general: &Dlg, advanced: &Dlg, has_model: bool) {
 /// The TranSend SE page (sheet page 10003) showing `s` (spec 25 section 14): the printer choice (5), the printers it
 /// lets the list show (6) with the setup's ink printer chosen, every font (8) with the interline font chosen, the
 /// font size (10 to 12) and the two ink adjustments (15, 17). A stored printer or font the system no longer has is
-/// left unchosen, as in the reference.
+/// left unchosen.
 fn fill_transend(page: &Dlg, s: &Setup) {
     page.set_items(5, TRANSEND_FILTERS, Some(s.transend_filter.min(2) as u32));
     fill_ink_printers(page, s.transend_filter, &s.ink_printer);
@@ -392,9 +392,8 @@ fn fill_ink_printers(page: &Dlg, filter: usize, chosen: &str) {
     page.set_items(6, &refs, refs.iter().position(|n| *n == chosen).map(|i| i as u32));
 }
 
-/// The TranSend SE page's values read into `s`. The reference stores each value as it changes, so a list with
-/// nothing chosen leaves the stored value as it was; an adjustment that is not a whole number is stored as 0, as
-/// the reference's reading of a number field gives.
+/// The TranSend SE page's values read into `s`. Each value is stored as it changes, so a list with
+/// nothing chosen leaves the stored value as it was; an adjustment that is not a whole number is stored as 0.
 fn read_transend(page: &Dlg, s: &mut Setup) {
     s.transend_filter = page.chosen_in(5, TRANSEND_FILTERS).unwrap_or(s.transend_filter);
     if let Some(p) = page.selected_text(6) {
@@ -408,7 +407,7 @@ fn read_transend(page: &Dlg, s: &mut Setup) {
     s.ink_adjust_v = page.number(17).and_then(|n| i32::try_from(n).ok()).unwrap_or(0);
 }
 
-/// The Device Settings page as the reference sets it (re/spec/25-emboss.md, Device Settings page (resource
+/// The Device Settings page (re/spec/25-emboss.md, Device Settings page (resource
 /// 10002)): the page holds one group of controls per embosser driver at the same places, and only the group of the
 /// model's driver is shown; the margin rows, the interpoint check box and the encoding rows show by the driver and
 /// by whether escape codes are in use. `version` is the place chosen in VERSIONS, `escapes` the Allow escape codes
@@ -438,7 +437,7 @@ fn show_device(device: &Dlg, model: Option<&Model>, version: usize, escapes: boo
         (!in_use, !in_use, true)
     };
     let rows = margins && model.is_some();
-    // The Braillo rows by the model's SubModel number (the standard sub-model table): 15 to 18 for 1, 4, 5, 6
+    // The Braillo rows by the model's SubModel number (the sub-model table): 15 to 18 for 1, 4, 5, 6
     // and 10; 19 to 23 for 9 and 11.
     let sub = |set: &[i64]| model.and_then(|m| m.number("SubModel")).is_some_and(|n| set.contains(&n));
     let groups: [(i32, i32, bool); 15] = [
@@ -503,15 +502,15 @@ pub fn layout_transend_page(page: &Dlg) {
     });
 }
 
-/// The setup sheet for `setup`, filled. As in the reference (spec 25 15.1) all four pages are made: General, Device
+/// The setup sheet for `setup`, filled. All four pages are made (spec 25 15.1): General, Device
 /// Settings, TranSend SE and Advanced, in that order; the caller takes the TranSend SE tab away for a model without
 /// TranSend.
 fn build_sheet(setup: &Setup, cat: &Catalog) -> (Dlg, Vec<Dlg>) {
     let pages = [(10001, "General"), (10002, "Device Settings"), (10003, "TranSend SE"), (10004, "Advanced")];
     let title = format!("Embosser Setup - {}", if setup.shown_name().is_empty() { "Untitled Configuration".to_string() } else { setup.shown_name() });
     let (sheet, p) = Dlg::sheet(&crate::app::frame(), 10000, &title, &pages);
-    // The reference places Configuration location (8, 9) and Default Form (10, 11) at the same spot and shows
-    // Configuration location (audit print-emboss E10); the setup's form follows its model.
+    // Configuration location (8, 9) and Default Form (10, 11) are at the same spot, and
+    // Configuration location is shown (audit print-emboss E10); the setup's form follows its model.
     p[0].hide(10);
     p[0].hide(11);
     fill_sheet(&p[0], &p[1], &p[3], setup, cat, true);
@@ -565,11 +564,11 @@ fn has_transend(model: Option<&Model>) -> bool {
 }
 
 /// The setup sheet (dialogs 10000 to 10004): `setup` shown, changed on OK. Returns false when cancelled. A change of
-/// model works as in the reference (spec 25 15.2 to 15.4 and 16): the forms and the Device Settings and Advanced
+/// model works as spec 25 15.2 to 15.4 and 16 say: the forms and the Device Settings and Advanced
 /// pages take the new model's values, the port list follows the model's ports, the TranSend SE tab is added or taken
 /// away, and the output, the serial settings and the TranSend SE values stay as they were.
 pub fn edit(setup: &mut Setup, cat: &Catalog) -> bool {
-    // The FTDI devices are listed once as the sheet opens, as the reference builds its port lists (spec 25 16.1).
+    // The FTDI devices are listed once as the sheet opens, as the port lists are built (spec 25 16.1).
     crate::ftdi::refresh();
     let (sheet, p) = build_sheet(setup, cat);
     let general = &p[0];
@@ -607,8 +606,8 @@ pub fn edit(setup: &mut Setup, cat: &Catalog) -> bool {
         let changed = output_changed();
         init.on_toggled(move |_| changed());
     }
-    // The ports the list was last made from: the reference makes it again only when the model's kinds of port
-    // change, and then leaves nothing in it chosen (spec 25 16.1).
+    // The ports the list was last made from: it is made again only when the model's kinds of port
+    // change, and then has nothing in it chosen (spec 25 16.1).
     let last_ports = std::rc::Rc::new(std::cell::RefCell::new(bc_core::emboss_setup::ports_with(opened, &crate::ftdi::devices())));
     let pages: Vec<Dlg> = p.iter().map(handle).collect();
     // The model the pages show (the form list holds its forms), and the setup the sheet opened with.
@@ -621,7 +620,7 @@ pub fn edit(setup: &mut Setup, cat: &Catalog) -> bool {
                 let Ok(cat) = cat else { return };
                 let model = if name.starts_with('(') { None } else { find_model(cat, &name) };
                 match model {
-                    // The setup as the pages show it, changed to the new model as the reference changes it (spec 25
+                    // The setup as the pages show it, changed to the new model (spec 25
                     // 18.3), shown again.
                     Some(_) => {
                         let shown = read_sheet(&pages, &base, cat, &shown_model.borrow());
@@ -642,7 +641,7 @@ pub fn edit(setup: &mut Setup, cat: &Catalog) -> bool {
             });
         });
     }
-    // As in the reference, a change of Embosser Version or of Allow escape codes shows the page's groups again.
+    // A change of Embosser Version or of Allow escape codes shows the page's groups again.
     if let Some(versions) = device.win(5).and_then(|w| w.as_widget::<Choice>()) {
         let (g, dv) = (handle(general), handle(device));
         versions.on_selection_changed(move |_| refresh_device(&g, &dv));
@@ -685,7 +684,7 @@ fn read_sheet(p: &[Dlg], base: &Setup, cat: &Catalog, model: &str) -> Setup {
         Some(0) => Output::Printer(general.selected_text(16).unwrap_or_default()),
         Some(2) => Output::File(general.text(18).trim().to_string()),
         // With no port chosen (the list made again for a new model), the port kept is the one stored before, as the
-        // reference stores the target name only when a port is chosen (spec 25 16.3).
+        // target name is stored only when a port is chosen (spec 25 16.3).
         _ => Output::Port(general.selected_text(17).unwrap_or_else(|| match &base.output {
             Output::Port(p) => p.clone(),
             _ => bc_core::emboss_setup::ports_with(find_model(cat, model), &crate::ftdi::devices()).into_iter().next().unwrap_or_default(),

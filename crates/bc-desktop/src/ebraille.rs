@@ -1,8 +1,8 @@
 //! eBraille and EPUB 3 (spec 23): Save As eBraille (.ebrl) for braille documents and EPUB 3 (.epub) for print
-//! documents, File, Save eBraille, and Document, eBraille Metadata with its three sub-dialogs. The dialogs are the
-//! standard own XRC dialogs (kept with the decoded resource data outside the repository) loaded by resource id 2606 (the menu command)
-//! and 26061 to 26063 (the Attributes, Braille Systems and Languages dialogs); their controls are found by the
-//! standard names. The package itself is built by bc_core::ebraille.
+//! documents, File, Save eBraille, and Document, eBraille Metadata with its three sub-dialogs. The dialogs are
+//! XRC dialogs (kept with the decoded resource data outside the repository) loaded by resource id 2606 (the menu
+//! command) and 26061 to 26063 (the Attributes, Braille Systems and Languages dialogs); their controls are found by
+//! their XRC names. The package itself is built by bc_core::ebraille.
 
 use std::cell::RefCell;
 use std::path::Path;
@@ -147,9 +147,9 @@ fn write_package(key: u64, path: &Path) -> bool {
     true
 }
 
-/// File, Save eBraille (1107): the quality notice first, as the standard dispatch shows it before its save (spec 23
-/// 8.1), then the file asked for (eBraille for a braille document, EPUB 3 for a print one; the standard caller of
-/// its save was not traced, so the name is asked for as Save As asks it), then the package written.
+/// File, Save eBraille (1107): the quality notice first (spec 23
+/// 8.1), then the file asked for (eBraille for a braille document, EPUB 3 for a print one; the name is
+/// asked for as Save As asks it), then the package written.
 pub fn save_ebraille() {
     let Some((key, braille, name)) = app::with(|a| a.doc().map(|d| (d.key, d.kind == DocKind::Braille, d.name.clone()))) else { return };
     if !once_notice(ebraille::QUALITY_WARNING_KEY, ebraille::QUALITY_WARNING) {
@@ -174,7 +174,7 @@ pub fn save_ebraille() {
 }
 
 /// The language names the Languages and Braille Systems dialogs offer: the translation table list's languages
-/// (INFERENCE: the standard list contents were not read).
+/// (INFERENCE: the dialogs' own list contents are not known).
 fn language_names() -> Vec<String> {
     crate::translation::with_list(|l| l.entries.iter().map(|e| e.name.clone()).collect())
 }

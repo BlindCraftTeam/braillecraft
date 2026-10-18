@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Writes the WiX fragment that installs the braille fonts for every program (the SystemFonts component group): one
-component per font file in the Fonts folder, registered as a TrueType font, as the reference installer's Font table
-registers its braille fonts.
+component per font file in the Fonts folder, registered as a TrueType font through the
+installer's Font table.
 
 Usage: python3 packaging/windows/fonts_fragment.py <program folder>/fonts > fonts.wxs
 """

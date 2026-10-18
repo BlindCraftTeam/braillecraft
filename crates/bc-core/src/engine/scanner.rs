@@ -1179,7 +1179,7 @@ impl<'a> Scanner<'a> {
 /// first), the end code left out: the codes the rule engine reads. The bytes are read one at a time, so the text is
 /// never held as eight-byte codes before the scan.
 ///
-/// In text mode the bytes are read as the reference reads its input stream: line ends joined, two-byte codes made
+/// In text mode the bytes are read as an input stream: line ends joined, two-byte codes made
 /// whole, and the input ended right after a table switch code (spec 07 section A9b); the second value is the place
 /// in `bytes` where it ended, None when every byte was read.
 pub(crate) fn scan_bytes(
@@ -1374,7 +1374,7 @@ fn file_codes(bytes: &[u8]) -> Vec<i64> {
 }
 
 /// The import scan of a file: the bytes read through the scanner with `t` (no styles), each code it gives written
-/// as its low byte until the end. The reference uses it on braille and print text files before the import rules.
+/// as its low byte until the end. It is used on braille and print text files before the import rules.
 /// The bytes are read and the codes written one at a time, so the file is never held as codes.
 pub(crate) fn scan_file(t: &ScanTable, bytes: &[u8]) -> Result<Vec<u8>, EngineError> {
     let mut out = Vec::with_capacity(bytes.len() + bytes.len() / 8);

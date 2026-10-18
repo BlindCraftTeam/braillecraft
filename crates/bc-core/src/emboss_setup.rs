@@ -72,7 +72,7 @@ pub struct Setup {
     /// TranSend SE page (spec 25 section 14): which printers the ink printer list shows (0 supported, 1 supported or
     /// compatible, 2 any printer), the ink printer, the interline print font, its size (0 small, 1 large interline,
     /// 2 large overlapped), and the horizontal and vertical ink adjustments in hundredths of an inch. A setup kept
-    /// before these existed takes the defaults the reference gives a new setup (spec 25 14.1).
+    /// before these existed takes the defaults of a new setup (spec 25 14.1).
     #[serde(default)]
     pub transend_filter: usize,
     #[serde(default)]
@@ -105,7 +105,7 @@ fn default_interline_font() -> String {
     "Arial".into()
 }
 
-/// The TranSend SE page's printer choices, as the reference lists them (strings 10268 to 10270), in the order of
+/// The TranSend SE page's printer choices, as listed (strings 10268 to 10270), in the order of
 /// TranSendSEFilter's values.
 pub const TRANSEND_FILTERS: &[&str] = &["Choose a Supported Printer:", "Choose a Supported or Compatible Printer:", "Choose any Printer:"];
 
@@ -142,7 +142,7 @@ fn split_number(name: &str) -> (String, u64) {
     (text, number)
 }
 
-/// One line of the list file as the reference reads it (spec 25 14.8 item 4): a bar and a space, or a bar at the
+/// One line of the list file as read (spec 25 14.8 item 4): a bar and a space, or a bar at the
 /// line end, ends the line there; two bars are one bar; a bar and three digits are the character of that code; a bar
 /// and anything else is a bar and the character after it is dropped. Trailing spaces and a carriage return are
 /// left off. None when the line holds only a note (it is passed over).
@@ -216,8 +216,8 @@ pub fn transend_printers(text: &str) -> Option<TranSendPrinters> {
 impl TranSendPrinters {
     /// Whether the printer choice `filter` lets the ink printer list show a printer with driver `driver` (spec 25
     /// 14.8 item 6): 0 when its name is a supported one ignoring case; 1 when it has the text part of a compatible
-    /// one ignoring case with a number at least that one's (the supported list is not looked at, as in the
-    /// reference); 2 always.
+    /// one ignoring case with a number at least that one's (the supported list is not looked
+    /// at); 2 always.
     pub fn allows(&self, filter: usize, driver: &str) -> bool {
         let name = transend_normalize(driver);
         match filter {
@@ -234,11 +234,11 @@ impl TranSendPrinters {
     }
 }
 
-/// The ports Write to Port lists for `model`, as the reference builds the list (spec 25 16.1): lpt1 to lpt3 unless
-/// the model has NoParallel, com1 to com9 unless it has NoSerial. YesUSB adds the reference's USB list, which is
+/// The ports Write to Port lists for `model` (spec 25 16.1): lpt1 to lpt3 unless
+/// the model has NoParallel, com1 to com9 unless it has NoSerial. YesUSB adds the USB list, which is
 /// always empty, so it adds nothing. YesFTDI adds the FTDI devices by their descriptions (spec 25 16.2), which the
 /// caller reads from the FTDI library (ftd2xx) where it is installed; without it there are none. The port names are
-/// lower case as the reference stores them; the list is in the order the reference's sorted list shows it, without
+/// lower case; the list is sorted without
 /// regard to case. No model, no ports.
 pub fn ports_with(model: Option<&Model>, ftdi: &[String]) -> Vec<String> {
     let Some(m) = model else { return Vec::new() };
@@ -274,9 +274,9 @@ pub const LINE_ENDS: &[&str] = &["Carriage return, Line feed (PC)", "Carriage re
 pub const PAGE_ENDS: &[&str] = &["End of Line and Form Feed", "Form Feed only", "Pad page with End of Line", "Control-K (LED-120)", "Nothing", "Puma-style (0x83)"];
 pub const CASES: &[&str] = &["Lowercase", "Uppercase"];
 
-/// The form descriptions the setup shows, by form id: the reference's table of form descriptions in its English
+/// The form descriptions the setup shows, by form id: the table of form descriptions in the English
 /// texts (spec 25 section 12.3). Ids are matched without regard to case; a form not in the table shows its id (as A5
-/// and B4_landscape do in the reference).
+/// and B4_landscape do).
 pub const FORM_NAMES: &[(&str, &str)] = &[
     ("10_d", "23 by 10 inches (folded booklet)"),
     ("10_mn", "8 by 10 inches"),
@@ -344,7 +344,7 @@ pub fn form_name_with_prefix(id: &str, prefix: &str) -> String {
     variant.or_else(|| find(FORM_NAMES)).unwrap_or_else(|| id.to_string())
 }
 
-/// Whether a region (its ISO 3166 two-letter code) takes the European order of default forms. The reference tests
+/// Whether a region (its ISO 3166 two-letter code) takes the European order of default forms. The test is
 /// whether the user locale's country code, which is the region's international calling code, begins with 3 or 4
 /// (spec 25 12.3); these are the regions of calling-code zones 3 and 4 (ITU-T E.164), the list being this program's
 /// way of making that test where the system gives a region rather than a calling code.
@@ -387,7 +387,7 @@ fn version_range(versions: &str) -> Option<(usize, usize)> {
     }
 }
 
-/// The General page's Configuration location choices, in the standard order; the second is `Setup::all_users`.
+/// The General page's Configuration location choices, in their order; the second is `Setup::all_users`.
 pub const LOCATIONS: [&str; 2] = ["Current user", "All users on this computer"];
 
 /// The Device Settings version list (5) for a model label: the versions of the model's
@@ -489,7 +489,7 @@ impl Setup {
         }
     }
 
-    /// This setup after its model is changed to `label` on the setup sheet, as the reference makes it (spec 25 18.3):
+    /// This setup after its model is changed to `label` on the setup sheet (spec 25 18.3):
     /// the new model's serial settings (apart from parity), Advanced settings, escape codes, interpoint, encoding,
     /// letter case and punctuation, signature sheet counts, rightmost cell and PRINT55 location; the form kept when
     /// the new model has it, else the model's default; Embosser Version the model's single version, else the old one
@@ -558,13 +558,13 @@ pub struct Layout {
     pub interline: u32,
 }
 
-/// Whether the setup is "automated" as the reference's drivers count it: escape codes allowed, the model uses escape
+/// Whether the setup is "automated" as the drivers count it: escape codes allowed, the model uses escape
 /// codes, or an Index at level 4 or above.
 pub fn automated(s: &Setup, model: &Model) -> bool {
     s.escape_codes || model.flag("UsingEscapeCodes") || (model.driver().contains("Index") && index_level(s) >= 4)
 }
 
-/// What the reference's form check finds for a layout of `cells` by `lines` (its three flag words): for the layout,
+/// What the form check finds for a layout of `cells` by `lines` (its three flag words): for the layout,
 /// 4 interpoint asked for and not allowed, 1 interline print asked for and not allowed; for the lines and the cells
 /// each, 8 the margin below the embosser's own margin (16 when equal, not a fault), 4 the margin past the form's
 /// maximum, 2 margin and text past it, 1 the text alone past it. None when the form is not one of the model's (its
@@ -610,7 +610,7 @@ pub fn fit_flags(s: &Setup, model: &Model, layout: &Layout, cells: u32, lines: u
     Some((whole, flags(layout.top_margin, top, lines, max_lines), flags(layout.binding, left, cells, max_cells)))
 }
 
-/// What the checks before an embossing job found (spec 25 9.1), in the reference's order.
+/// What the checks before an embossing job found (spec 25 9.1), in the order they are made.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Check {
     Ready,
@@ -630,8 +630,8 @@ pub fn check(s: &Setup, model: &Model, layout: &Layout, cells: u32, lines: u32) 
     }
 }
 
-/// The least lines per page and cells per line Embosser Setup allows: the reference reads them from its settings
-/// MinPageDepth and MinPageWidth, which nothing in its dialogs sets, so their defaults.
+/// The least lines per page and cells per line Embosser Setup allows: the settings
+/// MinPageDepth and MinPageWidth, which no dialog sets, so their defaults.
 pub const MIN_PAGE_DEPTH: u32 = 1;
 pub const MIN_PAGE_WIDTH: u32 = 10;
 
@@ -643,7 +643,7 @@ pub struct Block {
     pub lines: u32,
 }
 
-/// A page block corrected to a setup as the reference does when Embosser Setup opens, when another setup is chosen
+/// A page block corrected to a setup when Embosser Setup opens, when another setup is chosen
 /// and on OK: interpoint off unless the model can emboss interpoint and the setup has it on; interline print off
 /// unless the model has Interline or is a TranSend SE with an ink printer named; then lines with the top margin, then
 /// cells with the binding margin: the margin raised to the embosser's own margin (none when automated), the value put
@@ -775,16 +775,16 @@ pub fn single_version(label: &str) -> usize {
 }
 
 /// The Index driver level of a setup: its version number as the Device Settings list gives it (V1 1, V2 2, V3_early
-/// 3, V3 4, V4 5, V5 6; 0 unspecified), as the reference's driver reads it.
+/// 3, V3 4, V4 5, V5 6; 0 unspecified), as the driver reads it.
 fn index_level(s: &Setup) -> u8 {
     s.version.min(6) as u8
 }
 
 /// The byte pipeline's options for a job of `copies` copies of a document laid out `cells` by `lines` with
 /// `layout`, on `setup` and its `model`: the driver's job start (spec 25 section 8), padding, line and page ends, as
-/// the reference's drivers make them (audit print-emboss E2 to E5). An Index V3 or later makes the copies itself (MC).
-/// INFERENCE: the keywords RotatePaperSizings, IndexPagemm and LabellerROM are the names of the model flags the
-/// reference reads by number (0x55, 0x3d, 0x56).
+/// the drivers make them (audit print-emboss E2 to E5). An Index V3 or later makes the copies itself (MC).
+/// INFERENCE: the keywords RotatePaperSizings, IndexPagemm and LabellerROM are the names of the model flags
+/// read by number (0x55, 0x3d, 0x56).
 pub fn job_options(s: &Setup, model: &Model, layout: &Layout, cells: u32, lines: u32, copies: u32, encoding: Option<[u8; 64]>) -> Options {
     let form = model.forms.iter().find(|f| f.id.eq_ignore_ascii_case(&layout.form));
     let driver = model.driver();

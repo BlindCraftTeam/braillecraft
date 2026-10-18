@@ -1,4 +1,4 @@
-//! File, Print and Printer Setup, as the reference program does them (re/spec/24-print.md).
+//! File, Print and Printer Setup (re/spec/24-print.md).
 //!
 //! Printer Setup (dialog 1071, for the document or for the program) keeps the printer, the paper, the orientation,
 //! the margins with their unit and the formatted page size. File, Print (dialog 1040) takes the copies, the page
@@ -7,8 +7,8 @@
 //! or at the size set there, with the line numbers of a braille page in a column on each side when Global, View
 //! Preferences shows line numbers, and under each braille line its print in a 9-point font when interline print is on.
 //!
-//! The reference program prints through the Windows printer directly; BrailleCraft prints through wxWidgets printing
-//! (wxPrinter and a wxPrintout), our port choice, so the same pages print on Windows, macOS and Linux.
+//! BrailleCraft prints through wxWidgets printing (wxPrinter and a wxPrintout), not through the Windows printer
+//! directly, so the same pages print on Windows, macOS and Linux.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -27,7 +27,7 @@ pub use bc_core::printer_setup::{parse_margin, PrinterSetup, PAPERS};
 // ------------------------------------------------------------------ fonts
 
 /// The system's font face names in the order the system gives them (wxFontEnumerator); the TranSend SE page lists
-/// them as the reference lists every font family of the screen (spec 25 14.1).
+/// them all, every font family of the screen (spec 25 14.1).
 pub fn font_names() -> Vec<String> {
     let n = unsafe { ffi::wxd_FontEnumerator_GetFacenames(std::ptr::null_mut(), 0) };
     if n <= 0 {
@@ -116,9 +116,9 @@ fn print_data(key: u64, setup: &PrinterSetup) -> PrintData {
     d
 }
 
-/// Whether the print data of `setup` for document `key` is good for this computer: the reference asks its document
-/// print data the same before printing and falls back to the global settings with message 2696 when it is not. (On
-/// Windows that finds a printer the computer no longer has; GTK's print data has no such check.)
+/// Whether the print data of `setup` for document `key` is good for this computer: the document's print
+/// data is checked the same way before printing, falling back to the global settings with message 2696 when it is
+/// not. (On Windows that finds a printer the computer no longer has; GTK's print data has no such check.)
 pub fn printer_valid(key: u64, setup: &PrinterSetup) -> bool {
     let data = print_data(key, setup);
     unsafe { ffi::wxd_PrintData_IsOk(data.0) }
@@ -377,7 +377,7 @@ pub enum Outcome {
 }
 
 /// Prints `job` with the printer, paper and orientation of `setup` (and the driver settings kept for document
-/// `key`), `copies` times: one print job per copy, as the reference program does (spec 24, 3a).
+/// `key`), `copies` times: one print job per copy (spec 24, 3a).
 pub fn run(key: u64, setup: &PrinterSetup, job: Job, copies: u32) -> Outcome {
     #[cfg(debug_assertions)]
     if let Ok(folder) = std::env::var("BC_PRINT_TO_PPM") {
@@ -425,8 +425,8 @@ pub fn run(key: u64, setup: &PrinterSetup, job: Job, copies: u32) -> Outcome {
 // ------------------------------------------------------------------ the ink pass of an embossing job
 
 /// The ink pass of an embossing job with interline print (spec 25 14.5 and 17): its pages, each a list of pieces of
-/// ink placed in twips from the printable area's top left, drawn in font `face` ("Times New Roman" when empty, as in
-/// the reference) at a cell height of `height` twips.
+/// ink placed in twips from the printable area's top left, drawn in font `face` ("Times New Roman" when empty)
+/// at a cell height of `height` twips.
 pub struct InkJob {
     pub title: String,
     pub pages: Vec<Vec<bc_core::ink::Item>>,
@@ -481,13 +481,13 @@ unsafe extern "C" fn ink_print_page(user_data: *mut c_void, page: i32) -> bool {
     true
 }
 
-/// Draws ink page `n` (from 0): in twips, as the reference draws on a device context in MM_TWIPS; each piece against
+/// Draws ink page `n` (from 0): in twips, as on a device context in MM_TWIPS; each piece against
 /// the bottom of its box and cut to the box, as its DrawTextW with DT_SINGLELINE | DT_BOTTOM | DT_NOPREFIX and no
 /// DT_NOCLIP does (spec 25 14.5).
 fn draw_ink_page<D: DeviceContext>(job: &InkJob, dc: &D, ppi: (i32, i32), n: usize) {
     dc.set_user_scale(ppi.0.max(1) as f64 / 1440.0, ppi.1.max(1) as f64 / 1440.0);
     let face = if job.face.is_empty() { "Times New Roman" } else { job.face.as_str() };
-    // The font at the cell height the reference asks for: measured at 12 points, then sized to it.
+    // The font at the cell height asked for: measured at 12 points, then sized to it.
     let Some(probe) = crate::app::font(face, 12) else { return };
     dc.set_font(&probe);
     let at12 = dc.get_char_height().max(1);
@@ -504,7 +504,7 @@ fn draw_ink_page<D: DeviceContext>(job: &InkJob, dc: &D, ppi: (i32, i32), n: usi
 }
 
 /// Prints the ink pass `job` to printer `printer` with its own paper, `copies` times within the one print job (the
-/// reference's copies are made inside each pass, spec 25 17.2), without a print dialog.
+/// copies are made inside each pass, spec 25 17.2), without a print dialog.
 pub fn run_ink(printer: &str, job: InkJob, copies: u32) -> Outcome {
     #[cfg(debug_assertions)]
     if let Ok(folder) = std::env::var("BC_PRINT_TO_PPM") {
@@ -584,7 +584,7 @@ fn render_ink_pages(job: &InkJob, folder: &std::path::Path) -> Outcome {
 
 /// Whether the system has a print server to ask for printers. On Linux the system print dialog's printer list comes
 /// from CUPS; without a CUPS server to reach, a print waits for it without end, so File, Print says so instead
-/// (BrailleCraft's own check; the reference program shows message 2632 when it cannot get printer information).
+/// (BrailleCraft's own check; message 2632 is for printer information that cannot be got).
 pub fn print_server_reachable() -> bool {
     if cfg!(target_os = "linux") {
         std::env::var_os("CUPS_SERVER").is_some()

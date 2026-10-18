@@ -1,5 +1,5 @@
 //! PEF, the Portable Embosser Format (PEF 1.0, version 2008-1, DAISY Consortium): braille pages as Unicode braille
-//! in XML. The reference program has no PEF; BrailleCraft writes and reads it from the published standard, as the
+//! in XML. BrailleCraft writes and reads it from the published standard, as the
 //! version 1 scope asks (open and save PEF).
 //!
 //! Written: one volume holding one section, its page size (columns and rows) and whether it is embossed on both

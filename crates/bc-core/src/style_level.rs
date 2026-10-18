@@ -1,4 +1,4 @@
-//! Layout, Style Level + and Style Level - (commands 1403 and 1404), as the standard program does them (spec 34): the
+//! Layout, Style Level + and Style Level - (commands 1403 and 1404) (spec 34): the
 //! hierarchy level code [hlN] inside the paragraph style around the caret is raised or lowered by one; with a
 //! selection, every run of [hl..] and [<] codes inside it is renumbered by the same step. Inside a table the keys
 //! move the caret to the next or previous cell instead. Places are in running text (codes as 0x1C name 0x1F).
@@ -85,7 +85,7 @@ pub fn max_level(running: &str, caret: usize) -> u32 {
     }
 }
 
-/// The paragraph style open at `page_start` and the place of its start code (the standard page fields, spec 34
+/// The paragraph style open at `page_start` and the place of its start code (the page fields, spec 34
 /// 8.2): the last [es~NAME.] before the page start with no [ee~NAME.] after it.
 pub fn page_style(running: &str, page_start: usize) -> Option<(String, usize)> {
     let r: Vec<char> = running.chars().collect();
@@ -110,8 +110,8 @@ pub fn page_style(running: &str, page_start: usize) -> Option<(String, usize)> {
 
 /// Style Level with `step` +1 or -1 (spec 34 sections 2 to 4). `has_selection` and `anchor` are the selection's;
 /// `page_start` is the first place of the caret's formatted page and `page_style` the paragraph style open at it
-/// (page_style); `max` is max_level. None when nothing changed and nothing beeped (never, in fact: the standard program
-/// beeps on every failure), so the outcome always says what to do.
+/// (page_style); `max` is max_level. None when nothing changed and nothing beeped (never, in fact: every
+/// failure beeps), so the outcome always says what to do.
 pub fn change(running: &str, anchor: usize, caret: usize, has_selection: bool, step: i32, page_start: usize, page_style: Option<(String, usize)>, max: u32) -> Outcome {
     let mut r: Vec<char> = running.chars().collect();
     let len = r.len();

@@ -1,7 +1,6 @@
 //! The margin bell (Global, View Preferences, spec 24 2d.2): a short tone when typing brings the caret to the bell
-//! position before the end of the line. The reference program plays a sound file it ships, and when that is missing
-//! it builds the tone itself: 100 ms of a 4000 Hz sine, 8-bit mono at 11025 samples a second; failing that, the
-//! system beep. BrailleCraft ships no sound file, so it always builds the tone.
+//! position before the end of the line. No sound file is shipped; the tone is built: 100 ms of a 4000 Hz sine,
+//! 8-bit mono at 11025 samples a second; failing that, the system beep.
 
 use std::cell::RefCell;
 
@@ -35,7 +34,7 @@ pub fn tone_wav() -> Vec<u8> {
 }
 
 thread_local! {
-    /// The tone, built once and kept, as the reference keeps its sound after the first ring.
+    /// The tone, built at the first ring and kept.
     static TONE: RefCell<Option<(Vec<u8>, *mut ffi::wxd_Sound_t)>> = const { RefCell::new(None) };
 }
 

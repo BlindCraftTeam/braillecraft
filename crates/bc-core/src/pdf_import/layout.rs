@@ -1,7 +1,7 @@
 //! Layout analysis of a page's characters into lines, text boxes and groups of boxes: a port of the layout analysis
-//! of pdfminer.six 20231228 (layout.py and the Plane of utils.py; MIT licence, listed in NOTICE), the version the
-//! reference program's PDF importer runs. The rules, thresholds and orders are kept as they are there, so a PDF is
-//! cut into the same boxes; names follow pdfminer's where that helps to compare the two.
+//! of pdfminer.six 20231228 (layout.py and the Plane of utils.py; MIT licence, listed in NOTICE). The rules,
+//! thresholds and orders are kept as they are there, so a PDF is cut into the same boxes; names follow pdfminer's
+//! where that helps to compare the two.
 //!
 //! One difference that cannot be kept: pdfminer breaks ties between equal box distances by Python object identity
 //! (memory addresses); here the tie goes to the element made first.

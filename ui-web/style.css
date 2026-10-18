@@ -155,7 +155,7 @@ h1 { font-size: 1rem; font-weight: normal; margin: 0 0 0.25rem; }
   font-weight: bold;
 }
 
-/* Dialogs: the reference program's controls in its order, flowing so they fit any window. */
+/* Dialogs: the controls in their resource order, flowing so they fit any window. */
 dialog {
   max-width: min(42rem, calc(100vw - 1rem));
   padding: 0;
@@ -179,7 +179,7 @@ dialog form > .buttons { align-self: stretch; }
 dialog legend { padding: 0 0.25rem; }
 .row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; max-width: 100%; }
 .row > label { min-width: 10rem; }
-/* A radio button or check box with the field that stands beside it in the reference. */
+/* A radio button or check box with the field that stands beside it. */
 .pair { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; max-width: 100%; }
 .pair > label.row { min-width: 10rem; }
 .pair select { min-width: 12rem; }
@@ -207,7 +207,7 @@ button {
 button.default { border: 2px solid var(--accent); }
 button:disabled, input:disabled, select:disabled, .disabled { opacity: 0.6; }
 
-/* Message boxes keep the reference messages' line breaks. */
+/* Message boxes keep the line breaks of their messages. */
 dialog p.message { margin: 0; max-width: 36rem; white-space: pre-wrap; }
 
 /* The embosser setup sheet: its pages as tabs. */

@@ -1,5 +1,5 @@
-//! Word import (.docx), as the standard Word recipe runs it (spec 28 sections 3, 6 to 8, 10, 12 and 14): the
-//! package's parts, the stylesheet's rules ported element by element, the run combining, the style map, the tag
+//! Word import (.docx), as the Word recipe runs it (spec 28 sections 3, 6 to 8, 10, 12 and 14): the
+//! package's parts, the stylesheet's rules element by element, the run combining, the style map, the tag
 //! processor with its scrub rules, then the recipe's rule scripts and the shared steps. This file holds the package
 //! reader (a zip whose parts are inflated) and the XML reader the parts go through.
 

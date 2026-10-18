@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  The BrailleCraft installer for Windows (WiX Toolset 5), as the reference program's installer is laid out
-  (re/spec/26-installer.md): a per-machine install, administrative rights required; the program with its tables,
+  The BrailleCraft installer for Windows (WiX Toolset 5), laid out as re/spec/26-installer.md describes:
+  a per-machine install, administrative rights required; the program with its tables,
   templates, embosser models and fonts; the braille fonts installed for every program; the JAWS scripts; Start menu
   and desktop shortcuts; the print and braille document types with their icons and the Open, Print and Emboss
   verbs; older versions removed on upgrade; and a check box on the last page to start BrailleCraft.
@@ -53,8 +53,8 @@
       <Files Include="!(bindpath.dist)\nvda\**" />
     </ComponentGroup>
 
-    <!-- The document types: .dxp print documents and .dxb braille documents, each with its icon and the verbs the
-         reference program gives them. Two unversioned files, so the component has a fixed id of its own. -->
+    <!-- The document types: .dxp print documents and .dxb braille documents, each with its icon and its
+         verbs. Two unversioned files, so the component has a fixed id of its own. -->
     <Component Id="DocumentTypes" Directory="IconsFolder" Guid="F2035C1E-C8E2-4BDF-A3AA-8DD2EFEA2062">
       <File Id="PrintDocumentIco" Source="!(bindpath.icons)\print-document.ico" KeyPath="yes" />
       <File Id="BrailleDocumentIco" Source="!(bindpath.icons)\braille-document.ico" />
@@ -113,7 +113,7 @@
     </UI>
     <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Start BrailleCraft" />
     <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
-    <!-- As the reference installer does (re/spec/26-installer.md section 26.6): when the installing user has no
+    <!-- As re/spec/26-installer.md section 26.6 says: when the installing user has no
          embosser setup yet, the last page says the program will set up the embossers; the program itself opens
          Embosser Setup at start-up in that case. The program is started with no arguments. -->
     <Property Id="EMBOSSERSETUPS">

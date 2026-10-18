@@ -1,5 +1,5 @@
 //! The editing area: the program-drawn editing window (vendor/wxdragon-sys wxd_doc_editor.h) showing a document's
-//! editor model (bc_core::editor), as the reference program draws its own editing window (spec 27, spec 30). The
+//! editor model (bc_core::editor; spec 27, spec 30). The
 //! window is told how many rows there are and asks for a row's text as it draws, measures or reads it (so a book's
 //! rows are not held a second time in the window, plan line L1); it keeps the system caret and gives screen readers
 //! its text; every key, typed character and click comes back here and is carried out on the model (documents.rs).
@@ -26,7 +26,7 @@ impl WxWidget for Area {
 unsafe impl Send for Area {}
 unsafe impl Sync for Area {}
 
-/// The reference's line number column is 20 pixels wide (spec 27 section 0).
+/// The line number column is 20 pixels wide (spec 27 section 0).
 const LINE_NUMBER_WIDTH: c_int = 20;
 
 fn key_of(data: *mut c_void) -> u64 {
@@ -71,7 +71,7 @@ extern "C" fn on_row(data: *mut c_void, row: c_int, which: c_int) -> *const c_ch
         let ed = &d.ed;
         Some(match which {
             2 => match ed.row(row) {
-                // Two digits at least, as the standard program's "%02d" (spec 30 section 12 unknown 5).
+                // Two digits at least, "%02d" (spec 30 section 12 unknown 5).
                 Some(Row::Line { line, .. }) => format!("{:02}", line + 1),
                 _ => String::new(),
             },

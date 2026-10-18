@@ -40,8 +40,8 @@ const BUTTON_PADDING: i32 = 24;
 /// The room a GTK text field takes around its text (its frame and inner padding, both sides).
 const FIELD_PADDING: i32 = 20;
 
-/// Controls the reference hides as its dialog starts, whatever else is set, in the program BrailleCraft follows:
-/// View Preferences 13 "When document opened" (the full program shows 12 in its place, spec 24, 2d.1); TranSend SE
+/// Controls hidden as their dialog starts, whatever else is set:
+/// View Preferences 13 "When document opened" (12 is shown in its place, spec 24, 2d.1); TranSend SE
 /// 19 and 22 (shown in place of 18 and 21 only when TranSend is not licensed, spec 25, 13; BrailleCraft has no
 /// licensing, so it is the licensed state).
 const HIDDEN_AT_START: &[(i32, i32)] = &[(1034, 13), (10003, 19), (10003, 22)];
@@ -219,7 +219,7 @@ impl Dlg {
         (sheet, out)
     }
 
-    /// Shows or takes away the tab of sheet page `pages[n]` (named `tab`), as the reference's sheet does (spec 25
+    /// Shows or takes away the tab of sheet page `pages[n]` (named `tab`) (spec 25
     /// 15.1): every page is made when the sheet opens, and a page taken away keeps its controls and their values; put
     /// back, it goes after the shown pages that come before it in `pages`.
     pub fn set_sheet_page(pages: &[Dlg], n: usize, tab: &str, on: bool) {
@@ -323,9 +323,9 @@ impl Dlg {
         }
         // Wrapped to the room it has in the dialog: on macOS a label takes the width of its whole text when it is
         // made, so its own width would leave it on one line, far past the dialog's edge.
-        // Where the wrapped text needs more lines than the rectangle the reference gave it (its font is wider here), the
-        // label grows down and what starts below it moves down by as much, as a group box around it grows; labels are
-        // taken from the top so each move sees the positions the ones above it left.
+        // Where the wrapped text needs more lines than the rectangle its resource gives it (its font is wider here),
+        // the label grows down and what starts below it moves down by as much, as a group box around it grows; labels
+        // are taken from the top so each move sees the positions the ones above it left.
         let room = self.client().width - self.margin().width;
         let mut labels: Vec<(i32, i32)> =
             several_lines.into_iter().filter_map(|cid| self.win(cid).map(|w| (w.get_position().y, cid))).collect();
@@ -355,7 +355,7 @@ impl Dlg {
         self.cover_controls();
     }
 
-    /// macOS places Cancel to the left of OK, OK at the right (the reference's Mac version does the same). Where a
+    /// macOS places Cancel to the left of OK, OK at the right. Where a
     /// dialog has OK left of Cancel in one row, the two change places: the right one keeps its right edge.
     fn mac_button_order(&self) {
         let (Some(ok), Some(cancel)) = (self.win(1), self.win(2)) else { return };
@@ -379,7 +379,7 @@ impl Dlg {
 
     /// Control `cid`, which spanned `top` to `bottom`, has grown down by `extra`: every control that starts at or below
     /// its old bottom moves down by `extra`, a group box that holds it grows by `extra`, and so does the dialog (or
-    /// page), keeping the room the reference left below its last control.
+    /// page), keeping the room the resource left below its last control.
     fn push_down(&self, cid: i32, top: i32, bottom: i32, extra: i32) {
         for (other, kind) in self.controls() {
             let Some(o) = self.win(*other).filter(|_| *other != cid) else { continue };
@@ -415,7 +415,7 @@ impl Dlg {
     }
 
     /// GTK gives the standard OK and Cancel buttons its own stock labels with letters of their own (Alt+O, Alt+C),
-    /// which take those keys from the dialog's labels; the reference's OK and Cancel have none. They are given their
+    /// which take those keys from the dialog's labels; the resources' OK and Cancel have none. They are given their
     /// own text again, which has no letter.
     fn plain_ok_cancel(&self) {
         for cid in [1, 2] {
@@ -651,7 +651,7 @@ impl Dlg {
         }
     }
 
-    /// Fills a list or combo box with `items` and chooses `items[selected]`. Many reference boxes sort their items,
+    /// Fills a list or combo box with `items` and chooses `items[selected]`. Many of the boxes sort their items,
     /// so the choice is made by its text, not by its place in `items`.
     pub fn set_items(&self, cid: i32, items: &[&str], selected: Option<u32>) {
         let chosen = selected.and_then(|s| items.get(s as usize));
@@ -979,7 +979,7 @@ pub fn layout_show(page: i32) {
 }
 
 /// What a control draws, as a rectangle (x, y, width, height). A label draws its text, not its whole rectangle: the
-/// reference's rectangles of neighbouring labels often overlap where their text does not (a label 60 units wide
+/// resource rectangles of neighbouring labels often overlap where their text does not (a label 60 units wide
 /// holding a word of 30), so a label is measured by its lines of text, within its rectangle. A titled group box
 /// draws its title in a band across its top; that band is what other controls must not reach (the frame below it
 /// holds the box's own controls by design).

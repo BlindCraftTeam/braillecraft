@@ -273,7 +273,7 @@ impl Languages {
 
     /// The rule table and scan table a language code switches to (spec 07 section A9b: the table that takes control
     /// reads the rest of the text with its own scan table); None when the code is not known (the engine then goes
-    /// back to the document's own tables, as the standard program does).
+    /// back to the document's own tables).
     pub fn tables(&self, name: &[u8]) -> Result<Option<(Rc<RuleTable>, ScanTable)>, EngineError> {
         let Some((btb, sct)) = self.lookup(name) else { return Ok(None) };
         match &self.source {

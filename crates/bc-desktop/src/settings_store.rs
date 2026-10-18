@@ -425,7 +425,7 @@ pub fn save_default_template(name: &str) {
     set(ROOT, "DefaultTemplate", name);
 }
 
-/// File, New's Show Hidden Templates box, kept as the standard program keeps it (ShowAllTemplates, yes or no).
+/// File, New's Show Hidden Templates box, kept as ShowAllTemplates (yes or no).
 pub fn load_show_all_templates() -> bool {
     get(ROOT, "ShowAllTemplates").is_some_and(|v| v.trim().eq_ignore_ascii_case("yes"))
 }
@@ -458,7 +458,7 @@ pub fn save_default_views(d: &DefaultViews) {
     set("Display", "SixKeyBraille", yes_no(d.six_key));
 }
 
-/// Global, View Preferences, under the reference program's names and words (spec 24 2d.2).
+/// Global, View Preferences, under the names and words of spec 24 2d.2.
 pub fn save_view_prefs(verbose: bool, p: &ViewPrefs) {
     set("Display", "BellPosition", &p.bell_position.to_string());
     set("Display", "SpellCodedView", yes_no(verbose));
@@ -546,7 +546,7 @@ const CORNERS: [&str; 5] = ["NoPages", "UpperLeft", "UpperRight", "LowerLeft", "
 /// Which pages have a running head or foot, as the settings name them (0 none to 3 both).
 const SIDES: [&str; 4] = ["None", "Odd", "Even", "Both"];
 
-/// Global, Formatted Braille Importer, under the names the reference program keeps them by; a value that is missing
+/// Global, Formatted Braille Importer, under the keys below; a value that is missing
 /// or not understood keeps its default (both main page numbers lower right, both reference page numbers upper right,
 /// no running head or foot, 30 lines of 40 cells, formatting not preserved).
 pub fn load_braide() -> bc_core::braide::Settings {

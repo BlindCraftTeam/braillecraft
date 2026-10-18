@@ -1,7 +1,7 @@
 //! Records when the program was built (seconds since 1970, UTC) for the About box: SOURCE_DATE_EPOCH when the build
 //! sets it (reproducible builds), else the time of this build. On Windows it also embeds the program's manifest
-//! (packaging/windows/braillecraft.manifest: Common Controls 6, the DPI awareness and the supported systems the
-//! reference's own manifest gives); without one wxWidgets warns at every start and the controls take the old look.
+//! (packaging/windows/braillecraft.manifest: Common Controls 6, the DPI awareness and the supported systems
+//! it lists); without one wxWidgets warns at every start and the controls take the old look.
 
 fn main() {
     println!("cargo:rerun-if-env-changed=SOURCE_DATE_EPOCH");

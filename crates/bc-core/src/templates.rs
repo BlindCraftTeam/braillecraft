@@ -79,8 +79,8 @@ pub fn setting<'a>(text: &'a str, key: &str) -> Option<&'a str> {
 }
 
 /// A template's Hyphenation as a document file keeps it: 0 None, 1 Dash, 2 DashAndHyphen, 3 French, 4 French1103.
-/// The standard program's header reader never sets the value before reading, so for a template without the key it
-/// copies an unset field into the document (spec 05 section A10); every template it ships has the key. BrailleCraft
+/// The value is not set before the header is read, so a template without the key would give the document an unset
+/// field (spec 05 section A10); every shipped template has the key. BrailleCraft
 /// gives such a template 2, DashAndHyphen, the value 214 of its 226 templates hold.
 pub fn hyphenation(text: &str) -> u16 {
     match setting(text, "Hyphenation").map(str::trim) {
@@ -104,8 +104,8 @@ pub fn tables(text: &str) -> Option<[String; 4]> {
 
 /// A template's page numbering, in the order a document file keeps it: braille page numbers on even pages and on
 /// odd pages, print page numbers on even pages and on odd pages (0 none, 1 upper left, 2 upper right, 3 lower left,
-/// 4 lower right), then the first page whose number is shown. A setting the template leaves out takes the reference
-/// program's default (braille numbers lower right, print numbers upper right, spec 19; numbers from page 1).
+/// 4 lower right), then the first page whose number is shown. A setting the template leaves out takes the
+/// default (braille numbers lower right, print numbers upper right, spec 19; numbers from page 1).
 pub fn page_numbers(text: &str) -> [u32; 5] {
     let corner = |key: &str, default: u32| match setting(text, key) {
         Some("None") => 0,

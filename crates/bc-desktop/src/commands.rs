@@ -122,8 +122,8 @@ fn page_numbering() {
     });
 }
 
-/// Global, Formatted Braille Importer (1045): the settings the formatted braille import reads, kept under the
-/// reference names. The four groups are braille page numbers on even and on odd pages and print page numbers on even
+/// Global, Formatted Braille Importer (1045): the settings the formatted braille import reads, kept by
+/// settings_store. The four groups are braille page numbers on even and on odd pages and print page numbers on even
 /// and on odd pages of the file; then the running head and foot pages, the lines and cells of the file's pages. With
 /// "Read formatted braille without interpretation" checked (formatting preserved) the other controls are disabled.
 fn formatted_braille_importer() {
@@ -182,7 +182,7 @@ fn formatted_braille_importer() {
     }
 }
 
-/// A dialog control whose value the standard program keeps between runs as a setting (spec 18 section 18.6: the
+/// A dialog control whose value is kept between runs as a setting (spec 18 section 18.6: the
 /// four Global option dialogs copy the settings variables into their controls at open and back on OK): the
 /// control, its section and key, how its value is written, and the default from the settings descriptor table
 /// (spec 18 section 18.2b).
@@ -206,7 +206,7 @@ enum Kept {
 const HYPERLINK_ITEMS: &[&str] = &["Text Only", "URLs Only", "Both Text and URLs", "Structured Hyperlinks"];
 const UNKNOWN_ITEMS: &[&str] = &["Mark with asterisk (*)", "Ignore", "Output Unicode value"];
 const PRINT_PAGE_ITEMS: &[&str] = &["Ignore", "Mark from Word document", "Treat hard page breaks as print page breaks", "Use publishers' <ipp no=#> reference page tags"];
-/// The kinds a UEB typeform mapping of the Word Importer can be (the standard program's list, spec 18 A3, with the
+/// The kinds a UEB typeform mapping of the Word Importer can be (the list of spec 18 A3, with the
 /// attribute names tables/word-styles/typeform-attributes.txt normalises), for the combo boxes 20 to 35 of 1036.
 const TYPEFORM_KINDS: &[&str] = &["(Unused)", "Font Is", "Font Contains", "Highlight Is", "Text Color Is", "Drop Shadow", "Outline"];
 
@@ -233,8 +233,8 @@ const KEPT_WORDPERFECT: &[Kept] = &[
     Kept::Radios(18, "WordPerfect", "Units", &["Inches", "Centimeters"], 0),
 ];
 
-/// Global, Word Importer (1036). The UEB typeform mappings (controls 20 to 36) stay in the dialog memory: the
-/// standard program keeps them beside these in its settings block under no key the descriptor table names.
+/// Global, Word Importer (1036). The UEB typeform mappings (controls 20 to 36) stay in the dialog memory: they are
+/// kept beside these in the settings block under no key the descriptor table names.
 const KEPT_WORD: &[Kept] = &[
     Kept::Flag(6, "Word", "CBC", false),
     Kept::Flag(7, "Word", "PreserveHardPageBreaks", true),
@@ -356,7 +356,7 @@ mod kept_tests {
     }
 
     /// Every kept control of the four dialogs has a default its words can show, and the keys are those of the
-    /// standard program's descriptor table (spec 18 sections 18.2b and 18.6).
+    /// settings descriptor table (spec 18 sections 18.2b and 18.6).
     #[test]
     fn kept_tables_are_well_formed() {
         for (table, dialog) in [(KEPT_IMPORT_OPTIONS, 1037), (KEPT_WORDPERFECT, 1035), (KEPT_WORD, 1036), (KEPT_FILE_LOCATIONS, 1060)] {
@@ -380,7 +380,7 @@ mod kept_tests {
     }
 }
 
-/// A Global option dialog whose settings the standard program keeps between runs: its controls are set from the
+/// A Global option dialog whose settings are kept between runs: its controls are set from the
 /// kept settings (over the dialog memory, which keeps the other controls while the program runs) and written back
 /// on OK (spec 18 section 18.6).
 fn kept_settings_dialog(id: i32, kept: &[Kept], setup: impl FnOnce(&Dlg)) {
@@ -670,8 +670,8 @@ struct NewDialogState {
     default: String,
     show_hidden: bool,
     region: u32,
-    /// The names listed now, and the one the list cursor is on. The template list allows several selections, as
-    /// the reference has it; the widget gives no way to read a selection there, so the item is followed from the
+    /// The names listed now, and the one the list cursor is on. The template list allows several selections;
+    /// the widget gives no way to read a selection there, so the item is followed from the
     /// list's selection events.
     names: Vec<String>,
     current: Option<String>,
@@ -865,8 +865,8 @@ fn file_new() {
     }
 }
 
-/// The file dialog of File, Open (`insert` false) and Edit, Insert File (`insert` true), with the standard
-/// type lists in its order, the last (All Files) chosen; the type does not limit what opens, the file's content
+/// The file dialog of File, Open (`insert` false) and Edit, Insert File (`insert` true), with the
+/// type lists in a set order, the last (All Files) chosen; the type does not limit what opens, the file's content
 /// decides. PEF is BrailleCraft's addition, before All Files. The dialog starts in the folder last opened from
 /// (AutoSave, openPath) and keeps the new one.
 fn pick_file(insert: bool) -> Option<std::path::PathBuf> {
@@ -941,7 +941,7 @@ fn open_dx_document(path: &Path) -> Option<u64> {
             d.dirty = false;
             d.saved = true;
             d.path = Some(path.to_path_buf());
-            // The document's own styles, as the reference program loads them from the file (spec 05-B (c)).
+            // The document's own styles, as loaded from the file (spec 05-B (c)).
             if !doc.styles.is_empty() {
                 d.styles = doc
                     .styles
@@ -1344,7 +1344,7 @@ fn read_import(bytes: &[u8], choice: &ImportChoice) -> Option<(Shown, Option<boo
 }
 
 /// The Word importer's settings from the Global Word Importer (1036) and Import Options (1037) dialogs as they were
-/// last kept, the standard defaults where a dialog was never confirmed.
+/// last kept, the defaults where a dialog was never confirmed.
 fn word_options() -> bc_core::word::Options {
     use crate::dlg::Value;
     let mut o = bc_core::word::Options::default();
@@ -1471,11 +1471,11 @@ enum SaveType {
     Markdown,
     /// eBraille (.ebrl) for braille documents and EPUB 3 (.epub) for print documents (spec 23, bc_core::ebraille).
     EBraille,
-    /// Portable Embosser Format (.pef, bc_core::pef): not in the reference program; the version 1 scope asks for it.
+    /// Portable Embosser Format (.pef, bc_core::pef): the version 1 scope asks for it.
     Pef,
 }
 
-/// The Save As file types, in the reference program's order for each kind of document (spec 04d-B), as far as
+/// The Save As file types, in the order of spec 04d-B for each kind of document, as far as
 /// BrailleCraft writes them; the first is chosen when the dialog opens, every time.
 fn save_types(braille: bool) -> &'static [(&'static str, &'static str, SaveType)] {
     if braille {
@@ -1620,7 +1620,7 @@ pub(crate) fn write_document(key: u64, path: &Path, version: u16) -> bool {
                 });
                 // The older format gives older names where its code is among the document's initial codes.
                 if version == 0 {
-                    bc_core::dxfile::older_table_names(&named, |code| d.initial_codes.contains(&format!("[{code}]")))
+                    bc_core::dxfile::older_table_names(&named, |code| bc_core::dxfile::codes_hold(&d.initial_codes, code))
                 } else {
                     named
                 }
@@ -1703,7 +1703,7 @@ fn child_title_update(d: &app::Doc) {
     app::set_tab_title(&d.page, &d.full_name());
 }
 
-/// The encodings Save As offers for formatted braille, in the reference program's order (spec 04d-B (a), (f)):
+/// The encodings Save As offers for formatted braille, in the order of spec 04d-B (a), (f):
 /// "12.4 Compatible (CAPS)", the national encodings, "Unicode Braille Patterns"; the first is chosen every time.
 fn brf_encodings() -> Vec<String> {
     let mut list = vec!["12.4 Compatible (CAPS)".to_string()];
@@ -1714,7 +1714,7 @@ fn brf_encodings() -> Vec<String> {
 
 /// One cell (dot pattern) as the chosen encoding writes it into a formatted braille file (spec 04d-B (f)): CAPS is
 /// North American ASCII braille in capitals; a national encoding writes its character as one byte when it is 0 to
-/// 255 and '#' otherwise (the reference writes a character its code page cannot hold as '#'); Unicode braille writes
+/// 255 and '#' otherwise (a character the code page cannot hold is written as '#'); Unicode braille writes
 /// the cell in UTF-8.
 fn brf_cell(out: &mut Vec<u8>, choice: usize, pattern: usize) {
     let all = encodings::all();
@@ -1912,7 +1912,7 @@ fn open_pef(path: &Path) -> Option<u64> {
     Some(key)
 }
 
-/// Opens a PDF as a print document (bc_core::pdf_import: the reference's PDF front end, spec 29), with the styles
+/// Opens a PDF as a print document (bc_core::pdf_import, spec 29), with the styles
 /// of the default template, whose names decide between the long and short heading and paragraph style names.
 fn open_pdf(path: &Path) -> Option<u64> {
     let bytes = match std::fs::read(path) {
@@ -1956,8 +1956,8 @@ pub fn write_refreshable_for(key: u64, path: &Path) -> bool {
 }
 
 /// Save As formatted braille (.brf) for a braille document or formatted text (.prf) for a print document, in the
-/// encoding or code page at `choice` of the Encoding box: the document laid out into pages and written as the
-/// reference program's page writer writes them (spec 04d-B). The document itself keeps its own file and name.
+/// encoding or code page at `choice` of the Encoding box: the document laid out into pages and written as
+/// spec 04d-B describes. The document itself keeps its own file and name.
 pub(crate) fn write_formatted(key: u64, path: &Path, braille: bool, choice: usize) -> bool {
     let Some((pages, shown_in)) = app::with(|a| {
         let i = a.index_of(key)?;
@@ -2053,7 +2053,7 @@ fn wire_page_range(d: &Dlg, radios: [i32; 5], fields: (i32, i32)) {
     }
 }
 
-/// The copies field: a number from 1 up, else the reference message and None.
+/// The copies field: a number from 1 up, else the message and None.
 fn copies_field(d: &Dlg, cid: i32) -> Option<u32> {
     match d.number(cid).filter(|n| (1..=i32::MAX as i64).contains(n)) {
         Some(n) => Some(n as u32),
@@ -2082,7 +2082,7 @@ fn chosen_pages(d: &Dlg, radios: [i32; 5], fields: (i32, i32), pages: &[bc_core:
         2 => {
             let (a, b) = (from.min(to).max(0) as usize, from.max(to).max(0) as usize);
             let part = app::with(|ap| ap.laid_out_part(i, a, b));
-            // No page made of it: the standard program shows its message -1, which has no text, so "Error message -1".
+            // No page made of it: message -1 is shown, which has no text, so "Error message -1".
             if part.is_empty() {
                 message("Error message -1");
                 return None;
@@ -2149,8 +2149,8 @@ pub fn print_with(skip: Option<u32>) {
             wire_page_range(&d, PRINT_RANGE, (15, 16));
             // No page-number range when two pages carry the same page number.
             d.enable(12, !bc_core::format::numbers_repeat(&pages));
-            // On a braille document the page-number choice reads "Braille page number(s)": the reference copies control 13's
-            // text into control 12 (spec 24, 2a); control 13 itself is not used.
+            // On a braille document the page-number choice reads "Braille page number(s)": control 13's
+            // text is copied into control 12 (spec 24, 2a); control 13 itself is not used.
             if braille {
                 if let Some(label) = d.win(13).and_then(|w| w.get_label()) {
                     d.set_text(12, &label);
@@ -2260,7 +2260,7 @@ pub fn emboss_with(skip: Option<u32>) {
     }) else {
         return;
     };
-    // The checks before a job, in the reference's order (spec 25 9.1): a setup chosen (2892), the document's paper
+    // The checks before a job, in the order of spec 25 9.1: a setup chosen (2892), the document's paper
     // size defined on that embosser (2364, the job stops), its layout fitting that paper (2362, a question).
     // INFERENCE: a setup name that is no longer kept here is treated as no setup chosen.
     use bc_core::emboss_setup::{check, does_not_fit_message, form_not_defined_message, Check, NO_SETUP_MESSAGE};
@@ -2370,9 +2370,9 @@ pub fn emboss_with(skip: Option<u32>) {
             })
             .collect()
     });
-    // A SuppressFeedPrompts setting that is not 0 skips the prompts between passes, as in the reference (spec 25 17.5).
+    // A SuppressFeedPrompts setting that is not 0 skips the prompts between passes (spec 25 17.5).
     let suppressed = crate::settings_store::get(crate::settings_store::ROOT, "SuppressFeedPrompts").is_some_and(|v| v.trim() != "0" && !v.trim().is_empty());
-    // The output is opened first, before any pass, as the standard program opens its job (audit print-emboss E14): Write to
+    // The output is opened first, before any pass (audit print-emboss E14): Write to
     // File with no name asks for the file (its title and filter, strings 10044 and 10046), offering no name, and asks
     // again while the file chosen cannot be made, with the system's own text; Cancel ends the job quietly. A failed
     // job ends with its own message and then message 2694 (E15).
@@ -2398,7 +2398,7 @@ pub fn emboss_with(skip: Option<u32>) {
         },
     };
     // The ink pass first, to the setup's ink printer (spec 25 14.5 and 17): a printer that cannot be printed to ends
-    // the job with message 2382, as a failed first pass does in the reference.
+    // the job with message 2382, as a failed first pass does.
     if ink_pass {
         let job = ink_job(i, &name, &setup, &model, &layout, cells, &pages, &chosen, &sides);
         match crate::print::run_ink(&setup.ink_printer, job, copies) {
@@ -2436,8 +2436,8 @@ pub fn emboss_with(skip: Option<u32>) {
         }
         // A port that is an FTDI device is written through the FTDI library (spec 25 21.1); the Typewriter driver
         // sends messages with the embosser's status and answer around each (21.2). To any other output the
-        // Typewriter messages go as their bytes, without the status and answer: the reference waits there for
-        // answers from a device it never opened, so that part is BrailleCraft's own.
+        // Typewriter messages go as their bytes, without the status and answer, as no device was
+        // opened there to answer them; that part is BrailleCraft's own.
         let ftdi = match &target {
             bc_core::emboss_out::Target::Port { name, .. } if crate::ftdi::is_device(name) => Some(name.clone()),
             _ => None,
@@ -2523,7 +2523,7 @@ fn ink_job(
                 let page = &pages[*p];
                 let shown: Vec<Vec<char>> = page.lines.iter().map(|l| l.text.chars().collect()).collect();
                 // The end of the text a cell came from: the next place any cell of the page has, but not past a
-                // space or a code. INFERENCE: the reference counts the cell's own item (spec 25 20.3); the layout
+                // space or a code. INFERENCE: spec 25 20.3 counts the cell's own item; the layout
                 // here keeps only each cell's start.
                 let mut places: Vec<usize> = page.lines.iter().flat_map(|l| l.sources.iter().flatten()).collect();
                 places.sort_unstable();
@@ -2556,7 +2556,7 @@ fn ink_job(
 
 /// File, Translate: a NEW document made from the open one, which is left untouched. A print document becomes a
 /// braille document (forward translation), a braille document a print document (back-translation). The whole
-/// document goes through the engine in one run, as in the reference program; the result keeps the codes, and its
+/// document goes through the engine in one run; the result keeps the codes, and its
 /// lines and pages are laid out from them.
 fn translate_document() {
     if let Err(e) = translate_active() {
@@ -2672,12 +2672,12 @@ fn toggle_highlight() {
                 Some(_) => None,
             };
         }
-        // The Keys field shows highlighting ("H"), as the reference rewrites it on this command.
+        // The Keys field shows highlighting ("H"), rewritten on this command.
         a.update_status();
     });
 }
 
-/// Edit, Change Case, as the standard program (bc_core doctext change_case): the selection or the word at the caret; the
+/// Edit, Change Case (bc_core doctext change_case): the selection or the word at the caret; the
 /// caret goes to the start of the range.
 fn change_case() {
     let Some(((from_c, to_c), doc)) = app::with(|a| a.doc().map(|d| (d.selection(), d.shown()))) else { return };
@@ -2825,7 +2825,7 @@ fn search_question(q: find::Question) -> bool {
 }
 
 /// The search options of Find (case 8, backward 9, whole words 10, radios 12 to 14) and Replace (10, 11, 12, radios
-/// 14 to 16) filled from `s` and enabled as the standard program enables them (spec 32 1.1): case sensitive only in a print
+/// 14 to 16) filled from `s` and enabled as spec 32 1.1 says: case sensitive only in a print
 /// document and not for a style name, whole words not for a style name; choosing literal or wildcard enables both,
 /// choosing style name disables both (case only in a print document).
 fn search_options(d: &Dlg, s: &find::Search, case: i32, whole: i32, radios: [i32; 3], print: bool) {
@@ -2848,7 +2848,7 @@ fn search_options(d: &Dlg, s: &find::Search, case: i32, whole: i32, radios: [i32
 }
 
 /// The search the options say, for `text` (running text); a `*` before a code's end becomes the wildcard mark when
-/// wildcards are chosen, as the standard program stores it (spec 32 1.2).
+/// wildcards are chosen, as it is stored (spec 32 1.2).
 fn read_search(d: &Dlg, text: String, case: i32, whole: i32, radios: [i32; 3]) -> find::Search {
     let r = d.radio(&radios).unwrap_or(0);
     let text = if r == 2 { text.replace("*\u{1f}", "\u{1b}\u{1f}") } else { text };
@@ -3148,7 +3148,7 @@ fn choose_style(dialog: i32) -> Option<Style> {
     app::with(|a| a.doc().and_then(|doc| doc.styles.iter().find(|s| s.name == chosen).cloned()))
 }
 
-/// Applies the style as the standard program (spec 31): a paragraph style takes whole paragraphs and is cleaned up inside; a
+/// Applies the style (spec 31): a paragraph style takes whole paragraphs and is cleaned up inside; a
 /// character style goes round the selection.
 fn apply_named_style(name: &str) {
     let name = name.to_string();
@@ -3424,7 +3424,7 @@ fn code_list() {
     }
 }
 
-/// Table, Create and Table, Table Properties, one command as in the standard program (spec 33): with the caret in a table it
+/// Table, Create and Table, Table Properties, one command (spec 33): with the caret in a table it
 /// edits that table's start code, else it puts a new table at the caret; a selection holding a table start or end
 /// code is refused.
 fn table_command() {
@@ -3586,7 +3586,7 @@ fn shown_form(d: &Dlg) -> Option<String> {
 /// with a target; Modify and Remove (9, 10) only with a target in Global mode; Emboss in Interpoint (22) only when the
 /// setup's model can emboss interpoint and the setup has interpoint switched on; Interline Print (24) only when the
 /// model has interline print (its Interline property) or is a TranSend SE whose setup names an ink printer. A box
-/// that is not allowed is cleared, as the reference clears those values when it checks the block. Cells, lines and
+/// that is not allowed is cleared, as those values are when the block is checked. Cells, lines and
 /// the banner page stay enabled.
 fn apply_setup_target(d: &Dlg, global: bool) {
     let name = d.selected_text(7).filter(|s| s != NO_EMBOSSER);
@@ -3653,7 +3653,7 @@ fn fit_to_choice(d: &Dlg, block: &bc_core::emboss_setup::Block) -> bc_core::embo
 /// Document / Global: Embosser Setup (dialog 1032, spec 25 section 2b). Document: the document's setup and its
 /// embosser page layout. Global: the default setup and the layout new documents take; New, Modify Embosser and
 /// Remove (shown in Global only) open the setup sheet and change the kept setups.
-/// At start-up, Global, Embosser Setup when no embosser is set up (spec 25 section 11: the reference opens it after its
+/// At start-up, Global, Embosser Setup when no embosser is set up (spec 25 section 11: it opens after the
 /// start-up autoprobe finds no embosser installed). The autoprobe of the Windows embosser driver is not built.
 pub fn embosser_setup_at_start() {
     if crate::embosser::setup_names().is_empty() {
@@ -3685,8 +3685,8 @@ fn embosser_setup(global: bool) {
     let opened = fit_to_choice(&d, &bc_core::emboss_setup::Block { layout: layout.clone(), cells, lines });
     show_block(&d, &opened);
     apply_setup_target(&d, global);
-    // A new choice in the list keeps the form the page block shows where the new list has it (the reference reads
-    // the block from the controls, then fills the form box and selects the block's form, else its first item).
+    // A new choice in the list keeps the form the page block shows where the new list has it (the block is read
+    // from the controls, then the form box is filled and the block's form selected, else its first item).
     let block_form = std::rc::Rc::new(std::cell::RefCell::new(layout.form.clone()));
     if let Some(forms) = d.win(13).and_then(|w| w.as_widget::<Choice>()) {
         let bf = block_form.clone();
@@ -3886,7 +3886,7 @@ fn printer_setup(global: bool) {
     };
     let d = open_dialog(1071, Some(title));
     show_printer_setup(&d, &setup);
-    // The page size fields stay enabled for a braille document (the standard program only ignores their values there).
+    // The page size fields stay enabled for a braille document (only their values are ignored there).
     d.set_text(2003, &lines.to_string());
     d.set_text(2005, &chars.to_string());
     d.closes_with(1026);
@@ -4071,7 +4071,7 @@ fn set_hyphen(id: i32) {
                 2904 => Hyphen::French,
                 _ => Hyphen::French113,
             };
-            // The standard program lays the document out again with the table chosen and does not mark it as
+            // The document is laid out again with the table chosen and is not marked as
             // changed (spec 36 section 12).
             if d.hyphen != chosen {
                 d.hyphen = chosen;
@@ -4427,7 +4427,7 @@ fn global_fonts() {
     d.on_check(12, move || output_enabled(&me, !me.checked(12)));
     d.set_items(18, &status_ref, pick(&status, &current.status_face));
     d.set_text(20, &current.status_size.to_string());
-    // The checks of the standard Fonts dialog, in its order: a font chosen in the print font list (none chosen keeps
+    // The checks of the Fonts dialog, in this order: a font chosen in the print font list (none chosen keeps
     // the dialog open with no message), each size 5 to 180 points, a font chosen in the status line list.
     d.check_on_ok(|d| {
         const PRINT: (&str, &str) = ("The print font point size must not be less than %d.", "The print font point size must not be greater than %d.");
@@ -4483,8 +4483,8 @@ fn global_fonts() {
 }
 
 /// Global, View Preferences (dialog 1034, spec 24 2d.1 and 2d.2): filled from the settings, not from dialog memory.
-/// OK takes the six-key set first; a set that is not six keys gives the message and the dialog stays open, as the
-/// reference does. Then the other values are kept, and every open document is redrawn when verbose labels, line
+/// OK takes the six-key set first; a set that is not six keys gives the message and the dialog stays open.
+/// Then the other values are kept, and every open document is redrawn when verbose labels, line
 /// numbers or the translated line codes changed.
 fn view_preferences() {
     let (set, verbose, p) = app::with(|a| (a.settings.six_key_set.clone(), a.settings.verbose_labels, a.settings.view_prefs));
@@ -4534,7 +4534,7 @@ fn view_preferences() {
     });
 }
 
-/// What the standard program says about a shortcut code field (Global, Shortcut Preferences), or None when it is accepted.
+/// The message for a shortcut code field (Global, Shortcut Preferences), or None when it is accepted.
 fn shortcut_field_problem(text: &str) -> Option<String> {
     const LONGEST: usize = 99;
     let n = text.encode_utf16().count();
@@ -4635,8 +4635,8 @@ fn long_date(seconds: i64) -> String {
 }
 
 /// Help, About (dialog 1016, spec 04f): 7 the program, 8 its version and build date in the resource's own form; the
-/// service release line (9) stays hidden, as there is none; the reference's licence lines and Activate buttons have
-/// no counterpart here.
+/// service release line (9) stays hidden, as there is none; there are no licence lines or Activate
+/// buttons.
 fn about() {
     let d = open_dialog(1016, None);
     d.set_text(8, &format!("Version {}   Build Date: {}", env!("CARGO_PKG_VERSION"), build_date()));

@@ -1,4 +1,4 @@
-//! Save As eBraille (braille documents) and EPUB 3 (print documents), as the standard program writes them (spec 23): a zip
+//! Save As eBraille (braille documents) and EPUB 3 (print documents), as written (spec 23): a zip
 //! package holding the mimetype, the content folder ("ebraille" or "epub") with its style sheet and one content
 //! page part0001.xml, index.html with the table of contents, page list and landmarks navs, package.opf from the
 //! standard template with the document's metadata, and META-INF/container.xml. The content page is the document
@@ -7,7 +7,7 @@
 //! cell. The metadata comes from Document, eBraille Metadata (the `Metadata` struct) and is written as the
 //! package's metadata element.
 //!
-//! What the standard program does that the saved decompiles do not show is marked INFERENCE in the code: the element name
+//! What the spec does not show is marked INFERENCE in the code: the element name
 //! of a block style (p), which styles are headings and list styles, the markup of the line break code, the manifest
 //! items for the nav page and the style sheet, and the metadata property names of the Recommended page.
 
@@ -90,7 +90,7 @@ impl Metadata {
 }
 
 /// The names the Options... dialogs offer: XML attributes an OPF metadata element may carry (INFERENCE: the
-/// standard list was not read), and the properties the Additional page offers (the names the standard code
+/// list is not known), and the properties the Additional page offers (the names the code
 /// holds, spec 23 section 5).
 pub const ATTRIBUTE_NAMES: [&str; 6] = ["id", "xml:lang", "dir", "scheme", "refines", "property"];
 pub const PROPERTY_NAMES: [&str; 7] =
@@ -100,7 +100,7 @@ pub const SPECIALIZATIONS: [&str; 5] = ["None", "comp6", "math", "music", "phone
 
 /// How a style is written, from its name and its beginning codes (running text, codes marked 0x1C ... 0x1F):
 /// GuideDots by name; a page number style holds a reference point code (rps); a list style holds level codes
-/// (hl or hi), its depth the highest level named (INFERENCE: the standard maxdepth source was not read); a
+/// (hl or hi), its depth the highest level named (INFERENCE); a
 /// heading style is named h1., h2., h3. and so on (INFERENCE); a paragraph style holds a layout code; anything
 /// else is a character style.
 pub fn kind_of(name: &str, begin: &str) -> StyleKind {
@@ -330,7 +330,7 @@ impl<'a> Builder<'a> {
                 if self.in_table {
                     self.out.push_str("</td></tr><tr><td>");
                 } else {
-                    // INFERENCE: the line break code counts a line in the standard program; written as a break here.
+                    // INFERENCE: the line break code counts a line; written as a break here.
                     self.out.push_str("<br/>");
                 }
             }
@@ -445,7 +445,7 @@ fn encode_text_nodes(markup: &str, encode: &dyn Fn(&str) -> String) -> String {
     out
 }
 
-/// A text node's characters, the entities undone first and put back after (the standard encode callback).
+/// A text node's characters, the entities undone first and put back after.
 fn encode_node(text: &str, cell: &dyn Fn(char) -> u8) -> String {
     let plain = text.replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&");
     let cells = encode_cells(&plain, cell);
@@ -519,7 +519,7 @@ fn urn(kind: u8, value: &str) -> String {
     }
 }
 
-/// The package's metadata element text (the standard template, package.opf, with the dialog's values): the
+/// The package's metadata element text (the template package.opf, with the dialog's values): the
 /// template's elements in its order, with the Required page's lists written one element each; the Recommended
 /// page's as Dublin Core elements (INFERENCE for the education levels, written as schema:educationalLevel); the
 /// Additional page's as meta elements with their attributes.
@@ -686,7 +686,7 @@ pub fn package(input: &Input) -> Vec<u8> {
     docx::stored_zip(&entries)
 }
 
-/// The quality notice shown before every eBraille and EPUB 3 save until its box is checked (the standard text
+/// The quality notice shown before every eBraille and EPUB 3 save until its box is checked (the text
 /// with the vendor's team unnamed), kept under Mutable, EBrailleQualityWarning.
 pub const QUALITY_WARNING: &str = "eBraille exports should be reliably working to produce readable eBraille files, but the quality is not yet reliable. Any sample files sent to the support team will help us to improve the quality.";
 pub const QUALITY_WARNING_KEY: &str = "EBrailleQualityWarning";

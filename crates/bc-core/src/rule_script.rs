@@ -1,4 +1,4 @@
-//! Rule scripts: small state machines that rewrite a byte stream, as the reference program runs them for coded
+//! Rule scripts: small state machines that rewrite a byte stream, as they are run for coded
 //! output, imports and exports (spec 20).
 //!
 //! A script is lines of rules, `match~replacement~state~next state~mark~`. A run walks the input with a current state
@@ -16,7 +16,7 @@
 
 use std::path::{Path, PathBuf};
 
-/// A script could not be read; the number is the reference program's error number for the same fault.
+/// A script could not be read; the number is the error number for the fault.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ScriptError {
     pub code: u32,
@@ -166,7 +166,7 @@ fn parse_line(line: &[u8], default_state: i32, default_next: i32) -> Result<Pars
     Ok(Parsed { line: parsed, line_in, line_out })
 }
 
-/// The lines of a file as the reference reads them: CR, LF, CR LF and LF CR each end a line.
+/// The lines of a file as they are read: CR, LF, CR LF and LF CR each end a line.
 fn split_lines(data: &[u8]) -> Vec<&[u8]> {
     let mut lines = Vec::new();
     let (mut start, mut i) = (0, 0);
@@ -269,7 +269,7 @@ impl RuleScript {
         self.load(&data, state, next)
     }
 
-    /// Puts a rule in its list, in the reference's order (spec 20, "Rule order").
+    /// Puts a rule in its list, in rule order (spec 20, "Rule order").
     fn insert(&mut self, rule: Rule) {
         let first = rule.matches[0] as usize;
         let key = if rule.special && first < 2 { 256 + first } else { first };
@@ -475,10 +475,10 @@ mod tests {
         assert_eq!(out, b"|no-par |spacing |compress ab|$cd|p\r\n|es~X Hello |'there|' x\r\n".to_vec());
     }
 
-    /// Every sample document body through both coded outputs gives what the reference port gives, when a folder of
-    /// samples is named in BC_DX_SAMPLES and a folder of the port's outputs in BC_RULES_EXPECTED.
+    /// Every sample document body through both coded outputs gives the expected output, when a folder of
+    /// samples is named in BC_DX_SAMPLES and a folder of the expected outputs in BC_RULES_EXPECTED.
     #[test]
-    fn sample_bodies_match_the_reference_port() {
+    fn sample_bodies_match_the_expected_outputs() {
         let (Ok(samples), Ok(expected)) = (std::env::var("BC_DX_SAMPLES"), std::env::var("BC_RULES_EXPECTED")) else {
             return;
         };

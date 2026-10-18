@@ -24,7 +24,7 @@ use std::os::windows::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-/// The question asked before installing (the message of the reference dialog, in BrailleCraft's name).
+/// The question asked before installing, in BrailleCraft's name.
 pub const OFFER_TITLE: &str = "Install JAWS Scripts";
 pub const OFFER_TEXT: &str = "You have one or more JAWS® installations without the most up-to-date script files for \
 BrailleCraft.  Installing the most recent script files (included with BrailleCraft) will help BrailleCraft to work \
@@ -297,7 +297,7 @@ mod reg {
     pub type Hkey = *mut c_void;
     pub const HKEY_LOCAL_MACHINE: Hkey = 0x8000_0002u32 as usize as Hkey;
     const KEY_READ: u32 = 0x20019;
-    /// The 32-bit registry view, where JAWS registers itself (the reference opens its keys with this view).
+    /// The 32-bit registry view, where JAWS registers itself (its keys are opened with this view).
     const KEY_WOW64_32KEY: u32 = 0x0200;
     const REG_SZ: u32 = 1;
 

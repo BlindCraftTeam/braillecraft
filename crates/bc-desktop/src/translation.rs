@@ -42,8 +42,8 @@ thread_local! {
     static RUN_TEMPLATE: RefCell<Option<String>> = const { RefCell::new(None) };
 }
 
-/// A LaTeX file from a print document's running text (codes marked 0x1C ... 0x1F), as the reference program writes
-/// it (spec 22): the text through the text export table (txxtxa with the binary scan table; when that table cannot be
+/// A LaTeX file from a print document's running text (codes marked 0x1C ... 0x1F; spec 22):
+/// the text through the text export table (txxtxa with the binary scan table; when that table cannot be
 /// used, the body as the document file stores it goes on unchanged), then the LaTeX rule script, with nothing written
 /// before or after what the script writes.
 pub fn latex(running: &str) -> Result<Vec<u8>, String> {
@@ -52,9 +52,9 @@ pub fn latex(running: &str) -> Result<Vec<u8>, String> {
     script.run(&middle).map_err(|e| e.to_string())
 }
 
-/// An HTML with MathJax file from a print document's running text, as the reference program writes it (spec 21):
-/// the text through the text export table as for LaTeX, then the MathJax rule script, between the fixed head and
-/// foot the standard program writes.
+/// An HTML with MathJax file from a print document's running text (spec 21):
+/// the text through the text export table as for LaTeX, then the MathJax rule script, between a fixed head and
+/// foot.
 pub fn mathjax(running: &str) -> Result<Vec<u8>, String> {
     let middle = text_export(running);
     let mut script = rule_script("mathjax.rules")?;
@@ -101,7 +101,7 @@ fn rule_script(name: &str) -> Result<bc_core::rule_script::RuleScript, String> {
 
 /// A coded braille (.bru) or coded text (.txt) file from a document body as the document file stores it (codes as
 /// 0x1C name 0x1F): the body through the coding script for braille or for print documents, then the line wrapping
-/// script, as the reference program makes these files (spec 04d-C, spec 20).
+/// script (spec 04d-C, spec 20).
 pub fn coded(body: &[u8], braille: bool) -> Result<Vec<u8>, String> {
     let folder = RULES.with(|r| r.borrow().clone()).ok_or("The rule scripts were not found.")?;
     let open = |name: &str| bc_core::rule_script::RuleScript::open(&folder.join(name)).map_err(|e| format!("{name}: {e}"));
@@ -221,8 +221,8 @@ pub fn template_tables(name: &str) -> Option<[String; 4]> {
     })
 }
 
-/// A template's page numbering, by its name (the order bc_core::templates::page_numbers gives); the reference
-/// program's default for an unknown template.
+/// A template's page numbering, by its name (the order bc_core::templates::page_numbers gives); the default
+/// for an unknown template.
 /// A template's Hyphenation (0 None to 4 French 1103); 2 for an unknown template.
 pub fn template_hyphenation(name: &str) -> u16 {
     with_templates(|t| {
@@ -359,7 +359,7 @@ fn result(out: &str, initial: &str) -> Shown {
 
 /// Print (a document or a line of one, with its codes) to braille in the display encoding `enc`, with the rules
 /// table `code`, the document's initial codes and its styles. A whole document goes through the engine in one run,
-/// as the reference program's translation run reads the whole document; the result keeps the codes.
+/// so the whole document is read at once; the result keeps the codes.
 pub fn forward(code: &str, text: &Shown, initial: &str, enc: &Encoding, styles: &StyleTable) -> Result<Shown, String> {
     let running = format!("{}{}", Shown::marked(initial).to_running(), text.to_running());
     let out = translate(code, &running, styles, true)?;

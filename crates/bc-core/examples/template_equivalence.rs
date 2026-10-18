@@ -28,7 +28,7 @@ fn main() {
     let text = shipped.text(entry).expect("template");
     let tables = templates::tables(&text).expect("TranslationTables");
 
-    // The reference: binary tables, the template file it came from, the table list over the binary tables.
+    // The other side: binary tables, the template file it came from, the table list over the binary tables.
     let reference = Translator::open(folder, &format!("{}.btb", tables[0]), &format!("{}.sct", tables[1]))
         .expect("binary tables")
         .with_styles(StyleTable::from_template(Path::new(folder).join(format!("{code}.dxt"))).expect("template file"))

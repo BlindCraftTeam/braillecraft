@@ -6,7 +6,7 @@ Usage: python3 -I make_windows_tables.py <folder with the .encode and .decode fi
 The file, little-endian: "BCWCP1", the number of pages (u16); per page: its number (u32), the number of characters
 it writes (u32), for each the UTF-16 unit (u16), the number of bytes (u8) and the bytes; the number of byte
 sequences it reads (u32), for each the number of bytes (u8), the bytes, the number of UTF-16 units (u8) and the
-units (u16 each). UTF-7 (65000) is left out: it is written by its rule, as the standard gives it.
+units (u16 each). UTF-7 (65000) is left out: it is written by its rule, as the UTF-7 standard gives it.
 """
 import os
 import struct

@@ -1,9 +1,9 @@
 //! The font lists of Global, Fonts: symbol, dingbat, braille and
 //! vertical (@) fonts are left out; the print font list puts the typewriter fonts (Courier New, any name with
-//! "courier" or "consolas") before the others. Each group is in alphabetical order (INFERENCE: the list the standard program
-//! adds to is taken to be a sorted one).
+//! "courier" or "consolas") before the others. Each group is in alphabetical order (INFERENCE: the list
+//! added to is taken to be a sorted one).
 
-/// Whether the standard program lists a font at all (its test of the name).
+/// Whether a font is listed at all (the test of its name).
 pub fn listed(name: &str) -> bool {
     if name.starts_with('@') {
         return false;

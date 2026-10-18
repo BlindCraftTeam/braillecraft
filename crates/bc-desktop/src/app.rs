@@ -73,8 +73,8 @@ pub struct Doc {
     pub page: Panel,
     /// The editing area: the program-drawn editing window (editor_view), showing `ed`.
     pub area: crate::editor_view::Area,
-    /// The document's status line, the window after the editing area (as in the reference program, where screen
-    /// reader scripts find it there): current style, Page, Line, Column, the character at the caret, Keys.
+    /// The document's status line, the window after the editing area (where screen
+    /// reader scripts find it): current style, Page, Line, Column, the character at the caret, Keys.
     pub status: StaticText,
     pub line: TextCtrl,
     pub name: String,
@@ -94,8 +94,8 @@ pub struct Doc {
     /// page (characters and lines).
     pub cells: u32,
     pub lines: u32,
-    /// The embosser page (cells, lines) of a print document's embosser setup, kept apart from its print page as the
-    /// standard program keeps it (spec 05 section A10); a braille document uses `cells` and `lines`.
+    /// The embosser page (cells, lines) of a print document's embosser setup, kept apart from its print page
+    /// (spec 05 section A10); a braille document uses `cells` and `lines`.
     pub emb_page: (u32, u32),
     /// Page numbering, in the order the document file keeps it: braille page numbers on even pages and on odd pages,
     /// print page numbers on even pages and on odd pages (0 none, 1 upper left, 2 upper right, 3 lower left, 4 lower
@@ -105,7 +105,7 @@ pub struct Doc {
     /// and styles); laid out again when any of them changes.
     pub pages: Option<(u64, std::rc::Rc<Vec<bc_core::format::Page>>)>,
     /// The document and its caret (bc_core::editor): its text with the ranges that are codes (a code comes only
-    /// from a program command: a menu, a style, the code list, a file, as in the reference program; brackets typed
+    /// from a program command: a menu, a style, the code list, a file; brackets typed
     /// are text), laid out as the formatted view or the coded view shows it.
     pub ed: bc_core::editor::Editor,
     /// What the editor was laid out by (page size, numbering, styles); laid out again when it changes.
@@ -126,7 +126,7 @@ pub struct Doc {
     pub file_styles: Vec<(String, u16)>,
     /// Edit, Highlight: while on, caret moves extend the selection from where it was turned on.
     pub highlight_anchor: Option<usize>,
-    /// Edit, Find and Edit, Replace as last used in this window, with the search state the standard program keeps there
+    /// Edit, Find and Edit, Replace as last used in this window, with the search state kept there
     /// (spec 32 0.2): the find spec, and the replace spec with its replacement text.
     pub find: bc_core::find::Search,
     pub replace: bc_core::find::Search,
@@ -144,7 +144,7 @@ pub struct Doc {
     /// back as they were (their descriptor's place, kind and bytes).
     pub file_sections: Vec<(usize, u16, Vec<u8>)>,
     /// Document, eBraille Metadata: the package metadata of an eBraille or EPUB 3 save (kept with the open document;
-    /// where the standard program stores it in the document file is not traced, spec 23 section 2).
+    /// where the document file stores it is not traced, spec 23 section 2).
     pub ebraille: bc_core::ebraille::Metadata,
 }
 
@@ -259,8 +259,8 @@ pub struct Settings {
     pub printer: crate::print::PrinterSetup,
     /// Global, Internationalization: "Prefer Unicode Braille Patterns for Braille Display" (braille shown in a
     /// braille font is written as Unicode braille patterns) and "Report Braille to Screen Readers as Unicode Braille
-    /// Patterns" (a braille document's text given to UI Automation clients), as the standard program (PreferBraillePatterns,
-    /// AccessUseBraillePatterns).
+    /// Patterns" (a braille document's text given to UI Automation clients), kept as PreferBraillePatterns and
+    /// AccessUseBraillePatterns.
     pub prefer_patterns: bool,
     pub access_patterns: bool,
 }
@@ -271,7 +271,7 @@ impl Default for Settings {
             encoding: encodings::DEFAULT.to_string(),
             six_key_set: "fdsjkl".to_string(),
             default_views: DefaultViews {
-                // The defaults are the reference program's (spec 18): translated line in the print font, braille
+                // The defaults (spec 18): translated line in the print font, braille
                 // documents with the translated line and six-key entry on, status line Segoe UI 12. Braille
                 // documents open in the braille font (owner direction, queue line T4).
                 translated_font: ViewFont::Print,
@@ -332,7 +332,7 @@ impl LineCodes {
     }
 }
 
-/// Global, View Preferences, with the reference program's defaults (spec 24 2d.2).
+/// Global, View Preferences, with its defaults (spec 24 2d.2).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ViewPrefs {
     pub bell_position: i64,
@@ -480,8 +480,8 @@ impl App {
         }
     }
 
-    /// The title bar: "BrailleCraft - [name -- New Print Document]", as the reference program's title bar reads
-    /// with a document window maximized in it; the active document's tab carries the same name.
+    /// The title bar: "BrailleCraft - [name -- New Print Document]"; the active document's tab carries the same
+    /// name.
     pub fn set_title(&self) {
         match self.doc().map(|d| d.full_name()) {
             Some(n) => self.frame.set_label(&format!("BrailleCraft - [{n}]")),
@@ -675,7 +675,7 @@ impl App {
     pub fn translate_line(&self, i: usize, line: &Shown) -> String {
         let enc = self.encoding();
         let d = &self.docs[i];
-        // A braille document with no braille-to-print table shows the reference program's text for message 0;
+        // A braille document with no braille-to-print table shows the text for message 0;
         // screen reader scripts read "Error message 0" on the translated line as "no back-translation".
         if d.kind == DocKind::Braille && !crate::translation::has_table(&d.tables[2]) {
             return "Error message 0".to_string();
@@ -736,7 +736,7 @@ impl App {
     }
 
     /// Document places `from` to `to` of document `i` laid out as a document of their own with its layout, as File
-    /// Print and File Emboss take a selection in the standard program (audit print-emboss E1): pages numbered from 1.
+    /// Print and File Emboss take a selection (audit print-emboss E1): pages numbered from 1.
     pub fn laid_out_part(&self, i: usize, from: usize, to: usize) -> std::rc::Rc<Vec<bc_core::format::Page>> {
         let (_, layout, styles) = self.page_layout(i);
         let part = self.docs[i].shown().slice(from, to);
@@ -761,8 +761,8 @@ impl App {
         // A braille document's cells (Global, Internationalization): drawn as Unicode braille patterns when they are
         // preferred and the document is shown in a braille font; given to screen readers as patterns when Report
         // Braille to Screen Readers as Unicode Braille Patterns is on: on Windows through the UI Automation text while
-        // Support UI Automation is on; on macOS and Linux through the accessibility text (the
-        // standard program has no program there; owner order 2026-10-17: a braille display gets the exact braille on every
+        // Support UI Automation is on; on macOS and Linux through the accessibility text (owner
+        // order 2026-10-17: a braille display gets the exact braille on every
         // system). A screen reader passes the patterns to a display dot for dot (research row 965).
         let braille = self.docs[i].kind == DocKind::Braille;
         let enc = self.encoding();

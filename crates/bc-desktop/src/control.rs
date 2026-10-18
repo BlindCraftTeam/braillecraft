@@ -34,7 +34,7 @@ use crate::app::{self, DocKind};
 use crate::settings_store::{get, set};
 use crate::{commands, documents, encodings, translation};
 
-/// The Global menu command that opens the MCP Server dialog (BrailleCraft's own item, after the reference's).
+/// The Global menu command that opens the MCP Server dialog (an item of BrailleCraft's own).
 pub const COMMAND_ID: i32 = 3220;
 /// The port the dialog proposes.
 pub const DEFAULT_PORT: u16 = 7991;

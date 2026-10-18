@@ -1,5 +1,5 @@
-//! Global, PDF Importer (command 3116): the PDF import settings, kept under the section "PDF" with the reference's
-//! keys and defaults (spec 29 section 2), the dialog that edits them, and the options the importer takes from them.
+//! Global, PDF Importer (command 3116): the PDF import settings, kept under the section "PDF" with the
+//! keys and defaults of spec 29 section 2, the dialog that edits them, and the options the importer takes from them.
 
 use wxdragon::prelude::*;
 
@@ -7,7 +7,7 @@ use crate::settings_store::{get, set};
 
 const SECTION: &str = "PDF";
 
-/// The stored settings; numbers in thousandths, as the reference stores them.
+/// The stored settings; numbers stored in thousandths.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PdfSettings {
     pub show_at_import: bool,
@@ -152,7 +152,7 @@ impl PdfSettings {
         set(SECTION, "Script", &self.script);
     }
 
-    /// The importer's options, as the reference writes them into its script (spec 29 3b): heights from thousandths
+    /// The importer's options (spec 29 3b): heights from thousandths
     /// of an inch to points (x 0.072), layout numbers from thousandths; without Advanced, no box flow.
     pub fn options(&self) -> bc_core::pdf_import::PdfOptions {
         let k = |v: i64| v as f64 / 1000.0;
@@ -180,7 +180,7 @@ fn shown(v: i64) -> String {
     s.trim_end_matches('.').to_string()
 }
 
-/// A number field read on OK: its value in thousandths, or the message the reference shows.
+/// A number field read on OK: its value in thousandths, or the message to show.
 fn read_number(text: &str, label: &str, max: f64) -> Result<i64, String> {
     match text.trim().parse::<f64>() {
         Ok(v) if (0.0..=max).contains(&v) => Ok((v * 1000.0 + 0.5) as i64),
@@ -247,8 +247,8 @@ pub fn dialog() {
             return;
         }
         let advanced = checked(&d, "PDFMINER_ADVANCED");
-        // The number fields in the reference's order of checking; Box Flow only with Advanced on. Line Overlap is
-        // shown but not read back, as in the reference (spec 29 2: its edits are dropped).
+        // The number fields in their order of checking; Box Flow only with Advanced on. Line Overlap is
+        // shown but not read back (spec 29 2: its edits are dropped).
         let read = || -> Result<PdfSettings, (String, &'static str)> {
             let num = |name: &'static str, label_name: &str, max: f64, old: i64, used: bool| -> Result<i64, (String, &'static str)> {
                 if !used {

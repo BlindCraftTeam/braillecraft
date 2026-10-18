@@ -1,7 +1,6 @@
-//! PDF import: the reference program's PDF front end (its Python import script and table finder, run with the
-//! values its Global PDF Options give, spec 29) ported to Rust, followed by the steps its import recipe runs after
-//! it (character mapping, letter and accent composition, and the final text clean-up; its Han step passes text
-//! through in this chain).
+//! PDF import: the PDF front end (the import step and table finder, run with the values the Global PDF Options
+//! give, spec 29), followed by the steps the import recipe runs after it (character mapping, letter and accent
+//! composition, and the final text clean-up; the Han step passes text through in this chain).
 //!
 //! A tagged PDF (its catalog's MarkInfo says Marked and it has a structure tree) is read through the structure tree:
 //! each element's text is the text drawn inside its marked content, and the element's tag gives the codes around it.
@@ -100,7 +99,7 @@ struct Collector {
     page_ids: Vec<(ObjectId, Rect, i64)>,
     ctm: [f64; 6],
     figure_depth: usize,
-    /// The text of each (page, MCID), as the reference's tagged device collects it.
+    /// The text of each (page, MCID), as the tagged device collects it.
     spans: HashMap<(ObjectId, i64), String>,
     mcid: Option<i64>,
 }
@@ -164,7 +163,7 @@ impl OutputDev for Collector {
         Ok(())
     }
     fn begin_marked_content(&mut self, _tag: &str, mcid: Option<i64>) -> Result<(), OutputError> {
-        // Only an MCID changes the current one; it stays in force after EMC, as in the reference's device.
+        // Only an MCID changes the current one; it stays in force after EMC.
         if let (Some(m), Some(page)) = (mcid, self.pages.last()) {
             self.mcid = Some(m);
             self.spans.insert((page.object, m), String::new());
@@ -284,7 +283,7 @@ impl Tagged<'_> {
         let mut any = false;
         for child in children(d) {
             let (m, t) = match &child {
-                // The reference passes its own parent's page on, not the one this element names.
+                // The parent's own page is passed on, not the one this element names.
                 Object::Reference(_) => self.convert(&child, pg, table_depth + i32::from(starts_table)),
                 Object::Integer(mcid) => {
                     let s = page.and_then(|p| self.spans.get(&(p, *mcid))).cloned().unwrap_or_default();
@@ -460,7 +459,7 @@ fn compose(text: &str) -> String {
     out
 }
 
-/// For checks against the reference: the text lines of one page (0-based) after layout analysis, in group order,
+/// For checks against expected output: the text lines of one page (0-based) after layout analysis, in group order,
 /// with their boxes.
 pub fn page_lines(bytes: &[u8], opts: &PdfOptions, page: usize) -> Result<Vec<(Rect, String)>, String> {
     let doc = Document::load_mem(bytes).map_err(|e| e.to_string())?;

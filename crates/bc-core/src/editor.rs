@@ -1,4 +1,4 @@
-//! The editing area's model, as the reference program's editor works (spec 27 section 5): the caret is a place in
+//! The editing area's model (spec 27 section 5): the caret is a place in
 //! the document, not in the text on the screen, and the screen shows either the formatted page lines (each page's
 //! lines, then a separator row) or the coded rows. Where a place shows is found through the laid-out pages: the cell
 //! that came from it, or where the formatter's pen stood at it (format::Line::marks), so a caret can stand on a space
@@ -443,7 +443,7 @@ impl Editor {
         }
     }
 
-    /// Selects the word under document place `pos`, as the standard program's double click does (spec 30 section
+    /// Selects the word under document place `pos`, as a double click does (spec 30 section
     /// 12 unknown 9, closed): spaces at the place are skipped forward; the word runs back to a space, a code's end
     /// or a code's start, and forward to a space, a code's start or a code's end; the selection holds the word's
     /// characters alone, with the caret at its end.
@@ -480,7 +480,7 @@ impl Editor {
         self.want = None;
     }
 
-    /// Ctrl+U of the standard program (spec 30 section 12 unknown 7, closed): the character at the caret is replaced
+    /// Ctrl+U (spec 30 section 12 unknown 7, closed): the character at the caret is replaced
     /// by its capital form from the character table when it has one; a code or the end of the text is left alone.
     pub fn capitalize_at_caret(&mut self) -> Option<Shown> {
         let pos = self.caret;
@@ -504,7 +504,7 @@ impl Editor {
     }
 
     /// The paragraph codes ([p], and style begin codes), each as the unit the caret goes over. INFERENCE (spec 27
-    /// 5a: which codes the reference counts as paragraph codes is not traced).
+    /// 5a: which codes count as paragraph codes is not given).
     fn paragraph_codes(&self) -> Vec<(usize, usize)> {
         self.doc
             .codes

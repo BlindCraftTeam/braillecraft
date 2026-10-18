@@ -1,5 +1,4 @@
-//! Page ranges as the Print and Emboss dialogs take them (spec 24 section 2a, spec 25 section 2a), read as the
-//! standard program reads them.
+//! Page ranges as the Print and Emboss dialogs take them (spec 24 section 2a, spec 25 section 2a).
 
 /// What a page range asks for: the pages (indexes into the laid-out pages; None for a blank page, "b"), and what
 /// was wrong with it.

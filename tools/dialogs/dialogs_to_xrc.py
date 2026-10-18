@@ -59,8 +59,8 @@ SKIP |= set(range(10005, 10017))
 # The embosser setup sheet's pages, shown as tabs of the sheet (10000): written as panels, not dialogs.
 PANELS = {10001, 10002, 10003, 10004}
 
-# About (1016) keeps its layout with BrailleCraft's own text; the activation buttons and the standard program credits are
-# left out (None). Controls 10 to 14 are filled at run time.
+# About (1016) keeps its layout with BrailleCraft's own text; the activation buttons and the
+# credits are left out (None). Controls 10 to 14 are filled at run time.
 ABOUT = 1016
 ABOUT_TEXT = {
     5: None, 6: None, 9: None, 20: None, 21: None, 22: None,
@@ -97,7 +97,7 @@ TEXTS = {
 }
 
 
-# Lists whose resource asks for sorting but which the reference fills by inserting each item at a set place
+# Lists whose resource asks for sorting but which are filled by inserting each item at a set place
 # (CB_INSERTSTRING), which keeps the order given: the TranSend SE printer choice keeps Supported, Supported or
 # Compatible, any printer, the order of the values it stands for (re/spec/25-emboss.md section 14.7 item 6).
 UNSORTED = {(10003, 5)}
@@ -131,7 +131,7 @@ def kind_of(c):
         if any(k in f for k in ("BS_CHECKBOX", "BS_AUTOCHECKBOX", "BS_3STATE", "BS_AUTO3STATE")):
             return "Check"
         return "Button"
-    # The standard codes edit field is a text field (shown as one by `control`).
+    # The codes edit field is a text field (shown as one by `control`).
     if c["class"].endswith("_CODESEDIT"):
         return "Text"
     return {"Static": "Static", "Edit": "Text", "ListBox": "List",

@@ -197,7 +197,7 @@ impl Translator {
         self.run(text, styles, languages, brackets)
     }
 
-    /// Translates a document's running text, whose codes are marked as the reference program keeps them, 0x1C code
+    /// Translates a document's running text, whose codes are marked 0x1C code
     /// 0x1F; "[" and "]" are text (bc_core::doctext).
     pub fn translate_marked(
         &self,
@@ -241,10 +241,10 @@ impl Translator {
         let text: std::borrow::Cow<str> =
             if brackets { std::borrow::Cow::Owned(text.replace('[', "\u{1c}").replace(']', "\u{1f}")) } else { std::borrow::Cow::Borrowed(text) };
         // Internal text, two-byte codes as their two bytes, first byte first, as the scanner reads them; the scanner
-        // gets the document's styles too, as the reference hands its scanner the same style lookup.
+        // gets the document's styles too (the same style lookup).
         let bytes = crate::internal::encode(&text).map_err(EngineError::NotEncodable)?;
         drop(text);
-        // The tables in use, one per language name as the standard program keeps them (spec 07 section A9b): the
+        // The tables in use, one per language name (spec 07 section A9b): the
         // document's own first; the stack of at most 8 places in that list, the count going on past 8.
         let mut tables: Vec<(String, Rc<RuleTable>, ScanTable)> = vec![(String::new(), self.rules.clone(), self.scan.clone())];
         let mut depth = 1usize;
@@ -263,8 +263,8 @@ impl Translator {
                 }
             } else {
                 let name = &e.name[..e.name_len as usize];
-                // A name not known, or tables that cannot be read (the standard program's new context then fails to
-                // open and it takes the first in its list), go back to the document's own tables.
+                // A name not known, or tables that cannot be read (a new context then fails to
+                // open and the first in the list is taken), go back to the document's own tables.
                 let found = match languages {
                     Some(l) => l.tables(name).unwrap_or(None),
                     None => None,
@@ -423,7 +423,7 @@ mod tests {
 
     /// A sample document translated with its own tables (the older American pair, which uses fonts) and its own
     /// styles, when BC_DX_SAMPLES names the sample folder; with BC_DX_EXPECTED naming a folder of expected results
-    /// (FILE.txt, from the reference port), the result must be the same.
+    /// (FILE.txt), the result must be the same.
     #[test]
     fn a_sample_document_with_fonts_translates() {
         let (Some(f), Ok(dir)) = (folder(), std::env::var("BC_DX_SAMPLES")) else { return };
@@ -439,7 +439,7 @@ mod tests {
         assert!(out.starts_with("\u{1c}svpnp2:2:0:0\u{1f}\u{1c}es~h1.\u{1f},,topical ,,h[-6,,guide"), "{}", &out[..80]);
         if let Ok(expected) = std::env::var("BC_DX_EXPECTED") {
             let want = std::fs::read_to_string(std::path::Path::new(&expected).join("dochow.txt")).unwrap();
-            assert!(out == want, "differs from the reference port at {:?}", out.chars().zip(want.chars()).position(|(a, b)| a != b));
+            assert!(out == want, "differs from the expected result at {:?}", out.chars().zip(want.chars()).position(|(a, b)| a != b));
         }
     }
 
@@ -505,7 +505,7 @@ mod tests {
         assert_eq!(t.translate("a cat [lnb~qip]ab[lnb] the cat").unwrap(), "a cat \u{1c}lnb~qip\u{1f};ab\u{1c}lnb\u{1f} ! cat");
     }
 
-    /// Table switches as the standard program makes them (spec 07 section A9b): a name not known goes back to the
+    /// Table switches (spec 07 section A9b): a name not known goes back to the
     /// document's own table, a bare [lnb] to the table before the latest switch, and switches nest.
     #[test]
     fn table_switches_nest_and_an_unknown_name_goes_back_to_the_document_table() {
@@ -578,9 +578,9 @@ mod tests {
 
     /// A rule here asks for a table switch where the text holds no switch code, so the input had not ended there and
     /// the scanner had read it to the end: the table that takes over reads on from the stream and finds nothing, so
-    /// the gamma after the switch is not written (spec 07 section A9b). Before the switches were ported, the port
-    /// went on with the first scanner's codes and a rule that takes no characters matched at the gamma again and
-    /// again; BrailleCraft's stop for that repeat (rules.rs, run) stays.
+    /// the gamma after the switch is not written (spec 07 section A9b). Before table switches were built,
+    /// BrailleCraft went on with the first scanner's codes and a rule that takes no characters matched at the gamma
+    /// again and again; BrailleCraft's stop for that repeat (rules.rs, run) stays.
     #[test]
     fn a_switch_without_a_switch_code_reads_nothing_more() {
         let semitic = shipped("semitic-language-transcription-basic-forward.bmt");

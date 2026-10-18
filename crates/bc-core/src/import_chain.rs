@@ -1,4 +1,4 @@
-//! The import chains for braille and text files, as the reference program's import recipes run them: each recipe is
+//! The import chains for braille and text files, as the import recipes run them: each recipe is
 //! a list of steps (built-in steps and rule scripts) run one after another over the file's bytes, and the result is
 //! internal text with codes marked 0x1C ... 0x1F.
 //!
@@ -18,7 +18,7 @@
 //!
 //! The braille encoding step that comes first for formatted braille (the file's encoding to North American braille
 //! ASCII) is the caller's, which holds the encodings. A step that fails is reported and the chain goes on with the
-//! text as it was, as the reference's recipe runner does.
+//! text as it was.
 
 use crate::braide;
 use crate::rule_script::RuleScript;
@@ -68,7 +68,7 @@ pub struct Imported {
     pub warnings: braide::Warnings,
 }
 
-/// The standard program's post-import step (megfdt.sbt, run after every text import): a paragraph of the style
+/// The post-import step (megfdt.sbt, run after every text import): a paragraph of the style
 /// B-BodyText. or para. holding only "(this_is_a_braille_document)" or "(this_is_a_print_document)" is taken out
 /// of the running text, and the document is made of that kind. Answers the kind asked for: Some(true) braille,
 /// Some(false) print, None when the file says nothing. `running` is the text in its running form (codes marked
@@ -258,7 +258,7 @@ pub fn run_with(bytes: &[u8], recipe: &Recipe, files: &dyn Files, progress: &mut
     }
     script("ninit-codes.rules", &mut text, &mut out.errors, progress);
     // Tables to outlines is optional in the recipes: it runs when it is there. The optional maths step that follows
-    // it in the recipes is not part of the reference program's installation, so there is nothing to run.
+    // it in the recipes is not installed, so there is nothing to run.
     if let Ok(mut s) = files.rule_script("table-outline.rules") {
         match s.run(&text) {
             Ok(t) => text = t,

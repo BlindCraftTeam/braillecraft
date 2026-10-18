@@ -1,8 +1,8 @@
-//! Ledger tables in a scraped page: a port of the reference importer's table finder (table.py). A row is a text line
+//! Ledger tables in a scraped page: the table finder (table.py). A row is a text line
 //! that ends in an amount, with the lines beside it on the same height read as cells (date D, text T, the amount
 //! that started it *, other amounts A); rows below it with the same pattern of cells make a table, the line above
 //! each column may be its header, and text under a cell that wrapped is added to that cell. The rules and their
-//! quirks are kept as the reference has them.
+//! quirks are kept as they are.
 
 use super::layout::{Layout, Node, Plane, Rect};
 
@@ -36,7 +36,7 @@ pub struct Row {
     pub anchor: usize,
     pub line_desc: String,
     last_cell: Option<usize>,
-    /// A header row (no column list of its own in the reference).
+    /// A header row (no column list of its own).
     pub header: bool,
 }
 
@@ -56,8 +56,8 @@ impl Row {
         } else {
             match self.last_cell {
                 Some(c) if layout.lines[line].rect.is_hoverlap(&self.cells[c].rect) => {
-                    // Joined to the last cell, whatever its kind (the reference presumes it is text); the row's
-                    // own box is not widened by it, as in the reference.
+                    // Joined to the last cell, whatever its kind (it is presumed to be text); the row's
+                    // own box is not widened by it.
                     self.cells[c].add(line, layout);
                     return;
                 }
@@ -217,7 +217,7 @@ impl<'a> TableFinder<'a> {
     }
 
     /// The row a line anchors: the lines on its height, cut to the first pattern that fits (and the cell after it,
-    /// as the reference's inclusive end takes one more).
+    /// as the inclusive end takes one more).
     fn table_row(&self, line: usize) -> Option<Row> {
         let mut row = Row::new(line);
         for n in self.items_on_same_line(line) {

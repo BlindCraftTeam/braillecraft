@@ -1,4 +1,4 @@
-//! FTDI devices through the FTDI library (ftd2xx) where it is installed, as the reference loads it at run time
+//! FTDI devices through the FTDI library (ftd2xx) where it is installed, loaded at run time
 //! (re/spec/25-emboss.md sections 16.2 and 21.1): the devices are listed by their descriptions for models with
 //! YesFTDI, opened by description at 38400 baud, 8 data bits, 1 stop bit, no parity, and written and read through the
 //! library. Without the library the list is empty and nothing is opened.
@@ -43,12 +43,12 @@ fn func<T: Copy>(name: &[u8]) -> Option<T> {
 }
 
 thread_local! {
-    /// The devices as last listed: the reference lists them once when the setup sheet opens (spec 25 16.1).
+    /// The devices as last listed: they are listed once when the setup sheet opens (spec 25 16.1).
     static DEVICES: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
 }
 
 /// Lists the FTDI devices again by their descriptions (FT_CreateDeviceInfoList, then each device's description;
-/// the reference reads the same descriptions with FT_GetDeviceInfoList). Called when the setup sheet opens.
+/// FT_GetDeviceInfoList gives the same descriptions). Called when the setup sheet opens.
 pub fn refresh() -> Vec<String> {
     let list = list();
     DEVICES.with(|d| *d.borrow_mut() = list.clone());
@@ -104,7 +104,7 @@ pub struct Device {
 
 impl Device {
     /// Opens the device described `description` and sets its line (spec 25 21.1); any failure gives the port
-    /// message, as the reference reports an open or line-setting error.
+    /// message, for an open or a line-setting error alike.
     pub fn open(description: &str) -> Result<Device, Failure> {
         let (Some(open), Some(write), Some(read), Some(close), Some(baud), Some(data)) = (
             func::<OpenEx>(b"FT_OpenEx\0"),
@@ -131,7 +131,7 @@ impl Device {
 }
 
 impl Link for Device {
-    /// FT_Write until every byte is written. The reference tries again after a failed call; BrailleCraft ends the
+    /// FT_Write until every byte is written. A failed call ends the
     /// job there, so an unplugged embosser gives the port message rather than a program that waits for ever.
     fn write_all(&mut self, bytes: &[u8]) -> Result<(), Failure> {
         let mut done = 0usize;
@@ -147,7 +147,7 @@ impl Link for Device {
         Ok(())
     }
 
-    /// FT_Read of one byte, asked again until one arrives, as the reference does; a failed call ends the job.
+    /// FT_Read of one byte, asked again until one arrives; a failed call ends the job.
     fn read_byte(&mut self) -> Result<u8, Failure> {
         loop {
             let mut b = 0u8;
@@ -168,8 +168,8 @@ impl Drop for Device {
     }
 }
 
-/// Sends a byte job to the device described `description`, in writes of at most 512 bytes as the reference's writer
-/// sends them (spec 25 21.2).
+/// Sends a byte job to the device described `description`, in writes of at most 512 bytes
+/// (spec 25 21.2).
 pub fn send(description: &str, bytes: &[u8]) -> Result<(), Failure> {
     let mut d = Device::open(description)?;
     bytes.chunks(512).try_for_each(|c| d.write_all(c))

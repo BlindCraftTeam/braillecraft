@@ -1,4 +1,4 @@
-//! Table, Create and Table, Table Properties as the standard program (spec 33): the table start code [htbs;...] read and
+//! Table, Create and Table, Table Properties (spec 33): the table start code [htbs;...] read and
 //! written, a new table's codes, and the test that refuses a selection holding a table code. Places are running-text
 //! places (codes marked 0x1C ... 0x1F).
 
@@ -19,7 +19,7 @@ pub const TYPES: [(&str, char, char); 8] = [
 /// The X/Y (Row/Column) Swap list (strings 2059-2061) with the letter each writes (spec 33 3.2).
 pub const SWAPS: [(&str, char); 3] = [("Do Not Swap", 'n'), ("Force Swap", 'y'), ("Swap if More Compact", 'a')];
 
-/// The message of a selection holding a table start or end code (a literal in the standard program).
+/// The message of a selection holding a table start or end code.
 pub const SPANS_BOUNDARY: &str = "You have a selection that spans across a table boundary.  Please place the cursor in a table to set table properties or outside of all tables to create a new table.";
 
 /// A table as the dialog shows it (spec 33 1.1): total rows and columns, the type letter, header rows and columns,
@@ -214,7 +214,7 @@ fn codes_in(r: &[char], from: usize, to: usize) -> Vec<(String, usize, usize)> {
 }
 
 /// True when the selection from `a` to `b` holds a table start code (a name beginning htbs) or end code (htbe):
-/// the standard program then refuses Table, Create and Table Properties (spec 33 2.2).
+/// Table, Create and Table Properties (spec 33 2.2).
 pub fn selection_has_table_code(running: &str, a: usize, b: usize) -> bool {
     let r: Vec<char> = running.chars().collect();
     codes_in(&r, a.min(b), a.max(b)).iter().any(|(n, _, _)| n.starts_with("htbs") || n == "htbe")

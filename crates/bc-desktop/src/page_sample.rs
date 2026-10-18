@@ -1,9 +1,8 @@
-//! The sample page of Printer Setup (dialog 1071). The reference opens the Windows Page Setup dialog with this
-//! template, and the system draws a sample page in controls 1080 (the paper), 1081 and 1082 (its shadows to the right
+//! The sample page of Printer Setup (dialog 1071). As the Windows Page Setup dialog's template,
+//! this dialog has the system draw a sample page in controls 1080 (the paper), 1081 and 1082 (its shadows to the right
 //! and below): a rectangle in the paper's proportions for the chosen orientation, the margins as a dotted rectangle,
-//! and small text inside them (spec 24, 2b; the Microsoft PagePaintHook documentation). Here the three controls are
-//! replaced by one panel that draws the same, on every system, following the open Page Setup code of Wine
-//! (pagesetup_change_preview and its page paint procedure): the paper fills the height of 1080 in portrait and its
+//! and small text inside them (spec 24, 2b). Here the three controls are replaced by one panel that draws the same
+//! on every system: the paper fills the height of 1080 in portrait and its
 //! width in landscape, centred; each shadow is 4 pixels; the margins are a 1-pixel dashed line in the shadow colour;
 //! the text sits 2 pixels inside them. The shadows' colour and the sample's words are this program's choice: the
 //! system fills SS_GRAYRECT with its screen background colour, and its sample words are its own.
@@ -39,7 +38,7 @@ impl PageSample {
             .with_size(Size::new(s.width + SHADOW, s.height + SHADOW))
             .build();
         panel.set_background_style(BackgroundStyle::Paint);
-        // Around the paper the dialog shows through, as around the reference's three controls.
+        // Around the paper the dialog shows through, as around the resource's three controls.
         panel.set_background_color(d.container().get_background_color());
         let state = Rc::new(RefCell::new(setup.clone()));
         let (pn, st) = (panel.clone(), state.clone());

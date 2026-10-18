@@ -272,8 +272,8 @@ jobs:
           check 'Hello from the agent.'
           check 'image/png'
 
-      # The Windows installer of the native program (packaging/windows, WiX Toolset 5), laid out as the reference
-      # program's installer (re/spec/26-installer.md).
+      # The Windows installer of the native program (packaging/windows, WiX Toolset 5), laid out as
+      # re/spec/26-installer.md describes.
       - name: Windows installer
         if: runner.os == 'Windows'
         shell: bash

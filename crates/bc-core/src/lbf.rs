@@ -1,5 +1,5 @@
 //! Refreshable braille files (.lbf): a braille document as one running line of braille text and "$" markup for a
-//! refreshable braille display, as the reference program's exporter writes it (spec 04d-D).
+//! refreshable braille display, as the exporter writes it (spec 04d-D).
 //!
 //! The body is walked once. Text is written as it is (UTF-8, no change of case); codes set layout flags, and before
 //! the next text the strongest flag is written as markup: "$h" (centred heading), "$h#a", "$p" (paragraph), "$l"

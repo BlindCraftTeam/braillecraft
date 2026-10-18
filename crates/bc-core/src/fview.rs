@@ -3,7 +3,7 @@
 //! text with its codes in their display forms, in rows.
 //!
 //! The formatted text is every line of every page, each followed by a line feed, the pages one after another; the
-//! page break between pages is drawn, not written, so it is not in the text, as in the reference program's text for
+//! page break between pages is drawn, not written, so it is not in the text, as in the text for
 //! screen readers (spec 27 section 6). Blank lines of a page are empty lines.
 
 use crate::doctext::Shown;

@@ -1,11 +1,11 @@
 //! The page formatter: a document laid out into pages of lines of cells, from its codes (spec 19).
 //!
-//! The reference program keeps a document as running text with codes and lays it out page by page when the view,
+//! BrailleCraft keeps a document as running text with codes and lays it out page by page when the view,
 //! Print or Emboss asks for a page. This formatter reads the document in the editor's form (bc_core::doctext: codes
 //! in brackets, [<] shown as a line break) and records, for every cell it places, the character position in that
 //! text it came from, so a caret position in the editor can be found on its page, line and column.
 //!
-//! Rules (spec 19, from the reference program's documentation unless marked):
+//! Rules (spec 19 unless marked):
 //! - margins: left (where a line starts after a forced new line), runover (where it starts after a word wrap) and a
 //!   right margin counted in from the full width; at first left = runover = the first cell, right margin 0.
 //!   [indP:F] new line if not at the start of one, left margin at cell P counted from 1 (1 when not given; from the
@@ -274,7 +274,7 @@ pub struct Line {
     pub text: String,
     pub sources: Sources,
     /// Document positions that have no cell, each with the column where the formatter's pen stood when it came to
-    /// it: the reference's formatter records the same for a position it is asked about (spec 27 5b), so a caret
+    /// it: the same is recorded for a position the formatter is asked about (spec 27 5b), so a caret
     /// can stand after the last letter of a line on a space the line does not show, or on an empty last line.
     pub marks: Marks,
 }
@@ -326,7 +326,7 @@ struct CbItem {
     cells: Vec<(char, Option<usize>)>,
 }
 
-/// The [wb-cb] look-ahead of the standard program (spec 36 section 15.6): what to do with word `w` (0 the word being
+/// The [wb-cb] look-ahead (spec 36 section 15.6): what to do with word `w` (0 the word being
 /// laid out, k the item k - 1 after it) at pen `pen` in `room`, with `next_room` the room of a following line and `c`
 /// the continuation string's length. 1 lay it whole, 2 lay it whole then a space and the continuation string, 3 and 5
 /// end the line first, 4 split it (the first part's length beside).
@@ -399,7 +399,7 @@ fn wb_mode(code: &str, cells: usize) -> Option<u8> {
 }
 
 /// What follows a [wb-cb] word ended at piece `at` (spec 36 section 15): the run of items after it, each read as the
-/// standard program's item reader reads it (a space ends a word, a word-break code changes the mode, another code
+/// item reader reads it (a space ends a word, a word-break code changes the mode, another code
 /// ends the word or is an item of its own), up to the first item that is not a [wb-cb] word.
 fn cb_scan(pieces: &Pieces, at: usize, mode: u8, cells_per_line: usize) -> CbAhead {
     let ended_space = matches!(pieces.get(at), Piece::Space);
@@ -658,8 +658,8 @@ fn pieces(doc: &Shown, styles: Option<&StyleTable>) -> Pieces {
             after_break_code = crate::doctext::breaks_line(&code);
             // A code under another of its names in the code list is the same code (spec 19 section 10).
             let code = canonical_code(&code);
-            // A code's place is where the pen stands before the code does its work: the standard program records the
-            // asked-for place before its code switch (spec 19 section 9). Table codes keep theirs after them.
+            // A code's place is where the pen stands before the code does its work: the asked-for place is recorded
+            // before the code switch (spec 19 section 9). Table codes keep theirs after them.
             let table_code = in_table || code.starts_with("htbs");
             if code.starts_with("htbs") {
                 in_table = true;
@@ -703,7 +703,7 @@ fn pieces(doc: &Shown, styles: Option<&StyleTable>) -> Pieces {
 }
 
 /// A code as pieces: a style code becomes its begin or end codes (themselves codes in brackets); the text of a [q~X]
-/// code is cells of the word it is in, and that of a [d~X] code cells that end the word (the reference's word
+/// code is cells of the word it is in, and that of a [d~X] code cells that end the word (the word
 /// reader takes both into the word); anything else stays a code. `depth` stops a style that names itself; `pos` is
 /// the code's place in the document, which its cells come from.
 fn expand(code: &str, styles: Option<&StyleTable>, out: &mut Pieces, depth: usize, pos: usize) {
@@ -749,7 +749,7 @@ const CODE_ALIASES: [(&str, &str); 37] = [
 ];
 
 /// A code with its name in the form this formatter reads: the name (up to a digit, ':', ';', '~' or '=', as the
-/// standard program's code reader takes it) replaced when it is another name of the same code.
+/// code reader takes it) replaced when it is another name of the same code.
 fn canonical_code(code: &str) -> String {
     let end = code.find(|c: char| c.is_ascii_digit() || matches!(c, ':' | ';' | '~' | '=')).unwrap_or(code.len());
     let (name, rest) = code.split_at(end);
@@ -864,7 +864,7 @@ fn mfc_levels(pieces: &Pieces, from: usize) -> i64 {
     levels
 }
 
-/// The line fill styles the standard program ships (linefill.xml, spec 19 section 10.10): name (empty for the default),
+/// The line fill styles that ship (linefill.xml, spec 19 section 10.10): name (empty for the default),
 /// fill cell (a braille pattern is written as the encoding's ASCII cell) and its left, centre and right fields (all three
 /// when the style lists none).
 const LINE_FILLS: [(&str, char, [bool; 3]); 3] = [
@@ -873,8 +873,8 @@ const LINE_FILLS: [(&str, char, [bool; 3]); 3] = [
     ("banaboxbottom", '\u{281b}', [false, false, true]),
 ];
 
-/// A roman numeral, lower case (the standard program writes it in capitals; the braille and print tables both show
-/// it in small letters here, as the digits are); "?" outside 1 to 3999 (spec 19 section 8.1).
+/// A roman numeral, lower case (the braille and print tables both show it in small letters
+/// here, as the digits are); "?" outside 1 to 3999 (spec 19 section 8.1).
 fn roman_numeral(n: usize) -> String {
     if !(1..=3999).contains(&n) {
         return "?".into();
@@ -1643,8 +1643,8 @@ impl Formatter {
         }
     }
 
-    /// The page number of the page being filled, as shown: as it was when the page opened (the standard program
-    /// writes it then, spec 19 section 8.1), else as it stands.
+    /// The page number of the page being filled, as shown: as it was when the page opened (it is
+    /// written then, spec 19 section 8.1), else as it stands.
     fn number_text(&self) -> String {
         match &self.page_text {
             Some((text, _)) => text.clone(),
@@ -1836,7 +1836,7 @@ impl Formatter {
 
     fn put(&mut self, c: char, source: Option<usize>) {
         if source.is_some() {
-            // The standard program writes a waiting line number when it puts the next word on a line, and that
+            // A waiting line number is written when the next word is put on a line, and that
             // word counts as text since the last forced line break (spec 19 section 10.5).
             if let Some((start, cells)) = self.number_drawn.take() {
                 self.number_bound = Some((start, cells, self.line.text.chars().count()));
@@ -1919,8 +1919,8 @@ impl Formatter {
                 if self.placing.is_some() {
                     return;
                 }
-                // A number makes the note recurring: the standard program tests the code's own number (0xb3) where the
-                // manual says the parameter, so any number does.
+                // A number makes the note recurring: the code's own number (0xb3) is tested, not the
+                // parameter, so any number does.
                 let kind = u8::from(numbered);
                 let start = self.piece_at + 1;
                 let end = self.note_end;
@@ -1945,8 +1945,8 @@ impl Formatter {
                 }
             }
             "kdtxp" if numbered => {
-                // With a number the collection goes on the list placed at [lea] (again at its end: the standard program
-                // tests the code's own number, 0xb5, so every number puts it on).
+                // With a number the collection goes on the list placed at [lea] (again at its end: the
+                // code's own number, 0xb5, is tested, so every number puts it on).
                 let entry = format!("{name}~");
                 let mut list = self.auto_notes.replace(&entry, "");
                 list.push_str(&entry);
@@ -2123,7 +2123,7 @@ impl Formatter {
     }
 
     /// Draws the line number the line took: spaces up to its first cell (when the pen had already reached it, the
-    /// cells up to there become spaces, as the standard program does), then the number, cut at the line end.
+    /// cells up to there become spaces), then the number, cut at the line end.
     fn draw_line_number(&mut self) {
         let Some((start, cells, pen)) = self.number_bound.take() else { return };
         if cells.is_empty() || start < 0 {
@@ -2150,7 +2150,7 @@ impl Formatter {
     }
 
     /// When the line the page goes on to is a fold line ([folds]), its W lines are filled with the fold's character
-    /// across the page (or left blank) and passed, as the standard program does after each line.
+    /// across the page (or left blank) and passed, after each line.
     fn fold_lines(&mut self) {
         let (n, w) = (self.folds.0 as i64, self.folds.1);
         if n == 0 {
@@ -2434,7 +2434,7 @@ impl Formatter {
             self.word_marks.clear();
             return;
         }
-        // A word a code took (the positioned-word modes 0, 4, 6, 7, 8 of the standard program): not laid out.
+        // A word a code took (the positioned-word modes 0, 4, 6, 7, 8): not laid out.
         if let Some(kind) = self.next_word.take() {
             let text: String = cells.iter().take(36).map(|c| c.0).collect();
             match kind {
@@ -2527,7 +2527,7 @@ impl Formatter {
         self.last_word = cells.iter().map(|c| c.0).collect();
         // Without the document's table the None table applies: marked breaks only.
         let table = self.layout.hyphen.clone().unwrap_or_else(crate::hyphen::HyphenTable::none);
-        // The word placed as the standard program places it (spec 36 section 4): whole when it fits after the pending
+        // The word is placed (spec 36 section 4): whole when it fits after the pending
         // space; else the first piece up to a break point the hyphenation table finds (a marked break, a dash, an
         // internal hyphen, or an automaton break with a hyphen inserted); else, for a word longer than a whole
         // line, cut at the line end with no mark when at least one cell is free; else the whole word goes to the
@@ -2542,7 +2542,7 @@ impl Formatter {
         let col = if has_text { used } else { self.start_col.max(used).max(self.rooms().0) };
         let mut placed = 0usize;
         let mut k = 0usize;
-        // A [wb-cb] word goes through the look-ahead before the fit test, as in the standard program (0xdd4235).
+        // A [wb-cb] word goes through the look-ahead before the fit test (0xdd4235).
         if word_break == 2 {
             self.computer_braille_word(cells, gap, used, col);
             return;
@@ -2587,8 +2587,8 @@ impl Formatter {
             let col = self.start_col.max(used).max(self.rooms().0);
             let left = cells.len() - placed;
             let mut piece = width.saturating_sub(col).min(left);
-            // Every remainder longer than the line is searched again, in [wb-no] too (the standard program tests the
-            // mode only before the first piece, spec 36 section 14).
+            // Every remainder longer than the line is searched again, in [wb-no] too (the mode is
+            // tested only before the first piece, spec 36 section 14).
             if width < col + left {
                 let before = cells.len();
                 let bp = crate::hyphen::break_point(&table, crate::hyphen::Word { cells: &mut cells, flags: &mut flags }, placed, (width as i64 - col as i64).max(0), width as i64, self.wb_min, self.hyphen_override);
@@ -2703,7 +2703,7 @@ impl Formatter {
         self.touching = false;
     }
 
-    /// The room of the next line as the standard program foresees it (spec 36 section 15.3): the line
+    /// The room of the next line as foreseen (spec 36 section 15.3): the line
     /// width less the wider of the right margin and a page number's room at the right, and less the wider of the
     /// runover margin and a page number's room at the left, at least 1. The page numbers count on the page's last
     /// line, or on the first line of the next page when the next line is there (its number one more, its side the
@@ -2855,7 +2855,7 @@ impl Formatter {
         // [>] the next word at the nearest stop at or past the cell after the pen (and past a tab already pending),
         // counted with the [svlma] adjustment; with none, flush right at the right margin, no fill (case 0x49).
         // In a centred heading [>] puts the next word at the next tab stop on the heading's line before it is centred
-        // (the standard program builds the heading's line with the positioned word, then centres it).
+        // (the heading's line is built with the positioned word, then centred).
         if code == ">" {
             if let Some(h) = &mut self.heading {
                 h.0.push(("	".into(), Vec::new()));
@@ -4216,10 +4216,10 @@ pub fn locate(pages: &[Page], pos: usize) -> (usize, usize, usize) {
     before.unwrap_or((1, 1, 1))
 }
 
-/// The text of a formatted file (.brf, .prf) from laid-out pages, as the reference program's page writer writes it
+/// The text of a formatted file (.brf, .prf) from laid-out pages, as the page writer writes it
 /// (spec 04d-B): every line of every page with its trailing spaces left off and a line end after it, and a form feed
 /// after every page, the last one included; nothing before the first page or after the last form feed. The line end
-/// is CR LF: the reference opens the file in Windows text mode, which writes each line end as CR LF (spec 04d-B
+/// is CR LF: the file is opened in Windows text mode, which writes each line end as CR LF (spec 04d-B
 /// item 1, inferred from the open mode). The characters are the cells as the pages hold them; the caller maps them
 /// to the chosen encoding.
 pub fn formatted_text(pages: &[Page]) -> String {
@@ -4237,7 +4237,7 @@ pub fn formatted_text(pages: &[Page]) -> String {
 /// The bytes of a formatted text file (.prf) in `code_page`: each line with "\n"
 /// and a form feed after every page, a hard space as a space, encoded in the code page ('#' for a character it cannot
 /// hold), through a text-mode file stream, which puts a carriage return before every line feed byte. In a one-byte or
-/// multi-byte code page that is CR LF per line; in UTF-16 and UTF-32 it is also what the standard files hold (a CR
+/// multi-byte code page that is CR LF per line; in UTF-16 and UTF-32 it is also what such files hold (a CR
 /// byte before the 0x0A byte of each line end, and of any character holding a 0x0A byte).
 pub fn formatted_text_file(pages: &[Page], code_page: &str) -> Vec<u8> {
     let text = formatted_text(pages).replace("\r\n", "\n").replace('\u{a0}', " ");

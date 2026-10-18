@@ -1,22 +1,22 @@
-//! The code pages Save As offers for formatted text (.prf), in the reference program's order, and how each writes a
+//! The code pages Save As offers for formatted text (.prf), in the order it lists them, and how each writes a
 //! character (spec 04d-E, 04d-F).
 //!
-//! The reference makes a converter for the chosen name: a Windows code page where one exists, its own converters for
-//! UTF-16 and UTF-32, and plain Latin-1 for a name it has no converter for. A character the converter cannot write is
+//! A converter is made for the chosen name: a Windows code page where one exists, dedicated converters for
+//! UTF-16 and UTF-32, and plain Latin-1 for a name with no converter. A character the converter cannot write is
 //! written '#', and nothing is written before the text (no byte-order mark). Text is converted one character at a
-//! time, as the reference's page writer does.
+//! time.
 //!
-//! A name the reference writes through a Windows code page uses that page's own table, as Windows itself wrote it
+//! A name written through a Windows code page uses that page's own table, as Windows itself wrote it
 //! (data/windows-code-pages.bin, from the windows-code-pages CI artifact by tools/codepages/make_windows_tables.py).
-//! ISO-8859-14, which the reference writes through wxWidgets' own table, and ISO-8859-10, whose Windows code page
-//! (28600) a standard Windows does not have, keep the standard tables of data/codepages.txt (INFERENCE for
-//! ISO-8859-10: the reference's fallback for a missing page was not traced past spec 04d-F). ISO-2022-JP is read by
+//! ISO-8859-14, which is not written through a Windows code page, and ISO-8859-10, whose Windows code page
+//! (28600) a standard Windows does not have, keep the tables of data/codepages.txt (INFERENCE for
+//! ISO-8859-10: the fallback for a missing page is not given past spec 04d-F). ISO-2022-JP is read by
 //! encoding_rs: Windows gives no table for reading it one byte sequence at a time.
 
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
-/// The Windows code page the reference writes each name through (spec 04d-F, its code page switch).
+/// The Windows code page each name is written through (spec 04d-F, the code page switch).
 fn windows_page(name: &str) -> Option<u32> {
     Some(match name {
         "ISO-8859-2" => 28592,
@@ -334,7 +334,7 @@ pub fn encode_char(name: &str, c: char) -> Option<Vec<u8>> {
     if let Some(table) = single_byte().get(name) {
         return table.get(&c).map(|b| vec![*b]);
     }
-    // ISO-8859-1, and a name the reference has no converter for: plain Latin-1.
+    // ISO-8859-1, and a name with no converter: plain Latin-1.
     ((c as u32) <= 0xFF).then(|| vec![c as u32 as u8])
 }
 
@@ -384,7 +384,7 @@ mod tests {
         assert_eq!(encode("UTF-16LE", "A"), b"A\0".to_vec());
         assert_eq!(encode("UTF-7", "A\u{e9}"), b"A+AOk-".to_vec());
         assert_eq!(encode("WINDOWS-932", "\u{3042}"), b"\x82\xa0".to_vec());
-        // A Mac code page the reference has no converter for writes plain Latin-1.
+        // A Mac code page with no converter writes plain Latin-1.
         assert_eq!(encode("MacTibetan", "\u{e9}\u{f40}"), b"\xe9#".to_vec());
         assert_eq!(encode("MacRoman", "\u{e9}"), b"\x8e".to_vec());
     }

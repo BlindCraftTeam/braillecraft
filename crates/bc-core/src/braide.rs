@@ -1,4 +1,4 @@
-//! Formatted braille back into running braille with codes, as the reference program's formatted braille importer
+//! Formatted braille back into running braille with codes, as the formatted braille importer
 //! does it (spec 28 sections 2c, 2d and 13): the file is read page by page into a grid; the braille page numbers in
 //! the corners become page numbering codes, the print page numbers print page codes, the first and last lines running
 //! head and foot codes when the settings say so; then each line is classed by where its text starts: a blank run is a
