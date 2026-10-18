@@ -297,6 +297,17 @@ pub struct Page {
     pub references: Vec<ReferencePoint>,
 }
 
+/// A deferred note or a placement mark (spec 19 section 10.9): its collection (lower case), its kind (0 a note, 1 a
+/// recurring note, 2 a [kdtxp] placement, 3 a placement at [lea]), the piece it starts at and, for a note, the piece
+/// after its [kdtxe].
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Note {
+    name: String,
+    kind: u8,
+    start: usize,
+    end: usize,
+}
+
 /// A reference point ([rpsN] ... [rpe]): the document places of its two codes, N, and the braille page number and
 /// print page number of its first word and of its last.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -657,6 +668,19 @@ fn fold_index(n: i64, l: i64, y: i64, k: i64, last: bool, w: i64, at: &[i64; 9])
     None
 }
 
+/// The piece after the first [kdtxe] from piece `from` (the end of the document when none): the end of a deferred
+/// note (spec 19 section 10.9; no nesting is counted).
+fn note_end(pieces: &Pieces, from: usize) -> usize {
+    for i in from..pieces.len() {
+        if let Piece::Code(c) = pieces.get(i) {
+            if c == "kdtxe" {
+                return i + 1;
+            }
+        }
+    }
+    pieces.len()
+}
+
 /// The levels of a major formatting context from piece `from`: 1, or the largest [hlN] (N 1 to 256) before the next
 /// [mfce] or the end (spec 19 section 10.8).
 fn mfc_levels(pieces: &Pieces, from: usize) -> i64 {
@@ -999,6 +1023,17 @@ struct Formatter {
     /// [wlf~X] (spec 19 section 10.10): the line being filled is a whole-line fill: its style's fill cell, its left,
     /// centre and right fields, and the columns [>] marked on it (two at most).
     fill: Option<(char, [bool; 3], Vec<i64>)>,
+    /// Keep-deferred text (spec 19 section 10.9): the notes and placement marks met ([kdtxs] ... [kdtxe] and
+    /// [kdtxp]), the note being placed and how (2 at [kdtxp], 3 at a [lea]), the piece the placing code stands at, the
+    /// piece to go back to and the [lea] to lay after the notes; the collections placed at the next [lea]
+    /// ("name~name~", 159 characters at most); the piece being laid out, the end of the note its [kdtxs] opens (after
+    /// its [kdtxe]) and the piece to go on from.
+    notes: Vec<Note>,
+    placing: Option<(usize, u8, usize, usize, Option<String>)>,
+    auto_notes: String,
+    piece_at: usize,
+    note_end: usize,
+    jump: Option<usize>,
     /// [svantN]: 1 or 3 the head as it stands when the page closes; 2 or 3 the print page number likewise.
     anticipatory: i64,
     /// The table being collected (from [htbs] to [htbe], spec 35), the [htbfmtN:FFF] values for the next table
@@ -1135,6 +1170,12 @@ impl Formatter {
             folds: (0, 1, [0; 9], Vec::new()),
             mfc_levels: 1,
             fill: None,
+            notes: Vec::new(),
+            placing: None,
+            auto_notes: String::new(),
+            piece_at: 0,
+            note_end: 0,
+            jump: None,
             anticipatory: 0,
             table: None,
             htbfmt: (0, String::new()),
@@ -1687,6 +1728,109 @@ impl Formatter {
         }
         self.start_col = next_col;
         self.after_page_code = false;
+    }
+
+    /// [kdtxs~X] (case 0xb3), [kdtxe] (0xb4), [kdtxpN~X] (0xb5), spec 19 section 10.9.
+    fn deferred_text(&mut self, code: &str) {
+        let (head, name) = code.split_once('~').map_or((code, ""), |(a, b)| (a, b));
+        let name = name.to_lowercase();
+        let numbered = head[5.min(head.len())..].chars().next().is_some_and(|c| c.is_ascii_digit() || c == '-');
+        match &head[..5.min(head.len())] {
+            "kdtxs" => {
+                if self.placing.is_some() {
+                    return;
+                }
+                // A number makes the note recurring: the standard program tests the code's own number (0xb3) where the
+                // manual says the parameter, so any number does.
+                let kind = u8::from(numbered);
+                let start = self.piece_at + 1;
+                let end = self.note_end;
+                if !self.notes.iter().any(|n| n.start == start) {
+                    self.notes.push(Note { name, kind, start, end });
+                }
+                let end = self.notes.iter().find(|n| n.start == start).map_or(end, |n| n.end);
+                self.jump = Some(end);
+            }
+            "kdtxe" => {
+                let Some((cur, mode, hi, back, lea)) = self.placing.take() else { return };
+                let name = self.notes[cur].name.clone();
+                let lo = self.notes_floor(hi, &name);
+                if let Some(next) = (cur + 1..self.notes.len()).find(|&k| self.note_taken(k, &name, lo, hi, true)) {
+                    self.placing = Some((next, mode, hi, back, lea));
+                    self.jump = Some(self.notes[next].start);
+                    return;
+                }
+                self.jump = Some(back);
+                if let Some(lea) = lea {
+                    self.code(&lea);
+                }
+            }
+            "kdtxp" if numbered => {
+                // With a number the collection goes on the list placed at [lea] (again at its end: the standard program
+                // tests the code's own number, 0xb5, so every number puts it on).
+                let entry = format!("{name}~");
+                let mut list = self.auto_notes.replace(&entry, "");
+                list.push_str(&entry);
+                self.auto_notes = list.chars().take(159).collect();
+            }
+            "kdtxp" => {
+                if self.placing.is_some() {
+                    return;
+                }
+                let hi = self.piece_at;
+                self.start_placing(&name, hi, 2, None);
+            }
+            _ => {}
+        }
+    }
+
+    /// Starts placing the notes of collection `name` deferred since its last placement, from the placing code at piece
+    /// `hi`; false when there is none to place.
+    fn start_placing(&mut self, name: &str, hi: usize, mode: u8, lea: Option<String>) -> bool {
+        let lo = self.notes_floor(hi, name);
+        let count = (0..self.notes.len()).filter(|&k| self.note_taken(k, name, lo, hi, false)).count();
+        if count == 0 {
+            return false;
+        }
+        let Some(first) = (0..self.notes.len()).find(|&k| self.note_taken(k, name, lo, hi, true)) else { return false };
+        if !self.notes.iter().any(|n| n.start == hi) {
+            self.notes.push(Note { name: name.to_string(), kind: mode, start: hi, end: hi });
+        }
+        self.placing = Some((first, mode, hi, hi + 1, lea));
+        self.jump = Some(self.notes[first].start);
+        true
+    }
+
+    /// At [lea]: the first collection on the [kdtxpN] list, when it has notes to place; the [lea] is laid after them.
+    fn place_notes_at_lea(&mut self, lea: &str) -> bool {
+        let name = self.auto_notes.split('~').next().unwrap_or("").to_string();
+        if name.is_empty() {
+            return false;
+        }
+        let hi = self.piece_at;
+        self.start_placing(&name, hi, 3, Some(lea.to_string()))
+    }
+
+    /// The piece the last placement of collection `name` before piece `hi` stands at (0 when none).
+    fn notes_floor(&self, hi: usize, name: &str) -> usize {
+        let mut lo = 0;
+        for n in &self.notes {
+            if (n.kind == 2 || n.kind == 3) && n.name == name {
+                if hi <= n.start {
+                    break;
+                }
+                lo = n.start;
+            }
+        }
+        lo
+    }
+
+    /// Whether note `k` is placed with collection `name` (every collection when empty) between pieces `lo` and `hi`:
+    /// a recurring note always (when `recurring`), a note when it lies between them.
+    fn note_taken(&self, k: usize, name: &str, lo: usize, hi: usize, recurring: bool) -> bool {
+        let n = &self.notes[k];
+        (name.is_empty() || n.name == name)
+            && ((n.kind == 1 && recurring) || (n.kind == 0 && lo <= n.start && n.end <= hi))
     }
 
     /// Lays out a whole-line fill at the line end (spec 19 section 10.10): the text of a right field goes to the right
@@ -2518,10 +2662,18 @@ impl Formatter {
             }
             return;
         }
+        if code.starts_with("kdtx") {
+            self.deferred_text(code);
+            return;
+        }
         // [leaF~X] the next word is the print page number (pgifmt case 99): F the fill kind (a letter, 'F' when not
         // given), X the fill character (dots 3-6 when not given).
         if let Some(rest) = code.strip_prefix("lea") {
             if rest.is_empty() || rest.starts_with(|c: char| c.is_ascii_alphabetic() || c == '~' || c == ':') {
+                // The notes of the first collection [kdtxpN~X] put on the list go before the print page number.
+                if self.placing.is_none() && self.place_notes_at_lea(code) {
+                    return;
+                }
                 let (params, x) = rest.split_once('~').map_or((rest, None), |(a, b)| (a, Some(b)));
                 let kind = params.trim_start_matches(':').chars().next().map_or('F', |c| c.to_ascii_uppercase());
                 let fill = x.and_then(|x| x.chars().next()).unwrap_or('-');
@@ -3196,6 +3348,10 @@ impl Formatter {
     /// The formatter as it stands with every document place in it moved by `map`; None when a place has nowhere to
     /// go (it was in the text an edit replaced).
     fn moved(&self, map: &impl Fn(usize) -> Option<usize>) -> Option<Formatter> {
+        // A state holding deferred notes keeps piece numbers an edit shifts: it is not reused, the layout goes on afresh.
+        if !self.notes.is_empty() || self.placing.is_some() {
+            return None;
+        }
         // Kept states have no pages, so the copy is small.
         let mut f = self.clone();
         f.pages = Vec::new();
@@ -3268,12 +3424,23 @@ impl Formatter {
                 if split_code(c).0.split('~').next() == Some("mfcs") {
                     self.mfc_levels = mfc_levels(pieces, i + 1);
                 }
+                if c.starts_with("kdtxs") {
+                    self.note_end = note_end(pieces, i + 1);
+                }
             }
+            self.piece_at = i;
             self.step(&piece, &mut word);
             if std::mem::take(&mut self.keep_opened) {
                 self.keep_start = Some(i);
             }
             i += 1;
+            if let Some(to) = self.jump.take() {
+                // Deferred text: reading goes on elsewhere (the word in progress ends first).
+                if !word.is_empty() {
+                    self.word(&std::mem::take(&mut word));
+                }
+                i = to;
+            }
             if std::mem::take(&mut self.room_restart) {
                 let (at, state, w, n) = page_from.clone();
                 let rooms = std::mem::take(&mut self.room_table);
@@ -3409,6 +3576,7 @@ fn is_layout(code: &str) -> bool {
         || code.starts_with("svgan")
         || code.starts_with("mfcs~")
         || code.starts_with("wlf~")
+        || code.starts_with("kdtx")
         || code.starts_with("svgrn")
         || (code.starts_with("pv") && code[2..].starts_with(|c: char| c.is_ascii_digit() || c == '~'))
         || code == "pv"
@@ -4387,6 +4555,24 @@ mod tests {
         // ab, then cd at the stop at cell 3, right after it; the word after the heading is not moved.
         let pages = format(&m("[hds]ab[>]cd[hde]ef"), &Layout::braille(20, 4), None);
         assert_eq!(texts(&pages[0])[..2], ["        abcd", "ef"]);
+    }
+
+    #[test]
+    fn deferred_notes_go_where_they_are_placed() {
+        let l = Layout::braille(30, 10);
+        let lines = |doc: &str| {
+            let pages = format(&m(doc), &l, None);
+            texts(&pages[0]).iter().take_while(|t| !t.is_empty()).map(|t| t.to_string()).collect::<Vec<_>>()
+        };
+        // The note is skipped where it is written and laid where [kdtxp] stands.
+        assert_eq!(lines("Text one[kdtxs~footnote][l]note A[l][kdtxe] more.[kdtxp~footnote] after."), ["Text one more.", "note A", "after."]);
+        // A second placement lays only the notes since the first.
+        let doc = "a[kdtxs~footnote][l]n1[l][kdtxe] b[kdtxs~footnote][l]n2[l][kdtxe] c[kdtxp~footnote] d[kdtxs~footnote][l]n3[l][kdtxe] e[kdtxp~footnote] f";
+        assert_eq!(lines(doc), ["a b c", "n1", "n2", "d e", "n3", "f"]);
+        // [kdtxp1~X]: the notes go before the next print page number.
+        let doc = "[kdtxp1~footnote]a[kdtxs~footnote][l]n1[l][kdtxe] b[lea]12 c";
+        assert_eq!(lines(doc)[..2], ["a b", "n1"]);
+        assert!(lines(doc)[2].ends_with("12"));
     }
 
     #[test]
