@@ -217,7 +217,12 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   JAWS scripts work in BrailleCraft, braille documents are read as braille cell names, and contracted braille is off
   while a braille document's editing area has focus. The script serves Orca 45 to 50; for Orca 51 and later the same
   folder holds a BrailleCraft user extension with the same keys and behaviour, which the installer puts in place and
-  approves instead. The scripts are for the desktop program; the web build has none.
+  approves instead. The scripts are for the desktop program. The web build has, after its status line, a Reading
+  toolbar with the same functions as buttons (the translated line, the style and table place, the location, the
+  document name and status line, the line position and length, the last word, the table entry, the braille
+  keyboard), each answered through a live region, so a screen reader on a phone or tablet reaches them by swipe;
+  their keyboard shortcuts (Alt with 7, 8, 9, 0, comma, period, End, T and C) can be turned off and changed in the
+  Reading Keys dialog, which the browser keeps.
 - **Braille displays.** A braille document's cells reach a display exactly, not as a translation of the ASCII
   letters. With JAWS the scripts turn Grade 2 translation and 8-dot braille off while a braille document is in
   front; the NVDA add-on switches the braille output table to 6-dot computer braille

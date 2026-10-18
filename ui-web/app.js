@@ -4847,3 +4847,386 @@ loadCore().then(async () => {
     await embosserSetupAtStart();
   }
 });
+
+// ------------------------------------------------------------------ reading toolbar
+
+// The reading functions of the screen reader scripts (the translated line, the style and table place, the location,
+// the document name and status line, the line position and length, the last word, the table entry, the braille
+// keyboard) as buttons after the status line, each answering through a polite live region, so a touch screen reader
+// reaches them by swipe; their keyboard shortcuts can be turned off and changed in the Reading Keys dialog and are
+// kept in the browser (WCAG 2.2 success criterion 2.1.4). Braille is announced as braille cell names, by the tables
+// of the scripts.
+const announceOut = $("announce");
+function announce(text) {
+  announceOut.textContent = "";
+  setTimeout(() => {
+    announceOut.textContent = text;
+  }, 30);
+}
+
+const CELL_NA32 = "space;t h e sign;dot 5;number sign;e d sign;s h sign;a n d sign;dot 3;o f sign;w i t h sign;c h sign;i n g sign;dot 6;dots 3 6;dots 4 6;s t sign".split(";");
+const CELL_NA48 = "low j;low a;low b;low c;low d;low e;low f;low g;low h;low i;w h sign;dots 5 6;g h sign;f o r sign;a r sign;t h sign;dot 4".split(";");
+const CELL_NA91 = "o w sign;o u sign;e r sign;dots 4 5;dots 4 5 6;dot 4;a;b;c;d;e;f;g;h;i;j".split(";");
+const CELL_NA107 = "k;l;m;n;o;p;q;r;s;t;u;v;w;x;y;z".split(";");
+const CELL_NA123 = "dots 4 6;dots 4 5 6;dot 6;dots 1 2 4 5 6;hard space".split(";");
+const CELL_RU1072 = "dot 1;dots 1 2;dots 2 4 5 6;dots 1 2 4 5;dots 1 4 5;dots 1 5;dots 2 4 5;dots 1 3 5 6;dots 2 4;dots 1 2 3 4 6;dots 1 3;dots 1 2 3;dots 1 3 4;dots 1 3 4 5;dots 1 3 5;dots 1 2 3 4".split(";");
+const CELL_RU1088 = "dots 1 2 3 5;dots 2 3 4;dots 2 3 4 5;dots 1 3 6;dots 1 2 4;dots 1 2 5;dots 1 4;dots 1 2 3 4 5;dots 1 5 6;dots 1 3 4 6;dots 1 2 3 5 6;dots 2 3 4 6;dots 2 3 4 5 6;dots 2 4 6;dots 1 2 5 6;dots 1 2 4 6;dots 1 6".split(";");
+const CELL_UNI = "space;a;low a;b;dot 3;k;low b;l;dot 4;c;i;f;s t sign;m;s;p;dot 5;e;low c;h;low i;o;low f;r;dots 4 5;d;j;g;a r sign;n;t;q;dot 6;c h sign;low e;g h sign;hyphen;u;low h;v;dots 4 6;s h sign;o w sign;e d sign;i n g sign;x;t h e sign;a n d sign;dots 5 6;w h sign;low d;o u sign;low j;z;low g;o f sign;dots 4 5 6;t h sign;w;e r sign;number sign;y;w i t h sign;f o r sign".split(";");
+
+// The spoken name of one braille cell written as `ch` (North American ASCII, Russian or a Unicode braille pattern).
+function cellName(ch) {
+  if (!ch) return "";
+  let v = ch.codePointAt(0);
+  if (v === 30 || v === 160) return "hard space";
+  if (v >= 32 && v < 48) return CELL_NA32[v - 32];
+  if (v >= 48 && v <= 64) return CELL_NA48[v - 48];
+  if (v >= 65 && v <= 90) v += 32;
+  if (v >= 91 && v < 107) return CELL_NA91[v - 91];
+  if (v >= 107 && v < 123) return CELL_NA107[v - 107];
+  if (v >= 123 && v < 128) return CELL_NA123[v - 123];
+  if (v >= 1072 && v < 1088) return CELL_RU1072[v - 1072];
+  if (v >= 1088 && v < 1105) return CELL_RU1088[v - 1088];
+  if (v >= 0x2800 && v < 0x2840) return CELL_UNI[v - 0x2800];
+  return ch;
+}
+
+// `text` spoken cell by cell, runs of two or more spaces as a count.
+function cellsOf(text) {
+  const out = [];
+  const chars = [...text];
+  let i = 0;
+  while (i < chars.length) {
+    if (chars[i] === " " && chars[i + 1] === " ") {
+      let j = i;
+      while (j < chars.length && chars[j] === " ") j++;
+      out.push(`${j - i} spaces`);
+      i = j;
+    } else {
+      out.push(cellName(chars[i]));
+      i++;
+    }
+  }
+  return out.join(", ");
+}
+
+// The status line taken apart (Page, Line and Column are left out in the coded view).
+function statusFields() {
+  const t = statusLine.textContent;
+  const field = (re) => {
+    const m = t.match(re);
+    return m ? m[1] : null;
+  };
+  const row = t.match(/Row\s*(\d+)\/(\d+)/);
+  const col = t.match(/Col\s*(\d+)\/(\d+)/);
+  const keys = t.match(/Keys:(\d)([Hh+]?)/);
+  const style = field(/Current Style:\s*(.*?)(?:\s\s|$)/);
+  const inTable = Boolean(row && col) || t.includes("Matrix");
+  return {
+    text: t,
+    page: field(/Page:\s*(\S+)/),
+    line: field(/Line:\s*(\d+)/),
+    column: field(/Column:\s*(\d+)/),
+    style: (style ?? (inTable ? t.split("  ")[0] : "")).trim(),
+    row: row ? [Number(row[1]), Number(row[2])] : null,
+    col: col ? [Number(col[1]), Number(col[2])] : null,
+    inTable,
+    coded: t !== "" && !t.includes("Page:"),
+    keyboard: Boolean(keys && keys[2] === "+"),
+  };
+}
+
+let lastReading = { id: null, at: 0 };
+function readTwice(id) {
+  const now = performance.now();
+  const again = lastReading.id === id && now - lastReading.at < 700;
+  lastReading = { id, at: now };
+  return again;
+}
+
+const READING_COMMANDS = [
+  {
+    id: "translated",
+    label: "Translated line",
+    key: "Alt+7",
+    async run() {
+      if (!doc.view.translated) {
+        setView((v) => (v.translated = true));
+      }
+      lastLine = null;
+      await showTranslatedLine();
+      // The first translation of a document fetches its tables and lands the text a moment later.
+      let text = translated.textContent;
+      for (let waited = 0; !text.trim() && waited < 3000; waited += 100) {
+        await new Promise((r) => setTimeout(r, 100));
+        text = translated.textContent;
+      }
+      if (!text.trim()) announce("blank");
+      else if (text === "Error message 0") announce("translation not available");
+      else announce(doc.kind === "braille" ? text : cellsOf(text));
+    },
+  },
+  {
+    id: "style",
+    label: "Style",
+    key: "Alt+8",
+    run() {
+      const s = statusFields();
+      if (readTwice("style") && s.inTable && s.row && s.col) announce(`Row ${s.row[0]} Column ${s.col[0]}`);
+      else announce(s.style || "no style");
+    },
+  },
+  {
+    id: "location",
+    label: "Location",
+    key: "Alt+9",
+    run() {
+      const s = statusFields();
+      if (s.coded) announce("location not available in coded view, press Alt F3 to turn codes off");
+      else announce(`P${s.page} L${s.line} C${s.column}`);
+    },
+  },
+  {
+    id: "document",
+    label: "Document and status",
+    key: "Alt+0",
+    run() {
+      announce(`${$("doc-title").textContent}: ${statusLine.textContent}`);
+    },
+  },
+  {
+    id: "position",
+    label: "Line position",
+    key: "Alt+,",
+    run() {
+      const s = statusFields();
+      const c = caretLine();
+      const pos = s.column ? Number(s.column) : c.column;
+      const toEnd = c.text.length - pos + 1;
+      if (readTwice("position")) announce(`${c.text.trimEnd().length - pos} to last nonspace character`);
+      else announce(toEnd === 0 ? `position ${pos} end of line` : `position ${pos}`);
+    },
+  },
+  {
+    id: "length",
+    label: "Line length",
+    key: "Alt+.",
+    run() {
+      const s = statusFields();
+      if (s.coded) {
+        announce("coded view");
+        return;
+      }
+      const c = caretLine();
+      if (readTwice("length")) announce(`${c.text.length - c.text.trimStart().length} left spaces`);
+      else announce(`${c.text.length} total characters.`);
+    },
+  },
+  {
+    id: "lastWord",
+    label: "Last word",
+    key: "Alt+End",
+    run() {
+      const s = statusFields();
+      if (s.coded) {
+        announce("location not available in coded view, press Alt F3 to turn codes off");
+        return;
+      }
+      const parts = caretLine().text.trimEnd().split(/[ -]/);
+      const word = parts[parts.length - 1] ?? "";
+      announce(doc.kind === "braille" ? cellsOf(word) : word || "blank");
+    },
+  },
+  {
+    id: "tableEntry",
+    label: "Table entry",
+    key: "Alt+T",
+    run() {
+      const s = statusFields();
+      if (!s.inTable) {
+        announce("not in a table");
+        return;
+      }
+      const line = caretLine().text;
+      let col = s.col ? s.col[0] : 1;
+      let parts;
+      if (s.coded) parts = line.split(/\[<\]|\[>\]/);
+      else if (s.style.includes("Linear")) parts = line.split(/; |: /);
+      else if (s.style.includes("Listed")) {
+        announce(line);
+        return;
+      } else parts = line.split(/ \.\.|\.\.|  /);
+      parts = parts.map((p) => p.trim()).filter((p) => p);
+      if (s.style.includes("Two-Page") && s.page && "13579".includes(s.page.slice(-1)) && s.col) col = col - s.col[1] - 1;
+      const entry = col > 0 && col <= parts.length ? parts[col - 1] : "";
+      announce(doc.kind === "braille" ? cellsOf(entry) : entry || "blank");
+    },
+  },
+  {
+    id: "keyboard",
+    label: "Braille keyboard",
+    key: "Alt+C",
+    run() {
+      announce(statusFields().keyboard ? "braille keyboard connected" : "braille keyboard not connected");
+    },
+  },
+];
+
+// The shortcuts as kept: on or off, and each command's key (the defaults where none was changed).
+function readingKeysOn() {
+  return store.get("reading.enabled") !== "no";
+}
+function readingKeys() {
+  const kept = store.json("reading.keys", {});
+  const keys = {};
+  for (const c of READING_COMMANDS) keys[c.id] = kept[c.id] ?? c.key;
+  return keys;
+}
+
+// A key press as the dialog and the kept keys name it: the modifiers, then the key (ArrowDown as Down, a letter in
+// upper case); "" for a modifier alone.
+function comboOf(e) {
+  const key = e.key;
+  if (["Alt", "Control", "Shift", "Meta", "AltGraph"].includes(key)) return "";
+  const parts = [];
+  if (e.ctrlKey) parts.push("Ctrl");
+  if (e.altKey) parts.push("Alt");
+  if (e.shiftKey) parts.push("Shift");
+  if (e.metaKey) parts.push("Meta");
+  parts.push(key.length === 1 ? key.toUpperCase() : key.replace(/^Arrow/, ""));
+  return parts.join("+");
+}
+
+function buildReadingToolbar() {
+  const bar = $("reading");
+  bar.textContent = "";
+  const keys = readingKeys();
+  const on = readingKeysOn();
+  for (const c of READING_COMMANDS) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = c.label;
+    if (on && keys[c.id]) {
+      button.setAttribute("aria-keyshortcuts", keys[c.id]);
+      button.title = `${c.label} (${keys[c.id]})`;
+    }
+    button.addEventListener("click", () => c.run());
+    bar.append(button);
+  }
+  const keysButton = document.createElement("button");
+  keysButton.type = "button";
+  keysButton.textContent = "Reading keys...";
+  keysButton.addEventListener("click", () => readingKeysDialog());
+  bar.append(keysButton);
+}
+
+// The shortcuts, on every key press outside a dialog.
+document.addEventListener("keydown", (e) => {
+  if (!readingKeysOn() || e.target.closest("dialog")) return;
+  const combo = comboOf(e);
+  if (!combo || !(e.altKey || e.ctrlKey || e.metaKey)) return;
+  const keys = readingKeys();
+  const command = READING_COMMANDS.find((c) => keys[c.id] === combo);
+  if (!command) return;
+  e.preventDefault();
+  e.stopPropagation();
+  command.run();
+});
+
+// The Reading Keys dialog: the shortcuts on or off, and a field per command that takes the key pressed in it
+// (Backspace or Delete clears it); Reset puts the defaults back.
+async function readingKeysDialog() {
+  const { dialog, form } = newDialog("Reading Keys", "reading-keys");
+  const keys = readingKeys();
+  const onRow = document.createElement("div");
+  onRow.className = "row";
+  const onBox = document.createElement("input");
+  onBox.type = "checkbox";
+  onBox.id = "reading-keys-on";
+  onBox.checked = readingKeysOn();
+  const onLabel = document.createElement("label");
+  onLabel.htmlFor = onBox.id;
+  onLabel.textContent = "Keyboard shortcuts on";
+  onRow.append(onBox, onLabel);
+  form.append(onRow);
+  const note = document.createElement("p");
+  note.id = "reading-keys-note";
+  note.textContent = "To change a shortcut, move to its field and press the keys you want; Backspace clears it.";
+  form.append(note);
+  const grid = document.createElement("div");
+  grid.className = "keys-table";
+  const fields = new Map();
+  for (const c of READING_COMMANDS) {
+    const label = document.createElement("label");
+    label.htmlFor = `reading-key-${c.id}`;
+    label.textContent = c.label;
+    const field = document.createElement("input");
+    field.type = "text";
+    field.id = label.htmlFor;
+    field.value = keys[c.id] ?? "";
+    field.readOnly = true;
+    field.setAttribute("aria-describedby", note.id);
+    field.addEventListener("keydown", (e) => {
+      if (e.key === "Tab") return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.key === "Backspace" || e.key === "Delete") {
+        field.value = "";
+        return;
+      }
+      if (e.key === "Escape") {
+        dialog.close("cancel");
+        return;
+      }
+      const combo = comboOf(e);
+      if (combo) field.value = combo;
+    });
+    grid.append(label, field);
+    fields.set(c.id, field);
+  }
+  form.append(grid);
+  const buttons = document.createElement("div");
+  buttons.className = "buttons";
+  const reset = document.createElement("button");
+  reset.type = "button";
+  reset.textContent = "Reset to defaults";
+  reset.addEventListener("click", () => {
+    for (const c of READING_COMMANDS) fields.get(c.id).value = c.key;
+  });
+  const ok = document.createElement("button");
+  ok.type = "submit";
+  ok.className = "default";
+  ok.textContent = "OK";
+  const cancel = document.createElement("button");
+  cancel.type = "button";
+  cancel.textContent = "Cancel";
+  cancel.addEventListener("click", () => dialog.close("cancel"));
+  buttons.append(reset, ok, cancel);
+  form.append(buttons);
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const chosen = {};
+    const seen = new Map();
+    for (const c of READING_COMMANDS) {
+      const v = fields.get(c.id).value.trim();
+      if (v && seen.has(v)) {
+        announce(`${v} is used by both ${seen.get(v)} and ${c.label}; change one of them.`);
+        fields.get(c.id).focus();
+        return;
+      }
+      if (v) seen.set(v, c.label);
+      chosen[c.id] = v;
+    }
+    store.set("reading.enabled", onBox.checked ? null : "no");
+    store.set("reading.keys", JSON.stringify(chosen));
+    buildReadingToolbar();
+    dialog.close("ok");
+  });
+  $("dialogs").append(dialog);
+  const closed = closedPromise(dialog);
+  dialog.showModal();
+  onBox.focus();
+  await closed;
+  editor.focus();
+}
+
+buildReadingToolbar();

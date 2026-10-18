@@ -225,3 +225,10 @@ dialog p.message { margin: 0; max-width: 36rem; white-space: pre-wrap; }
   .printed-page { break-after: page; line-height: 1.35; }
   .printed-line, .printed-ink { white-space: pre; }
 }
+
+/* The reading toolbar: the functions of the screen reader scripts as buttons, each 24 px or more to touch. */
+#reading { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.5rem; }
+#reading button { min-height: 2rem; min-width: 2.5rem; padding: 0.25rem 0.6rem; }
+#reading button:focus-visible { outline: 3px solid var(--focus, #005fcc); outline-offset: 2px; }
+.keys-table { display: grid; grid-template-columns: max-content 1fr; gap: 0.4rem 0.8rem; align-items: center; }
+.keys-table input { font-family: inherit; }
