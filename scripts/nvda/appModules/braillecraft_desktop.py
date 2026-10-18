@@ -45,6 +45,9 @@ import winUser
 
 CATEGORY = "BrailleCraft"
 EDITOR_CLASS = "BrailleCraftEditor"
+# The braille output table for a braille document: 6-dot computer braille, whose cells are those of North American
+# ASCII braille (comma dot 6, semicolon dots 5 6, digits as lowered letters), as the JAWS scripts give JAWS.
+COMPUTER_BRAILLE_TABLE = "en-us-comp6.ctb"
 
 # --- settings (the JAWS scripts' Quick Settings choices) ---
 
@@ -388,6 +391,22 @@ class EditingWindow(NVDAObject):
 			return
 		super()._caretScriptPostMovedHelper(speakUnit, gesture, info)
 
+	# A braille document's cells reach a braille display exactly: while its editing window has focus the braille
+	# output table is 6-dot computer braille (the cells of North American ASCII braille, as the JAWS scripts turn
+	# Grade 2 translation and 8-dot braille off in a braille document), and the user's table comes back when focus
+	# leaves. With Report Braille to Screen Readers as Unicode Braille Patterns on, the text already comes as
+	# patterns, which every table with the braille patterns mapping shows as their dots.
+	def event_gainFocus(self):
+		super().event_gainFocus()
+		if self._docs().isBraille:
+			self.appModule.enterBrailleDoc()
+		else:
+			self.appModule.leaveBrailleDoc()
+
+	def event_loseFocus(self):
+		self.appModule.leaveBrailleDoc()
+		super().event_loseFocus()
+
 	def event_typedCharacter(self, ch):
 		docs = self._docs()
 		if not docs.isBraille:
@@ -416,10 +435,43 @@ class AppModule(appModuleHandler.AppModule):
 		self.inTable = False
 		self.lastTrans = ""
 		self.reviewOnTransLine = False
+		self.savedTable = None
 
 	def chooseNVDAObjectOverlayClasses(self, obj, clsList):
 		if obj.windowClassName == EDITOR_CLASS:
 			clsList.insert(0, EditingWindow)
+
+	# --- the braille display in a braille document (see EditingWindow.event_gainFocus) ---
+
+	def enterBrailleDoc(self):
+		if self.savedTable is not None:
+			return
+		try:
+			import brailleTables
+			# The table setter also writes the table name into the configuration, so the configured name (it may be
+			# "auto") is kept and put back as well.
+			self.savedTable = (braille.handler.table, config.conf["braille"]["translationTable"])
+			braille.handler.table = brailleTables.getTable(COMPUTER_BRAILLE_TABLE)
+		except Exception:
+			self.savedTable = None
+
+	def leaveBrailleDoc(self):
+		if self.savedTable is None:
+			return
+		table, name = self.savedTable
+		self.savedTable = None
+		try:
+			braille.handler.table = table
+			config.conf["braille"]["translationTable"] = name
+		except Exception:
+			pass
+
+	def event_appModule_loseFocus(self):
+		self.leaveBrailleDoc()
+
+	def terminate(self):
+		self.leaveBrailleDoc()
+		super().terminate()
 
 	# The editing area with focus, or None (then "not in document window" is said).
 	def _editor(self, speak=True):

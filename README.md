@@ -200,6 +200,13 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   has no hook for caret moves, typing or the program's own keys, so the braille-cell reading of lines and characters,
   the Alt+U, I, P and W choices and the state announcements after F2, Alt+F3, Control+F8 and Control+H have no
   VoiceOver counterpart. The scripts are for the desktop program; the web build has none.
+- **Braille displays.** A braille document's cells reach a display exactly, not as a translation of the ASCII
+  letters. With JAWS the scripts turn Grade 2 translation and 8-dot braille off while a braille document is in
+  front, as the original's scripts do; the NVDA add-on switches the braille output table to 6-dot computer braille
+  there and puts yours back when you leave. With Global, Internationalization, Report Braille to Screen Readers as
+  Unicode Braille Patterns on, the editing area hands the screen reader the cells as Unicode braille patterns, which
+  NVDA, JAWS and Orca (with a table that carries the braille patterns, such as the UEB tables) show as their dots: on
+  Windows through UI Automation as the original, and on macOS and Linux too.
 - **Formatted braille import settings.** Global, Formatted Braille Importer: where the braille and print page
   numbers stand on even and odd pages of the file, which pages have a running head or foot, the lines and cells of
   the file's pages, and Read formatted braille without interpretation, which keeps the file's lines and pages as they

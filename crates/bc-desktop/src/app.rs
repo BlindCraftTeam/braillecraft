@@ -772,13 +772,17 @@ impl App {
         let line_numbers =
             self.docs[i].kind == DocKind::Braille && self.settings.view_prefs.line_numbers && !self.docs[i].view.codes;
         // A braille document's cells (Global, Internationalization): drawn as Unicode braille patterns when they are
-        // preferred and the document is shown in a braille font; given to screen readers as patterns only where the
-        // original has that choice, its UI Automation text on Windows, while Support UI Automation is on.
+        // preferred and the document is shown in a braille font; given to screen readers as patterns when Report
+        // Braille to Screen Readers as Unicode Braille Patterns is on: on Windows through the UI Automation text while
+        // Support UI Automation is on, as the original; on macOS and Linux through the accessibility text (the
+        // original has no program there; owner order 2026-10-17: a braille display gets the exact braille on every
+        // system). A screen reader passes the patterns to a display dot for dot (research row 965).
         let braille = self.docs[i].kind == DocKind::Braille;
         let enc = self.encoding();
+        let uia_or_other = if cfg!(windows) { self.settings.reader.uia } else { true };
         let forms = crate::editor_view::CellForms {
             paint: (braille && self.settings.prefer_patterns && self.docs[i].view.font != ViewFont::Print).then_some(enc),
-            access: (braille && cfg!(windows) && self.settings.reader.uia && self.settings.access_patterns).then_some(enc),
+            access: (braille && uia_or_other && self.settings.access_patterns).then_some(enc),
         };
         let d = &mut self.docs[i];
         if d.ed_layout != key {
