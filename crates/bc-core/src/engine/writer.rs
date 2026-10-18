@@ -659,3 +659,58 @@ impl<'a> Writer<'a> {
         crate::internal::decode(&self.file)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn run(writer_mode: i64, out_mode: i64, flag: i64, codes: &[i64]) -> String {
+        let mut w = Writer::new(Chitab::shared(), writer_mode, out_mode, flag, 0, -1);
+        for &c in codes {
+            w.put(c);
+        }
+        w.put(super::super::chars::EOF);
+        w.text()
+    }
+
+    fn codes(s: &str) -> Vec<i64> {
+        s.chars().map(|c| c as i64).collect()
+    }
+
+    /// The output modes (spec 07 section E2 writer): 4 maps the code marks when the flag is not 0x1C ("|" for a "$"
+    /// flag, else "$"), 6 to "|", 7 to "$", the close mark to a space; 1 and 4 with the 0x1C flag keep them; 0 and 2
+    /// split a word longer than 0x82 with "-" and a line end, 1 does not.
+    #[test]
+    fn output_modes_map_code_marks_and_split_long_words() {
+        let code = codes("a \u{1c}xy\u{1f} b");
+        let cases = [
+            (4, 0x1c, "a \u{1c}xy\u{1f} b "),
+            (4, 0x24, "a |xy  b "),
+            (4, 0x7c, "a $xy  b "),
+            (6, 0x1c, "a |xy  b "),
+            (7, 0x1c, "a $xy  b "),
+            (1, 0x1c, "a \u{1c}xy\u{1f} b "),
+        ];
+        for (mode, flag, want) in cases {
+            assert_eq!(run(0, mode, flag, &code), want, "mode {mode} flag {flag:x}");
+        }
+        let long: Vec<i64> = std::iter::repeat(0x61).take(140).collect();
+        assert_eq!(run(0, 0, 0x1c, &long), format!("{}-\n{} ", "a".repeat(130), "a".repeat(10)));
+        assert_eq!(run(0, 1, 0x1c, &long), format!("{} ", "a".repeat(140)));
+    }
+
+    /// Collected format text (0x10 "a" to 0x10 "b"): 0x10 "c" writes it at once, "d" after the next printable code,
+    /// "e" before it; a space counts as printable.
+    #[test]
+    fn collected_format_text_goes_where_the_command_says() {
+        let at = |cmd: &[i64], rest: &str| -> String {
+            run(0, 1, 0x1c, &[&codes("one ")[..], &[0x10, 0x61], &codes("FMT"), &[0x10, 0x62], cmd, &codes(rest)].concat())
+        };
+        assert_eq!(
+            run(0, 1, 0x1c, &[&codes("one ")[..], &[0x10, 0x61], &codes("FMT"), &[0x10, 0x62], &codes("two "), &[0x10, 0x63], &codes("three")].concat()),
+            "one two FMTthree "
+        );
+        assert_eq!(at(&[0x10, 0x64], "  two"), "one  FMT two ");
+        assert_eq!(at(&[0x10, 0x65], "  two"), "one FMT  two ");
+    }
+}
