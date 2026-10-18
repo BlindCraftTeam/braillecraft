@@ -5,8 +5,10 @@ use crate::doctext::Shown;
 /// The styles open at a position: each [es~name] code before it without its [ee~name].
 pub fn open_styles(doc: &Shown, pos: i64) -> Vec<String> {
     let mut open: Vec<String> = Vec::new();
-    for &(start, _) in doc.codes.iter().take_while(|c| (c.1 as i64) <= pos) {
-        let Some(code) = doc.code_at(start) else { continue };
+    // The names in one pass over the text: a long document has thousands of codes, and reading each one by its
+    // character offset would walk the whole text once per code.
+    let names = doc.code_names();
+    for (&(_, _), code) in doc.codes.iter().zip(names.iter()).take_while(|(c, _)| (c.1 as i64) <= pos) {
         if let Some(name) = code.strip_prefix("es~") {
             open.push(name.to_string());
         } else if let Some(name) = code.strip_prefix("ee~") {

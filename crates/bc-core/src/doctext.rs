@@ -258,6 +258,45 @@ impl Shown {
         Some(name)
     }
 
+    /// The names of every code, in the order of `codes`, read in one pass over the text (the codes' character
+    /// offsets turned into byte offsets as the text is walked once), so a reader of all the codes of a long
+    /// document does not walk the text again for each code.
+    pub fn code_names(&self) -> Vec<String> {
+        let mut names = Vec::with_capacity(self.codes.len());
+        let mut spans: Vec<(usize, usize, usize)> = self.codes.iter().enumerate().map(|(k, &(s, e))| (s, e, k)).collect(); // (start, end, place in codes)
+        spans.sort_unstable();
+        let mut bytes_of = vec![(0usize, 0usize); spans.len()];
+        let mut next = 0;
+        let mut pending_end: Vec<usize> = Vec::new();
+        let mut char_index = 0;
+        for (byte, _) in self.text.char_indices().chain(std::iter::once((self.text.len(), '\0'))) {
+            while next < spans.len() && spans[next].0 == char_index {
+                bytes_of[next].0 = byte;
+                pending_end.push(next);
+                next += 1;
+            }
+            pending_end.retain(|&k| {
+                if spans[k].1 == char_index {
+                    bytes_of[k].1 = byte;
+                    false
+                } else {
+                    true
+                }
+            });
+            char_index += 1;
+        }
+        names.resize(self.codes.len(), String::new());
+        for (k, &(_, _, place)) in spans.iter().enumerate() {
+            let (from, to) = bytes_of[k];
+            let inner = self.text.get(from..to).unwrap_or("");
+            let mut chars = inner.chars();
+            chars.next();
+            chars.next_back();
+            names[place] = chars.as_str().to_string();
+        }
+        names
+    }
+
     /// Layout, Apply Last Style: the name of the nearest paragraph style ended before `pos`, read from the text as
     /// the standard program does (back from the caret or the selection start to the first style end code [ee~name] whose
     /// name ends in "."; codes inside a code count too). None when there is none.
@@ -520,6 +559,21 @@ fn matching(chars: &[char], i: usize) -> Option<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The one-pass code names are the names code_at reads one by one, codes inside codes included, with text
+    /// outside ASCII around them.
+    #[test]
+    fn code_names_match_code_at() {
+        let doc = Shown::marked("caf\u{e9} [es~h1.]Title[ee~h1.] \u{2800}x[hl1[es~para.]]y[l]\nz[p]\n[ee~para.]");
+        let names = doc.code_names();
+        assert_eq!(names.len(), doc.codes.len());
+        for (k, &(start, _)) in doc.codes.iter().enumerate() {
+            assert_eq!(Some(names[k].clone()), doc.code_at(start), "code {k} at {start}");
+        }
+        assert!(names.contains(&"es~h1.".to_string()) && names.contains(&"hl1[es~para.]".to_string()), "{names:?}");
+        assert_eq!(crate::status::open_styles(&doc, 15), vec!["h1.".to_string()]);
+        assert_eq!(crate::status::open_styles(&doc, 1000), Vec::<String>::new());
+    }
 
     #[test]
     fn codes_kept_or_taken_out() {
