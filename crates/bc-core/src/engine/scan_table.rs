@@ -48,7 +48,7 @@ pub struct ScanTable {
     pub out_format2: i64,
     pub out_cap: i64,
     pub out_capterm: i64,
-    /// Computer-braille switching for web and mail addresses (not built; English tables have it off).
+    /// 1: words read as web or mail addresses go between the computer-braille codes (no shipped table has it on).
     pub icb: i64,
     /// The eleven words that change the line, space and paragraph modes while reading.
     pub modes: Vec<String>,

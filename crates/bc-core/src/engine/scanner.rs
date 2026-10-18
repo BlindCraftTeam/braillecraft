@@ -16,10 +16,15 @@
 //! The words wait in a ring of 25 that shares one character buffer; the ring is filled to 25 words unless the
 //! buffer has come round again to the next word to write.
 //!
-//! Not built, and refused with an error when a table needs it: computer-braille switching for web and mail
-//! addresses.
+//! A word read as a web or mail address (when the table has icb on) is written between the computer-braille codes
+//! (spec 07 section E2): the start string in front of it, and the end string after it, or before its last
+//! character when that is a full stop or a comma.
 
 use super::callbacks::StyleTable;
+
+/// The computer-braille start and end strings written around an address (the scanner's two constant strings).
+const CB_START: [i64; 3] = [0x0e, 0x63, 0x0f];
+const CB_END: [i64; 4] = [0x0e, 0x2f, 0x63, 0x0f];
 use super::scan_table::{Font, ScanTable};
 use super::EngineError;
 
@@ -912,6 +917,14 @@ impl<'a> Scanner<'a> {
         }
     }
 
+    /// Queues a string after whatever is queued and writes its first character, then the rest.
+    fn put_str(&mut self, s: &[i64]) {
+        self.queue.extend(s.iter().copied());
+        if let Some(first) = self.queue.pop_front() {
+            self.put(first);
+        }
+    }
+
     fn end_of_input(&mut self) {
         if self.t.spare > 1 {
             (self.out)(0xff);
@@ -949,7 +962,8 @@ impl<'a> Scanner<'a> {
             }
             if ordinary {
                 if w.url != 0 {
-                    return Err(EngineError::NotSupported("computer-braille switching for addresses"));
+                    // An address: the computer-braille start in front of the word and its font codes.
+                    self.put_str(&CB_START);
                 }
                 // The font codes in front of the word.
                 loop {
@@ -1012,7 +1026,11 @@ impl<'a> Scanner<'a> {
                         continue;
                     }
                     if i == w.chars.len() && w.url != 0 && (c == 0x2e || c == 0x2c) {
-                        return Err(EngineError::NotSupported("computer-braille switching for addresses"));
+                        // A full stop or comma ending an address is left outside it.
+                        w.url = 0;
+                        i -= 1;
+                        self.put_str(&CB_END);
+                        continue;
                     }
                     // A doubled word ("anak-anak"): the table's code in front of the first copy and the next code after
                     // the second.
@@ -1118,6 +1136,11 @@ impl<'a> Scanner<'a> {
                 self.caps = 0;
                 self.put(self.c[4]);
             }
+            if w.url != 0 {
+                // The address ends with the word.
+                w.url = 0;
+                self.put_str(&CB_END);
+            }
             if w.term == 0xff00 || w.term == 0xff01 {
                 self.end_of_input();
                 return Ok(());
@@ -1210,7 +1233,7 @@ fn file_codes(bytes: &[u8]) -> Vec<i64> {
 /// as its low byte until the end. The reference uses it on braille and print text files before the import rules.
 /// The bytes are read and the codes written one at a time, so the file is never held as codes.
 pub(crate) fn scan_file(t: &ScanTable, bytes: &[u8]) -> Result<Vec<u8>, EngineError> {
-    if t.binmod != 0 || t.ninmod != 0 || t.spare != 0 || t.icb != 0 {
+    if t.binmod != 0 || t.ninmod != 0 || t.spare != 0 {
         return Err(EngineError::NotSupported("import scan tables other than text mode"));
     }
     let mut out = Vec::with_capacity(bytes.len() + bytes.len() / 8);
@@ -1258,6 +1281,28 @@ mod tests {
         assert_eq!(run("import-braille.sct", b"|P This is |IND5 a test."), b"\x1dp this is \x1dind5 a test.".to_vec());
         assert_eq!(run("import-braille.sct", b"A|$B ||C |:D"), b"a|b \x1e|c \x1e:d".to_vec());
         assert_eq!(run("import-braille.sct", b"ABC\r\rDEF  GHI\tJ"), b"abc \x1dp def ghi j".to_vec());
+    }
+
+    /// A word with "@" or ":" then "." and more is an address: with icb on it goes between the computer-braille
+    /// start and end strings, a full stop or comma ending it left outside; with icb off nothing changes.
+    #[test]
+    fn addresses_go_between_the_computer_braille_codes() {
+        let mut t = table("import-print.sct");
+        let scan = |t: &ScanTable, text: &str| -> Vec<u8> {
+            scan_bytes(t, text.bytes().collect(), None).unwrap().iter().map(|&c| c as u8).collect()
+        };
+        assert_eq!(scan(&t, "mail me@example.org, then"), b"mail me@example.org, then".to_vec());
+        t.icb = 1;
+        let cases: [(&str, &[u8]); 5] = [
+            ("see http://example.com now", b"see \x0ec\x0fhttp://example.com\x0e/c\x0f now"),
+            ("see http://example.com.", b"see \x0ec\x0fhttp://example.com\x0e/c\x0f."),
+            ("mail me@example.org, then", b"mail \x0ec\x0fme@example.org\x0e/c\x0f, then"),
+            ("see www.example.com.", b"see www.example.com."),
+            ("a:b.c d", b"\x0ec\x0fa:b.c\x0e/c\x0f d"),
+        ];
+        for (text, want) in cases {
+            assert_eq!(scan(&t, text), want.to_vec(), "{text}");
+        }
     }
 
     #[test]
