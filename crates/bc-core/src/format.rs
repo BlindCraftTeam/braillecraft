@@ -677,6 +677,15 @@ fn mfc_levels(pieces: &Pieces, from: usize) -> i64 {
     levels
 }
 
+/// The line fill styles the standard program ships (linefill.xml, spec 19 section 10.10): name (empty for the default),
+/// fill cell (a braille pattern is written as the encoding's ASCII cell) and its left, centre and right fields (all three
+/// when the style lists none).
+const LINE_FILLS: [(&str, char, [bool; 3]); 3] = [
+    ("", '=', [true, true, true]),
+    ("banaboxtop", '\u{2836}', [true, false, false]),
+    ("banaboxbottom", '\u{281b}', [false, false, true]),
+];
+
 /// A roman numeral, lower case (the standard program writes it in capitals; the braille and print tables both show
 /// it in small letters here, as the digits are); "?" outside 1 to 3999 (spec 19 section 8.1).
 fn roman_numeral(n: usize) -> String {
@@ -987,6 +996,9 @@ struct Formatter {
     folds: (usize, usize, [i64; 9], Vec<char>),
     /// The levels of the major formatting context an [mfcs] opens: the largest [hlN] before its [mfce] (1 at least).
     mfc_levels: i64,
+    /// [wlf~X] (spec 19 section 10.10): the line being filled is a whole-line fill: its style's fill cell, its left,
+    /// centre and right fields, and the columns [>] marked on it (two at most).
+    fill: Option<(char, [bool; 3], Vec<i64>)>,
     /// [svantN]: 1 or 3 the head as it stands when the page closes; 2 or 3 the print page number likewise.
     anticipatory: i64,
     /// The table being collected (from [htbs] to [htbe], spec 35), the [htbfmtN:FFF] values for the next table
@@ -1122,6 +1134,7 @@ impl Formatter {
             last_place: 0,
             folds: (0, 1, [0; 9], Vec::new()),
             mfc_levels: 1,
+            fill: None,
             anticipatory: 0,
             table: None,
             htbfmt: (0, String::new()),
@@ -1641,6 +1654,7 @@ impl Formatter {
     fn end_line(&mut self, next_col: usize) {
         self.saved_col = None;
         self.draw_line_number();
+        self.fill_line();
         // A main entry ([meg]) takes effect at the line end: the first of a page is its first and last guide word,
         // a later one its last; the page keeps a foot line for them when there is room (spec 19 10.4).
         if let Some(entry) = self.guide_pending.take() {
@@ -1673,6 +1687,70 @@ impl Formatter {
         }
         self.start_col = next_col;
         self.after_page_code = false;
+    }
+
+    /// Lays out a whole-line fill at the line end (spec 19 section 10.10): the text of a right field goes to the right
+    /// margin, of a centre field to the middle, and the rest of the line within the margins is the fill cell; a line
+    /// with no word is all fill.
+    fn fill_line(&mut self) {
+        let Some((cell, [left, center, right], marked)) = self.fill.take() else { return };
+        let w = self.layout.cells as i64;
+        let total = self.width() as i64;
+        let has_text = self.line_has_text();
+        let mut cells: Vec<(char, Option<usize>)> =
+            self.line.text.chars().enumerate().map(|(i, c)| (c, self.line.sources.get(i))).collect();
+        let pen = cells.len() as i64;
+        let mut len = pen;
+        cells.resize(w.max(pen) as usize, (' ', None));
+        let fields = if has_text { marked.len() as i64 + 1 } else { 0 };
+        let mut stops = [0, pen, pen];
+        for (k, &c) in marked.iter().enumerate() {
+            stops[k + 1] = c;
+        }
+        let mut from = if has_text { pen } else { 0 };
+        let mut end = total;
+        let copy = |cells: &mut Vec<(char, Option<usize>)>, len: &mut i64, src: i64, dst: i64, n: i64| {
+            if n > 0 && src >= 0 && dst >= 0 && src + n <= w && dst + n <= w {
+                let part: Vec<_> = cells[src as usize..(src + n) as usize].to_vec();
+                cells[dst as usize..(dst + n) as usize].copy_from_slice(&part);
+                *len = (*len).max(dst + n);
+            }
+        };
+        let fill = |cells: &mut Vec<(char, Option<usize>)>, len: &mut i64, a: i64, b: i64| {
+            if a >= 0 && b >= 0 && a < w && b <= w && a < b {
+                for k in a..b {
+                    cells[k as usize] = (cell, None);
+                }
+                *len = (*len).max(b);
+            }
+        };
+        if right {
+            let k = i64::from(left) + i64::from(center);
+            if k < fields {
+                from = stops[k as usize];
+                end = total - (pen - from);
+                copy(&mut cells, &mut len, from, end, pen - from);
+            }
+        }
+        if center {
+            let k = i64::from(left);
+            if k < fields {
+                from = stops[k as usize];
+                let n = stops[k as usize + 1] - from;
+                let at = (total - n) / 2;
+                copy(&mut cells, &mut len, from, at, n);
+                fill(&mut cells, &mut len, at + n, end);
+                end = at;
+            }
+        }
+        fill(&mut cells, &mut len, if left { from } else { 0 }, end);
+        cells.truncate(len.max(0) as usize);
+        let mut line = Line { marks: std::mem::take(&mut self.line.marks), ..Line::default() };
+        for (c, source) in cells {
+            line.text.push(c);
+            line.sources.push(source);
+        }
+        self.line = line;
     }
 
     /// Takes the word after [linenum] as the number (at most 36 cells and one less than the line) and where it goes:
@@ -2377,6 +2455,25 @@ impl Formatter {
         }
         // [>] the next word at the nearest stop at or past the cell after the pen (and past a tab already pending),
         // counted with the [svlma] adjustment; with none, flush right at the right margin, no fill (case 0x49).
+        // In a centred heading [>] puts the next word at the next tab stop on the heading's line before it is centred
+        // (the standard program builds the heading's line with the positioned word, then centres it).
+        if code == ">" {
+            if let Some(h) = &mut self.heading {
+                h.0.push(("	".into(), Vec::new()));
+                return;
+            }
+        }
+        if code == ">" && self.fill.is_some() {
+            // In a whole-line fill [>] marks the column after the pen (and the space to come) as a field's edge.
+            let pen = self.line.text.chars().count() as i64 + i64::from(self.line_has_text() && !self.touching);
+            let last = self.layout.cells as i64 - 1;
+            if let Some((_, _, stops)) = &mut self.fill {
+                if stops.len() < 2 {
+                    stops.push(pen.min(last));
+                }
+            }
+            return;
+        }
         if code == ">" {
             let pen = self.line.text.chars().count() as i64;
             let mut from = pen + 1 + self.lma;
@@ -2456,6 +2553,8 @@ impl Formatter {
             "tab"
         } else if name.starts_with("mfcs~") {
             "mfcs"
+        } else if name.starts_with("wlf~") {
+            "wlf"
         } else {
             name
         };
@@ -2518,6 +2617,17 @@ impl Formatter {
                 self.code(&format!("hi1:{}:{third}:2:0:0:{seventh}:-1:-1:-1:0", levels * 2 + 1));
             }
             "mfce" => self.code("hi1:1:0:0:0:0:-1:-1:-1:-1:0"),
+            // [wlf~X] (case 0xba): the line is filled at its end with style X of the line fill styles (the default
+            // style when X is not one of them); [>] marks its fields instead of tabbing.
+            "wlf" => {
+                let name: String = code.split_once('~').map_or(String::new(), |(_, x)| x.chars().take(19).collect());
+                let (_, cell, fields) = LINE_FILLS.iter().find(|f| f.0 == name).unwrap_or(&LINE_FILLS[0]);
+                let c = match *cell as u32 {
+                    0x2800..=0x28ff => crate::emboss::NA_CELLS[(*cell as u32 & 0x3f) as usize].to_ascii_lowercase() as char,
+                    _ => *cell,
+                };
+                self.fill = Some((c, *fields, Vec::new()));
+            }
             // [foldsN:W:P...~X] (case 0xa5): N 2 when not given, 0 to (lines - 4) / 2; W 1, 0 to (lines - 4) / N.
             "folds" => {
                 let most = (self.layout.lines as i64 - 4).max(0) / 2;
@@ -2964,8 +3074,31 @@ impl Formatter {
         let width = self.layout.cells.saturating_sub(self.right.max(2 * l.max(r))).max(1);
         let mut lines: Vec<Line> = Vec::new();
         let mut line = Line::default();
+        let mut tab = false;
         for (w, s) in words {
+            if w == "	" {
+                tab = true;
+                continue;
+            }
             let len = w.chars().count();
+            if std::mem::take(&mut tab) && !line.text.is_empty() {
+                let pen = line.text.chars().count() as i64;
+                let from = pen + 1 + self.lma;
+                let stop = self.stops.iter().filter(|st| st.col >= from).min_by_key(|st| st.col).copied();
+                let (start, fill) = match stop {
+                    Some(st) => (if st.just == 'R' { st.col - len as i64 } else { st.col - 1 }, if st.kind != ' ' { st.fill } else { ' ' }),
+                    None => (width as i64 - len as i64, ' '),
+                };
+                if start >= pen && start as usize + len <= width {
+                    for _ in pen..start {
+                        line.text.push(fill);
+                        line.sources.push(None);
+                    }
+                    line.text.push_str(w);
+                    line.sources.extend(s.iter().copied());
+                    continue;
+                }
+            }
             if !line.text.is_empty() && line.text.chars().count() + 1 + len > width {
                 lines.push(std::mem::take(&mut line));
             }
@@ -3275,6 +3408,7 @@ fn is_layout(code: &str) -> bool {
         || code.starts_with("svdac~")
         || code.starts_with("svgan")
         || code.starts_with("mfcs~")
+        || code.starts_with("wlf~")
         || code.starts_with("svgrn")
         || (code.starts_with("pv") && code[2..].starts_with(|c: char| c.is_ascii_digit() || c == '~'))
         || code == "pv"
@@ -3289,7 +3423,7 @@ fn is_layout(code: &str) -> bool {
                 | "svpnp" | "svpfd" | "hi" | "hl" | "lea" | "svrlb" | "svprg" | "sl" | "st" | "ki"
                 | "tls" | "tle" | "tld" | "rfs" | "rfe" | "rfd" | "svrhp" | "svrfp" | "svrhs" | "svrfs" | "kps" | "kpe" | "sc"
                 | "ctb" | "tas" | "taa" | "svmts" | "lps" | "lpr" | "svlma" | "skn" | "sd" | "pm" | "svant" | "pntr" | "pnta" | "svles" | "vcs" | "vce" | "remw" | "lec" | "led" | "mec" | "meg" | "med"
-                | "linenum" | "svpal" | "rps" | "rpe" | "folds" | "mfcs" | "mfce"
+                | "linenum" | "svpal" | "rps" | "rpe" | "folds" | "mfcs" | "mfce" | "wlf"
         )
 }
 
@@ -4226,6 +4360,33 @@ mod tests {
         same("[mfcs~list][hl1]aa bb cc dd[hl2]ee ff gg hh[mfce]ii jj kk ll", "[hi1:5:0:2:0:0:6:-1:-1:-1:0][hl1]aa bb cc dd[hl2]ee ff gg hh[hi1:1:0:0:0:0:-1:-1:-1:-1:0]ii jj kk ll");
         same("[mfcs~contents][hl3]aa bb cc dd ee ff[mfce]", "[hi1:7:6:2:0:0:6:-1:-1:-1:0][hl3]aa bb cc dd ee ff");
         same("[mfcs~exercisenemeth][hl4]aa bb cc dd ee ff[mfce]", "[hi1:5:0:2:0:0:2:-1:-1:-1:0][hl4]aa bb cc dd ee ff");
+    }
+
+    #[test]
+    fn a_whole_line_fill_places_its_fields_and_fills_the_rest() {
+        let l = Layout::braille(12, 4);
+        let line = |doc: &str| {
+            let pages = format(&m(doc), &l, None);
+            texts(&pages[0])[0].to_string()
+        };
+        // The default style (=, all three fields): a line of fill alone, or text then fill.
+        assert_eq!(line("[wlf]"), "============");
+        assert_eq!(line("[wlf~none]x"), "x===========");
+        // The box styles: a left field then the fill (dots 2356), the fill then a right field (dots 1245).
+        assert_eq!(line("[wlf~banaboxtop]Note"), "Note77777777");
+        assert_eq!(line("[wlf~banaboxbottom]End"), "gggggggggEnd");
+        // [>] marks the fields: left, centred, right.
+        assert_eq!(line("[wlf]ab[>]cd[>]ef"), "ab===cd===ef");
+    }
+
+    #[test]
+    fn a_tab_in_a_centred_heading_is_laid_before_the_heading_is_centred() {
+        // abc, then de at the stop at cell 5 (the first past the cell after the pen): "abc de" centred on 20 cells.
+        let pages = format(&m("[hds]abc[>]de[hde]ef"), &Layout::braille(20, 4), None);
+        assert_eq!(texts(&pages[0])[..2], ["       abc de", "ef"]);
+        // ab, then cd at the stop at cell 3, right after it; the word after the heading is not moved.
+        let pages = format(&m("[hds]ab[>]cd[hde]ef"), &Layout::braille(20, 4), None);
+        assert_eq!(texts(&pages[0])[..2], ["        abcd", "ef"]);
     }
 
     #[test]
