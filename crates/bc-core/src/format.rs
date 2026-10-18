@@ -889,6 +889,24 @@ struct Formatter {
     wanted_odd: Option<bool>,
     /// [pmN:C]: the next word goes N spaces on in the line if it fits, else starts a paragraph (C its column).
     magazine: Option<(i64, Option<i64>)>,
+    /// [linenumC:A] (spec 19 section 10.5): the next word is a line number at cell C (from the right edge when
+    /// negative; -1 when not given), aligned A ('R' when not given); the number waiting to be drawn at the line end
+    /// (its first cell and its cells), then on the line the next word's first cell went on (with the pen there);
+    /// [svpalS:N] the word after it (3 and -3); whether text has been put since the last [l], [p], [pg], [hl], [st]
+    /// or paragraph start; the right reserve the numbers keep, the override
+    /// margin of [rmN:O] (0), the section of the page the reserve is kept for ([rmN:O] starts one), the reserve each
+    /// section needed (at most 40, kept over the layouts of a page) and whether the page is laid out again with a
+    /// wider reserve.
+    line_number: Option<(i64, char)>,
+    number_drawn: Option<(i64, Vec<char>)>,
+    number_bound: Option<(i64, Vec<char>, usize)>,
+    svpal: (i64, i64),
+    line_ended: bool,
+    number_room: usize,
+    override_margin: usize,
+    room_section: usize,
+    room_table: Vec<((usize, usize), usize)>,
+    room_restart: bool,
     /// [svantN]: 1 or 3 the head as it stands when the page closes; 2 or 3 the print page number likewise.
     anticipatory: i64,
     /// The table being collected (from [htbs] to [htbe], spec 35), the [htbfmtN:FFF] values for the next table
@@ -1008,6 +1026,16 @@ impl Formatter {
             skip_debt: 0,
             wanted_odd: None,
             magazine: None,
+            line_number: None,
+            number_drawn: None,
+            number_bound: None,
+            svpal: (3, -3),
+            line_ended: false,
+            number_room: 0,
+            override_margin: 0,
+            room_section: 0,
+            room_table: Vec::new(),
+            room_restart: false,
             anticipatory: 0,
             table: None,
             htbfmt: (0, String::new()),
@@ -1228,7 +1256,7 @@ impl Formatter {
     }
 
     fn width(&self) -> usize {
-        self.layout.cells.saturating_sub(self.right.max(self.rooms().1)).max(1)
+        self.layout.cells.saturating_sub(self.right.max(self.number_room).max(self.rooms().1)).max(1)
     }
 
     /// The corner the number of the page being filled goes in (none before the first page shown), by the page
@@ -1255,6 +1283,8 @@ impl Formatter {
         if self.opened {
             return;
         }
+        self.room_section = 0;
+        self.number_room = self.room_lookup(self.override_margin);
         // [sdN] asked for an odd or even page: a page of the wrong parity is left blank (its head and number laid)
         // and the content goes on the next.
         if let Some(odd) = self.wanted_odd.take() {
@@ -1487,6 +1517,12 @@ impl Formatter {
 
     fn put(&mut self, c: char, source: Option<usize>) {
         if source.is_some() {
+            // The standard program writes a waiting line number when it puts the next word on a line, and that
+            // word counts as text since the last forced line break (spec 19 section 10.5).
+            if let Some((start, cells)) = self.number_drawn.take() {
+                self.number_bound = Some((start, cells, self.line.text.chars().count()));
+            }
+            self.line_ended = true;
             if self.page_start.is_none() {
                 self.page_start = source;
             }
@@ -1518,6 +1554,7 @@ impl Formatter {
     /// Ends the line; the next one starts at `next_col`.
     fn end_line(&mut self, next_col: usize) {
         self.saved_col = None;
+        self.draw_line_number();
         // A main entry ([meg]) takes effect at the line end: the first of a page is its first and last guide word,
         // a later one its last; the page keeps a foot line for them when there is room (spec 19 10.4).
         if let Some(entry) = self.guide_pending.take() {
@@ -1550,6 +1587,79 @@ impl Formatter {
         }
         self.start_col = next_col;
         self.after_page_code = false;
+    }
+
+    /// Takes the word after [linenum] as the number (at most 36 cells and one less than the line) and where it goes:
+    /// at the right edge less C when C is negative, keeping room for it and two more cells on the right of the
+    /// page section (at most the line less 4); the page is laid out again when the room grows.
+    fn take_line_number(&mut self, cells: &[(char, Option<usize>)], col: i64, just: char) {
+        let w = self.layout.cells as i64;
+        let len = (cells.len() as i64).min(36).min(w - 1).max(0);
+        let mut col = col;
+        if col < 0 {
+            col += w;
+            let room = self.room_lookup((len + 2).min(w - 4).max(0) as usize);
+            // Laid out again only when the kept room grows (a page state already opened keeps the older reserve).
+            let key = (self.pages.len(), self.room_section);
+            let known = self.room_table.iter().any(|e| e.0 == key && e.1 >= room);
+            if room > self.number_room && self.room_store(room) && !known {
+                self.room_restart = true;
+            }
+            self.number_room = room;
+        }
+        let start = match just {
+            'C' => (col - len + 1) / 2,
+            'L' => col - 1,
+            _ => col - len + 1,
+        };
+        self.number_drawn = Some((start, cells.iter().take(len as usize).map(|c| c.0).collect()));
+    }
+
+    /// The reserve kept for the page section being filled, or `room` when it is wider.
+    fn room_lookup(&self, room: usize) -> usize {
+        let key = (self.pages.len(), self.room_section);
+        self.room_table.iter().find(|e| e.0 == key).map_or(room, |e| e.1.max(room))
+    }
+
+    /// Keeps `room` for the page section being filled; false when 40 sections are kept already.
+    fn room_store(&mut self, room: usize) -> bool {
+        let key = (self.pages.len(), self.room_section);
+        if let Some(e) = self.room_table.iter_mut().find(|e| e.0 == key) {
+            e.1 = room;
+            return true;
+        }
+        if self.room_table.len() < 40 {
+            self.room_table.push((key, room));
+            return true;
+        }
+        false
+    }
+
+    /// Draws the line number the line took: spaces up to its first cell (when the pen had already reached it, the
+    /// cells up to there become spaces, as the standard program does), then the number, cut at the line end.
+    fn draw_line_number(&mut self) {
+        let Some((start, cells, pen)) = self.number_bound.take() else { return };
+        if cells.is_empty() || start < 0 {
+            return;
+        }
+        let full = self.layout.cells as i64;
+        let to = start.min(full) as usize;
+        let used = self.line.text.chars().count();
+        if pen < to {
+            for _ in used..to {
+                self.put(' ', None);
+            }
+        } else {
+            for at in 0..to {
+                self.put_at(at, ' ', None);
+            }
+        }
+        for (k, &c) in cells.iter().enumerate() {
+            let at = start + k as i64;
+            if at < full {
+                self.put_at(at as usize, c, None);
+            }
+        }
     }
 
     fn push_line(&mut self, line: Line) {
@@ -1808,6 +1918,16 @@ impl Formatter {
             // The heading's words are centred later; places in them with no cell fall back to the cell before.
             h.0.push((cells.iter().map(|c| c.0).collect(), cells.iter().map(|c| c.1).collect()));
             self.word_marks.clear();
+            return;
+        }
+        if let Some((col, just)) = self.line_number.take() {
+            self.open_page();
+            self.take_line_number(cells, col, just);
+            self.word_marks.clear();
+            // Text since the last forced line break: the next word follows as after [pm] with the [svpal] values.
+            if self.line_ended {
+                self.magazine = Some((self.svpal.0, Some(self.svpal.1)));
+            }
             return;
         }
         if std::mem::take(&mut self.lea) {
@@ -2234,7 +2354,14 @@ impl Formatter {
             }
             // [sdN] the next page is odd (1) or even (0).
             "sd" => self.wanted_odd = Some(first.unwrap_or(1) != 0),
-            "pm" => self.magazine = Some((first.unwrap_or(0), n.get(1).copied())),
+            // [pmN:C]: N 3 when not given (case 0x71).
+            "pm" => self.magazine = Some((first.unwrap_or(3), n.get(1).copied())),
+            // [linenumC:A] (case 0xaa) and [svpalS:N] (case 0xb7).
+            "linenum" => {
+                let just = code.split(':').nth(1).and_then(|a| a.chars().next()).filter(|c| c.is_ascii_alphabetic());
+                self.line_number = Some((first.unwrap_or(-1), just.map_or('R', |c| c.to_ascii_uppercase())));
+            }
+            "svpal" => self.svpal = (first.unwrap_or(3), n.get(1).copied().unwrap_or(-3)),
             "svant" => self.anticipatory = first.unwrap_or(0).clamp(0, 3),
             "<" => {
                 self.interrupt_keep(|f| {
@@ -2243,11 +2370,13 @@ impl Formatter {
                 });
             }
             "l" => {
+                self.line_ended = false;
                 if self.line_has_text() {
                     self.end_line(self.left);
                 }
             }
             "p" => {
+                self.line_ended = false;
                 if self.line_has_text() {
                     self.end_line(self.left);
                 }
@@ -2339,6 +2468,7 @@ impl Formatter {
             }
             // [hlN] level N: acts as [l], then the level's margins.
             "hl" => {
+                self.line_ended = false;
                 self.interrupt_keep(|f| {
                     if f.line_has_text() {
                         f.end_line(f.left);
@@ -2360,6 +2490,7 @@ impl Formatter {
             }
             // [slN] N lines, the first ending a line with text; [stL] to line L of the page.
             "sl" | "st" => {
+                self.line_ended = false;
                 let target = first.unwrap_or(if name == "st" { 1 } else { 0 });
                 let mut count = if name == "st" {
                     target.clamp(1, self.layout.lines as i64) - 1 - self.page.len() as i64
@@ -2373,13 +2504,24 @@ impl Formatter {
                 self.skip_lines(count);
             }
             "ki" => self.keep_interrupt = first.unwrap_or(0) != 0,
-            "rm" => self.right = first.unwrap_or(0).max(0) as usize,
+            // [rmN:O] (case 0x66): O at least 0 is an override margin (at most the line less 4) the line number
+            // reserve does not go below, and starts a section of the page for that reserve.
+            "rm" => {
+                self.right = first.unwrap_or(0).clamp(0, 159) as usize;
+                if let Some(&o) = n.get(1).filter(|&&o| o >= 0) {
+                    let o = o.min(self.layout.cells as i64 - 4).max(0) as usize;
+                    self.override_margin = o;
+                    self.room_section += 1;
+                    self.number_room = self.room_lookup(o);
+                }
+            }
             // [svsblN]: N blank lines after every line (1 when not given), at most (lines - 4) / 2.
             "svsbl" => {
                 let most = (self.layout.lines as i64 - 4).max(0) / 2;
                 self.blank_between = first.unwrap_or(1).clamp(0, most) as usize;
             }
             "pg" => {
+                self.line_ended = false;
                 // [pgN~X]: the next page is numbered N, with X before its number.
                 if let Some(n) = first.filter(|&n| n > 0) {
                     self.next_counter = Some(n as usize);
@@ -2797,6 +2939,17 @@ impl Formatter {
                 self.keep_start = Some(i);
             }
             i += 1;
+            if std::mem::take(&mut self.room_restart) {
+                let (at, state, w, n) = page_from.clone();
+                let rooms = std::mem::take(&mut self.room_table);
+                let mut pages = std::mem::take(&mut self.pages);
+                pages.truncate(n);
+                self = Formatter { pages, room_table: rooms, ..state };
+                word = w;
+                i = at;
+                made = n;
+                continue;
+            }
             if self.pages.len() == made {
                 continue;
             }
@@ -2933,6 +3086,7 @@ fn is_layout(code: &str) -> bool {
                 | "svpnp" | "svpfd" | "hi" | "hl" | "lea" | "svrlb" | "svprg" | "sl" | "st" | "ki"
                 | "tls" | "tle" | "tld" | "rfs" | "rfe" | "rfd" | "svrhp" | "svrfp" | "svrhs" | "svrfs" | "kps" | "kpe" | "sc"
                 | "ctb" | "tas" | "taa" | "svmts" | "lps" | "lpr" | "svlma" | "skn" | "sd" | "pm" | "svant" | "pntr" | "pnta" | "svles" | "vcs" | "vce" | "remw" | "lec" | "led" | "mec" | "meg" | "med"
+                | "linenum" | "svpal"
         )
 }
 
@@ -3800,6 +3954,28 @@ mod tests {
         // [remw] drops the next word.
         let pages = format(&m("a [remw]b c"), &Layout::braille(20, 2), None);
         assert_eq!(texts(&pages[0])[0], "a c");
+    }
+
+    #[test]
+    fn line_numbers_go_at_the_line_end_with_room_kept_on_the_right() {
+        let l = Layout::braille(20, 6);
+        // At the last cell, with the number and two more cells kept on the right (width 17).
+        let pages = format(&m("[linenum]5 one two three four five six"), &l, None);
+        assert_eq!(texts(&pages[0])[..2], ["one two three      5", "four five six"]);
+        // A wider number later on the page lays the page out again with its room (16); after text the next word
+        // goes on three spaces on ([svpal] 3).
+        let pages = format(&m("[linenum]1 aaa bbb ccc ddd eee fff [linenum]12 ggg hhh"), &l, None);
+        assert_eq!(texts(&pages[0])[..3], ["aaa bbb ccc ddd    1", "eee fff   ggg     12", "hhh"]);
+        // [linenum1:l] at the first cell, over what is there and with no room kept.
+        let pages = format(&m("[linenum1:l]7 aaa bbb"), &l, None);
+        assert_eq!(texts(&pages[0])[0], "7aa bbb");
+        // [svpal1:-2]: when the word does not fit after one space it starts the next line at the margin, with its
+        // number.
+        let pages = format(&m("[svpal1:-2][linenum]1 aaa bbb ccc ddd [linenum]2 eee"), &l, None);
+        assert_eq!(texts(&pages[0])[..2], ["aaa bbb ccc ddd    1", "eee                2"]);
+        // [rm0:0] starts a new section of the page with no room kept.
+        let pages = format(&m("[linenum]9 aaa[l][rm0:0]bbb ccc ddd eee fff"), &l, None);
+        assert_eq!(texts(&pages[0])[1], "bbb ccc ddd eee fff");
     }
 
     #[test]
