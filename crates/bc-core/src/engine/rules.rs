@@ -55,6 +55,19 @@ pub(crate) struct Engine<'a> {
     m_consume: i64,
     m_out: Vec<u8>,
     m_rid: i64,
+    /// A style's codes carried over from the table before a switch: the first 64 codes of the input go to the
+    /// saved ring and the carried codes run first.
+    carried: bool,
+}
+
+/// What a table switch made while a style's codes run carries to the next table (spec 07 section A9b): the ring
+/// with the style's codes, its place, and the codes still to come.
+pub(crate) struct Expansion {
+    ring: [i64; 64],
+    pos: usize,
+    exp: i64,
+    exp_str: Vec<u8>,
+    exp_i: usize,
 }
 
 /// The engine's state at a match, for the stop in `run` (see there).
@@ -119,7 +132,38 @@ impl<'a> Engine<'a> {
             m_consume: 0,
             m_out: Vec::new(),
             m_rid: 0,
+            carried: false,
         }
+    }
+
+    /// The running style's codes, when a switch comes while they run.
+    pub(crate) fn expansion(&self) -> Option<Expansion> {
+        (self.exp >= 1).then(|| Expansion {
+            ring: self.ring,
+            pos: self.pos,
+            exp: self.exp,
+            exp_str: self.exp_str.clone(),
+            exp_i: self.exp_i,
+        })
+    }
+
+    /// Goes on with a style's codes carried from the table before the switch.
+    pub(crate) fn carry(&mut self, x: Expansion) {
+        self.ring = x.ring;
+        self.pos = x.pos;
+        self.exp = x.exp;
+        self.exp_str = x.exp_str;
+        self.exp_i = x.exp_i;
+        self.carried = true;
+    }
+
+    /// The next code of the input itself (not a style's codes).
+    fn input(&mut self) -> i64 {
+        if let Some(&c) = self.inp.get(self.ip) {
+            self.ip += 1;
+            return c;
+        }
+        EOF
     }
 
     /// The next character: from the scanner's codes or, while a style's codes run, from them.
@@ -131,11 +175,7 @@ impl<'a> Engine<'a> {
             }
             return EOF;
         }
-        if let Some(&c) = self.inp.get(self.ip) {
-            self.ip += 1;
-            return c;
-        }
-        EOF
+        self.input()
     }
 
     fn out_on(&self) -> bool {
@@ -803,10 +843,18 @@ impl<'a> Engine<'a> {
     /// The run loop. Returns 0 at the end of the input, or 0x15 when a rule asks for a table switch (the name
     /// collected by action 0x14 is in `name` / `name_len`). `fill_ring` reads the first 64 characters first.
     pub fn run(&mut self) -> i64 {
-        for i in 0..64 {
-            self.ring[i] = self.getc();
+        if self.carried {
+            // After a switch inside a style's codes: the input waits in the saved ring while the codes go on.
+            for i in 0..64 {
+                self.saved_ring[i] = self.input();
+            }
+            self.saved_pos = 0;
+        } else {
+            for i in 0..64 {
+                self.ring[i] = self.getc();
+            }
+            self.pos = 0;
         }
-        self.pos = 0;
         let mut last_zero: Option<Snapshot> = None;
         loop {
             let mut c = self.cur(0);

@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use super::chars::{latin1, split_lines, strip};
-use super::{EngineError, RuleTable, TableSet};
+use super::{EngineError, RuleTable, ScanTable, TableSet};
 use crate::table_list::TableList;
 
 /// Template code text ("[l][kps]") to engine codes: "[" is 0x1C and "]" is 0x1F.
@@ -142,24 +142,24 @@ pub enum LanguageSource {
     Folder(PathBuf),
     /// The tables shipped with BrailleCraft, compiled from their sources.
     Shipped(Rc<TableSet>),
-    /// Rule tables already loaded, by rules table code (the web build, which fetches tables as they are needed). A
-    /// code asked for and not loaded is noted, so the caller can load it and translate again.
+    /// Tables already loaded, by rules table code (the web build, which fetches tables as they are needed). A code
+    /// asked for and not loaded is noted, so the caller can load it and translate again.
     Loaded(Rc<RefCell<LoadedTables>>),
 }
 
-/// The rule tables of `LanguageSource::Loaded`.
+/// The tables of `LanguageSource::Loaded`: each rules table with the scan table its source names.
 #[derive(Default)]
 pub struct LoadedTables {
-    tables: HashMap<String, Rc<RuleTable>>,
+    tables: HashMap<String, (Rc<RuleTable>, ScanTable)>,
     /// Codes known to have no table; they are not noted again.
     absent: HashSet<String>,
     missing: Vec<String>,
 }
 
 impl LoadedTables {
-    /// Keeps the rule table for a rules table code.
-    pub fn add(&mut self, code: &str, table: Rc<RuleTable>) {
-        self.tables.insert(code.to_lowercase(), table);
+    /// Keeps the rule table and scan table for a rules table code.
+    pub fn add(&mut self, code: &str, table: Rc<RuleTable>, scan: ScanTable) {
+        self.tables.insert(code.to_lowercase(), (table, scan));
     }
 
     /// Notes that a rules table code has no table: a switch to it stays on the current table, as when the code is
@@ -173,7 +173,7 @@ impl LoadedTables {
         std::mem::take(&mut self.missing)
     }
 
-    fn get(&mut self, code: &str) -> Option<Rc<RuleTable>> {
+    fn get(&mut self, code: &str) -> Option<(Rc<RuleTable>, ScanTable)> {
         let key = code.to_lowercase();
         if let Some(t) = self.tables.get(&key) {
             return Some(t.clone());
@@ -271,16 +271,21 @@ impl Languages {
         Some((btb.to_string(), pair[1].clone()))
     }
 
-    /// The rule table a language code switches to; None when the code is not known (the engine then stays on the
-    /// current table).
-    pub fn rule_table(&self, name: &[u8]) -> Result<Option<Rc<RuleTable>>, EngineError> {
-        let Some((btb, _)) = self.lookup(name) else { return Ok(None) };
+    /// The rule table and scan table a language code switches to (spec 07 section A9b: the table that takes control
+    /// reads the rest of the text with its own scan table); None when the code is not known (the engine then goes
+    /// back to the document's own tables, as the standard program does).
+    pub fn tables(&self, name: &[u8]) -> Result<Option<(Rc<RuleTable>, ScanTable)>, EngineError> {
+        let Some((btb, sct)) = self.lookup(name) else { return Ok(None) };
         match &self.source {
             LanguageSource::Folder(folder) => {
-                let path = super::find_file(folder, &format!("{btb}.btb"));
-                Ok(Some(Rc::new(RuleTable::read(&super::read_file(&path)?)?)))
+                let rules = RuleTable::read(&super::read_file(&super::find_file(folder, &format!("{btb}.btb")))?)?;
+                let scan = ScanTable::read(&super::read_file(&super::find_file(folder, &format!("{sct}.sct")))?)?;
+                Ok(Some((Rc::new(rules), scan)))
             }
-            LanguageSource::Shipped(set) => Ok(Some(set.translator(&btb)?.rules.clone())),
+            LanguageSource::Shipped(set) => {
+                let t = set.translator_with_scan(&btb, &sct).or_else(|_| set.translator(&btb))?;
+                Ok(Some((t.rules.clone(), t.scan.clone())))
+            }
             LanguageSource::Loaded(loaded) => Ok(loaded.borrow_mut().get(&btb)),
         }
     }

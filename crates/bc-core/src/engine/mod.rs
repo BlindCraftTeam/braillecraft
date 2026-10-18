@@ -175,6 +175,11 @@ impl Translator {
         self.rules.clone()
     }
 
+    /// The scan table the rule table reads its text through.
+    pub fn scan_table(&self) -> &ScanTable {
+        &self.scan
+    }
+
     /// Translates a text.
     pub fn translate(&self, text: &str) -> Result<String, EngineError> {
         self.translate_with(text, self.styles.as_ref(), self.languages.as_ref())
@@ -239,44 +244,67 @@ impl Translator {
         // gets the document's styles too, as the reference hands its scanner the same style lookup.
         let bytes = crate::internal::encode(&text).map_err(EngineError::NotEncodable)?;
         drop(text);
-        let codes = scanner::scan_bytes(&self.scan, bytes, style, &self.chitab)?;
-        let mut stack: Vec<Rc<RuleTable>> = vec![self.rules.clone()];
+        // The tables in use, one per language name as the standard program keeps them (spec 07 section A9b): the
+        // document's own first; the stack of at most 8 places in that list, the count going on past 8.
+        let mut tables: Vec<(String, Rc<RuleTable>, ScanTable)> = vec![(String::new(), self.rules.clone(), self.scan.clone())];
+        let mut depth = 1usize;
+        let mut places = [0usize; MAX_TABLE_DEPTH];
+        let mut current = 0usize;
+        let (codes, mut stop) = scanner::scan_bytes(&self.scan, &bytes, style, &self.chitab)?;
+        let mut read = 0usize;
         let mut e = rules::Engine::new(self.rules.clone(), codes, style, &self.chitab, out);
         let mut r = e.run();
         while r == 0x15 {
             if e.name_len < 1 {
-                // A bare language code goes back one table.
-                if stack.len() > 1 {
-                    stack.pop();
+                // A bare switch code goes back to the table before the latest switch.
+                if depth > 1 {
+                    depth -= 1;
+                    current = if depth <= MAX_TABLE_DEPTH { places[depth - 1] } else { 0 };
                 }
             } else {
                 let name = &e.name[..e.name_len as usize];
+                // A name not known, or tables that cannot be read (the standard program's new context then fails to
+                // open and it takes the first in its list), go back to the document's own tables.
                 let found = match languages {
-                    Some(l) => l.rule_table(name)?,
+                    Some(l) => l.tables(name).unwrap_or(None),
                     None => None,
                 };
-                if stack.len() < MAX_TABLE_DEPTH {
-                    let next = found.unwrap_or_else(|| stack.last().unwrap().clone());
-                    stack.push(next);
+                let target = match found {
+                    None => 0,
+                    Some((rules, scan)) => {
+                        let key: String = chars::latin1(name).to_lowercase().chars().take(30).collect();
+                        match tables.iter().position(|t| t.0 == key) {
+                            Some(k) => k,
+                            None => {
+                                tables.push((key, rules, scan));
+                                tables.len() - 1
+                            }
+                        }
+                    }
+                };
+                depth += 1;
+                if depth <= MAX_TABLE_DEPTH {
+                    places[depth - 1] = target;
+                    current = target;
                 }
             }
-            // The new table goes on from the character after the switch code, with the rest of the input as the
-            // first table's scanner read it.
-            let mut rest = Vec::new();
-            for i in 0..64 {
-                let c = e.ring[(e.pos + i) & 63];
-                if c == EOF {
-                    break;
+            // The next table reads on from where the input ended, with its own scan table; a style's codes running at
+            // the switch go on first.
+            let rest = match stop {
+                Some(p) => {
+                    read += p;
+                    let (codes, next) = scanner::scan_bytes(&tables[current].2, &bytes[read..], style, &self.chitab)?;
+                    stop = next;
+                    codes
                 }
-                rest.push(c);
-            }
-            let tail_end = if e.inp.last() == Some(&EOF) { e.inp.len() - 1 } else { e.inp.len() };
-            if e.ip < tail_end {
-                rest.extend_from_slice(&e.inp[e.ip..tail_end]);
-            }
-            rest.retain(|&x| x < 256);
+                None => Vec::new(),
+            };
+            let carry = e.expansion();
             let out = e.out;
-            e = rules::Engine::new(stack.last().unwrap().clone(), rest, style, &self.chitab, out);
+            e = rules::Engine::new(tables[current].1.clone(), rest, style, &self.chitab, out);
+            if let Some(x) = carry {
+                e.carry(x);
+            }
             r = e.run();
         }
         Ok(())
@@ -477,6 +505,32 @@ mod tests {
         assert_eq!(t.translate("a cat [lnb~qip]ab[lnb] the cat").unwrap(), "a cat \u{1c}lnb~qip\u{1f};ab\u{1c}lnb\u{1f} ! cat");
     }
 
+    /// Table switches as the standard program makes them (spec 07 section A9b): a name not known goes back to the
+    /// document's own table, a bare [lnb] to the table before the latest switch, and switches nest.
+    #[test]
+    fn table_switches_nest_and_an_unknown_name_goes_back_to_the_document_table() {
+        let root = format!("{}/../..", env!("CARGO_MANIFEST_DIR"));
+        let set = Rc::new(shipped_set());
+        let list = crate::table_list::TableList::read(format!("{root}/tables/languages.tsv")).unwrap();
+        let languages = Languages::from_list(&list, LanguageSource::Shipped(set.clone()));
+        let t = set.translator("enuncp").unwrap();
+        let cases = [
+            (
+                "the cat [lnb~qip]ab[lnb~zzz]the cat[lnb]ab[lnb] the cat",
+                "! cat \u{1c}lnb~qip\u{1f}\";2ab;;\u{1c}lnb~zzz\u{1f}! cat\u{1c}lnb\u{1f}\";2ab;;\u{1c}lnb\u{1f} ! cat",
+            ),
+            (
+                "the [lnb~qip]a[lnb~qip]b[lnb]c[lnb] the",
+                "! \u{1c}lnb~qip\u{1f}\";2a;;\u{1c}lnb~qip\u{1f}\";2b;;\u{1c}lnb\u{1f}\";2c;;\u{1c}lnb\u{1f} !",
+            ),
+            ("the [lnb~fra]chat[lnb] the cat", "! \u{1c}lnb~fra\u{1f}*at\u{1c}lnb\u{1f} ! cat"),
+            ("the [lnb~qip]ab", "! \u{1c}lnb~qip\u{1f}\";2ab"),
+        ];
+        for (text, braille) in cases {
+            assert_eq!(t.translate_with(text, None, Some(&languages)).unwrap(), braille, "{text}");
+        }
+    }
+
     #[test]
     fn shipped_tables_are_found_by_the_codes_a_document_names() {
         let set = shipped_set();
@@ -484,6 +538,15 @@ mod tests {
         assert_eq!(set.translator("enuncp").unwrap().translate("The cat sat.").unwrap(), ",! cat sat4");
         assert_eq!(set.translator("enuncb").unwrap().translate(",! cat sat4").unwrap(), "The cat sat.");
         assert!(set.translator("nosuch").is_err());
+    }
+
+    /// Two-byte codes reach the scanner whole, so a two-byte capital gets the capital sign and is written small.
+    #[test]
+    fn two_byte_capitals_get_the_capital_sign() {
+        let set = shipped_set();
+        let t = set.translator("enuncp").unwrap();
+        assert_eq!(t.translate("\u{100}b \u{101}b \u{100}\u{100}").unwrap(), ",@\u{2011}ab @\u{2011}ab ,,@\u{2011}a@\u{2011}a");
+        assert_eq!(set.translator("russup").unwrap().translate("\u{410}\u{431} \u{430}").unwrap(), "^ab a");
     }
 
     /// Accented capitals are capitals to the scanner (the character table tells it): the capital sign goes in front
@@ -513,16 +576,15 @@ mod tests {
         assert_eq!(set.entry("txxtxa").map(|e| e.scan.as_str()), Some("gendxp"));
     }
 
-    /// A rule that takes no characters and leaves its own condition true matches here at the gamma again and again;
-    /// the reference program never finishes this text. BrailleCraft stops the repeat (rules.rs, run) and gives the
-    /// gamma its default output, as the Python reference port with the same stop does.
+    /// A rule here asks for a table switch where the text holds no switch code, so the input had not ended there and
+    /// the scanner had read it to the end: the table that takes over reads on from the stream and finds nothing, so
+    /// the gamma after the switch is not written (spec 07 section A9b). Before the switches were ported, the port
+    /// went on with the first scanner's codes and a rule that takes no characters matched at the gamma again and
+    /// again; BrailleCraft's stop for that repeat (rules.rs, run) stays.
     #[test]
-    fn a_rule_that_repeats_without_taking_characters_is_stopped() {
+    fn a_switch_without_a_switch_code_reads_nothing_more() {
         let semitic = shipped("semitic-language-transcription-basic-forward.bmt");
-        assert_eq!(
-            semitic.translate(&crate::internal::decode(&[0xbd, 0x20, 0xe2])).unwrap(),
-            "\u{1c}lng~am\u{1f}***dbd??* \u{1c}lng~\u{1f}\u{1c}lng~\u{1f}*"
-        );
+        assert_eq!(semitic.translate(&crate::internal::decode(&[0xbd, 0x20, 0xe2])).unwrap(), "\u{1c}lng~am\u{1f}***dbd??* ");
     }
 
     #[test]

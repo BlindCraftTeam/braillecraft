@@ -20,6 +20,9 @@
 //! (spec 07 section E2): the start string in front of it, and the end string after it, or before its last
 //! character when that is a full stop or a comma.
 
+use std::cell::Cell;
+use std::rc::Rc;
+
 use super::callbacks::StyleTable;
 use super::scan_table::{Font, ScanTable};
 use super::writer::Chitab;
@@ -543,39 +546,7 @@ impl<'a> Scanner<'a> {
     /// A code in a style's codes: mode 0 a code that starts with `name`, mode 2 the code `name` itself (followed
     /// by 0x1F, a space or a backquote).
     fn find_code(&self, codes: Option<&[u8]>, name: &str, mode: u8) -> bool {
-        let Some(codes) = codes else { return false };
-        let s: Vec<i64> = codes.iter().map(|&b| i64::from(b)).chain([0]).collect();
-        let n: Vec<i64> = name.chars().map(|c| c.to_ascii_lowercase() as i64).chain([0]).collect();
-        let at = |v: &Vec<i64>, k: usize| v.get(k).copied().unwrap_or(0);
-        let mut i = 0;
-        loop {
-            if at(&s, i) == 0 {
-                return false;
-            }
-            while at(&s, i) != 0 && at(&s, i) != self.t.flag {
-                i += 1;
-            }
-            if at(&s, i) == 0 {
-                return false;
-            }
-            i += 1;
-            let mut j = 0;
-            loop {
-                let a = at(&s, i);
-                let a = if a < 0x80 { to_lower(a) } else { a };
-                if a != at(&n, j) || a == 0 {
-                    break;
-                }
-                i += 1;
-                j += 1;
-                if at(&s, i) == 0x7e && mode == 1 {
-                    return true;
-                }
-            }
-            if at(&n, j) == 0 && (mode == 0 || matches!(at(&s, i), 0x1f | 0x20 | 0x60)) {
-                return true;
-            }
-        }
+        find_code_in(self.t.flag, codes, name, mode)
     }
 
     /// The word is the font's end code, or the end word of a style whose end codes hold it.
@@ -1207,23 +1178,45 @@ impl<'a> Scanner<'a> {
 /// The scanner's output for internal text given as its bytes (two-byte codes as their two bytes, first byte
 /// first), the end code left out: the codes the rule engine reads. The bytes are read one at a time, so the text is
 /// never held as eight-byte codes before the scan.
+///
+/// In text mode the bytes are read as the reference reads its input stream: line ends joined, two-byte codes made
+/// whole, and the input ended right after a table switch code (spec 07 section A9b); the second value is the place
+/// in `bytes` where it ended, None when every byte was read.
 pub(crate) fn scan_bytes(
     t: &ScanTable,
-    bytes: Vec<u8>,
+    bytes: &[u8],
     styles: Option<&StyleTable>,
     case: &Chitab,
-) -> Result<Vec<i64>, EngineError> {
+) -> Result<(Vec<i64>, Option<usize>), EngineError> {
     let mut out = Vec::with_capacity(bytes.len() + bytes.len() / 8);
+    let stop = Rc::new(Cell::new(None));
     {
         let sink = |c: i64| {
             if c != super::chars::EOF {
                 out.push(c);
             }
         };
-        let mut s = Scanner::new(t.clone(), Box::new(bytes.into_iter().map(i64::from)), 0xff01, styles, case, Box::new(sink));
+        let codes = reader_codes(t, bytes, styles, &stop);
+        let mut s = Scanner::new(t.clone(), codes, 0xff01, styles, case, Box::new(sink));
         s.run()?;
     }
-    Ok(out)
+    Ok((out, stop.get()))
+}
+
+/// The codes a scanner reads from `bytes`: in text mode through `FileCodes`, watching for table switches; in the
+/// byte modes the bytes as they are.
+fn reader_codes<'a>(
+    t: &ScanTable,
+    bytes: &'a [u8],
+    styles: Option<&'a StyleTable>,
+    stop: &Rc<Cell<Option<usize>>>,
+) -> Box<dyn Iterator<Item = i64> + 'a> {
+    if t.binmod == 0 {
+        let watch = Watch { flag: t.flag, styles, state: 0, name: Vec::new(), stop: stop.clone() };
+        Box::new(FileCodes { bytes, i: 0, lead: None, watch: Some(watch) })
+    } else {
+        Box::new(bytes.iter().map(|&b| i64::from(b)))
+    }
 }
 
 /// The codes the scanner reads from the bytes of a file, one at a time: a line end (CR, LF, CR LF or LF CR) is one
@@ -1234,6 +1227,54 @@ struct FileCodes<'a> {
     bytes: &'a [u8],
     i: usize,
     lead: Option<i64>,
+    watch: Option<Watch<'a>>,
+}
+
+/// What the text-mode reader watches for in the bytes (spec 07 section A9b): the flag and "lnb" (a table switch)
+/// up to the control that closes the code, or the flag and "es~" or "ee~" and a style name whose codes hold one;
+/// the input ends right after it, and the next table reads on from there.
+struct Watch<'a> {
+    flag: i64,
+    styles: Option<&'a StyleTable>,
+    state: u8,
+    name: Vec<u8>,
+    /// The place in the bytes just after the code that ended the input.
+    stop: Rc<Cell<Option<usize>>>,
+}
+
+impl Watch<'_> {
+    /// Looks at one byte as it is read; `at` is the place after it.
+    fn look(&mut self, c: i64, at: usize) {
+        let low = if (0x41..=0x5a).contains(&c) { c + 0x20 } else { c };
+        self.state = match self.state {
+            0 if c == self.flag => 1,
+            n @ 1..=3 if low == i64::from(b"lnb"[usize::from(n - 1)]) => n + 1,
+            1 if low == 0x65 => 5,
+            4 if c < 0x20 => {
+                self.stop.set(Some(at));
+                0
+            }
+            4 => 4,
+            5 if low == 0x73 => 6,
+            5 if low == 0x65 => 7,
+            n @ (6 | 7) if c == 0x7e => {
+                self.name.clear();
+                n + 2
+            }
+            n @ (8 | 9) if c < 0x20 => {
+                let codes = self.styles.and_then(|st| st.lookup(&self.name, i64::from(n - 8)));
+                if find_code_in(self.flag, codes.as_deref(), "lnb", 1) {
+                    self.stop.set(Some(at));
+                }
+                0
+            }
+            n @ (8 | 9) if self.name.len() < 0x1f => {
+                self.name.push(c as u8);
+                n
+            }
+            _ => 0,
+        };
+    }
 }
 
 impl FileCodes<'_> {
@@ -1260,7 +1301,15 @@ impl Iterator for FileCodes<'_> {
 
     fn next(&mut self) -> Option<i64> {
         loop {
+            if self.watch.as_ref().is_some_and(|w| w.stop.get().is_some()) {
+                // The input has ended at a table switch.
+                return Some(0xff01);
+            }
             let c = self.line_code()?;
+            let at = self.i;
+            if let Some(w) = self.watch.as_mut() {
+                w.look(c, at);
+            }
             if super::chars::flags(c) & 0x20 != 0 {
                 self.lead = Some(c << 8);
                 continue;
@@ -1281,9 +1330,47 @@ impl Iterator for FileCodes<'_> {
     }
 }
 
+/// Whether a style's codes hold the code `name` after the flag `flag`: mode 0 any code starting with it, mode 1 the
+/// name whole or followed by "~" (spec 07 sections E7 and A9b).
+fn find_code_in(flag: i64, codes: Option<&[u8]>, name: &str, mode: u8) -> bool {
+    let Some(codes) = codes else { return false };
+    let s: Vec<i64> = codes.iter().map(|&b| i64::from(b)).chain([0]).collect();
+    let n: Vec<i64> = name.chars().map(|c| c.to_ascii_lowercase() as i64).chain([0]).collect();
+    let at = |v: &Vec<i64>, k: usize| v.get(k).copied().unwrap_or(0);
+    let mut i = 0;
+    loop {
+        if at(&s, i) == 0 {
+            return false;
+        }
+        while at(&s, i) != 0 && at(&s, i) != flag {
+            i += 1;
+        }
+        if at(&s, i) == 0 {
+            return false;
+        }
+        i += 1;
+        let mut j = 0;
+        loop {
+            let a = at(&s, i);
+            let a = if a < 0x80 { to_lower(a) } else { a };
+            if a != at(&n, j) || a == 0 {
+                break;
+            }
+            i += 1;
+            j += 1;
+            if at(&s, i) == 0x7e && mode == 1 {
+                return true;
+            }
+        }
+        if at(&n, j) == 0 && (mode == 0 || matches!(at(&s, i), 0x1f | 0x20 | 0x60)) {
+            return true;
+        }
+    }
+}
+
 #[cfg(test)]
 fn file_codes(bytes: &[u8]) -> Vec<i64> {
-    FileCodes { bytes, i: 0, lead: None }.collect()
+    FileCodes { bytes, i: 0, lead: None, watch: None }.collect()
 }
 
 /// The import scan of a file: the bytes read through the scanner with `t` (no styles), each code it gives written
@@ -1301,11 +1388,8 @@ pub(crate) fn scan_file(t: &ScanTable, bytes: &[u8]) -> Result<Vec<u8>, EngineEr
             }
         };
         // The byte modes read the file's bytes as they are; text mode reads them as codes.
-        let codes: Box<dyn Iterator<Item = i64>> = if t.binmod == 0 {
-            Box::new(FileCodes { bytes, i: 0, lead: None })
-        } else {
-            Box::new(bytes.iter().map(|&b| i64::from(b)))
-        };
+        let stop = Rc::new(Cell::new(None));
+        let codes = reader_codes(t, bytes, None, &stop);
         let mut s = Scanner::new(t.clone(), codes, 0xff7f, None, Chitab::shared(), Box::new(sink));
         s.run()?;
     }
@@ -1349,7 +1433,7 @@ mod tests {
     fn addresses_go_between_the_computer_braille_codes() {
         let mut t = table("import-print.sct");
         let scan = |t: &ScanTable, text: &str| -> Vec<u8> {
-            scan_bytes(t, text.bytes().collect(), None, Chitab::shared()).unwrap().iter().map(|&c| c as u8).collect()
+            scan_bytes(t, text.as_bytes(), None, Chitab::shared()).unwrap().0.iter().map(|&c| c as u8).collect()
         };
         assert_eq!(scan(&t, "mail me@example.org, then"), b"mail me@example.org, then".to_vec());
         t.icb = 1;
@@ -1366,8 +1450,8 @@ mod tests {
     }
 
     /// Input mode 1 reads bytes with line ends joined and mode 2 bytes as they are, both without the text layers
-    /// (runs of spaces kept); ninmod passes the codes through with no words made; spare 1 and 3 write FF 80 in
-    /// front of the text, spare 2 and 3 FF 7F at its end.
+    /// (runs of spaces kept); text mode joins line ends too (each here a space); ninmod passes the codes through with
+    /// no words made; spare 1 and 3 write FF 80 in front of the text, spare 2 and 3 FF 7F at its end.
     #[test]
     fn byte_modes_pass_through_and_spare_marks() {
         let base = table("import-print.sct");
@@ -1375,16 +1459,16 @@ mod tests {
             ((1, 0, 0), b"Ab  c\nd\ne", b"Ab  c\nd"),
             ((2, 0, 0), b"Ab  c\r\nd\re", b"Ab  c\r\nd"),
             ((2, 1, 0), b"Ab  c\r\nd\re", b"Ab  c\r\nd"),
-            ((0, 1, 0), b"Ab c\r d\re", b"Ab c d"),
-            ((0, 0, 1), b"\xff\x80Ab c\r d\re", b"\xff\x80Ab c d"),
-            ((0, 0, 3), b"\xff\x80Ab c\r d\re\xff\x7f", b"\xff\x80Ab c d\xff\x7f"),
-            ((0, 0, 2), b"Ab c\r d\re\xff\x7f", b"Ab c d\xff\x7f"),
+            ((0, 1, 0), b"Ab c d e", b"Ab c d"),
+            ((0, 0, 1), b"\xff\x80Ab c d e", b"\xff\x80Ab c d"),
+            ((0, 0, 3), b"\xff\x80Ab c d e\xff\x7f", b"\xff\x80Ab c d\xff\x7f"),
+            ((0, 0, 2), b"Ab c d e\xff\x7f", b"Ab c d\xff\x7f"),
         ];
         for ((mode, nin, spare), codes, file) in cases {
             let mut t = base.clone();
             (t.binmod, t.ninmod, t.spare) = (mode, nin, spare);
             let out: Vec<u8> =
-                scan_bytes(&t, b"Ab  c\r\nd\re".to_vec(), None, Chitab::shared()).unwrap().iter().map(|&c| c as u8).collect();
+                scan_bytes(&t, b"Ab  c\r\nd\re", None, Chitab::shared()).unwrap().0.iter().map(|&c| c as u8).collect();
             assert_eq!(out, codes.to_vec(), "codes, mode {mode} ninmod {nin} spare {spare}");
             assert_eq!(scan_file(&t, b"Ab  c\r\nd").unwrap(), file.to_vec(), "file, mode {mode} ninmod {nin} spare {spare}");
         }
@@ -1400,6 +1484,34 @@ mod tests {
         assert!(case.is_capital(0x9c83) && case.small(0x9c83) == 0x83);
         assert!(case.is_capital(0xb230) && case.small(0xb230) == 0xb231 && case.is_small(0xb231));
         assert!(!case.is_capital(0x31) && !case.is_small(0x31) && case.small(0x31) == 0x31);
+    }
+
+    /// In text mode the input ends right after a table switch code, or after a style code whose style holds one;
+    /// the rest is left for the next table (spec 07 section A9b). Byte modes watch nothing.
+    #[test]
+    fn the_input_ends_after_a_table_switch() {
+        let t = table("import-print.sct");
+        let scan = |t: &ScanTable, text: &[u8], styles: Option<&StyleTable>| -> (Vec<u8>, Option<usize>) {
+            let (codes, stop) = scan_bytes(t, text, styles, Chitab::shared()).unwrap();
+            (codes.iter().map(|&c| c as u8).collect(), stop)
+        };
+        let mut braille = table("import-braille.sct");
+        braille.flag = 0x1c;
+        let (out, stop) = scan(&braille, b"ab \x1clnb~qip\x1fcd ef", None);
+        assert_eq!((String::from_utf8_lossy(&out).into_owned(), stop), ("ab \x1dlnb~qip\x1f".to_string(), Some(12)));
+        let (_, stop) = scan(&braille, b"ab \x1cLNB\x1fcd", None);
+        assert_eq!(stop, Some(8));
+        let (_, stop) = scan(&braille, b"ab \x1clng~x\x1fcd", None);
+        assert_eq!(stop, None);
+        let styles = StyleTable::from_text([("Fr", "[lnb~fra]", "[lnb]"), ("B", "[fts~b]", "[fte~b]")]);
+        let (_, stop) = scan(&braille, b"ab \x1ces~Fr\x1fcd", Some(&styles));
+        assert_eq!(stop, Some(10));
+        let (_, stop) = scan(&braille, b"ab \x1ces~B\x1fcd", Some(&styles));
+        assert_eq!(stop, None);
+        let mut raw = braille.clone();
+        raw.binmod = 2;
+        assert_eq!(scan(&raw, b"ab \x1clnb~qip\x1fcd", None).1, None);
+        let _ = t;
     }
 
     #[test]

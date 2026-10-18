@@ -923,10 +923,11 @@ impl LanguageList {
             .to_string()
     }
 
-    /// Loads the table a rules table code is recreated as (a shipped .bmt file's text), for language switches.
+    /// Loads the tables a rules table code is recreated as (a shipped .bmt file's text), for language switches: the
+    /// rule table and the scan table the switched-to text is read through.
     pub fn add_table(&self, code: &str, source: &str) -> Result<(), JsError> {
-        let table = Translator::from_source(source).map_err(error)?.rules();
-        self.1.borrow_mut().add(code, table);
+        let t = Translator::from_source(source).map_err(error)?;
+        self.1.borrow_mut().add(code, t.rules(), t.scan_table().clone());
         Ok(())
     }
 
