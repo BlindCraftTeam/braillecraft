@@ -293,6 +293,21 @@ pub struct Page {
     pub number: crate::range::PageNumber,
     /// The tables that start on this page (spec 35 section 7): the editor's table regions.
     pub tables: Vec<TableRegion>,
+    /// The reference points ([rps] ... [rpe]) that end on this page (spec 19 section 10.6), for a table of contents.
+    pub references: Vec<ReferencePoint>,
+}
+
+/// A reference point ([rpsN] ... [rpe]): the document places of its two codes, N, and the braille page number and
+/// print page number of its first word and of its last.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ReferencePoint {
+    pub start: usize,
+    pub end: usize,
+    pub value: i64,
+    pub first_page: String,
+    pub first_print: String,
+    pub last_page: String,
+    pub last_print: String,
 }
 
 /// The table holding document place `pos` among the laid-out pages, when the place is after the table's first
@@ -907,6 +922,12 @@ struct Formatter {
     room_section: usize,
     room_table: Vec<((usize, usize), usize)>,
     room_restart: bool,
+    /// The reference point open since its [rps] (the point with its first and last word's page numbers once a word
+    /// came), the points ended on the page being filled, and the document place of the last code or mark met.
+    ref_open: Option<ReferencePoint>,
+    ref_first: bool,
+    page_refs: Vec<ReferencePoint>,
+    last_place: usize,
     /// [svantN]: 1 or 3 the head as it stands when the page closes; 2 or 3 the print page number likewise.
     anticipatory: i64,
     /// The table being collected (from [htbs] to [htbe], spec 35), the [htbfmtN:FFF] values for the next table
@@ -1036,6 +1057,10 @@ impl Formatter {
             room_section: 0,
             room_table: Vec::new(),
             room_restart: false,
+            ref_open: None,
+            ref_first: false,
+            page_refs: Vec::new(),
+            last_place: 0,
             anticipatory: 0,
             table: None,
             htbfmt: (0, String::new()),
@@ -1807,7 +1832,8 @@ impl Formatter {
         let roman = self.page_text.take().map_or(self.roman, |(_, roman)| roman);
         let number = crate::range::PageNumber { number: self.counter as u32, letter: self.prefix, roman };
         let tables = std::mem::take(&mut self.page_tables);
-        self.pages.push(Page { lines, start, print_labels, number, tables });
+        let references = std::mem::take(&mut self.page_refs);
+        self.pages.push(Page { lines, start, print_labels, number, tables, references });
         // The next page: its counter, and the number settings changed on this one.
         self.counter = self.next_counter.take().unwrap_or(self.counter + 1);
         if let Some((odd, even)) = self.next_numbers.take() {
@@ -1919,6 +1945,18 @@ impl Formatter {
             h.0.push((cells.iter().map(|c| c.0).collect(), cells.iter().map(|c| c.1).collect()));
             self.word_marks.clear();
             return;
+        }
+        if self.ref_open.is_some() {
+            let page = self.page_number_text();
+            let print = self.print_number.clone().unwrap_or_default();
+            if let Some(r) = &mut self.ref_open {
+                if !std::mem::replace(&mut self.ref_first, true) {
+                    r.first_page = page.clone();
+                    r.first_print = print.clone();
+                }
+                r.last_page = page;
+                r.last_print = print;
+            }
         }
         if let Some((col, just)) = self.line_number.take() {
             self.open_page();
@@ -2362,6 +2400,22 @@ impl Formatter {
                 self.line_number = Some((first.unwrap_or(-1), just.map_or('R', |c| c.to_ascii_uppercase())));
             }
             "svpal" => self.svpal = (first.unwrap_or(3), n.get(1).copied().unwrap_or(-3)),
+            // [rpsN] (case 0x9b) opens a reference point when none is open; [rpe] (0x9c) keeps it when a word came in
+            // it; [svrpt] (0x9d) does nothing here.
+            "rps" => {
+                if self.ref_open.is_none() {
+                    self.ref_open = Some(ReferencePoint { start: self.last_place, value: first.unwrap_or(0), ..Default::default() });
+                    self.ref_first = false;
+                }
+            }
+            "rpe" => {
+                if let Some(mut r) = self.ref_open.take() {
+                    if std::mem::take(&mut self.ref_first) {
+                        r.end = self.last_place;
+                        self.page_refs.push(r);
+                    }
+                }
+            }
             "svant" => self.anticipatory = first.unwrap_or(0).clamp(0, 3),
             "<" => {
                 self.interrupt_keep(|f| {
@@ -2856,6 +2910,7 @@ impl Formatter {
                 }
             }
             Piece::Mark(pos) => {
+                self.last_place = *pos;
                 if !word.is_empty() {
                     self.word_marks.push((*pos, word.len()));
                 } else if self.heading.is_none() && self.running.is_none() {
@@ -2885,6 +2940,14 @@ impl Formatter {
             f.page_start = Some(map(s)?);
         }
         f.last_start = map(f.last_start)?;
+        f.last_place = map(f.last_place).unwrap_or(f.last_place);
+        if let Some(r) = &mut f.ref_open {
+            r.start = map(r.start)?;
+        }
+        for r in &mut f.page_refs {
+            r.start = map(r.start)?;
+            r.end = map(r.end)?;
+        }
         if let Some(h) = &mut f.heading {
             for (_, sources) in &mut h.0 {
                 for s in sources.iter_mut().flatten() {
@@ -3086,7 +3149,7 @@ fn is_layout(code: &str) -> bool {
                 | "svpnp" | "svpfd" | "hi" | "hl" | "lea" | "svrlb" | "svprg" | "sl" | "st" | "ki"
                 | "tls" | "tle" | "tld" | "rfs" | "rfe" | "rfd" | "svrhp" | "svrfp" | "svrhs" | "svrfs" | "kps" | "kpe" | "sc"
                 | "ctb" | "tas" | "taa" | "svmts" | "lps" | "lpr" | "svlma" | "skn" | "sd" | "pm" | "svant" | "pntr" | "pnta" | "svles" | "vcs" | "vce" | "remw" | "lec" | "led" | "mec" | "meg" | "med"
-                | "linenum" | "svpal"
+                | "linenum" | "svpal" | "rps" | "rpe"
         )
 }
 
@@ -3172,6 +3235,10 @@ impl Join {
             }
             for l in &mut page.print_labels {
                 l.1 = map(l.1)?;
+            }
+            for r in &mut page.references {
+                r.start = map(r.start)?;
+                r.end = map(r.end)?;
             }
         }
         let mut later = self.checkpoints.split_off(k + 1);
@@ -3976,6 +4043,19 @@ mod tests {
         // [rm0:0] starts a new section of the page with no room kept.
         let pages = format(&m("[linenum]9 aaa[l][rm0:0]bbb ccc ddd eee fff"), &l, None);
         assert_eq!(texts(&pages[0])[1], "bbb ccc ddd eee fff");
+    }
+
+    #[test]
+    fn a_reference_point_keeps_its_places_and_page_numbers() {
+        let doc = m("[rps2]Ch one[rpe] a[pg]b [rps]c[pg]d[rpe] [rps][rpe]");
+        let pages = format(&doc, &Layout::braille(20, 4), None);
+        let points: Vec<&ReferencePoint> = pages.iter().flat_map(|p| &p.references).collect();
+        // The empty point has no word and is not kept; the second runs from page 2 to page 3.
+        assert_eq!(points.len(), 2);
+        assert_eq!((points[0].start, points[0].end, points[0].value), (0, 12, 2));
+        assert_eq!((points[0].first_page.as_str(), points[0].last_page.as_str()), ("#a", "#a"));
+        assert_eq!((points[1].start, points[1].end, points[1].value), (25, 36, 0));
+        assert_eq!((points[1].first_page.as_str(), points[1].last_page.as_str()), ("#b", "#c"));
     }
 
     #[test]
