@@ -607,9 +607,12 @@ void DocEditor::AccessibleTextChanged(int, const wxString&, const wxString&)
     RaiseUiaEvent(this, UIA_Text_TextChangedEventId);
 }
 
+// As the standard program's caret notification (spec 30 section 12 unknown 12): the selection changed event and the
+// text changed event, both, whenever the caret moves.
 void DocEditor::AccessibleCaretMoved()
 {
     RaiseUiaEvent(this, UIA_Text_TextSelectionChangedEventId);
+    RaiseUiaEvent(this, UIA_Text_TextChangedEventId);
 }
 
 void DocEditor::AccessibleNameChanged()

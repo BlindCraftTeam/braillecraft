@@ -132,7 +132,8 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   Page Number and Document, Page Numbering check the number in the dialog, and Apply Last Style applies the paragraph
   style last ended before the caret. A value a dialog refuses gets its message there, with what was typed kept.
   Delete Style and changing a style's codes ask first, and the last style cannot be deleted; Clear (Del) with nothing
-  selected deletes the character at the caret, and Cut ends Highlight. Shortcut Preferences checks its codes in the
+  selected deletes the character at the caret, Cut ends Highlight, Ctrl+U makes the character at the caret its capital
+  form, and a double click selects the word alone, up to a space or a code on either side. Shortcut Preferences checks its codes in the
   dialog, Notification Settings brings back every message hidden with "do not show again", and a new hyphen table
   lays the document out again. Words are hyphenated at line ends by the document's Hyphen
   Table (None, Dashes, Dashes and Hyphens, French, French 113; the tables ship as data): at a break marked in the

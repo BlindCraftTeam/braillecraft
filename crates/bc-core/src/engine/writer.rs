@@ -111,7 +111,12 @@ impl Chitab {
     }
 
     /// The capital form of a code: from the code page for one-byte codes (0x9C plus the code when it has no
-    /// one-byte capital), from the table for two-byte codes.
+    /// one-byte capital), from the table for two-byte codes; the code itself when it has none. The editor's Ctrl+U
+    /// reads it too (spec 30 section 12 unknown 7, closed).
+    pub fn capital(&self, code: i64) -> i64 {
+        self.upper_pair(code)
+    }
+
     fn upper_pair(&self, code: i64) -> i64 {
         if code < 0x100 {
             let (_, lower, upper) = kind(code);

@@ -71,7 +71,8 @@ extern "C" fn on_row(data: *mut c_void, row: c_int, which: c_int) -> *const c_ch
         let ed = &d.ed;
         Some(match which {
             2 => match ed.row(row) {
-                Some(Row::Line { line, .. }) => (line + 1).to_string(),
+                // Two digits at least, as the standard program's "%02d" (spec 30 section 12 unknown 5).
+                Some(Row::Line { line, .. }) => format!("{:02}", line + 1),
                 _ => String::new(),
             },
             1 => row_form(ed, row, &ed.row_text(row), d.area_rows.forms.access, false),

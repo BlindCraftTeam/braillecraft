@@ -443,6 +443,66 @@ impl Editor {
         }
     }
 
+    /// Selects the word under document place `pos`, as the standard program's double click does (spec 30 section
+    /// 12 unknown 9, closed): spaces at the place are skipped forward; the word runs back to a space, a code's end
+    /// or a code's start, and forward to a space, a code's start or a code's end; the selection holds the word's
+    /// characters alone, with the caret at its end.
+    pub fn select_word_at(&mut self, pos: usize) {
+        let pos = pos.min(self.len);
+        let text = &self.doc.text;
+        let byte_of = |place: usize| text.char_indices().nth(place).map_or(text.len(), |(b, _)| b);
+        // A code's start and end as the text has them (every code is a run of the document's codes list).
+        let code_start = |place: usize| self.doc.codes.iter().any(|c| c.0 == place);
+        let code_end = |place: usize| self.doc.codes.iter().any(|c| c.1 == place);
+        let mut at = pos;
+        let mut forward = text[byte_of(at)..].chars();
+        while let Some(' ') = forward.clone().next() {
+            at += 1;
+            forward.next();
+        }
+        let mut start = at;
+        let before: Vec<char> = text[..byte_of(at)].chars().rev().take_while(|&c| c != ' ').collect();
+        for c in before {
+            if code_start(start) || code_end(start) || c == '\n' {
+                break;
+            }
+            start -= 1;
+        }
+        let mut end = at;
+        for c in text[byte_of(at)..].chars() {
+            if c == ' ' || c == '\n' || code_start(end) || code_end(end) {
+                break;
+            }
+            end += 1;
+        }
+        self.anchor = start;
+        self.caret = end;
+        self.want = None;
+    }
+
+    /// Ctrl+U of the standard program (spec 30 section 12 unknown 7, closed): the character at the caret is replaced
+    /// by its capital form from the character table when it has one; a code or the end of the text is left alone.
+    pub fn capitalize_at_caret(&mut self) -> Option<Shown> {
+        let pos = self.caret;
+        if pos >= self.len || self.doc.codes.iter().any(|c| c.0 <= pos && pos < c.1) {
+            return None;
+        }
+        let c = self.doc.text.chars().nth(pos)?;
+        let bytes = crate::internal::encode(&c.to_string()).ok()?;
+        let code = match bytes.len() {
+            1 => bytes[0] as i64,
+            2 => (bytes[0] as i64) << 8 | bytes[1] as i64,
+            _ => return None,
+        };
+        let capital = crate::engine::Chitab::builtin().capital(code);
+        if capital == code {
+            return None;
+        }
+        let out = if capital < 0x100 { vec![capital as u8] } else { vec![(capital >> 8) as u8, (capital & 0xff) as u8] };
+        let replacement = crate::internal::decode(&out);
+        Some(self.replace(pos, pos + 1, &Shown::plain(&replacement)))
+    }
+
     /// The paragraph codes ([p], and style begin codes), each as the unit the caret goes over. INFERENCE (spec 27
     /// 5a: which codes the reference counts as paragraph codes is not traced).
     fn paragraph_codes(&self) -> Vec<(usize, usize)> {
@@ -635,6 +695,39 @@ mod tests {
         e.move_caret(Move::Up, false);
         e.move_caret(Move::Up, false);
         assert_eq!(e.caret_place(), (0, 5));
+    }
+
+    #[test]
+    fn a_double_click_selects_the_word_alone_and_stops_at_codes() {
+        let mut ed = Editor::new(Shown::marked("one two[p]three four"), Layout::print(40, 25), None, true, 65);
+        // In "two", at its second letter: the word's characters, the caret at its end.
+        ed.select_word_at(5);
+        assert_eq!(ed.selection(), (4, 7));
+        assert_eq!(ed.caret, 7);
+        // On the space before "two": the spaces are skipped first.
+        ed.select_word_at(3);
+        assert_eq!(ed.selection(), (4, 7));
+        // "three" after the code and its own line break: the break bounds it on the left, the space on the right.
+        ed.select_word_at(12);
+        assert_eq!(ed.selection(), (11, 16));
+        // "four" at the end of the text.
+        ed.select_word_at(18);
+        assert_eq!(ed.selection(), (17, 21));
+    }
+
+    #[test]
+    fn ctrl_u_makes_the_character_at_the_caret_its_capital() {
+        let mut ed = Editor::new(Shown::marked("ab[p]c"), Layout::print(40, 25), None, true, 65);
+        ed.set_caret(1);
+        assert!(ed.capitalize_at_caret().is_some());
+        assert_eq!(ed.doc.text, "aB[p]\nc");
+        // Already capital, or a code, or the end: nothing changes.
+        ed.set_caret(1);
+        assert!(ed.capitalize_at_caret().is_none());
+        ed.set_caret(2);
+        assert!(ed.capitalize_at_caret().is_none());
+        ed.set_caret(7);
+        assert!(ed.capitalize_at_caret().is_none());
     }
 
     #[test]

@@ -342,18 +342,18 @@ int DocEditor::ColumnX(int row, int col)
     return m_gutter + m_margin + x;
 }
 
-// The column at x (in the virtual area) in row `row`: the nearer boundary.
+// The column at x (in the virtual area) in row `row`: the last character that starts at or left of x, as the
+// standard program places it (spec 30 section 12 unknown 11); past the row's end, whole characters on.
 int DocEditor::ColumnAt(int row, int x)
 {
     const auto& e = Extents(row);
     x -= m_gutter + m_margin;
     if (x <= 0) return 0;
     const int last = (int)e.size() - 1;
-    for (int k = 0; k < last; ++k) {
-        if (x < (e[k] + e[k + 1]) / 2) return k;
+    for (int k = 1; k <= last; ++k) {
+        if (e[k] > x) return k - 1;
     }
-    if (x <= e[last]) return last;
-    return last + (x - e[last] + m_charWidth / 2) / m_charWidth;
+    return last + (x - e[last]) / m_charWidth;
 }
 
 void DocEditor::SetCaretPlace(int row, int col, int anchorRow, int anchorCol, int keepFromTop, const wxString* caretRowText)
@@ -456,9 +456,9 @@ void DocEditor::OnPaint(wxPaintEvent&)
     for (int row = top; row <= last; ++row) {
         const int y = row * m_rowHeight;
         if (IsBreakRow(row)) {
-            // The page break row: one line across the whole width at the text's baseline (spec 30). INFERENCE: its
-            // pen is the window text colour, one pixel (spec 30 unknown: the page-break pen).
-            dc.SetPen(wxPen(fore, 1));
+            // The page break row: one line across the whole width at the text's baseline (spec 30); the pen is the
+            // standard program's: solid, two pixels, black (spec 30 section 12 unknown 2).
+            dc.SetPen(wxPen(*wxBLACK, 2));
             dc.DrawLine(0, y + m_ascent, width, y + m_ascent);
             continue;
         }

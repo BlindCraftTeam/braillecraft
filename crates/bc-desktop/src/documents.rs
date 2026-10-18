@@ -361,14 +361,20 @@ pub fn area_key(key: u64, code: i32, _unicode: i32, mods: i32) -> bool {
             done = true;
             return;
         }
+        // Ctrl+U (spec 30 section 12 unknown 7): the character at the caret becomes its capital form, one undo step.
+        if control && !shift && !alt && code == i32::from(b'U') {
+            a.edit_by(i, |ed| ed.capitalize_at_caret().unwrap_or_default());
+            done = true;
+            return;
+        }
         if raw_control && shift && matches!(code, PAGE_UP | PAGE_DOWN) {
             let up = code == PAGE_UP;
             wxdragon::call_after(Box::new(move || move_tab(key, up)));
             done = true;
             return;
         }
-        // Alt with a key belongs to the menus (Alt with the arrows moves between table cells in the reference, not
-        // built: BrailleCraft has no tables yet).
+        // Alt with a key belongs to the menus; Alt with the arrows moves between table cells (handled with the
+        // arrows below, as the reference does).
         if alt && !control {
             return;
         }
@@ -469,14 +475,9 @@ pub fn area_mouse(key: u64, kind: i32, row: usize, col: usize, mods: i32) {
             0 if mods & MOD_SHIFT != 0 => ed.select(ed.anchor, pos),
             0 => ed.set_caret(pos),
             1 => ed.select(ed.anchor, pos),
-            3 => {
-                // INFERENCE (spec 27 5c: the double click sets the reference's word select, not traced further).
-                ed.set_caret(pos);
-                ed.move_caret(Move::WordLeft, false);
-                let start = ed.caret;
-                ed.move_caret(Move::WordRight, true);
-                ed.anchor = start;
-            }
+            // The double click selects the word under it (spec 30 section 12 unknown 9: the word's characters, up to
+            // a space or a code on either side).
+            3 => ed.select_word_at(pos),
             _ => return,
         }
         caret_moved(a, i);
