@@ -657,6 +657,26 @@ fn fold_index(n: i64, l: i64, y: i64, k: i64, last: bool, w: i64, at: &[i64; 9])
     None
 }
 
+/// The levels of a major formatting context from piece `from`: 1, or the largest [hlN] (N 1 to 256) before the next
+/// [mfce] or the end (spec 19 section 10.8).
+fn mfc_levels(pieces: &Pieces, from: usize) -> i64 {
+    let mut levels = 1;
+    for i in from..pieces.len() {
+        if let Piece::Code(c) = pieces.get(i) {
+            let (name, n) = split_code(&c);
+            if name == "mfce" {
+                break;
+            }
+            if name == "hl" {
+                if let Some(&l) = n.first() {
+                    levels = levels.max(l.clamp(1, 256));
+                }
+            }
+        }
+    }
+    levels
+}
+
 /// A roman numeral, lower case (the standard program writes it in capitals; the braille and print tables both show
 /// it in small letters here, as the digits are); "?" outside 1 to 3999 (spec 19 section 8.1).
 fn roman_numeral(n: usize) -> String {
@@ -965,6 +985,8 @@ struct Formatter {
     /// [foldsN:W:P1:...~X] (spec 19 section 10.7): N folds (0 none) of W lines each, the fold positions given (0 where
     /// none) and the characters that fill a fold's lines (by fold, the first for the rest; none leaves them blank).
     folds: (usize, usize, [i64; 9], Vec<char>),
+    /// The levels of the major formatting context an [mfcs] opens: the largest [hlN] before its [mfce] (1 at least).
+    mfc_levels: i64,
     /// [svantN]: 1 or 3 the head as it stands when the page closes; 2 or 3 the print page number likewise.
     anticipatory: i64,
     /// The table being collected (from [htbs] to [htbe], spec 35), the [htbfmtN:FFF] values for the next table
@@ -1099,6 +1121,7 @@ impl Formatter {
             page_refs: Vec::new(),
             last_place: 0,
             folds: (0, 1, [0; 9], Vec::new()),
+            mfc_levels: 1,
             anticipatory: 0,
             table: None,
             htbfmt: (0, String::new()),
@@ -2429,7 +2452,13 @@ impl Formatter {
             }
         }
         let (name, n) = split_code(code);
-        let name = if name.starts_with("tab~") { "tab" } else { name };
+        let name = if name.starts_with("tab~") {
+            "tab"
+        } else if name.starts_with("mfcs~") {
+            "mfcs"
+        } else {
+            name
+        };
         let first = n.first().copied();
         match name {
             // [ctb] every stop at the line end, justified right, no fill (case 0x4c).
@@ -2472,6 +2501,23 @@ impl Formatter {
                 self.line_number = Some((first.unwrap_or(-1), just.map_or('R', |c| c.to_ascii_uppercase())));
             }
             "svpal" => self.svpal = (first.unwrap_or(3), n.get(1).copied().unwrap_or(-3)),
+            // [mfcs~X] (case 0xb1) sets the level margins as [hi] would for the levels to its [mfce]: first cell 1,
+            // runover two cells past the last level ("exercisenemeth" at most 2 levels, "contents" its own third
+            // and seventh values); [mfce] (0xb2) sets them back to [hi1:1] (spec 19 section 10.8).
+            "mfcs" => {
+                let kind = code.split_once('~').map_or("", |(_, x)| x);
+                let mut levels = self.mfc_levels;
+                let (third, seventh) = match kind {
+                    "contents" => (6, 6),
+                    "exercisenemeth" => {
+                        levels = levels.min(2);
+                        (0, 2)
+                    }
+                    _ => (0, 6),
+                };
+                self.code(&format!("hi1:{}:{third}:2:0:0:{seventh}:-1:-1:-1:0", levels * 2 + 1));
+            }
+            "mfce" => self.code("hi1:1:0:0:0:0:-1:-1:-1:-1:0"),
             // [foldsN:W:P...~X] (case 0xa5): N 2 when not given, 0 to (lines - 4) / 2; W 1, 0 to (lines - 4) / N.
             "folds" => {
                 let most = (self.layout.lines as i64 - 4).max(0) / 2;
@@ -3084,7 +3130,13 @@ impl Formatter {
                 }
                 self.new_page();
             }
-            self.step(&pieces.get(i), &mut word);
+            let piece = pieces.get(i);
+            if let Piece::Code(c) = &piece {
+                if split_code(c).0.split('~').next() == Some("mfcs") {
+                    self.mfc_levels = mfc_levels(pieces, i + 1);
+                }
+            }
+            self.step(&piece, &mut word);
             if std::mem::take(&mut self.keep_opened) {
                 self.keep_start = Some(i);
             }
@@ -3222,6 +3274,7 @@ fn is_layout(code: &str) -> bool {
         || code.starts_with('#')
         || code.starts_with("svdac~")
         || code.starts_with("svgan")
+        || code.starts_with("mfcs~")
         || code.starts_with("svgrn")
         || (code.starts_with("pv") && code[2..].starts_with(|c: char| c.is_ascii_digit() || c == '~'))
         || code == "pv"
@@ -3236,7 +3289,7 @@ fn is_layout(code: &str) -> bool {
                 | "svpnp" | "svpfd" | "hi" | "hl" | "lea" | "svrlb" | "svprg" | "sl" | "st" | "ki"
                 | "tls" | "tle" | "tld" | "rfs" | "rfe" | "rfd" | "svrhp" | "svrfp" | "svrhs" | "svrfs" | "kps" | "kpe" | "sc"
                 | "ctb" | "tas" | "taa" | "svmts" | "lps" | "lpr" | "svlma" | "skn" | "sd" | "pm" | "svant" | "pntr" | "pnta" | "svles" | "vcs" | "vce" | "remw" | "lec" | "led" | "mec" | "meg" | "med"
-                | "linenum" | "svpal" | "rps" | "rpe" | "folds"
+                | "linenum" | "svpal" | "rps" | "rpe" | "folds" | "mfcs" | "mfce"
         )
 }
 
@@ -4161,6 +4214,18 @@ mod tests {
         let pages = format(&m(&format!("[folds1:1~-]{letters}")), &l, None);
         assert_eq!(texts(&pages[0])[12], "-");
         assert_eq!(fold_index(1, 25, 12, 0, true, 1, &[0; 9]), Some(0));
+    }
+
+    #[test]
+    fn a_major_formatting_context_sets_its_margins_from_its_levels() {
+        let same = |a: &str, b: &str| {
+            let l = Layout::braille(12, 8);
+            assert_eq!(texts(&format(&m(a), &l, None)[0]), texts(&format(&m(b), &l, None)[0]), "{a}");
+        };
+        // Two levels: as [hi1:5:0:2:0:0:6:-1:-1:-1:0].
+        same("[mfcs~list][hl1]aa bb cc dd[hl2]ee ff gg hh[mfce]ii jj kk ll", "[hi1:5:0:2:0:0:6:-1:-1:-1:0][hl1]aa bb cc dd[hl2]ee ff gg hh[hi1:1:0:0:0:0:-1:-1:-1:-1:0]ii jj kk ll");
+        same("[mfcs~contents][hl3]aa bb cc dd ee ff[mfce]", "[hi1:7:6:2:0:0:6:-1:-1:-1:0][hl3]aa bb cc dd ee ff");
+        same("[mfcs~exercisenemeth][hl4]aa bb cc dd ee ff[mfce]", "[hi1:5:0:2:0:0:2:-1:-1:-1:0][hl4]aa bb cc dd ee ff");
     }
 
     #[test]
