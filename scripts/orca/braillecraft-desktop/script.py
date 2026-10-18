@@ -243,6 +243,7 @@ class Script(gtk.Script):
         """Speaks `text` and flashes it in braille, through whichever API this Orca has."""
         if not text:
             return
+        debug.print_message(debug.LEVEL_INFO, "BRAILLECRAFT SAY: %r" % text, True)
         if hasattr(self, "present_message"):
             self.present_message(text)
         elif hasattr(self, "presentMessage"):
@@ -254,6 +255,7 @@ class Script(gtk.Script):
         """Speaks `text` only."""
         if not text:
             return
+        debug.print_message(debug.LEVEL_INFO, "BRAILLECRAFT SPEAK: %r" % text, True)
         if hasattr(self, "speak_message"):
             self.speak_message(text)
         elif hasattr(self, "speakMessage"):

@@ -3,20 +3,31 @@
 BrailleCraft is made by the BlindCraft Team. It is a braille translation, formatting and embossing program for Windows, Linux and macOS, with the same
 program in a web browser. You write or open a print document, translate it to braille (or a braille document back to
 print), lay it out in braille pages, and print or emboss it. Every screen is built to work with a screen reader and
-the keyboard alone, and to meet WCAG 2.2 AA.
+the keyboard alone, and to meet WCAG 2.2 AA; JAWS scripts, an NVDA add-on, VoiceOver scripts and an Orca script
+come with the program, and a braille display shows a braille document's cells exactly.
 
 ## Screenshots
 
-![The BrailleCraft window with a print document holding two lines of text. Below the text, the translated line
-shows the first line in contracted braille, written in braille ASCII. The status line under it reads Current Style:
-None, Page 1, Line 1, Column 51.](docs/screenshots/desktop-print-document.png)
+![The BrailleCraft window with a print document: the sentence "BrailleCraft translates print to braille and back."
+and a second sentence that wraps onto a third line. Below the text, the translated line shows the second sentence in
+contracted braille written in braille ASCII. The status line under it reads Current Style: None, Page 1, Line 2,
+Column 78, Keys 1.](docs/screenshots/desktop-print-document.png)
 
 *A print document. The translated line under the text shows the braille for the line the cursor is on.*
 
-![The same text after File, Translate: a braille document shown in the braille font as six-dot braille cells, with
-the print text of the current line in the translated line below it.](docs/screenshots/desktop-braille-document.png)
+![The same text after File, Translate: a second tab, Untitled Braille Document 1, beside the print document's tab;
+four lines of six-dot braille cells in the braille font; the translated line below shows the print of the first
+line, "BrailleCraft translates print to braille and back."; the status line reads Current Style: None, Page 1,
+Line 1, Column 1, Keys 6.](docs/screenshots/desktop-braille-document.png)
 
-*The braille document made by File, Translate, shown in the braille font.*
+*The braille document made by File, Translate, shown in the braille font. Keys 6 on the status line: six-key entry
+is on in a braille document.*
+
+![The same braille document in the coded view: the cells in three rows of up to 42 cells, and a status line that
+reads Current Style: None, Keys 6, with no page, line or column.](docs/screenshots/desktop-coded-view.png)
+
+*View, Codes (Alt+F3): the coded view shows the running text with every code, in rows of 42 cells (65 characters
+in a print document); the status line gives the style and the keys, and no page, line or column.*
 
 ![The File New dialog: Document Type with Print selected and Braille, a list of document settings templates
 starting with English (UEB) basic, the buttons Mark template as default, Hide Template and Select Region, a Show
@@ -25,15 +36,17 @@ Hidden Templates check box, and OK and Cancel.](docs/screenshots/desktop-file-ne
 *File, New: each new document starts from a template that sets its language and braille code.*
 
 ![The Embosser Setup dialog: a Brailler Device list with No Target Embosser, the buttons New, Modify Embosser and
-Remove, and Desired Braille Document Formatting with Form, 40 characters per line, 25 lines per page, top and
-binding margins, and check boxes for Emboss in Interpoint, Emboss Banner Page and Interline
+Remove, and Desired Braille Document Formatting with an empty Form, 40 characters per line, 25 lines per page, top
+and binding margins greyed, and check boxes for Emboss in Interpoint, Emboss Banner Page and Interline
 Print.](docs/screenshots/desktop-embosser-setup.png)
 
-*Embosser Setup opens at the first start, when no embosser is set up yet.*
+*Embosser Setup opens at the first start, when no embosser is set up yet; with no target embosser the form and the
+margins are greyed, as in the original program.*
 
-![BrailleCraft in a web browser: the same menu bar (File, Edit, View, Layout, Table, Document, Global, Help), a print
-document with two lines of text, its translated line in braille ASCII, and the status
-line.](docs/screenshots/web-editor.png)
+![BrailleCraft in a web browser: the same menu bar (File, Edit, View, Layout, Table, Document, Global, Help), the
+window title BrailleCraft - Untitled Print Document 1 -- Print Document, a print document with two lines of text,
+its translated line in braille ASCII, and the status line Current Style: None, Page 1, Line 1, Column 38, Keys
+1.](docs/screenshots/web-editor.png)
 
 *The web build: the same program in a browser.*
 
@@ -236,7 +249,7 @@ to main runs the Build workflow. Open the repository on GitHub, then **Actions**
 |---|---|
 | `braillecraft-windows-installer` | The Windows installer (.msi): the program, the braille fonts for every program, the JAWS scripts, the NVDA add-on, a desktop shortcut, and the .dxp and .dxb file types with Open, Print and Emboss. |
 | `braillecraft-macos-installer` | A disk image (.dmg) with BrailleCraft.app, for Apple Silicon Macs, beside `BrailleCraft.voprefs` and the VoiceOver key notes. Drag the application to Applications. |
-| `braillecraft-linux-packages` | A .deb (Debian, Ubuntu), an .rpm (Fedora and others) and an AppImage that runs without installing. |
+| `braillecraft-linux-packages` | A .deb (Debian, Ubuntu), an .rpm (Fedora and others) and an AppImage that runs without installing; each carries the Orca script in its `orca` folder. |
 | `braillecraft-desktop-<system>` | The program as a plain folder, for trying it without an installer. |
 | `braillecraft-web` | The web build, to serve from any web server. |
 
