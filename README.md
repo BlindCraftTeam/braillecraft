@@ -269,15 +269,34 @@ or in a `.mcp.json` or the Claude Desktop configuration:
 `braillecraft-cli mcp --in book.md` opens a file first. `--automation-read-root DIR` and `--automation-write-root
 DIR` confine the files the session reads and writes to those folders. The server runs headless, with a session of
 its own over the same core the program uses (the same tables, templates and embosser models, found beside the
-program). Its tools: `list_commands` and `execute` (every menu command by id; the ones that need the program's
-window say so), `new_document`, `open_document` and `import_file` (every kind the program opens), `save_document`,
-`export_file` (BRF, PEF, coded and formatted text and braille, refreshable braille, HTML, HTML with MathJax,
-LaTeX, Markdown, the document formats), `get_text`, `inspect_document`, `type_text`, `select_text`, `translate`
-and `back_translate` (the document, or a given text; braille returned as North American ASCII and as Unicode
-braille patterns), `format_document` (the pages as they would be embossed), `emboss_bytes`, `list_tables`,
-`list_templates`, `list_embossers`, `undo` and `redo`; and resources for the document, the commands, the tables,
-the templates and the embossers. The tool `screenshot`, `key`, `click`, `list_documents` and `activate_document`
-need the running program (the next section of this work).
+program). Its tools: `list_commands` and `execute` (every menu command by id), `new_document`, `open_document` and
+`import_file` (every kind the program opens), `save_document`, `export_file` (BRF, PEF, coded and formatted text and
+braille, refreshable braille, HTML, HTML with MathJax, LaTeX, Markdown, the document formats), `get_text`,
+`inspect_document`, `type_text`, `select_text`, `translate` and `back_translate` (the document, or a given text;
+braille returned as North American ASCII and as Unicode braille patterns), `format_document` (the pages as they
+would be embossed), `emboss_bytes`, `list_tables`, `list_templates`, `list_embossers`, `undo` and `redo`; and
+resources for the document, the commands, the tables, the templates and the embossers.
+
+### Driving the running program
+
+The same tools can work on the documents you have open in BrailleCraft itself, with three more: `screenshot` (a
+picture of the program's windows), `key` (a key pressed in the program, with Ctrl, Shift and Alt) and `click`, plus
+`list_documents` and `activate_document`. Turn the server on in the program with **Global, MCP Server** (run it now,
+the port, and whether it starts with the program), or start the program with `braillecraft-desktop --control 7991`;
+then connect the agent to it:
+
+```
+claude mcp add braillecraft -- braillecraft-cli mcp --connect 7991
+```
+
+The program listens on 127.0.0.1 only and writes a key file, `control-7991.key`, in its settings folder; the
+command-line program reads it from there (or from `BRAILLECRAFT_CONTROL_KEY`) and sends it with every request, so
+only programs run by you on this computer reach the channel. Every request runs in the program as a menu command
+does: a change an agent makes is one undo step, and the status line follows it. A command that opens a dialog is
+started and answered at once; the agent then reads the dialog with `screenshot` and answers it with `key` and
+`click`, which press real keys and buttons in whichever window has the focus (on macOS the system asks once to allow
+BrailleCraft to control the computer, and `screenshot` needs Screen Recording for it). The web build has no server:
+a web page cannot listen for connections, and its MCP Server item says so.
 
 ## Downloads
 

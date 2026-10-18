@@ -61,3 +61,8 @@ included from cpp/include/wxdragon.h):
 - wxd_SaveDialog_WithChoice: a Save As file dialog with a labelled choice in it (through wxFileDialogCustomizeHook),
   shown only for given file types; on Linux the GTK file chooser's "filter" property is watched to follow the type,
   and the panel holding the controls is fitted to them again when they are shown or hidden.
+
+Also added, in cpp/include/core/wxd_screenshot.h and cpp/src/screenshot.cpp (listed in cpp/CMakeLists.txt and
+included from cpp/include/wxdragon.h):
+- wxd_App_SaveScreenshot: a picture of every shown top-level window of the program, read back from the screen
+  (wxScreenDC) as one PNG file, for the control channel's screenshot tool (braillecraft-cli mcp --connect).

@@ -7,6 +7,7 @@ mod bell;
 mod codes;
 mod command_line;
 mod commands;
+mod control;
 mod dialog_table;
 mod dlg;
 mod editor_view;
@@ -217,6 +218,10 @@ fn main() {
             busy: false,
             known: Vec::new(),
         });
+        // The command line is read now: --control PORT starts the control channel (control.rs) with the window,
+        // as does the Global, MCP Server setting; the files it names are opened once the window is up.
+        let cl = command_line::read();
+        control::start_at_launch(cl.control);
         // Windows: the JAWS script set shipped beside the program is offered for installing first.
         #[cfg(windows)]
         if let Some(dir) = resource_dir("jaws", "../../scripts/jaws", "braillecraft-desktop.jss") {
@@ -296,7 +301,6 @@ fn main() {
         // The command line (spec 26 section 26.5): files given are opened, and printed, embossed or saved when an
         // option says so. When every file came with an option, the work is done without the editor and the program
         // ends.
-        let cl = command_line::read();
         let opened = command_line::run(&cl);
         if cl.is_batch() {
             app::with(|a| {

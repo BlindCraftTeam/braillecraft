@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- BrailleCraft's own dialogs, beside the ones generated from the reference program's resources (dialogs.xrc):
+     sizer layouts whose controls the program finds by name. -->
+<resource xmlns="http://www.wxwidgets.org/wxxrc" version="2.5.3.0">
+  <object class="wxDialog" name="dlg3220">
+    <style>wxCAPTION|wxSYSTEM_MENU|wxCLOSE_BOX|wxTAB_TRAVERSAL</style>
+    <title>MCP Server</title>
+    <centered>1</centered>
+    <object class="wxBoxSizer">
+      <orient>wxVERTICAL</orient>
+      <object class="sizeritem">
+        <flag>wxALIGN_LEFT|wxALL</flag>
+        <border>8</border>
+        <object class="wxStaticText" name="CONTROL_INTRO">
+          <label>An AI agent works on the open documents through braillecraft-cli mcp --connect PORT. The server listens on this computer only (127.0.0.1) and takes requests that carry the key it writes beside the settings.</label>
+          <wrap>420</wrap>
+        </object>
+      </object>
+      <object class="sizeritem">
+        <flag>wxALIGN_LEFT|wxLEFT|wxRIGHT|wxTOP</flag>
+        <border>8</border>
+        <object class="wxCheckBox" name="CONTROL_RUNNING">
+          <label>&amp;Run the MCP server now</label>
+        </object>
+      </object>
+      <object class="sizeritem">
+        <flag>wxALIGN_LEFT|wxLEFT|wxRIGHT|wxTOP</flag>
+        <border>8</border>
+        <object class="wxBoxSizer">
+          <orient>wxHORIZONTAL</orient>
+          <object class="sizeritem">
+            <flag>wxALIGN_CENTER_VERTICAL|wxRIGHT</flag>
+            <border>5</border>
+            <object class="wxStaticText" name="CONTROL_PORT_LABEL">
+              <label>&amp;Port:</label>
+            </object>
+          </object>
+          <object class="sizeritem">
+            <flag>wxALIGN_CENTER_VERTICAL</flag>
+            <object class="wxTextCtrl" name="CONTROL_PORT">
+              <size>80,-1</size>
+            </object>
+          </object>
+        </object>
+      </object>
+      <object class="sizeritem">
+        <flag>wxALIGN_LEFT|wxLEFT|wxRIGHT|wxTOP</flag>
+        <border>8</border>
+        <object class="wxCheckBox" name="CONTROL_AUTOSTART">
+          <label>&amp;Start the server when BrailleCraft starts</label>
+        </object>
+      </object>
+      <object class="sizeritem">
+        <flag>wxALIGN_LEFT|wxALL</flag>
+        <border>8</border>
+        <object class="wxStaticText" name="CONTROL_STATE">
+          <label>Not running.</label>
+          <wrap>420</wrap>
+        </object>
+      </object>
+      <object class="sizeritem">
+        <flag>wxALIGN_RIGHT|wxALL</flag>
+        <border>5</border>
+        <object class="wxStdDialogButtonSizer">
+          <object class="button">
+            <flag>wxALIGN_CENTER_HORIZONTAL|wxALL</flag>
+            <border>5</border>
+            <object class="wxButton" name="wxID_OK">
+              <label>&amp;OK</label>
+              <default>1</default>
+            </object>
+          </object>
+          <object class="button">
+            <flag>wxALIGN_CENTER_HORIZONTAL|wxALL</flag>
+            <border>5</border>
+            <object class="wxButton" name="wxID_CANCEL">
+              <label>&amp;Cancel</label>
+            </object>
+          </object>
+        </object>
+      </object>
+    </object>
+  </object>
+</resource>

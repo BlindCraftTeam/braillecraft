@@ -459,6 +459,8 @@ pub fn run(id: i32, checked: bool) {
         3202 | 3204 | 3205 => message(PLANNED_HELP),
         3206 => message("BrailleCraft 0.1: the main window, menus, dialogs, editing, find and replace, six-key entry, the code vocabulary, braille fonts for 18 encodings, and translation with the BrailleCraft engine and its tables. The file format, printing and embossing follow in the plan."),
         3210 => message("Updates are published on the BrailleCraft GitHub page."),
+        // BrailleCraft's own: Global, MCP Server (control.rs).
+        crate::control::COMMAND_ID => crate::control::dialog(),
         3211 => about(),
         _ => {}
     }
@@ -632,7 +634,7 @@ fn template_chooser(d: &Dlg, ids: TemplateIds) -> std::rc::Rc<std::cell::RefCell
 }
 
 /// Document `key` takes template `name`'s tables, styles and page numbering.
-fn apply_template(key: u64, name: &str) {
+pub(crate) fn apply_template(key: u64, name: &str) {
     let tables = translation::template_tables(name);
     let styles = translation::template_style_list(name);
     let numbers = translation::template_page_numbers(name);
@@ -1383,7 +1385,7 @@ fn save(key: Option<u64>, as_new: bool) -> bool {
 
 /// Writes the document as a document file (.dxp or .dxb) in format `version` (1, or 0 for the older format), then
 /// takes that file as its own.
-fn write_document(key: u64, path: &Path, version: u16) -> bool {
+pub(crate) fn write_document(key: u64, path: &Path, version: u16) -> bool {
     let Some(doc) = app::with(|a| {
         let i = a.index_of(key)?;
         let d = &a.docs[i];
@@ -1552,7 +1554,7 @@ fn prf_bytes(pages: &[bc_core::format::Page], code_page: &str) -> Vec<u8> {
 
 /// Save As LaTeX (.tex), HTML (.htm) or HTML with MathJax (.htm) for a print document: the running text through
 /// `make` (translation::latex, html, mathjax). The document keeps its own file and name.
-fn write_text_export(key: u64, path: &Path, make: fn(&str) -> Result<Vec<u8>, String>) -> bool {
+pub(crate) fn write_text_export(key: u64, path: &Path, make: fn(&str) -> Result<Vec<u8>, String>) -> bool {
     let Some(running) = app::with(|a| a.index_of(key).map(|i| a.docs[i].shown().to_running())) else { return false };
     let out = match make(&running) {
         Ok(o) => o,
@@ -1571,7 +1573,7 @@ fn write_text_export(key: u64, path: &Path, make: fn(&str) -> Result<Vec<u8>, St
 /// Save As coded braille (.bru) for a braille document or coded text (.txt) for a print document: the body as the
 /// document file stores it, through the coding and line wrapping rule scripts. The document keeps its own file and
 /// name.
-fn write_coded(key: u64, path: &Path) -> bool {
+pub(crate) fn write_coded(key: u64, path: &Path) -> bool {
     let Some((body, braille)) = app::with(|a| {
         let i = a.index_of(key)?;
         let d = &a.docs[i];
@@ -1599,7 +1601,7 @@ fn write_coded(key: u64, path: &Path) -> bool {
 /// Save As refreshable braille (.lbf) for a braille document: its running text, braille in North American ASCII
 /// braille as the document file stores it, and its styles, through bc_core::lbf. The document keeps its own file
 /// and name.
-fn write_refreshable(key: u64, path: &Path) -> bool {
+pub(crate) fn write_refreshable(key: u64, path: &Path) -> bool {
     let Some((running, styles)) = app::with(|a| {
         let i = a.index_of(key)?;
         let d = &a.docs[i];
@@ -1618,7 +1620,7 @@ fn write_refreshable(key: u64, path: &Path) -> bool {
 
 /// Save As PEF for a braille document: its laid-out pages as Unicode braille, the page size and interpoint of its
 /// embosser layout, its name as the title. The document itself keeps its own file and name.
-fn write_pef(key: u64, path: &Path) -> bool {
+pub(crate) fn write_pef(key: u64, path: &Path) -> bool {
     let Some(xml) = app::with(|a| {
         let i = a.index_of(key)?;
         let shown = a.docs[i].shown();
@@ -1741,7 +1743,7 @@ pub fn write_refreshable_for(key: u64, path: &Path) -> bool {
 /// Save As formatted braille (.brf) for a braille document or formatted text (.prf) for a print document, in the
 /// encoding or code page at `choice` of the Encoding box: the document laid out into pages and written as the
 /// reference program's page writer writes them (spec 04d-B). The document itself keeps its own file and name.
-fn write_formatted(key: u64, path: &Path, braille: bool, choice: usize) -> bool {
+pub(crate) fn write_formatted(key: u64, path: &Path, braille: bool, choice: usize) -> bool {
     let Some((pages, shown_in)) = app::with(|a| {
         let i = a.index_of(key)?;
         let shown = a.docs[i].shown();
@@ -1764,7 +1766,7 @@ fn write_formatted(key: u64, path: &Path, braille: bool, choice: usize) -> bool 
 /// Save As Markdown for a braille document (BrailleCraft's own addition): the document laid out into pages, each
 /// page a fenced code block of its lines as Unicode braille patterns (a blank cell for a space), pages separated by
 /// a blank line.
-fn write_markdown_braille(key: u64, path: &Path) -> bool {
+pub(crate) fn write_markdown_braille(key: u64, path: &Path) -> bool {
     let Some((pages, enc)) = app::with(|a| {
         let i = a.index_of(key)?;
         let shown = a.docs[i].shown();
@@ -1793,6 +1795,7 @@ pub fn close_document(key: Option<u64>) {
 }
 
 pub fn exit_program() {
+    crate::control::stop();
     let keys: Vec<u64> = app::with(|a| a.docs.iter().map(|d| d.key).collect());
     for key in keys {
         documents::bring_to_front(app::with(|a| a.index_of(key)).unwrap_or(0));

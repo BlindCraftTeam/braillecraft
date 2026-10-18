@@ -4525,6 +4525,11 @@ const COMMANDS = {
       "BrailleCraft 0.1: the main window, menus, dialogs, editing, find and replace, six-key entry, the code vocabulary, braille fonts for 18 encodings, and translation with the BrailleCraft engine and its tables. The file format, printing and embossing follow in the plan.",
     ),
   3210: () => message("Updates are published on the BrailleCraft GitHub page."),
+  // BrailleCraft's own Global, MCP Server item: a page cannot listen for connections, so the web build has no server.
+  3220: () =>
+    message(
+      "The web build cannot run the MCP server: a web page cannot listen for connections. Use the desktop program (Global, MCP Server, or braillecraft-desktop --control PORT) with braillecraft-cli mcp --connect PORT, or braillecraft-cli mcp on its own.",
+    ),
   3101: async () => (await onceNotice("GlobalEmbosserWarning", GLOBAL_EMBOSSER_WARNING)) && embosserSetup(true),
   3102: async () => (await onceNotice("GlobalPrinterWarning", GLOBAL_PRINTER_WARNING)) && printerSetup(true),
   3104: () => showDialog(1060, { memory: "", setup: (d) => (d.setChecked(10, true), d.setText(12, ""), d.setText(14, "05:00")) }),

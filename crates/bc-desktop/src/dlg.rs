@@ -32,6 +32,8 @@ pub enum Value {
 }
 
 const XRC: &str = include_str!("../../../ui-native/dialogs.xrc");
+/// BrailleCraft's own dialogs (sizer layouts, controls found by name): Global, MCP Server.
+const OWN_XRC: &str = include_str!("../../../ui-native/braillecraft.xrc");
 
 /// Room a push button needs beside its text: the padding and border each side.
 const BUTTON_PADDING: i32 = 24;
@@ -93,7 +95,8 @@ pub fn load_resources() -> Result<(), String> {
     }
     let res = XmlResource::get();
     res.init_all_handlers();
-    res.load_from_string(XRC)
+    res.load_from_string(XRC)?;
+    res.load_from_string(OWN_XRC)
 }
 
 /// The mnemonic letter of a label: the character after a single &.

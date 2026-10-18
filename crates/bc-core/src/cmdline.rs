@@ -63,6 +63,9 @@ pub struct CommandLine {
     /// /resetfilesavefolder and /resetfileopenfolder.
     pub reset_save_folder: bool,
     pub reset_open_folder: bool,
+    /// --control PORT (also /control:PORT): BrailleCraft's own option, the control channel for an AI agent
+    /// (braillecraft-cli mcp --connect PORT) opened on 127.0.0.1 at that port; 0 lets the system pick one.
+    pub control: Option<u16>,
     /// Arguments that are neither an option nor a file found, and files that matched nothing, with the reference's
     /// log lines ("Ignoring command line parameter: %s", "Cannot open file %s").
     pub log: Vec<String>,
@@ -79,7 +82,8 @@ impl CommandLine {
 /// An option name and its value: "/name", "-name", "/name:value" or "/name=value" (`equals` allows "="). None for
 /// an argument that is not an option.
 fn option(arg: &str, equals: bool) -> Option<(String, Option<String>)> {
-    let rest = arg.strip_prefix('/').or_else(|| arg.strip_prefix('-'))?;
+    // "--name" as the shells of Linux and macOS write options is the same option as "-name".
+    let rest = arg.strip_prefix('/').or_else(|| arg.strip_prefix("--")).or_else(|| arg.strip_prefix('-'))?;
     let cut = rest.find(|c| c == ':' || (equals && c == '='));
     let (name, value) = match cut {
         Some(i) => (&rest[..i], Some(rest[i + 1..].to_string())),
@@ -93,7 +97,10 @@ fn option(arg: &str, equals: bool) -> Option<(String, Option<String>)> {
 pub fn parse(args: &[String], expand: impl Fn(&str) -> Vec<PathBuf>) -> CommandLine {
     let mut cl = CommandLine::default();
     let mut mode = Mode::Open;
-    for arg in args {
+    let mut k = 0;
+    while k < args.len() {
+        let arg = &args[k];
+        k += 1;
         if let Some((name, value)) = option(arg, true) {
             let path = || value.clone().filter(|v| !v.is_empty()).map(PathBuf::from);
             match name.as_str() {
@@ -140,6 +147,23 @@ pub fn parse(args: &[String], expand: impl Fn(&str) -> Vec<PathBuf>) -> CommandL
                 },
                 "resetfilesavefolder" => cl.reset_save_folder = true,
                 "resetfileopenfolder" => cl.reset_open_folder = true,
+                // --control PORT, --control=PORT or /control:PORT (BrailleCraft's own).
+                "control" => {
+                    let port = match value.as_deref() {
+                        Some(v) => v.trim().parse::<u16>().ok(),
+                        None => match args.get(k).and_then(|v| v.trim().parse::<u16>().ok()) {
+                            Some(p) => {
+                                k += 1;
+                                Some(p)
+                            }
+                            None => None,
+                        },
+                    };
+                    match port {
+                        Some(p) => cl.control = Some(p),
+                        None => cl.log.push(format!("Ignoring command line parameter: {arg}")),
+                    }
+                }
                 // Options of the reference program BrailleCraft has nothing for (its Word importer's style map, its
                 // debugging and automation hooks, its window title): kept out of the run, as noted.
                 "wordstylemap" | "debug" | "api" | "title" => cl.log.push(format!("Not used by BrailleCraft: {arg}")),
@@ -250,6 +274,19 @@ mod tests {
         assert_eq!(parse(&args(&["/print", "/home/x/a.dxp"]), found).actions[0].file, PathBuf::from("/home/x/a.dxp"));
         assert_eq!(parse(&args(&["/copies:0"]), found).log, vec!["Ignoring command line parameter: /copies:0".to_string()]);
         assert!(matches!(parse(&args(&["/RemovePageInfo", "x.dxp"]), found).actions[0].mode, Mode::NotAvailable(_)));
+    }
+
+    #[test]
+    fn the_control_port_in_its_three_forms() {
+        assert_eq!(parse(&args(&["--control", "7991", "a.dxp"]), found).control, Some(7991));
+        assert_eq!(parse(&args(&["--control=7000"]), found).control, Some(7000));
+        assert_eq!(parse(&args(&["/control:0"]), found).control, Some(0));
+        let cl = parse(&args(&["--control", "a.dxp"]), found);
+        assert_eq!(cl.control, None);
+        assert_eq!(cl.actions.len(), 1);
+        assert!(cl.log.iter().any(|l| l.contains("--control")), "{:?}", cl.log);
+        // "--print" is the /print option, as "-print" is.
+        assert_eq!(parse(&args(&["--print", "a.dxp"]), found).actions[0].mode, Mode::Print);
     }
 
     #[test]

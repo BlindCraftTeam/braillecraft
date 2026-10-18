@@ -47,7 +47,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libgl1-mesa-dev libglu1-mesa-dev libfontconfig-dev
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libgl1-mesa-dev libglu1-mesa-dev libfontconfig-dev libxtst-dev
 
       - name: Tests
         run: cargo test --workspace
@@ -193,7 +193,7 @@ jobs:
             w=$(xdotool getactivewindow 2> /dev/null || true)
             { if [ -n "$w" ]; then xwd -id "$w" -silent; else xwd -root -silent; fi; } | convert xwd:- "$1" || true
           }
-          ids="$(grep -o 'name="dlg[0-9]*"' ui-native/dialogs.xrc | tr -dc '0-9\n' | grep -v -x -E '1000[0-4]') 10001 10002 10003 10004"
+          ids="$(grep -h -o 'name="dlg[0-9]*"' ui-native/dialogs.xrc ui-native/braillecraft.xrc | tr -dc '0-9\n' | grep -v -x -E '1000[0-4]') 10001 10002 10003 10004"
           for p in $ids; do
             BC_LAYOUT_SHOW=$p $exe 2> layout/logs/$p.txt & pid=$!
             shown 4 $p
@@ -232,6 +232,39 @@ jobs:
         with:
           name: braillecraft-layout-${{ matrix.name }}
           path: layout
+
+      # The running program's control channel (--control PORT, crates/bc-desktop/src/control.rs): the program started
+      # under Xvfb with a port, then braillecraft-cli mcp --connect drives it over MCP as an agent would: the start-up
+      # dialog closed with a key, the documents listed, text typed into the open one and read back, a key pressed,
+      # and a picture of the window taken.
+      - name: Live control channel check
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          export DISPLAY=:99 NO_AT_BRIDGE=1 XDG_CONFIG_HOME=$PWD/control-home
+          pgrep -x Xvfb > /dev/null || { Xvfb :99 -screen 0 1280x900x24 > /dev/null 2>&1 & sleep 2; }
+          mkdir -p control-home
+          dist/BrailleCraft/braillecraft-desktop --control 7991 2> control-desktop.txt & pid=$!
+          for n in $(seq 1 60); do [ -f control-home/BrailleCraft/control-7991.key ] && break; sleep 1; done
+          test -f control-home/BrailleCraft/control-7991.key
+          sleep 3
+          printf '%s\n' \
+            '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18"}}' \
+            '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
+            '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"key","arguments":{"key":"Escape"}}}' \
+            '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"list_documents","arguments":{}}}' \
+            '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"type_text","arguments":{"text":"Hello from the agent."}}}' \
+            '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"get_text","arguments":{}}}' \
+            '{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"key","arguments":{"key":"Home"}}}' \
+            '{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"inspect_document","arguments":{}}}' \
+            '{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"screenshot","arguments":{}}}' \
+            | timeout 120 dist/BrailleCraft/braillecraft-cli mcp --connect 7991 > control-check.txt 2> control-cli.txt || true
+          kill $pid 2> /dev/null || true
+          check() { grep -q "$1" control-check.txt || { echo "missing: $1"; cat control-cli.txt control-desktop.txt; cut -c1-400 control-check.txt; exit 1; }; }
+          check '"serverInfo"'
+          check 'Untitled Print Document 1'
+          check 'Hello from the agent.'
+          check 'image/png'
 
       # The Windows installer of the native program (packaging/windows, WiX Toolset 5), laid out as the reference
       # program's installer (re/spec/26-installer.md).

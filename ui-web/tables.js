@@ -1148,6 +1148,15 @@ export const MENUS = [
     "label": "Formatted &Braille Importer...",
     "shortcut": "",
     "kind": "normal"
+   },
+   {
+    "separator": true
+   },
+   {
+    "id": 3220,
+    "label": "&MCP Server...",
+    "shortcut": "",
+    "kind": "normal"
    }
   ]
  },

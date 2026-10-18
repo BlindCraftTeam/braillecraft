@@ -83,6 +83,7 @@ name = "bc-desktop"
 version = "0.1.0"
 dependencies = [
  "bc-core",
+ "bc-mcp",
  "embed-manifest",
  "libloading",
  "serde",

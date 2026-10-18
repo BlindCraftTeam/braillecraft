@@ -260,6 +260,8 @@ const M18: &[Entry] = &[
     Entry::Item(3115, "Wo&rd Importer...", Kind::Normal),
     Entry::Item(3116, "PDF Importer...", Kind::Normal),
     Entry::Item(3117, "Formatted &Braille Importer...", Kind::Normal),
+    Entry::Separator,
+    Entry::Item(3220, "&MCP Server...", Kind::Normal),
 ];
 
 const M19: &[Entry] = &[

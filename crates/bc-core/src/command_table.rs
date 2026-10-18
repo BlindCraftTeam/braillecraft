@@ -174,6 +174,7 @@ pub const COMMANDS: &[Command] = &[
     Command { id: 3115, label: "Word Importer...", menu: "Global", shortcut: "" },
     Command { id: 3116, label: "PDF Importer...", menu: "Global", shortcut: "" },
     Command { id: 3117, label: "Formatted Braille Importer...", menu: "Global", shortcut: "" },
+    Command { id: 3220, label: "MCP Server...", menu: "Global", shortcut: "" },
     Command { id: 3202, label: "Help Topics...", menu: "Help", shortcut: "" },
     Command { id: 3204, label: "Translate Help...", menu: "Help", shortcut: "" },
     Command { id: 3205, label: "Favorite Topics...", menu: "Help", shortcut: "" },

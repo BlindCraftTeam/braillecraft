@@ -139,6 +139,8 @@ extern "C" {
 #include "core/wxd_save_dialog.h"
 #include "core/wxd_space_after.h"
 #include "core/wxd_line_gutter.h"
+// Added for BrailleCraft: a picture of the program's windows
+#include "core/wxd_screenshot.h"
 // Added for BrailleCraft: the drawn document editing window
 #include "core/wxd_doc_editor.h"
 

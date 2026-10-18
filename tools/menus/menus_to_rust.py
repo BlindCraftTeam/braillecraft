@@ -33,6 +33,10 @@ RADIO = {1303, 1304, 1305, 2701, 2702, 2703, 2704, 2705, 2706, 2901, 2902, 2903,
 # Line, which no other control uses.
 MENU_KEYS = {1206, 1903}
 
+# BrailleCraft's own items, added at the end of a menu after a separator: Global, MCP Server (the control channel
+# for an AI agent, crates/bc-desktop/src/control.rs).
+EXTRA_ITEMS = {"&Global": [("sep",), ("item", 3220, "&MCP Server...", None)]}
+
 LINE = re.compile(r"^( +)(.*?)(?:\t(.*?))?(?:  \[id (\d+)\])?$")
 
 
@@ -86,6 +90,9 @@ def main():
             if key is None and n in MENU_KEYS and _menu_keys:
                 key = _menu_keys.replace("Alt-", "Alt+").replace("Ctrl-", "Ctrl+").replace("Shift-", "Shift+")
             parent.append(("item", n, RELABEL.get(n, label), key))
+
+    for label, entries in top:
+        entries.extend(EXTRA_ITEMS.get(label, []))
 
     def tidy(entries):
         # No separator first, last or doubled once items are left out.

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Using an AI agent - BrailleCraft Help</title>
+</head>
+<body>
+<main>
+<h1>Using an AI agent with BrailleCraft (MCP)</h1>
+<p>An AI agent such as Claude Code or Claude Desktop can open, type into, translate, lay out, export and emboss
+documents through BrailleCraft. The program folder carries <strong>braillecraft-cli</strong>, whose
+<strong>mcp</strong> command is a server for the Model Context Protocol, the way agents reach programs.</p>
+
+<h2>A session of its own</h2>
+<p>Add the server to the agent with the command below, or with the equivalent entry in the agent's settings. The
+agent then works in a session of its own, with the same tables, templates and embosser models the program uses,
+without opening a window.</p>
+<pre><code>claude mcp add braillecraft -- braillecraft-cli mcp</code></pre>
+<p>Its tools: list and run every menu command by number; new, open, save and export documents (BRF, PEF, coded and
+formatted text and braille, refreshable braille, HTML, LaTeX, Markdown and the document formats); read, type and
+select text; translate and back-translate; lay out pages; make the bytes an embosser receives; list the tables,
+templates and embossers; undo and redo.</p>
+
+<h2>Driving the running program</h2>
+<p>The same tools can work on the documents you have open, with three more: a picture of the program's windows, a
+key pressed in the program, and a click. Choose <strong>Global, MCP Server</strong>: check <strong>Run the MCP
+server now</strong>, keep or change the port, and check <strong>Start the server when BrailleCraft starts</strong>
+if you want it running every time. The dialog's last line says whether the server is running and how to connect an
+agent to it. The program can also be started with <code>braillecraft-desktop --control 7991</code>.</p>
+<pre><code>claude mcp add braillecraft -- braillecraft-cli mcp --connect 7991</code></pre>
+<p>The server listens on this computer only (127.0.0.1) and takes requests that carry a key it writes beside your
+settings, so only programs you run reach it. Every change an agent makes is one undo step, and the status line
+follows it as it follows your own typing. A command that opens a dialog starts it; the agent then reads the dialog
+with a picture and answers it with keys and clicks, which press real keys and buttons in whichever window has the
+focus, so leave the program to the agent while it works. On macOS the system asks once to allow BrailleCraft to
+control the computer, and a picture needs Screen Recording.</p>
+
+<h2>The web build</h2>
+<p>A web page cannot listen for connections, so the web build has no server; its MCP Server item says so. Use the
+desktop program, or the command-line server on its own.</p>
+</main>
+</body>
+</html>

@@ -254,7 +254,7 @@ const LEFT: i32 = 314;
 const UP: i32 = 315;
 const RIGHT: i32 = 316;
 const DOWN: i32 = 317;
-const INSERT: i32 = 324;
+const INSERT: i32 = 322;
 const PAGE_UP: i32 = 366;
 const PAGE_DOWN: i32 = 367;
 const NUMPAD_ENTER: i32 = 370;
@@ -428,7 +428,7 @@ pub fn area_focus(key: u64, focused: bool) {
 }
 
 /// After the caret moved in document `i`: the editing window shows it, and the status line follows it.
-fn caret_moved(a: &mut app::App, i: usize) {
+pub(crate) fn caret_moved(a: &mut app::App, i: usize) {
     a.show_area(i, None);
     if a.active == Some(i) {
         a.update_status();
