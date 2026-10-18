@@ -1034,30 +1034,47 @@ impl Document {
         serde_json::json!({"layout": layout, "cells": l.cells, "lines": l.lines}).to_string()
     }
 
+    /// A print document's page size as the file keeps it, [lines per page, characters per line]; 54 and 65 when the
+    /// file holds none, as the standard program lays such a document out (spec 05 section A10).
+    #[wasm_bindgen(getter)]
+    pub fn print_page(&self) -> Vec<u32> {
+        let (l, c) = if self.0.print_page.0 == 0 { dxfile::PRINT_PAGE_DEFAULT } else { self.0.print_page };
+        vec![u32::from(l), u32::from(c)]
+    }
+
     /// As `save`, with the document's embosser setup name and page layout (JSON as `embosser_layout` gives it, the
     /// layout written only when it names a form), as the desktop program saves them.
     pub fn save_with(&self, text: &str, embosser: &str, layout: &str, cells: u32, lines: u32) -> Result<Vec<u8>, JsError> {
-        self.save_version(text, embosser, layout, cells, lines, 1)
+        self.save_version(text, embosser, layout, cells, lines, 1, cells, lines)
     }
 
     /// As `save_with`, in file format `version`: 1, or 0 for the older format, which names the print-to-braille
     /// tables by their older names where they have them (spec 04d-C; a web document has no initial codes in force).
-    pub fn save_version(&self, text: &str, embosser: &str, layout: &str, cells: u32, lines: u32, version: u16) -> Result<Vec<u8>, JsError> {
+    /// `cells` and `lines` are the document's page; `emb_cells` and `emb_lines` a print document's embosser page.
+    #[allow(clippy::too_many_arguments)]
+    pub fn save_version(&self, text: &str, embosser: &str, layout: &str, cells: u32, lines: u32, version: u16, emb_cells: u32, emb_lines: u32) -> Result<Vec<u8>, JsError> {
         let tables = if version == 0 { dxfile::older_table_names(&self.0.tables, |_| false) } else { self.0.tables.clone() };
         let mut doc = DxDocument { text: shown_of(text).to_running(), embosser: embosser.to_string(), version, tables, ..self.0.clone() };
+        let short = |n: u32| n.min(u32::from(u16::MAX)) as u16;
+        // A braille document's cells and lines are its embosser page; a print document's are its Printer Setup page
+        // (settings +129 and +131), and its embosser page is the one given apart.
+        let braille = self.0.kind == DocumentKind::Braille;
+        if !braille {
+            doc.print_page = (short(lines), short(cells));
+        }
+        let (emb_lines, emb_cells) = if braille { (short(lines), short(cells)) } else { (short(emb_lines), short(emb_cells)) };
         if !layout.is_empty() {
             let l: Layout = serde_json::from_str(layout).map_err(error)?;
             if !l.form.is_empty() {
-                let short = |n: u32| n.min(u32::from(u16::MAX)) as u16;
                 doc.layout = Some(dxfile::DxLayout {
-                    lines: short(lines),
+                    lines: emb_lines,
                     top_margin: short(l.top_margin),
-                    cells: short(cells),
+                    cells: emb_cells,
                     binding: short(l.binding),
                     interpoint: l.interpoint,
                     banner: u8::from(l.banner),
                     interline: l.interline.min(2) as u8,
-                    unknown: self.0.settings.get(108 + 11).copied().unwrap_or(0),
+                    double_size: self.0.settings.get(108 + 11).copied().unwrap_or(0),
                     form: l.form,
                 });
             }
@@ -1235,6 +1252,7 @@ pub fn new_document(braille: bool, text: &str, template: &str) -> Document {
         embosser: String::new(),
         sections: Vec::new(),
         layout: None,
+        print_page: (0, 0),
     })
 }
 
@@ -1995,6 +2013,7 @@ mod tests {
             embosser: "Index Everest-D V5".into(),
             sections: Vec::new(),
             layout: None,
+            print_page: (0, 0),
         };
         let read = read_document(&dxfile::write(&doc)).ok().unwrap();
         assert!(read.braille());
@@ -2047,7 +2066,7 @@ mod tests {
         let template = String::from_utf8(shipped("templates/english-ueb-basic.template")).unwrap_or_default();
         let doc = new_document(false, "The cat.", &template);
         for version in [1, 0] {
-            let bytes = doc.save_version("The dog.", "Everest", "", 40, 25, version).ok().unwrap();
+            let bytes = doc.save_version("The dog.", "Everest", "", 40, 25, version, 40, 25).ok().unwrap();
             let back = read_document(&bytes).ok().unwrap();
             assert_eq!((back.text(), back.embosser(), back.braille()), ("The dog.".to_string(), "Everest".to_string(), false));
         }

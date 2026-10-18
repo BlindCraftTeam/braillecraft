@@ -370,6 +370,8 @@ function embosserDefaults() {
   doc.layout = { ...layout };
   doc.cells = cells;
   doc.lines = lines;
+  // A print document's embosser page, kept apart from its print page (spec 05 section A10).
+  doc.embPage = [cells, lines];
 }
 embosserDefaults();
 
@@ -1814,6 +1816,8 @@ async function embosserSetup(global) {
   if (doc.kind === "braille") {
     doc.cells = chosen.cells;
     doc.lines = chosen.lines;
+  } else {
+    doc.embPage = [chosen.cells, chosen.lines];
   }
 }
 
@@ -2696,7 +2700,16 @@ fileInput.addEventListener("change", async () => {
       if (d.braille) {
         doc.cells = l.cells;
         doc.lines = l.lines;
+      } else {
+        doc.embPage = [l.cells, l.lines];
       }
+    }
+    // A print document is laid out on its own Printer Setup page, 54 lines of 65 characters when the file holds
+    // none (spec 05 section A10).
+    if (!d.braille) {
+      const [lines, chars] = d.print_page;
+      doc.lines = lines;
+      doc.cells = chars;
     }
   } else {
     doc.kind = read.braille ? "braille" : "print";
@@ -2865,7 +2878,7 @@ async function documentFile() {
 // its embosser setup name and layout, then takes that file as its own.
 async function writeDocument(name, version) {
   const file = await documentFile();
-  const bytes = file.save_version(storedText(), doc.embosser, doc.layout.form ? JSON.stringify(doc.layout) : "", doc.cells, doc.lines, version);
+  const bytes = file.save_version(storedText(), doc.embosser, doc.layout.form ? JSON.stringify(doc.layout) : "", doc.cells, doc.lines, version, doc.embPage[0], doc.embPage[1]);
   download(name, bytes);
   doc.file = core.read_document(bytes);
   doc.name = name;

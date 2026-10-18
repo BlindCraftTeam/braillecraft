@@ -350,6 +350,13 @@ impl Headless {
             doc.tables = f.tables.clone();
             doc.numbering = f.page_numbering;
             doc.hyphenation = f.hyphenation;
+            // A print document is laid out on its own Printer Setup page, 54 lines of 65 characters when the file
+            // holds none (spec 05 section A10).
+            if !braille {
+                let (l, c) = if f.print_page.0 == 0 { dxfile::PRINT_PAGE_DEFAULT } else { f.print_page };
+                doc.lines = u32::from(l);
+                doc.cells = u32::from(c);
+            }
             if !f.styles.is_empty() {
                 doc.style_list = f.styles.clone();
                 doc.styles = style_table(&f.styles);
@@ -411,6 +418,7 @@ impl Headless {
             embosser: String::new(),
             sections: Vec::new(),
             layout: None,
+            print_page: if d.braille { (0, 0) } else { (d.lines.min(u32::from(u16::MAX)) as u16, d.cells.min(u32::from(u16::MAX)) as u16) },
         }
     }
 

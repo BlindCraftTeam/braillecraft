@@ -980,7 +980,16 @@ fn open_dx_document(path: &Path) -> Option<u64> {
                 if braille {
                     d.cells = u32::from(l.cells);
                     d.lines = u32::from(l.lines);
+                } else {
+                    d.emb_page = (u32::from(l.cells), u32::from(l.lines));
                 }
+            }
+            // A print document is laid out on its own Printer Setup page (settings +129 and +131), 54 lines of 65
+            // characters when the file holds none (spec 05 section A10).
+            if !braille {
+                let (l, c) = if doc.print_page.0 == 0 { bc_core::dxfile::PRINT_PAGE_DEFAULT } else { doc.print_page };
+                d.lines = u32::from(l);
+                d.cells = u32::from(c);
             }
             d.view.translated = doc.translated_line;
             d.view.six_key = braille && doc.six_key;
@@ -1636,18 +1645,25 @@ pub(crate) fn write_document(key: u64, path: &Path, version: u16) -> bool {
             settings: d.file_settings.clone(),
             embosser: d.embosser.clone(),
             sections: d.file_sections.clone(),
-            // The embosser page layout; byte +11 (meaning unknown) is kept as the file had it.
+            // The embosser page layout (a print document's own embosser page, a braille document's page); byte +11,
+            // DoubleSizePrint, is kept as the file had it.
             layout: Some(&d.layout).filter(|l| !l.form.is_empty()).map(|l| bc_core::dxfile::DxLayout {
-                lines: d.lines.min(u32::from(u16::MAX)) as u16,
+                lines: (if d.kind == DocKind::Braille { d.lines } else { d.emb_page.1 }).min(u32::from(u16::MAX)) as u16,
                 top_margin: l.top_margin.min(u32::from(u16::MAX)) as u16,
-                cells: d.cells.min(u32::from(u16::MAX)) as u16,
+                cells: (if d.kind == DocKind::Braille { d.cells } else { d.emb_page.0 }).min(u32::from(u16::MAX)) as u16,
                 binding: l.binding.min(u32::from(u16::MAX)) as u16,
                 interpoint: l.interpoint,
                 banner: u8::from(l.banner),
                 interline: l.interline.min(2) as u8,
-                unknown: d.file_settings.get(108 + 11).copied().unwrap_or(0),
+                double_size: d.file_settings.get(108 + 11).copied().unwrap_or(0),
                 form: l.form.clone(),
             }),
+            // A print document's Printer Setup page (settings +129 and +131).
+            print_page: if d.kind == DocKind::Print {
+                (d.lines.min(u32::from(u16::MAX)) as u16, d.cells.min(u32::from(u16::MAX)) as u16)
+            } else {
+                (0, 0)
+            },
         })
     }) else {
         return false;
@@ -3802,6 +3818,8 @@ fn embosser_setup(global: bool) {
             if doc.kind == DocKind::Braille {
                 doc.cells = cells;
                 doc.lines = lines;
+            } else {
+                doc.emb_page = (cells, lines);
             }
         }
         a.apply_view();

@@ -89,6 +89,7 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
         template,
         cells,
         lines,
+        emb_page: { let (_, c, l) = crate::embosser::default_layout(); (c, l) },
         page_numbers,
         pages: None,
         ed,

@@ -196,7 +196,8 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   passages ([fts~b], [fts~i], [fts~u]) print in those styles; Interline Print starts from the document's embosser
   layout; a document whose printer the computer no longer has prints with the global printer after saying so.
   Printer Setup corrects a page size outside 7 to 160 characters and 1 to 100 lines and asks before taking it (Cancel
-  returns to the field); Global, Printer Setup and Global, Embosser Setup first say, once unless asked to repeat, that
+  returns to the field); a print document keeps that page size in its .dxp file (one without it is laid out at 54
+  lines of 65 characters, as the standard program does), apart from the page of its embosser setup; Global, Printer Setup and Global, Embosser Setup first say, once unless asked to repeat, that
   they do not change the open document. The embosser setup sheet's General page offers the configuration location
   (current user or all users; kept with the setup) and its Device Settings page lists only the model's own firmware
   versions and shows the Braillo rows by the model's sub-model. A Tiger model is sent to its

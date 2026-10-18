@@ -19,7 +19,8 @@
 //!   are 10-byte descriptors of optional sections after the styles (u16 kind, u32 file offset, u32 length; all zero
 //!   for a section that is absent): +88 kind 1 is the name of the document's embosser setup, NUL terminated; the
 //!   others (the extra block and its second copy, embedded objects) are kept as they are read and written back.
-//! - Settings +108 to +128 hold the document's embosser page layout (DxLayout, spec 25 section 10).
+//! - Settings +108 to +128 hold the document's embosser page layout (DxLayout, spec 25 section 10); +129 and +131 a
+//!   print document's page size from Document, Printer Setup (lines, characters; spec 05 section A10).
 //!
 //! The text is returned as running text (bc_core::doctext): codes marked 0x1C ... 0x1F as in the file, a hard space
 //! as U+00A0, every other byte its code page 437 character; brackets in the text stay text. Writing does the reverse
@@ -65,10 +66,19 @@ pub struct DxDocument {
     pub sections: Vec<(usize, u16, Vec<u8>)>,
     /// The document's embosser page layout (settings +108); None when the file holds none.
     pub layout: Option<DxLayout>,
+    /// A print document's page size from Document, Printer Setup: lines per page and characters per line (settings
+    /// +129 and +131, the document's +0x58c and +0x590; spec 05 section A10). The standard program reads 0 in either
+    /// as no size, and a print document without one is laid out at 54 lines of 65 characters.
+    pub print_page: (u16, u16),
 }
 
+/// The print page size a print document without its own size is laid out at (lines, characters; spec 05 A10).
+pub const PRINT_PAGE_DEFAULT: (u16, u16) = (54, 65);
+/// Where the print page size is in the settings block.
+const PRINT_PAGE_AT: usize = 129;
+
 /// The embosser page layout a document keeps in 21 bytes at settings +108 (spec 25 section 10): u16 lines per page,
-/// top margin, cells per line, binding margin; u8 interpoint, banner page, interline, a byte of unknown meaning; the
+/// top margin, cells per line, binding margin; u8 interpoint, banner page, interline, double-size print; the
 /// paper form name in 9 bytes.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct DxLayout {
@@ -80,8 +90,9 @@ pub struct DxLayout {
     pub banner: u8,
     /// 0 off, 1 ink and braille, 2 braille-only pass (read back as 1, as the reference loader does).
     pub interline: u8,
-    /// Byte +11, meaning unknown (spec 25 10.3); kept as read.
-    pub unknown: u8,
+    /// Byte +11: the setup's DoubleSizePrint (formatting block +0x24, the settings key of that name; spec 05
+    /// section A10). The setup dialog and the model check set it to 0; kept as read.
+    pub double_size: u8,
     /// The form name, at most 9 characters.
     pub form: String,
 }
@@ -105,7 +116,7 @@ fn read_layout(s: &[u8]) -> Option<DxLayout> {
         interpoint: b[8] != 0,
         banner: b[9],
         interline: u8::from(b[10] != 0),
-        unknown: b[11],
+        double_size: b[11],
         form: b[12..21].iter().take_while(|&&c| c != 0).map(|&c| cp437(c)).collect(),
     })
 }
@@ -120,7 +131,7 @@ fn layout_bytes(l: &DxLayout) -> [u8; LAYOUT_LEN] {
     b[8] = u8::from(l.interpoint);
     b[9] = l.banner;
     b[10] = l.interline;
-    b[11] = l.unknown;
+    b[11] = l.double_size;
     for (j, c) in l.form.chars().take(9).enumerate() {
         b[12 + j] = to_cp437(c);
     }
@@ -136,8 +147,9 @@ const EMBOSSER_KIND: u16 = 1;
 /// The settings block of a new document. Fields BrailleCraft sets itself (page numbering, body length, translated
 /// line, six-key entry, tables) are filled in when the document is written. The others:
 /// - +10 1 and +12 8: constants the reference writes (spec 05).
-/// - +16 2 and +30 1201: the values every sample holds; what the reference gives a new document is not traced
-///   (spec 05-B (d), UNKNOWN), so the sample values are used.
+/// - +16 2 and +30 1201: placeholders the document overwrites: a new document takes +16 from its template's
+///   Hyphenation and +30 from Global Default Views (a print document 1201), as the reference does (spec 05 section
+///   A10).
 /// - +64 to +87: the Table of Contents settings the reference's loader sets for a document that has none (spec 05-B
 ///   (d), observed), the same values every sample holds: contents style 1, the three switches off, number top level
 ///   on, runover 4 and 2, left margins 1 and 1, increment 2, right margins 6 and 6, guide dots '"', maximum runover
@@ -279,6 +291,10 @@ pub fn read(d: &[u8]) -> Result<DxDocument, DxError> {
         embosser,
         sections,
         layout: read_layout(&d[HEADER..BODY]),
+        print_page: {
+            let (l, c) = (u16_at(d, HEADER + PRINT_PAGE_AT), u16_at(d, HEADER + PRINT_PAGE_AT + 2));
+            if l == 0 || c == 0 { (0, 0) } else { (l, c) }
+        },
     })
 }
 
@@ -431,6 +447,8 @@ pub fn write(doc: &DxDocument) -> Vec<u8> {
     if let Some(l) = &doc.layout {
         s[LAYOUT_AT..LAYOUT_AT + LAYOUT_LEN].copy_from_slice(&layout_bytes(l));
     }
+    s[PRINT_PAGE_AT..PRINT_PAGE_AT + 2].copy_from_slice(&doc.print_page.0.to_be_bytes());
+    s[PRINT_PAGE_AT + 2..PRINT_PAGE_AT + 4].copy_from_slice(&doc.print_page.1.to_be_bytes());
     out.extend_from_slice(&s);
     out.extend_from_slice(&body);
     // The names as stored are sorted (spec 05-B (c)); a document read from a file keeps its order and index values,
@@ -585,6 +603,7 @@ mod tests {
             embosser: String::new(),
             sections: Vec::new(),
             layout: None,
+            print_page: (0, 0),
         };
         let bytes = write(&doc);
         assert_eq!(&bytes[..10], b"\xFFDSI\x00\x02\x00\x00\x00\x01");
@@ -595,6 +614,11 @@ mod tests {
         assert!(back.translated_line && !back.six_key);
         assert!(back.coded_view);
         assert_eq!((back.hyphenation, back.view_font), (1, 1203));
+        assert_eq!(back.print_page, (0, 0));
+        // A print document's own page size goes to settings +129 and +131 and comes back.
+        let sized = read(&write(&DxDocument { print_page: (40, 72), ..back.clone() })).unwrap();
+        assert_eq!(sized.print_page, (40, 72));
+        assert_eq!(&write(&DxDocument { print_page: (40, 72), ..back.clone() })[10 + 129..10 + 133], &[0, 40, 0, 72]);
         // Styles are stored sorted by name.
         assert_eq!(back.styles[0], ("bold".into(), "\x1ccs~b\x1f".into(), "\x1cce~b\x1f".into()));
         assert_eq!(back.styles[1].0, "para.");
@@ -644,7 +668,7 @@ mod tests {
             interpoint: true,
             banner: 1,
             interline: 2,
-            unknown: 0,
+            double_size: 0,
             form: "11_w".into(),
         });
         let bytes = write(&doc);
