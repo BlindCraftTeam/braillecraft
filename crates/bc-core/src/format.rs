@@ -34,7 +34,12 @@
 //!   started on it is laid out again, ending before the block (spec 19 7.4); [hi] and [hlN] level margins (7.3).
 //! - [lea] the next word is the print page number: in its corner (with a, b, ... on later braille pages of the same
 //!   print page), and a print page change line (dots 3-6, then the number) where it begins in the middle of a page.
-//!   Not yet: filling out a page whose last lines a print page begins on when the next page's corner is at the top.
+//!   Within [svlesN:M:L:P]'s bottom tolerance L of the page end, with the next page's corner at the top, the page is
+//!   filled out and the print page begins on the next page; N 1 the British line (centred, after dots 5 and 2-5), M 1
+//!   no continuation letters, P where the text after the line starts (spec 19 section 8).
+//! - [pntr] and [pnta] roman and arabic page numbers, [svgan~X...] the number sign and digits, [svgrnN~X] the roman
+//!   indicator (doubled before a numeral of more than one letter when N is not 0), [pvN~X] the page number without a
+//!   new page; a page's number is taken when the page opens (spec 19 section 8).
 //! Codes this formatter does not lay out take no room.
 
 use crate::doctext::Shown;
@@ -284,7 +289,7 @@ pub struct Page {
     /// reference page).
     pub print_labels: Vec<(String, usize)>,
     /// The page's own number (its counter and prefix letter), as File Print and File Emboss match typed page
-    /// numbers against it. Roman numbering ([pntr]) is not laid out yet, so it is never roman.
+    /// numbers against it ([pntr] makes it roman).
     pub number: crate::range::PageNumber,
     /// The tables that start on this page (spec 35 section 7): the editor's table regions.
     pub tables: Vec<TableRegion>,
@@ -565,17 +570,23 @@ fn split_code(code: &str) -> (&str, Vec<i64>) {
     (name, numbers)
 }
 
-/// A page number as the page shows it: the prefix [pgN~X] set, then in a braille document the numeric indicator
-/// and the digits as the letters a to j, in a print document the digits.
-fn page_number(n: usize, prefix: Option<char>, braille: bool) -> String {
-    let mut s: String = prefix.into_iter().collect();
-    if braille {
-        s.push('#');
-        for d in n.to_string().chars() {
-            s.push(b"jabcdefghi"[d.to_digit(10).unwrap_or(0) as usize] as char);
+/// A roman numeral, lower case (the standard program writes it in capitals; the braille and print tables both show
+/// it in small letters here, as the digits are); "?" outside 1 to 3999 (spec 19 section 8.1).
+fn roman_numeral(n: usize) -> String {
+    if !(1..=3999).contains(&n) {
+        return "?".into();
+    }
+    const PARTS: [(usize, &str); 13] = [
+        (1000, "m"), (900, "cm"), (500, "d"), (400, "cd"), (100, "c"), (90, "xc"), (50, "l"), (40, "xl"), (10, "x"),
+        (9, "ix"), (5, "v"), (4, "iv"), (1, "i"),
+    ];
+    let mut n = n;
+    let mut s = String::new();
+    for (value, letters) in PARTS {
+        while n >= value {
+            s.push_str(letters);
+            n -= value;
         }
-    } else {
-        s.push_str(&n.to_string());
     }
     s
 }
@@ -687,6 +698,26 @@ struct Formatter {
     counter: usize,
     next_counter: Option<usize>,
     prefix: Option<char>,
+    /// [pntr] roman page numbers ([pnta] arabic); the number sign and digits of arabic numbers ([svgan], from the
+    /// format table's digit line: braille "#" and "jabcdefghi", print none and "0123456789"); the roman indicator
+    /// ([svgrn], braille ";", print none; "}" puts ";" only before 5, 10, 50, 100, 400, 500, 605, 650 and 1000) and
+    /// whether it is doubled before a numeral of more than one letter; the page's number as it was when the page
+    /// opened, and whether it is roman.
+    roman: bool,
+    number_sign: Option<char>,
+    digits: Vec<char>,
+    roman_sign: Option<char>,
+    roman_double: bool,
+    page_text: Option<(String, bool)>,
+    /// [svlesN:M:L:P]: the British print page line (N 1), no continuation letters (M 1), the bottom tolerance L and
+    /// where the text after the line starts (P 0 the left margin, 1 the runover, 2 the runover when the line had text
+    /// at the [lea]).
+    leaf: (bool, bool, usize, i64),
+    /// An anticipatory head ([svant1]) whose line count changed while the page was filled: the page is laid out again
+    /// once with the head's rows at the new count (Formatter::run_from); a second change leaves it as laid.
+    head_reserve: Option<usize>,
+    head_retried: bool,
+    head_overflow: bool,
     /// Where page numbers go on odd and even pages and the first number shown; [svpnp] and [svpfd] change them from
     /// the next page.
     numbers_odd: Corner,
@@ -809,6 +840,16 @@ impl Formatter {
             counter: 1,
             next_counter: None,
             prefix: None,
+            roman: false,
+            number_sign: layout.braille.then_some('#'),
+            digits: if layout.braille { "jabcdefghi" } else { "0123456789" }.chars().collect(),
+            roman_sign: layout.braille.then_some(';'),
+            roman_double: false,
+            page_text: None,
+            leaf: (false, false, 2, 0),
+            head_reserve: None,
+            head_retried: false,
+            head_overflow: false,
             numbers_odd: layout.numbers_odd,
             numbers_even: layout.numbers_even,
             first_number_shown: layout.first_number_shown,
@@ -1117,16 +1158,20 @@ impl Formatter {
             }
         }
         self.opened = true;
+        self.page_text = Some((self.page_number_text(), self.roman));
         self.page_print = self.print_text().filter(|_| self.print_corner() != Corner::None);
         if self.foot.is_some() && self.on_this_page(self.foot_pages) {
             self.page_foot = self.foot.clone();
         }
-        if !self.head.is_empty() && self.on_this_page(self.head_pages) {
+        // A page laid out again for its anticipatory head reserves the rows the head had when it closed.
+        let rows = self.head_reserve.take().unwrap_or(self.head.len());
+        if rows > 0 && self.on_this_page(self.head_pages) {
             let cells = self.layout.cells;
-            for h in self.head.clone() {
-                self.page.push(side_line(&h, self.head_side, cells));
+            for k in 0..rows {
+                let line = self.head.get(k).map_or_else(Line::default, |h| side_line(h, self.head_side, cells));
+                self.page.push(line);
             }
-            self.head_rows = self.head.len();
+            self.head_rows = rows;
             let after = if self.layout.braille { 0 } else { 2 } + self.blank_between;
             for _ in 0..after.min(self.capacity().saturating_sub(self.page.len() + 1)) {
                 self.page.push(Line::default());
@@ -1134,9 +1179,45 @@ impl Formatter {
         }
     }
 
-    /// The page number of the page being filled, as shown.
+    /// The page number of the page being filled, as shown: as it was when the page opened (the standard program
+    /// writes it then, spec 19 section 8.1), else as it stands.
     fn number_text(&self) -> String {
-        page_number(self.counter, self.prefix, self.layout.braille)
+        match &self.page_text {
+            Some((text, _)) => text.clone(),
+            None => self.page_number_text(),
+        }
+    }
+
+    /// The page number as the settings make it now (spec 19 section 8.1): the prefix, then the number sign and the digits,
+    /// or the roman indicator (twice before a numeral of more than one letter with [svgrn1]) and the numeral.
+    fn page_number_text(&self) -> String {
+        let n = self.counter;
+        let mut s: String = self.prefix.into_iter().collect();
+        if self.roman {
+            let numeral = roman_numeral(n);
+            match self.roman_sign {
+                Some('}') => {
+                    if matches!(n, 5 | 10 | 50 | 100 | 400 | 500 | 605 | 650 | 1000) {
+                        s.push(';');
+                    }
+                }
+                Some(c) => {
+                    if self.roman_double && numeral.chars().count() > 1 {
+                        s.push(c);
+                    }
+                    s.push(c);
+                }
+                None => {}
+            }
+            s.push_str(&numeral);
+        } else {
+            s.extend(self.number_sign);
+            for d in n.to_string().chars() {
+                let k = d.to_digit(10).unwrap_or(0) as usize;
+                s.push(self.digits.get(k).copied().unwrap_or(d));
+            }
+        }
+        s
     }
 
     /// The lines a page holds. A page number takes no line of its own: it goes on the first or last line, beside the
@@ -1186,6 +1267,7 @@ impl Formatter {
     fn print_text(&self) -> Option<String> {
         let n = self.print_number.as_ref()?;
         Some(match self.print_since {
+            _ if self.leaf.1 => n.clone(),
             0 => n.clone(),
             k => format!("{}{n}", (b'a' + ((k - 1) % 26) as u8) as char),
         })
@@ -1201,6 +1283,7 @@ impl Formatter {
             self.labels.push((text.clone(), place));
         }
         self.print_number = Some(text.clone());
+        let had_text = self.line_has_text();
         let next_top = if self.odd { self.print_even } else { self.print_odd }.top();
         let at_top = !self.line_has_text() && (!self.opened || self.page.len() == 0);
         if at_top && self.print_corner().top() {
@@ -1212,8 +1295,11 @@ impl Formatter {
         }
         // On the last lines of the page with the next page's number at the top: the page is filled out so the
         // change shows in the next page's corner, and the print page begins there.
-        let left_after = self.usable().saturating_sub(self.page.len() + usize::from(self.line_has_text()));
-        if next_top && left_after <= 1 && !self.page.is_empty() {
+        // Spec 19 section 8.2: the line the [lea] is on is within the bottom tolerance L ([svles], 2) of the page's last
+        // usable line above the foot.
+        let at = self.page.len() + usize::from(self.line_has_text());
+        let bottom = self.usable().saturating_sub(usize::from(self.page_foot.is_some()));
+        if next_top && bottom.saturating_sub(self.leaf.2) <= at && !self.page.is_empty() {
             if self.line_has_text() {
                 self.end_line(self.left);
             }
@@ -1221,20 +1307,28 @@ impl Formatter {
                 self.finish_page();
             }
             self.print_since = 0;
-            self.start_col = self.left;
+            self.start_col = self.after_leaf_line(had_text);
             return;
         }
         if self.line_has_text() {
             self.end_line(self.left);
         }
         self.open_page();
-        let len = cells.len().min(self.layout.cells);
-        let dashes = self.layout.cells - len;
-        let mut line = Line {
-            text: "-".repeat(dashes),
-            sources: Sources::none(dashes),
-            marks: Marks::default(),
+        let width = self.layout.cells;
+        let len = cells.len().min(width);
+        // American: dots 3-6 across the line to the number flush right. British ([svles1]): the number
+        // centred on cell (W - 1) / 2 + 2, after dots 5 and 2-5 in the two cells before it.
+        let lead = if self.leaf.0 {
+            let target = (width as i64 - 1) / 2 + 2;
+            let start = (target + 1 - (len as i64 + 1) / 2).clamp(1, (width - len + 1) as i64) as usize - 1;
+            let mut lead = " ".repeat(start.saturating_sub(2));
+            lead.push_str(&"\"3"[2usize.saturating_sub(start)..]);
+            lead
+        } else {
+            "-".repeat(width - len)
         };
+        let n = lead.chars().count();
+        let mut line = Line { text: lead, sources: Sources::none(n), marks: Marks::default() };
         for &(c, s) in cells.iter().take(len) {
             line.text.push(c);
             line.sources.push(s);
@@ -1243,7 +1337,17 @@ impl Formatter {
         self.push_line(line);
         // This page is the one the print page began on; the next continues it.
         self.print_since = 0;
-        self.start_col = self.left;
+        self.start_col = self.after_leaf_line(had_text);
+    }
+
+    /// Where the text after a print page line starts ([svles] P, spec 19 section 8.2): the left margin for
+    /// P 0, and for P 2 when the line had no text at the [lea]; else the runover.
+    fn after_leaf_line(&self, had_text: bool) -> usize {
+        match self.leaf.3 {
+            0 => self.left,
+            2 if !had_text => self.left,
+            _ => self.runover(),
+        }
     }
 
     fn line_has_text(&self) -> bool {
@@ -1322,8 +1426,15 @@ impl Formatter {
         let room = self.usable();
         lines.resize(self.layout.lines.max(room), Line::default());
         // An anticipatory head ([svant] 1 or 3) is written as it stands when the page closes, over the rows it was
-        // given at the opening. INFERENCE: the standard program lays the page out again when the number of head lines
-        // changed; here a line that went away is left blank and one that came is not shown.
+        // given at the opening. When its line count changed, the page is laid out again once with that many rows
+        // (spec 19 section 8.3); a second change (error 16) leaves the page as laid,
+        // a line that went away blank and one that came not shown.
+        if self.anticipatory & 1 != 0 && self.opened && self.on_this_page(self.head_pages) {
+            if self.head.len() != self.head_rows && !self.head_retried {
+                self.head_overflow = true;
+            }
+        }
+        self.head_retried = false;
         if self.anticipatory & 1 != 0 && self.head_rows > 0 {
             let cells = self.layout.cells;
             for k in 0..self.head_rows.min(lines.len()) {
@@ -1410,7 +1521,8 @@ impl Formatter {
         let start = self.page_start.take().unwrap_or(self.last_start);
         self.last_start = start;
         let print_labels = std::mem::take(&mut self.labels);
-        let number = crate::range::PageNumber { number: self.counter as u32, letter: self.prefix, roman: false };
+        let roman = self.page_text.take().map_or(self.roman, |(_, roman)| roman);
+        let number = crate::range::PageNumber { number: self.counter as u32, letter: self.prefix, roman };
         let tables = std::mem::take(&mut self.page_tables);
         self.pages.push(Page { lines, start, print_labels, number, tables });
         // The next page: its counter, and the number settings changed on this one.
@@ -1803,6 +1915,46 @@ impl Formatter {
             }
             return;
         }
+        // [svgan~X...] the number sign X ("{" none) and the ten digits after it (pgifmt case 0xa1); [svgrnN~X] the
+        // roman indicator X ("{" none) and, N not 0, doubled before a numeral of more than one letter (case 0xa2).
+        if let Some(rest) = code.strip_prefix("svgan") {
+            if let Some((_, x)) = rest.split_once('~') {
+                let mut chars = x.chars();
+                if let Some(sign) = chars.next() {
+                    self.number_sign = (sign != '{').then_some(sign);
+                }
+                for (k, c) in chars.take(10).enumerate() {
+                    self.digits[k] = c;
+                }
+            }
+            return;
+        }
+        if let Some(rest) = code.strip_prefix("svgrn") {
+            let (params, x) = rest.split_once('~').map_or((rest, None), |(a, b)| (a, Some(b)));
+            self.roman_double = params.trim().parse::<i64>().unwrap_or(0) != 0;
+            if let Some(sign) = x.and_then(|x| x.chars().next()) {
+                self.roman_sign = (sign != '{').then_some(sign);
+            }
+            return;
+        }
+        // [pvN~X] the page number N (the page being filled when it has not opened, else the next), with X before it
+        // ("{" or a space none) when a text is given (case 0x89).
+        if let Some(rest) = code.strip_prefix("pv") {
+            if rest.is_empty() || rest.starts_with(|c: char| c.is_ascii_digit() || c == '~') {
+                let (params, x) = rest.split_once('~').map_or((rest, None), |(a, b)| (a, Some(b)));
+                if let Ok(n) = params.trim().parse::<usize>() {
+                    if self.opened {
+                        self.next_counter = Some(n);
+                    } else {
+                        self.counter = n;
+                    }
+                }
+                if let Some(x) = x {
+                    self.prefix = x.chars().next().filter(|&c| c != ' ' && c != '{');
+                }
+                return;
+            }
+        }
         let (name, n) = split_code(code);
         let name = if name.starts_with("tab~") { "tab" } else { name };
         let first = n.first().copied();
@@ -2015,6 +2167,31 @@ impl Formatter {
             }
             // [lea] the next word is the print page number.
             "lea" => self.lea = true,
+            // [pntr] roman and [pnta] arabic page numbers, from the next number taken (case 0x76, 0x77).
+            "pntr" => self.roman = true,
+            "pnta" => self.roman = false,
+            // [svlesN:M:L:P] the print page line (N 0 American, 1 British), continuation letters (M 1 none), the bottom
+            // tolerance L and where the text after the line starts (P 0, 1, 2); alone, the file's values 0:0:2:0
+            // (case 0x8a: N and M 0..1, L 0..4, P 0..2; a value not given stays).
+            "svles" => {
+                if n.is_empty() {
+                    self.leaf = (false, false, 2, 0);
+                } else {
+                    let get = |k: usize| n.get(k).copied();
+                    if let Some(v) = get(0) {
+                        self.leaf.0 = v.clamp(0, 1) == 1;
+                    }
+                    if let Some(v) = get(1) {
+                        self.leaf.1 = v.clamp(0, 1) == 1;
+                    }
+                    if let Some(v) = get(2) {
+                        self.leaf.2 = v.clamp(0, 4) as usize;
+                    }
+                    if let Some(v) = get(3) {
+                        self.leaf.3 = v.clamp(0, 2);
+                    }
+                }
+            }
             // [svpfdN] the first page whose number is shown, from the next page.
             "svpfd" => self.next_first_shown = Some(first.unwrap_or(1).max(1) as usize),
             // [top] a new page once the page has been started (blank lines start it too).
@@ -2365,6 +2542,19 @@ impl Formatter {
                 made = n;
                 continue;
             }
+            if std::mem::take(&mut self.head_overflow) {
+                let rows = self.head.len();
+                let (at, state, w, n) = page_from.clone();
+                let mut pages = std::mem::take(&mut self.pages);
+                pages.truncate(n);
+                self = Formatter { pages, ..state };
+                self.head_reserve = Some(rows);
+                self.head_retried = true;
+                word = w;
+                i = at;
+                made = n;
+                continue;
+            }
             made = self.pages.len();
             let at = i;
             page_from = (at, self.snapshot(), word.clone(), made);
@@ -2378,11 +2568,22 @@ impl Formatter {
                 }
             }
         }
-        self.end(word)
+        // The last page closes in `end`: when its anticipatory head changed its line count, it is laid out again.
+        let (at, state, w, n) = page_from;
+        let (mut pages, head_change) = self.end(word);
+        if let Some(rows) = head_change {
+            pages.truncate(n);
+            let mut again = Formatter { pages, ..state };
+            again.head_reserve = Some(rows);
+            again.head_retried = true;
+            return again.run_from(pieces, at, w, checkpoints, None);
+        }
+        pages
     }
 
-    /// Lays out the last word and what is still open, and gives the pages.
-    fn end(mut self, word: Vec<(char, Option<usize>)>) -> Vec<Page> {
+    /// Lays out the last word and what is still open, and gives the pages, with the head's line count when the last
+    /// page's anticipatory head changed it (Formatter::run_from lays that page out again).
+    fn end(mut self, word: Vec<(char, Option<usize>)>) -> (Vec<Page>, Option<usize>) {
         // A table without [htbe] runs to the end of the document (spec 35 1.3).
         if let Some(end) = self.table.as_ref().map(|t| t.last_mark().map_or(0, |m| m + 1)) {
             self.lay_table(end);
@@ -2412,7 +2613,8 @@ impl Formatter {
         if !self.page.is_empty() || self.pages.is_empty() {
             self.finish_page();
         }
-        self.pages
+        let change = std::mem::take(&mut self.head_overflow).then(|| self.head.len());
+        (self.pages, change)
     }
 }
 
@@ -2428,6 +2630,10 @@ fn is_layout(code: &str) -> bool {
         || code.starts_with("stb")
         || code.starts_with('#')
         || code.starts_with("svdac~")
+        || code.starts_with("svgan")
+        || code.starts_with("svgrn")
+        || (code.starts_with("pv") && code[2..].starts_with(|c: char| c.is_ascii_digit() || c == '~'))
+        || code == "pv"
         || code == ">"
         || matches!(
             split_code(code).0,
@@ -2435,7 +2641,7 @@ fn is_layout(code: &str) -> bool {
                 | "kbs" | "kbe" | "kpf" | "tab" | "run"
                 | "svpnp" | "svpfd" | "hi" | "hl" | "lea" | "svrlb" | "svprg" | "sl" | "st" | "ki"
                 | "tls" | "tle" | "tld" | "rfs" | "rfe" | "rfd" | "svrhp" | "svrfp" | "svrhs" | "svrfs" | "kps" | "kpe" | "sc"
-                | "ctb" | "tas" | "taa" | "svmts" | "lps" | "lpr" | "svlma" | "skn" | "sd" | "pm" | "svant"
+                | "ctb" | "tas" | "taa" | "svmts" | "lps" | "lpr" | "svlma" | "skn" | "sd" | "pm" | "svant" | "pntr" | "pnta" | "svles"
         )
 }
 
@@ -3335,4 +3541,66 @@ mod tests {
         assert_eq!(texts(&pages[0])[0], "H");
     }
 
+
+    #[test]
+    fn roman_page_numbers_and_their_indicators() {
+        let mut layout = Layout::braille(20, 2);
+        layout.numbers_odd = Corner::UpperRight;
+        layout.numbers_even = Corner::UpperRight;
+        // [pntr]: the roman indicator and the numeral; [pv] sets the number without a new page.
+        let pages = format(&m("[pv4][pntr]a"), &layout, None);
+        assert_eq!(texts(&pages[0])[0], format!("a{};iv", " ".repeat(16)));
+        assert_eq!(pages[0].number, crate::range::PageNumber { number: 4, letter: None, roman: true });
+        // [svgrn1] doubles the indicator before a numeral of more than one letter; "{" none.
+        let pages = format(&m("[svgrn1~;][pv4][pntr]a"), &layout, None);
+        assert_eq!(texts(&pages[0])[0], format!("a{};;iv", " ".repeat(15)));
+        let pages = format(&m("[svgrn~{][pntr]a"), &layout, None);
+        assert_eq!(texts(&pages[0])[0], format!("a{}i", " ".repeat(18)));
+        // The number is taken when the page opens: [pntr] in the middle of a page shows from the next page.
+        let pages = format(&m("a [pntr]b[pg]c"), &layout, None);
+        assert_eq!(texts(&pages[0])[0], format!("a b{}#a", " ".repeat(15)));
+        assert_eq!(texts(&pages[1])[0], format!("c{};ii", " ".repeat(16)));
+        // [pnta] goes back to arabic; [svgan] sets the sign and digits.
+        let pages = format(&m("[pntr]a[pg][pnta]b[pg][svgan~*0123456789]c"), &layout, None);
+        assert_eq!(texts(&pages[1])[0], format!("b{}#b", " ".repeat(17)));
+        assert_eq!(texts(&pages[2])[0], format!("c{}*3", " ".repeat(17)));
+        // Print: small letters, no indicator.
+        let mut layout = Layout::print(20, 2);
+        layout.numbers_odd = Corner::UpperRight;
+        let pages = format(&m("[pv9][pntr]a"), &layout, None);
+        assert_eq!(texts(&pages[0])[0], format!("a{}ix", " ".repeat(17)));
+    }
+
+    #[test]
+    fn print_page_lines_follow_svles() {
+        let mut layout = Layout::braille(20, 6);
+        layout.print_numbers_odd = Corner::UpperRight;
+        layout.print_numbers_even = Corner::UpperRight;
+        // Within the bottom tolerance (2) of the page end, with the next corner at the top: the page is filled out.
+        let pages = format(&m("a\nb\nc\nd\n[lea]5 e"), &layout, None);
+        assert_eq!(texts(&pages[0]), ["a", "b", "c", "d", "", ""]);
+        assert_eq!(texts(&pages[1])[0], format!("e{}5", " ".repeat(18)));
+        // With tolerance 1 the print page line goes on the page.
+        let pages = format(&m("[svles0:0:1]a\nb\nc\nd\n[lea]5 e"), &layout, None);
+        assert_eq!(texts(&pages[0])[4], format!("{}5", "-".repeat(19)));
+        assert_eq!(texts(&pages[0])[5], "e");
+        // British: the number centred after dots 5 and 2-5; no continuation letters with M 1.
+        let pages = format(&m("[svles1:1]a [lea]5 b\nc\nd\ne\nf\ng\nh"), &layout, None);
+        assert_eq!(texts(&pages[0])[1], format!("{}\"35", " ".repeat(8)));
+        assert_eq!(texts(&pages[1])[0], format!("f{}5", " ".repeat(18)));
+        // P 1: the text after the line starts at the runover.
+        let pages = format(&m("[ind1][ptys3][svles0:0:2:1]a [lea]5 b"), &layout, None);
+        assert_eq!(texts(&pages[0])[2], "   b");
+    }
+
+    #[test]
+    fn an_anticipatory_head_that_changes_its_line_count_lays_the_page_out_again() {
+        // The head set in the middle of the page: the page is laid out again with a row for it.
+        let pages = format(&m("[svant1]a[tls]H[tle] b"), &Layout::braille(10, 4), None);
+        assert_eq!(texts(&pages[0]), ["    H", "a", "b", ""]);
+        // Without [svant] the head starts on the next page.
+        let pages = format(&m("a[tls]H[tle] b[pg]c"), &Layout::braille(10, 4), None);
+        assert_eq!(texts(&pages[0]), ["a", "b", "", ""]);
+        assert_eq!(texts(&pages[1])[0], "    H");
+    }
 }

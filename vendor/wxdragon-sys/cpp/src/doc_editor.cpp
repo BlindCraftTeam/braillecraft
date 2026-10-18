@@ -390,16 +390,21 @@ void DocEditor::ShowRow(int row, int keepFromTop)
     } else if (row >= top + shown) {
         top = row - shown + 1;
     }
-    // Sideways: the caret column in view, five characters at a time.
-    const int x = ColumnX(row, m_caretCol) / m_charWidth;
-    const int width = wxMax(GetClientSize().GetWidth() / m_charWidth, 1);
-    int left = vx;
-    if (x < left + 1) {
-        left = wxMax(x - 5, 0);
-    } else if (x >= left + width - 1) {
-        left = x - width + 5;
+    // Sideways (spec 30 section 13, unknown 1): while the caret is right of the window, five characters further
+    // right, never past the right end of the text; while it is left of the window, five characters further left,
+    // never past the start; at least one pixel each time.
+    const int x = ColumnX(row, m_caretCol);
+    const int width = wxMax(GetClientSize().GetWidth(), 1);
+    const int most = GetVirtualSize().GetWidth();
+    int left = vx * m_charWidth;
+    while (x >= left + width) {
+        left += wxMax(wxMin(m_charWidth * 5, most - (left + width)), 1);
     }
-    if (top != vy || left != vx) Scroll(left, top);
+    while (x < left) {
+        left -= wxMax(wxMin(m_charWidth * 5, left), 1);
+    }
+    const int leftCol = left / m_charWidth;
+    if (top != vy || leftCol != vx) Scroll(leftCol, top);
 }
 
 void DocEditor::PlaceCaret()

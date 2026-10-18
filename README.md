@@ -122,7 +122,7 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   translated, when the view changes, or when Shift is pressed alone.
 - **Braille pages.** Lines per page, cells per line, margins, centred headings and page numbering, shown in the
   status line as page, line and column. A page number shares the first or last line with text, which keeps three
-  cells clear of it; print documents get page numbers too, and [pg] codes can renumber pages. Each document's styles (headings, lists, paragraphs) are laid out from its
+  cells clear of it; print documents get page numbers too, and [pg] and [pv] codes can renumber pages; [pntr] gives roman page numbers ([pnta] back to arabic), and the number sign, digits and roman indicator can be changed ([svgan], [svgrn]). Print page lines follow [svles]: the American or British line, letters on continuation pages or none, and how near the page end a print page change moves to the next page. Each document's styles (headings, lists, paragraphs) are laid out from its
   own style list. Running heads go on the first lines of the pages they are set for and running feet on the last
   line, centred or at a side, beside the page numbers. Blocks kept together (a heading with the lines after it, a list
   item) move to the next page whole rather than break across one. Print page numbers marked in the text show in their corner,

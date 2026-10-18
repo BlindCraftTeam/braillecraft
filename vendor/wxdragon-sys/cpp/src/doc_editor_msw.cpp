@@ -87,10 +87,39 @@ public:
         VariantInit(out);
         if (!m_editor) return UIA_E_ELEMENTNOTAVAILABLE;
         switch (id) {
+        // The reference's answers (spec 30 section 13, unknown 10): a Document, its strings, and the
+        // class name under BrailleCraft's own name.
         case UIA_ControlTypePropertyId:
-            // INFERENCE (spec 30 unknown: the reference's property values): an edit area.
             out->vt = VT_I4;
-            out->lVal = UIA_EditControlTypeId;
+            out->lVal = UIA_DocumentControlTypeId;
+            break;
+        case UIA_LocalizedControlTypePropertyId:
+            out->vt = VT_BSTR;
+            out->bstrVal = SysAllocString(L"document");
+            break;
+        case UIA_AutomationIdPropertyId:
+            out->vt = VT_BSTR;
+            out->bstrVal = SysAllocString(L"DocumentText");
+            break;
+        case UIA_ClassNamePropertyId:
+            out->vt = VT_BSTR;
+            out->bstrVal = SysAllocString(L"BrailleCraftDocumentAutomation");
+            break;
+        case UIA_HelpTextPropertyId:
+            out->vt = VT_BSTR;
+            out->bstrVal = SysAllocString(L"Type text here. Use Control-[ to enter codes or Control-< to start or end a style.");
+            break;
+        case UIA_ItemTypePropertyId:
+            out->vt = VT_BSTR;
+            out->bstrVal = SysAllocString(L"Document Text");
+            break;
+        case UIA_FrameworkIdPropertyId:
+            out->vt = VT_BSTR;
+            out->bstrVal = SysAllocString(L"Win32");
+            break;
+        case UIA_IsOffscreenPropertyId:
+            out->vt = VT_BOOL;
+            out->boolVal = VARIANT_FALSE;
             break;
         case UIA_NamePropertyId:
             out->vt = VT_BSTR;
