@@ -623,6 +623,40 @@ fn split_code(code: &str) -> (&str, Vec<i64>) {
     (name, numbers)
 }
 
+/// Which fold of `n` (from `k`) line `y` of `l` lines is, for folds of `w` lines with the positions given in `at`
+/// (spec 19 section 10.7): one fold in the middle of an odd number of lines, halving, when n is odd, w is 1, l is odd
+/// and no position is given; else spread evenly, the remainder going to the last folds (`last`) or the first.
+fn fold_index(n: i64, l: i64, y: i64, k: i64, last: bool, w: i64, at: &[i64; 9]) -> Option<usize> {
+    if n > 1 && w == 1 && at[0] == 0 && (n + 1) % 2 == 0 && (l + 1) % 2 == 0 {
+        if y == (l + 1) / 2 - 1 {
+            return Some(((n + 1) / 2 + k) as usize);
+        }
+        let half = l / 2;
+        let (mut y, mut k, mut last) = (y, k, last);
+        if half < y {
+            y -= half + 1;
+            k += 1 + n / 2;
+            last = !last;
+        }
+        return fold_index(n / 2, half, y, k, last, w, at);
+    }
+    let r = (n + 1) - (l + w) % (n + 1);
+    let mut pos = -((w + 2) / 2);
+    for c in 0..n {
+        if let Some(&p) = at.get((k + c) as usize).filter(|&&p| p != 0) {
+            pos = p - 1;
+        }
+        pos += (l + w) / (n + 1);
+        if (last && c >= r) || (!last && c < (n + 1) - r) {
+            pos += 1;
+        }
+        if y == pos {
+            return Some((k + c) as usize);
+        }
+    }
+    None
+}
+
 /// A roman numeral, lower case (the standard program writes it in capitals; the braille and print tables both show
 /// it in small letters here, as the digits are); "?" outside 1 to 3999 (spec 19 section 8.1).
 fn roman_numeral(n: usize) -> String {
@@ -928,6 +962,9 @@ struct Formatter {
     ref_first: bool,
     page_refs: Vec<ReferencePoint>,
     last_place: usize,
+    /// [foldsN:W:P1:...~X] (spec 19 section 10.7): N folds (0 none) of W lines each, the fold positions given (0 where
+    /// none) and the characters that fill a fold's lines (by fold, the first for the rest; none leaves them blank).
+    folds: (usize, usize, [i64; 9], Vec<char>),
     /// [svantN]: 1 or 3 the head as it stands when the page closes; 2 or 3 the print page number likewise.
     anticipatory: i64,
     /// The table being collected (from [htbs] to [htbe], spec 35), the [htbfmtN:FFF] values for the next table
@@ -1061,6 +1098,7 @@ impl Formatter {
             ref_first: false,
             page_refs: Vec::new(),
             last_place: 0,
+            folds: (0, 1, [0; 9], Vec::new()),
             anticipatory: 0,
             table: None,
             htbfmt: (0, String::new()),
@@ -1687,6 +1725,39 @@ impl Formatter {
         }
     }
 
+    /// When the line the page goes on to is a fold line ([folds]), its W lines are filled with the fold's character
+    /// across the page (or left blank) and passed, as the standard program does after each line.
+    fn fold_lines(&mut self) {
+        let (n, w) = (self.folds.0 as i64, self.folds.1);
+        if n == 0 {
+            return;
+        }
+        let l = self.capacity() as i64;
+        let y = self.page.len() as i64;
+        if y >= l || l / (n + 1) == 0 {
+            return;
+        }
+        let Some(k) = fold_index(n, l, y, 0, true, w as i64, &self.folds.2) else { return };
+        if (y + 1) / (l / (n + 1)) == n + 1 {
+            return;
+        }
+        let marker = &self.folds.3;
+        let c = marker.get(k).filter(|_| k < 10).or(marker.first()).copied();
+        for _ in 0..w {
+            if self.page.len() >= self.capacity() {
+                break;
+            }
+            let mut line = Line::default();
+            if let Some(c) = c {
+                for _ in 0..self.layout.cells {
+                    line.text.push(c);
+                    line.sources.push(None);
+                }
+            }
+            self.page.push(line);
+        }
+    }
+
     fn push_line(&mut self, line: Line) {
         if self.page.len() >= self.capacity() {
             self.finish_page();
@@ -1694,6 +1765,7 @@ impl Formatter {
         self.open_page();
         // Blank lines are kept at the top of a page too: skips that do not fit on a page go on at the top of the next.
         self.page.push(line);
+        self.fold_lines();
         if self.page.len() >= self.capacity() {
             self.finish_page();
         }
@@ -2400,6 +2472,21 @@ impl Formatter {
                 self.line_number = Some((first.unwrap_or(-1), just.map_or('R', |c| c.to_ascii_uppercase())));
             }
             "svpal" => self.svpal = (first.unwrap_or(3), n.get(1).copied().unwrap_or(-3)),
+            // [foldsN:W:P...~X] (case 0xa5): N 2 when not given, 0 to (lines - 4) / 2; W 1, 0 to (lines - 4) / N.
+            "folds" => {
+                let most = (self.layout.lines as i64 - 4).max(0) / 2;
+                let folds = first.unwrap_or(2).clamp(0, most);
+                let mut w = self.folds.1 as i64;
+                if folds != 0 {
+                    w = n.get(1).copied().unwrap_or(1).clamp(0, (self.layout.lines as i64 - 4).max(0) / folds);
+                }
+                let mut at = [0; 9];
+                for (k, &p) in n.iter().skip(2).take(9).enumerate() {
+                    at[k] = p;
+                }
+                let marker = code.split_once('~').map_or(Vec::new(), |(_, x)| x.chars().take(9).collect());
+                self.folds = (folds as usize, w as usize, at, marker);
+            }
             // [rpsN] (case 0x9b) opens a reference point when none is open; [rpe] (0x9c) keeps it when a word came in
             // it; [svrpt] (0x9d) does nothing here.
             "rps" => {
@@ -3149,7 +3236,7 @@ fn is_layout(code: &str) -> bool {
                 | "svpnp" | "svpfd" | "hi" | "hl" | "lea" | "svrlb" | "svprg" | "sl" | "st" | "ki"
                 | "tls" | "tle" | "tld" | "rfs" | "rfe" | "rfd" | "svrhp" | "svrfp" | "svrhs" | "svrfs" | "kps" | "kpe" | "sc"
                 | "ctb" | "tas" | "taa" | "svmts" | "lps" | "lpr" | "svlma" | "skn" | "sd" | "pm" | "svant" | "pntr" | "pnta" | "svles" | "vcs" | "vce" | "remw" | "lec" | "led" | "mec" | "meg" | "med"
-                | "linenum" | "svpal" | "rps" | "rpe"
+                | "linenum" | "svpal" | "rps" | "rpe" | "folds"
         )
 }
 
@@ -4056,6 +4143,24 @@ mod tests {
         assert_eq!((points[0].first_page.as_str(), points[0].last_page.as_str()), ("#a", "#a"));
         assert_eq!((points[1].start, points[1].end, points[1].value), (25, 36, 0));
         assert_eq!((points[1].first_page.as_str(), points[1].last_page.as_str()), ("#b", "#c"));
+    }
+
+    #[test]
+    fn folds_leave_their_lines_for_the_fold() {
+        let l = Layout::braille(1, 25);
+        let blank = |doc: &str| -> Vec<usize> {
+            let pages = format(&m(doc), &l, None);
+            texts(&pages[0]).iter().enumerate().take(20).filter(|(_, t)| !t.chars().any(|c| c.is_ascii_lowercase())).map(|(k, _)| k).collect()
+        };
+        let letters = "a b c d e f g h i j k l m n o p q r s t u v w";
+        // Two folds of one line in 25: lines 8 and 17 (the remainder to the last fold).
+        assert_eq!(blank(&format!("[folds]{letters}")), [7, 16]);
+        // Three: the middle line, then the middle of each half.
+        assert_eq!(blank(&format!("[folds3]{letters}")), [5, 12, 19]);
+        // One, filled with the fold character.
+        let pages = format(&m(&format!("[folds1:1~-]{letters}")), &l, None);
+        assert_eq!(texts(&pages[0])[12], "-");
+        assert_eq!(fold_index(1, 25, 12, 0, true, 1, &[0; 9]), Some(0));
     }
 
     #[test]
