@@ -54,7 +54,7 @@ pub fn latex(running: &str) -> Result<Vec<u8>, String> {
 
 /// An HTML with MathJax file from a print document's running text, as the reference program writes it (spec 21):
 /// the text through the text export table as for LaTeX, then the MathJax rule script, between the fixed head and
-/// foot the original writes.
+/// foot the standard program writes.
 pub fn mathjax(running: &str) -> Result<Vec<u8>, String> {
     let middle = text_export(running);
     let mut script = rule_script("mathjax.rules")?;
@@ -373,7 +373,7 @@ pub fn convert_braille(doc: &Shown, from: &Encoding, to: &Encoding) -> Shown {
     map_cells(doc, |run| to.cells_to_text(&from.text_to_cells(run)))
 }
 
-/// Braille text in `enc`'s characters written as Unicode braille patterns (U+2800 plus the dots), as the original
+/// Braille text in `enc`'s characters written as Unicode braille patterns (U+2800 plus the dots)
 /// shows braille when "Prefer Unicode Braille Patterns" is chosen; the codes keep their text.
 pub fn as_patterns(doc: &Shown, enc: &Encoding) -> Shown {
     map_cells(doc, |run| enc.text_to_cells(run))

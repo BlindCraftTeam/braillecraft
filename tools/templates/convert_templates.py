@@ -8,7 +8,7 @@ them giving the template's name (the file name it was installed under, ending in
 "Key: Value" settings; then "Styles:" and the styles (a name line and two indented lines of begin and end codes).
 
 What is written: the same settings and styles, line for line, under BrailleCraft's own header line, with the name
-line, the copyright lines and the rights lines left out (the name goes into the index). Other comments are kept.
+line, the notice and rights lines left out (the name goes into the index). Other comments are kept.
 Each template's file name is its name in small letters with every run of other characters turned into "-".
 index.tsv lists, per template: the short code of the file it came from, the BrailleCraft file name, and the name.
 """

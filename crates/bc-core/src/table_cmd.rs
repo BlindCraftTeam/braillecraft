@@ -1,4 +1,4 @@
-//! Table, Create and Table, Table Properties as the original (spec 33): the table start code [htbs;...] read and
+//! Table, Create and Table, Table Properties as the standard program (spec 33): the table start code [htbs;...] read and
 //! written, a new table's codes, and the test that refuses a selection holding a table code. Places are running-text
 //! places (codes marked 0x1C ... 0x1F).
 
@@ -19,7 +19,7 @@ pub const TYPES: [(&str, char, char); 8] = [
 /// The X/Y (Row/Column) Swap list (strings 2059-2061) with the letter each writes (spec 33 3.2).
 pub const SWAPS: [(&str, char); 3] = [("Do Not Swap", 'n'), ("Force Swap", 'y'), ("Swap if More Compact", 'a')];
 
-/// The message of a selection holding a table start or end code (a literal in the original).
+/// The message of a selection holding a table start or end code (a literal in the standard program).
 pub const SPANS_BOUNDARY: &str = "You have a selection that spans across a table boundary.  Please place the cursor in a table to set table properties or outside of all tables to create a new table.";
 
 /// A table as the dialog shows it (spec 33 1.1): total rows and columns, the type letter, header rows and columns,
@@ -44,7 +44,7 @@ impl Default for Table {
 }
 
 impl Table {
-    /// The start code's name and parameters read as the original reads them, by the pattern
+    /// The start code's name and parameters read, by the pattern
     /// htbs;%c:%d:%d:%c:%c:%c, a field not read taking its default (spec 33 4).
     pub fn parse(code: &str) -> Table {
         let mut t = Table::default();
@@ -191,7 +191,7 @@ impl Table {
     }
 }
 
-/// A number field as the original reads it: its ASCII digits only, anything else skipped ("-3" is 3, empty is 0).
+/// A number field: its ASCII digits only, anything else skipped ("-3" is 3, empty is 0).
 pub fn digits(field: &str) -> i64 {
     field.chars().filter(char::is_ascii_digit).fold(0i64, |n, d| n.saturating_mul(10).saturating_add(i64::from(d as u8 - b'0')))
 }
@@ -214,7 +214,7 @@ fn codes_in(r: &[char], from: usize, to: usize) -> Vec<(String, usize, usize)> {
 }
 
 /// True when the selection from `a` to `b` holds a table start code (a name beginning htbs) or end code (htbe):
-/// the original then refuses Table, Create and Table Properties (spec 33 2.2).
+/// the standard program then refuses Table, Create and Table Properties (spec 33 2.2).
 pub fn selection_has_table_code(running: &str, a: usize, b: usize) -> bool {
     let r: Vec<char> = running.chars().collect();
     codes_in(&r, a.min(b), a.max(b)).iter().any(|(n, _, _)| n.starts_with("htbs") || n == "htbe")
@@ -254,7 +254,7 @@ mod tests {
     }
 
     #[test]
-    fn start_codes_read_with_the_original_defaults() {
+    fn start_codes_read_with_the_standard_defaults() {
         assert_eq!(Table::parse("htbs"), Table::default());
         let m = Table::parse("htbs;m");
         assert_eq!((m.kind, m.header_rows, m.header_cols, m.type_index()), ('m', 0, 0, 1));
@@ -275,10 +275,10 @@ mod tests {
     }
 
     #[test]
-    fn tables_are_found_and_refused_as_the_original() {
+    fn tables_are_found_and_refused_as_specified() {
         let r = run("x[htbs;r:1:1:b:n:a]a[>]b[<]c[>]d[htbe]y");
         assert!(selection_has_table_code(&r, 0, 19));
-        // A code counts only when its end mark is in the selection, as the original walks it.
+        // A code counts only when its end mark is in the selection.
         assert!(!selection_has_table_code(&r, 0, 3));
         assert!(!selection_has_table_code(&r, 19, 20));
         let (open, after, rows, cols) = table_at(&r, 20).unwrap();

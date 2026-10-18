@@ -38,7 +38,7 @@ pub struct DxDocument {
     pub kind: DocumentKind,
     pub version: u16,
     /// Braille page numbers on even and odd pages, print page numbers on even and odd pages, first page number. Held
-    /// as 32-bit numbers as the original holds them in a document (+0x478 ... +0x488); the file keeps 16 bits of each.
+    /// as 32-bit numbers as the standard program holds them in a document (+0x478 ... +0x488); the file keeps 16 bits of each.
     pub page_numbering: [u32; 5],
     pub translated_line: bool,
     pub six_key: bool,

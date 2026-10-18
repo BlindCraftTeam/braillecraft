@@ -3,11 +3,6 @@
 | of all element names following "<" have been downcased and any elements
 | of the form <xy:element have been transformed to <xy-ns><element.
 | ---
-| 1;1 2003-4-23 J E Sullivan, from daielc 1;1 2003-4-18
-| 2;1 2010-12-20/jes: Allow for the possibility that "native" the program commands in TXX
-|     form, including [es~...] and [ee~...] as well as [<] and [>] commands, may
-|     already be present in the input, and if so should be copied through
-|     without interpretation.  (Earlier xmlproc may do this in the program as of date.)
 | ---
 | States:
 |   1 = in general text

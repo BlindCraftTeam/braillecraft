@@ -1,6 +1,6 @@
-//! Applying a style to a range, Join Styles, Join Lines and New Paragraph, as the original does them (spec 31). The
+//! Applying a style to a range, Join Styles, Join Lines and New Paragraph, as the standard program does them (spec 31). The
 //! work is done on the running text (codes marked 0x1C ... 0x1F) with places kept through every change, as the
-//! original keeps its markers.
+//! standard program keeps its markers.
 
 use crate::doctext::{CLOSE, OPEN};
 
@@ -122,7 +122,7 @@ fn paragraph_style(code: &str) -> Option<(bool, &str)> {
     }
 }
 
-/// The original's code kinds for widening a paragraph style's range (spec 31 1.3): 1 ind, 4 paragraph openers, 5 l,
+/// The standard code kinds for widening a paragraph style's range (spec 31 1.3): 1 ind, 4 paragraph openers, 5 l,
 /// 8 pg, 9 paragraph closers, 0 any other code.
 fn kind(code: &str) -> u8 {
     let mut name = String::new();
@@ -148,7 +148,7 @@ fn kind(code: &str) -> u8 {
     }
 }
 
-/// The original's list of line codes (Join Lines and the cleanup after a paragraph style is applied): the code's name
+/// The standard list of line codes (Join Lines and the cleanup after a paragraph style is applied): the code's name
 /// up to "~", compared whole and in any case.
 fn line_code(code: &str) -> Option<&'static str> {
     let name = code.split('~').next().unwrap_or("").to_ascii_lowercase();
@@ -229,7 +229,7 @@ fn widen_end(t: &Text, e: usize, mut flag: bool) -> usize {
 fn clean_up(t: &mut Text, s: usize, e: usize) {
     let ms = t.mark(s);
     let me = t.mark(e);
-    // Line codes right before the new end code go (the original's list check never matches es or ee here).
+    // Line codes right before the new end code go (the standard list check never matches es or ee here).
     if let Some(end_code) = t.code_ending_at(e) {
         if t.code_at(end_code).is_some_and(|(c, _)| paragraph_style(&c).is_some()) {
             let mut at = end_code;
@@ -285,7 +285,7 @@ fn clean_up(t: &mut Text, s: usize, e: usize) {
     }
 }
 
-/// Applies style `name` to `from`..`to` (an empty range at the caret when equal) as the original's style apply: a
+/// Applies style `name` to `from`..`to` (an empty range at the caret when equal): a
 /// paragraph style (name ending in a period) is widened to whole paragraphs and cleaned up inside; the codes go in end
 /// first. Answers the running text and the caret.
 pub fn apply_style(running: &str, from: usize, to: usize, caret: usize, name: &str) -> (String, usize) {
@@ -324,7 +324,7 @@ fn apply_in(t: &mut Text, from: usize, to: usize, m0: usize, name: &str) -> usiz
     }
 }
 
-/// The paragraph style open at `pos` as the original finds it (spec 31 5.2): the nearest paragraph style start before
+/// The paragraph style open at `pos` as the standard program finds it (spec 31 5.2): the nearest paragraph style start before
 /// it, unless that style is ended before `pos`.
 pub fn open_paragraph_style(running: &str, pos: usize) -> Option<String> {
     let t = Text::new(running);

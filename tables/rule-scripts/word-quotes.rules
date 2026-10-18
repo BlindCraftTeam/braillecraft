@@ -1,30 +1,12 @@
 | Smart quotes and apostrophes regularised
 |   set "forcers" to normal unambiguous chars
 |   Note both input and output are DUSCI
-| 1;1  2014-10-29/J E Sullivan
-| 1;2  2015-11-10/jes: refine logic towards defaults with only conservative
-|      exceptions (ex0001)
-| 2;1  2016-06-14/15/jes: Complete revision - base decision on local context only
-|      (no longer on whether or not there's an unclosed single quote) -- rather
-|      on whether there are alphanumerics somewhere to left and/or immediately
-|      to right
-| 2;2  2016-06-16/jes: make
-|      quõ¯ -> qu'
-|      a rule also in state 2 (for lorsqu')(ex0009)
-| 2;3  2017-05-05/jes: when the first ' in 'n' or 'N' is forced to apostrophe (in
-|      state 1 only), treat the second as apostrophe also if ambiguous;
-|      accommodate
-|        D+b279 D%|178|121 D:²y U+0149 Latin small letter n preceded by apostrophe
-|      by converting to ordinary 'n sequence -- and also treat any following '
-|      as apostrophe
-| 2;4  2026-09-25/cln: added a rule to fix badly constructed [idle~lfs] codes.
 | States:
 |   1 no alphanumerics since last space or spacing formatting code
 |   2 after alphanumerics since last space or spacing code
 |   3 after prefix enroute to state 1
 |   4 after prefix enroute to state 2
 |   5 in format/translation code passing through to |031 or space (preserving state)
-| extra rule added by cln to fix a problem with badly constructed [idle~lfs] codes.
 |028idle |~3lfs|031~|028idle|~lfs|031~
 | Global rules (for controls, most of which force state 1)
 |000~|000~~1~ |  0 NUL control

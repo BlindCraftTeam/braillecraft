@@ -59,7 +59,7 @@ SKIP |= set(range(10005, 10017))
 # The embosser setup sheet's pages, shown as tabs of the sheet (10000): written as panels, not dialogs.
 PANELS = {10001, 10002, 10003, 10004}
 
-# About (1016) keeps its layout with BrailleCraft's own text; the activation buttons and the original credits are
+# About (1016) keeps its layout with BrailleCraft's own text; the activation buttons and the standard program credits are
 # left out (None). Controls 10 to 14 are filled at run time.
 ABOUT = 1016
 ABOUT_TEXT = {
@@ -131,7 +131,7 @@ def kind_of(c):
         if any(k in f for k in ("BS_CHECKBOX", "BS_AUTOCHECKBOX", "BS_3STATE", "BS_AUTO3STATE")):
             return "Check"
         return "Button"
-    # The original's codes edit field is a text field (shown as one by `control`).
+    # The standard codes edit field is a text field (shown as one by `control`).
     if c["class"].endswith("_CODESEDIT"):
         return "Text"
     return {"Static": "Static", "Edit": "Text", "ListBox": "List",

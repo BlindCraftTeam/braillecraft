@@ -2,7 +2,6 @@
 | Removes all controls below space except for LF (10 decimal), and
 | any TAB (9) is converted to a space.
 | ---
-| 1;1 2003-4-18/5-25 P Sullivan - adapted from encut8.sbt
 |000~~ | discard all lower controls exc. 10 (LF) & cvt 9 (TAB) to space
 |001~~
 |002~~

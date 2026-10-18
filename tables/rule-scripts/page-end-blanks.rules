@@ -1,4 +1,4 @@
-| rmvpeb.sbt 1;1 - remove page-ending blank lines
+| the script - remove page-ending blank lines
 | This SCRUB table is often useful before running BRAIDE, when formatted
 | braille file contains blank lines before a formfeed, which can confuse
 | BRAIDE about how many lines per page are in the file.  It should not

@@ -1,9 +1,4 @@
-| niub1.sbt 1;5 - scrub table to turn start and end Nemeth indicators into math style tags
-| 1;1 20180521 CLN - original version.
-| 1;2 20190122 cln - If the file starts with _%_: use the rules for making punctuation upper.
-| 1;3 20200824 cln - now using the style math-separation
-| 1;4 20200918 adjustment for spacing
-| 1;5 2024-03-30 cln adjustments for _4 period at the end of a line and for OneWordBridge
+| the script - scrub table to turn start and end Nemeth indicators into math style tags
 | states
 |    1 - initial
 |    2 - using UEB with Nemeth

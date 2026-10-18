@@ -1,13 +1,13 @@
-//! Save As eBraille (braille documents) and EPUB 3 (print documents), as the original writes them (spec 23): a zip
+//! Save As eBraille (braille documents) and EPUB 3 (print documents), as the standard program writes them (spec 23): a zip
 //! package holding the mimetype, the content folder ("ebraille" or "epub") with its style sheet and one content
 //! page part0001.xml, index.html with the table of contents, page list and landmarks navs, package.opf from the
-//! original's template with the document's metadata, and META-INF/container.xml. The content page is the document
+//! standard template with the document's metadata, and META-INF/container.xml. The content page is the document
 //! body as XHTML: block styles as elements with the style's class, lists as ol and li, page number styles as
 //! doc-pagebreak elements, tables, links; in a braille document every text character becomes its Unicode braille
 //! cell. The metadata comes from Document, eBraille Metadata (the `Metadata` struct) and is written as the
 //! package's metadata element.
 //!
-//! What the original does that the saved decompiles do not show is marked INFERENCE in the code: the element name
+//! What the standard program does that the saved decompiles do not show is marked INFERENCE in the code: the element name
 //! of a block style (p), which styles are headings and list styles, the markup of the line break code, the manifest
 //! items for the nav page and the style sheet, and the metadata property names of the Recommended page.
 
@@ -16,7 +16,7 @@ use std::hash::{BuildHasher, Hasher};
 
 use crate::docx;
 
-/// The style sheet written as the content folder's css/ebrl.css (the original's, with our own namespace).
+/// The style sheet written as the content folder's css/ebrl.css (the standard, with our own namespace).
 pub const STYLE_SHEET: &str = include_str!("../data/ebraille.css");
 
 /// The namespace of the maxdepth attribute, as the style sheet declares it.
@@ -90,7 +90,7 @@ impl Metadata {
 }
 
 /// The names the Options... dialogs offer: XML attributes an OPF metadata element may carry (INFERENCE: the
-/// original's list was not read), and the properties the Additional page offers (the names the original's code
+/// standard list was not read), and the properties the Additional page offers (the names the standard code
 /// holds, spec 23 section 5).
 pub const ATTRIBUTE_NAMES: [&str; 6] = ["id", "xml:lang", "dir", "scheme", "refines", "property"];
 pub const PROPERTY_NAMES: [&str; 7] =
@@ -100,7 +100,7 @@ pub const SPECIALIZATIONS: [&str; 5] = ["None", "comp6", "math", "music", "phone
 
 /// How a style is written, from its name and its beginning codes (running text, codes marked 0x1C ... 0x1F):
 /// GuideDots by name; a page number style holds a reference point code (rps); a list style holds level codes
-/// (hl or hi), its depth the highest level named (INFERENCE: the original's maxdepth source was not read); a
+/// (hl or hi), its depth the highest level named (INFERENCE: the standard maxdepth source was not read); a
 /// heading style is named h1., h2., h3. and so on (INFERENCE); a paragraph style holds a layout code; anything
 /// else is a character style.
 pub fn kind_of(name: &str, begin: &str) -> StyleKind {
@@ -203,7 +203,7 @@ impl<'a> Builder<'a> {
         escape(text, &mut self.out);
     }
 
-    /// The list levels opened and closed to reach `level` (the [hlN] code), as the original keeps them: `</ol>` down
+    /// The list levels opened and closed to reach `level` (the [hlN] code): `</ol>` down
     /// to the level, `<li class="lvlNofM">` and `<ol>` up to it, then the item of the new level.
     fn list_level(&mut self, level: u32) {
         if self.item_open {
@@ -330,7 +330,7 @@ impl<'a> Builder<'a> {
                 if self.in_table {
                     self.out.push_str("</td></tr><tr><td>");
                 } else {
-                    // INFERENCE: the line break code counts a line in the original; written as a break here.
+                    // INFERENCE: the line break code counts a line in the standard program; written as a break here.
                     self.out.push_str("<br/>");
                 }
             }
@@ -445,7 +445,7 @@ fn encode_text_nodes(markup: &str, encode: &dyn Fn(&str) -> String) -> String {
     out
 }
 
-/// A text node's characters, the entities undone first and put back after (the original's encode callback).
+/// A text node's characters, the entities undone first and put back after (the standard encode callback).
 fn encode_node(text: &str, cell: &dyn Fn(char) -> u8) -> String {
     let plain = text.replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&");
     let cells = encode_cells(&plain, cell);
@@ -507,7 +507,7 @@ fn xml_text(text: &str) -> String {
     out
 }
 
-/// The identifier as a URN by its type; with no identifier entered, a new UUID as the original's template gives
+/// The identifier as a URN by its type; with no identifier entered, a new UUID
 /// (INFERENCE: the dialog starts on ISBN, and an empty ISBN is not written).
 fn urn(kind: u8, value: &str) -> String {
     let value = value.trim();
@@ -519,7 +519,7 @@ fn urn(kind: u8, value: &str) -> String {
     }
 }
 
-/// The package's metadata element text (the original's template, package.opf, with the dialog's values): the
+/// The package's metadata element text (the standard template, package.opf, with the dialog's values): the
 /// template's elements in its order, with the Required page's lists written one element each; the Recommended
 /// page's as Dublin Core elements (INFERENCE for the education levels, written as schema:educationalLevel); the
 /// Additional page's as meta elements with their attributes.
@@ -686,7 +686,7 @@ pub fn package(input: &Input) -> Vec<u8> {
     docx::stored_zip(&entries)
 }
 
-/// The quality notice shown before every eBraille and EPUB 3 save until its box is checked (the original's text
+/// The quality notice shown before every eBraille and EPUB 3 save until its box is checked (the standard text
 /// with the vendor's team unnamed), kept under Mutable, EBrailleQualityWarning.
 pub const QUALITY_WARNING: &str = "eBraille exports should be reliably working to produce readable eBraille files, but the quality is not yet reliable. Any sample files sent to the support team will help us to improve the quality.";
 pub const QUALITY_WARNING_KEY: &str = "EBrailleQualityWarning";
@@ -710,7 +710,7 @@ mod tests {
     fn the_page_writes_elements_lists_pages_and_tables() {
         let running = "\x1ces~h1.\x1fTitle & more\x1cee~h1.\x1f\x1ces~para.\x1fBody\x1cl\x1fnext\x1cee~para.\x1f\x1ces~list.\x1fone\x1chl2\x1ftwo\x1chl1\x1fthree\x1cee~list.\x1f\x1ces~pagenum.\x1f12\x1cee~pagenum.\x1f\x1chtbs;r:0\x1fa\x1c>\x1fb\x1c<\x1fc\x1chtbe\x1f\x1ces~1-3.\x1fx\x1cee~1-3.\x1f";
         let p = page(running, &kinds);
-        // A deeper level opens a new item holding its own list, as the original's level handler writes it.
+        // A deeper level opens a new item holding its own list.
         assert_eq!(p.body, "<p class=\"h1\" id=\"toc001\">Title &amp; more</p><p class=\"para\">Bodynext</p><ol class=\"list\" bc:maxdepth=\"2\"><li class=\"lvl1of2\">one</li><li class=\"lvl1of2\"><ol><li class=\"lvl2of2\">two</li></ol></li><li class=\"lvl1of2\">three</li></ol><p class=\"refpagenum\" id=\"page12\" role=\"doc-pagebreak\" aria-label-src=\"content\" hrefsrc=\"content\" hrefprefix=\"page\">12</p><table><tr><td>a</td><td>b</td></tr><tr><td>c</td></tr></table><p class=\"_1-3\">x</p>");
         assert_eq!(p.headings, vec![("toc001".to_string(), "Title & more".to_string())]);
         assert_eq!(p.pages, vec![("page12".to_string(), "12".to_string())]);

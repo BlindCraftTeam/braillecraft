@@ -1,8 +1,8 @@
-//! Global, Python Options (command 3110): the dialog the original shows from its XRC resources (audit
-//! xrc-dialogs, sections 2 and 4), with its settings kept under the section "Python" with the original's keys and
+//! Global, Python Options (command 3110): the dialog the standard program shows from its XRC resources (audit
+//! xrc-dialogs, sections 2 and 4), with its settings kept under the section "Python" with the standard keys and
 //! defaults: the custom library path (Lib), Include Built-In Library (IncludeBuiltinLib, yes), the logging level
 //! (LogLevel, 3 = Info) and the log file (LogFile). BrailleCraft reads PDFs with its own reader and runs no Python,
-//! so these settings have no effect on an import; they are kept as the original keeps them.
+//! so these settings have no effect on an import; they are kept.
 
 use wxdragon::prelude::*;
 

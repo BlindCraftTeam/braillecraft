@@ -1,8 +1,6 @@
 | Underscore emphasis marks to <it> tags
 | This should be run after the general TXX -> SGM treatment.
 | See also adidxi.ewt, which defines the inverse process.
-| 1;1 1995-2-22 J E Sullivan
-| 1;2 1996-6-4 PJS: change to use |258 as line ending (new scrub convention)
 | states: 1 = normal text
 |   3 = inside a tag
 |   4 = inside general (or unrecognized) end-tag

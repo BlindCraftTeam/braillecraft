@@ -150,7 +150,7 @@ pub struct Page {
 }
 
 /// The table holding document place `pos` among the laid-out pages, when the place is after the table's first
-/// cell starts (the original's "in the table" test for the status line and Style Level).
+/// cell starts (the standard "in the table" test for the status line and Style Level).
 pub fn table_at(pages: &[Page], pos: usize) -> Option<&TableRegion> {
     pages.iter().flat_map(|p| p.tables.iter()).find(|t| t.holds(pos) && t.first_cell_start().is_some_and(|s| pos >= s))
 }
@@ -524,7 +524,7 @@ struct Formatter {
     lma: i64,
     /// The word break mode of the word being collected ([wb-no] 1, [wb-cb] 2).
     word_break: u8,
-    /// Skipped lines: how many blank lines stand pending at the end of the page (written, as the original writes
+    /// Skipped lines: how many blank lines stand pending at the end of the page (written
     /// them lazily), and lines of the next skip that [skn] cancelled.
     pending_blank: usize,
     skip_debt: i64,
@@ -1072,7 +1072,7 @@ impl Formatter {
         let room = self.usable();
         lines.resize(self.layout.lines.max(room), Line::default());
         // An anticipatory head ([svant] 1 or 3) is written as it stands when the page closes, over the rows it was
-        // given at the opening. INFERENCE: the original lays the page out again when the number of head lines
+        // given at the opening. INFERENCE: the standard program lays the page out again when the number of head lines
         // changed; here a line that went away is left blank and one that came is not shown.
         if self.anticipatory & 1 != 0 && self.head_rows > 0 {
             let cells = self.layout.cells;
@@ -1305,7 +1305,7 @@ impl Formatter {
         self.last_word = cells.iter().map(|c| c.0).collect();
         // Without the document's table the None table applies: marked breaks only.
         let table = self.layout.hyphen.clone().unwrap_or_else(crate::hyphen::HyphenTable::none);
-        // The word placed as the original places it (spec 36 section 4): whole when it fits after the pending
+        // The word placed as the standard program places it (spec 36 section 4): whole when it fits after the pending
         // space; else the first piece up to a break point the hyphenation table finds (a marked break, a dash, an
         // internal hyphen, or an automaton break with a hyphen inserted); else, for a word longer than a whole
         // line, cut at the line end with no mark when at least one cell is free; else the whole word goes to the
@@ -1413,7 +1413,7 @@ impl Formatter {
 
     /// A [wb-cb] word that does not fit (spec 36 section 6): broken after the last punctuation cell past the third
     /// within the room less the continuation string, else at that room; the continuation string follows the first
-    /// part; the remainder goes on from the runover margin. INFERENCE: the original first looks ahead to the next
+    /// part; the remainder goes on from the runover margin. INFERENCE: the standard program first looks ahead to the next
     /// computer-braille word and may join or move the whole word (its five cases are not traced, spec 36 unknown
     /// 10); here the word is placed whole when it fits, else split.
     fn computer_braille_word(&mut self, cells: Vec<(char, Option<usize>)>, gap: usize, used: usize, col: usize) {
@@ -2432,14 +2432,14 @@ pub fn reformat(
     (pages, Trail { pieces: new, checkpoints, layout: Some(layout.clone()) })
 }
 
-/// Edit, Goto as the original goes there: the document place of the cell at page, line and column (1-based), only
+/// Edit, Goto: the document place of the cell at page, line and column (1-based), only
 /// when that cell is there and came from a place in the document; None otherwise.
 pub fn exact_position(pages: &[Page], page: usize, line: usize, column: usize) -> Option<usize> {
     let ln = pages.get(page.checked_sub(1)?)?.lines.get(line.checked_sub(1)?)?;
     *ln.sources.get(column.checked_sub(1)?)?
 }
 
-/// Edit, Goto, "go to the closest location", as the original: lines are counted through the document
+/// Edit, Goto, "go to the closest location": lines are counted through the document
 /// (`lines_per_page` to a page) and tried outward from the one asked for (that line, the one before, the one after,
 /// two before, ...); on the first line that has one, the cell with a document place nearest the column (that column,
 /// one left, one right, ...). Answers the place and its page, line and column (1-based), or None.
@@ -2487,7 +2487,7 @@ pub fn closest_position(
     }
 }
 
-/// Edit, Goto with "Use reference page number", as the original: the place of the first print page number laid out
+/// Edit, Goto with "Use reference page number": the place of the first print page number laid out
 /// as `number` would be (in a braille document the braille number sign and the letters a to j for the digits, in a
 /// print document the digits).
 pub fn reference_page_position(pages: &[Page], number: u32, braille: bool) -> Option<usize> {
@@ -2564,10 +2564,10 @@ pub fn formatted_text(pages: &[Page]) -> String {
     out
 }
 
-/// The bytes of a formatted text file (.prf) in `code_page`, as the original program writes it: each line with "\n"
+/// The bytes of a formatted text file (.prf) in `code_page`: each line with "\n"
 /// and a form feed after every page, a hard space as a space, encoded in the code page ('#' for a character it cannot
 /// hold), through a text-mode file stream, which puts a carriage return before every line feed byte. In a one-byte or
-/// multi-byte code page that is CR LF per line; in UTF-16 and UTF-32 it is also what the original's files hold (a CR
+/// multi-byte code page that is CR LF per line; in UTF-16 and UTF-32 it is also what the standard files hold (a CR
 /// byte before the 0x0A byte of each line end, and of any character holding a 0x0A byte).
 pub fn formatted_text_file(pages: &[Page], code_page: &str) -> Vec<u8> {
     let text = formatted_text(pages).replace("\r\n", "\n").replace('\u{a0}', " ");
@@ -2928,7 +2928,7 @@ mod tests {
     }
 
     #[test]
-    fn goto_exact_and_closest_as_the_original() {
+    fn goto_exact_and_closest_as_specified() {
         let line = |s: &[Option<usize>]| Line { sources: s.to_vec(), ..Line::default() };
         // Two pages of three lines; page 1 line 2 is blank; page 2 line 1 has a page number cell (no place).
         let pages = vec![

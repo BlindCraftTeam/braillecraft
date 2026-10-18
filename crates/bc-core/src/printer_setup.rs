@@ -117,12 +117,12 @@ fn trim_number(s: &str) -> String {
     }
 }
 
-/// The least characters per line and lines per page Printer Setup allows: the original's MinPageWidth and
+/// The least characters per line and lines per page Printer Setup allows: the standard MinPageWidth and
 /// MinPageDepth settings for print, which nothing sets, so their defaults.
 pub const MIN_CHARS: u32 = 7;
 pub const MIN_LINES: u32 = 1;
 
-/// The page size typed in Printer Setup, checked as the original checks it on OK: a field's digits make its number
+/// The page size typed in Printer Setup, checked: a field's digits make its number
 /// (other characters are skipped); with no digits or below the least it becomes the least, above 160 characters or
 /// 100 lines the most; a field holding other characters counts as corrected too. Returns (lines, chars, corrected
 /// field: 0 none, 1 lines, 2 chars; lines when both), the field for question 1000's Cancel to go to.

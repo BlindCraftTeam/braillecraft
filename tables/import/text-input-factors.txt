@@ -1,21 +1,6 @@
 | genl.pit 2;4 - pimbri input factor table, general
 | highest used index: 48
 | intermediate unused indices: 12 16
-| 1;1 1989-8-31/1989-9-30 JES
-| 1;4 1990-2-4/6 JES - add rqmts for tables (##30-35); rmv #16 (former
-|     max. % of line breaks that can be non-forced in a "block")
-| 2;1 1991-1-23/25 JES - allow for selection of initial-pim substitution
-|     set (e.g. for retention of accented letters for French, &c.), and
-|     for double &c. spacing; allow for min. indentation # and % for
-|     multi-level blocks; add min. page width; add text col. factors;
-|     allow inhibition of top/bot hdr/footer recognition:
-|     i.e. new factors: ##36-47
-| 2;2 1991-2-14 JES: add ability to disable computerese scan (#48)
-| 2;3 1991-5-7 JES disable computerese in this "general" table (for
-|     now, genlc should be used to enable);
-|     set to preserve accents, as amerc & britic now allow them
-| 2;4 1991-7-30 JES: increase % indented lines for multi-levels (outlines)
-|     from 25 to 41%; increase min. # table lines from 1 to 3
 -pimbri i 1
 | For determining whether input page has been hyphenated:
 10 1000 | min. % of lines ending in hyphens

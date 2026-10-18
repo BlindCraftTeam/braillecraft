@@ -1,43 +1,4 @@
 | Text export to LaTeX for MathJax html
-| 1;1 2007-9-13/2007-10-24 J E Sullivan prototype for demonstration
-| 2;1 2011-05-13/jes: expand for real use in the program
-| 2;2 2012-05-25/26/jes: added a large number of direct symbol
-|     conversions (see end);
-|     introduce logic to start/stop math mode in the absence of [ts] ... [te];
-|     discard artificial emphasis markers ({{...}}).
-| 2;3 2012-09-24/jes: Change to more standard way of issuing text to be treated
-|     as comments in LaTeX - i.e. use the % ... {eol} method (see msg to Caryn
-|     today re the \comment{...} method now being discontinued;
-|     implement [fsN], [flN], [flsN], [flNN] and [feN] as recognized commands to
-|     the extent actually needed for Nemeth/British/French math export
-| 2;4 2012-10-04/jes: Provide for balancing \) if math mode still open at end
-|     (so LaTeX parse requirement is satisfied)
-| 2;5 2014-01-04/jes: Add rules so that "bar over" simple items (digits &
-|     Roman and Greek letters) are given "\overline{}" treatment (which is
-|     generally preferable to "\bar{}" per Web article);
-|     regularize encoding of bytes not "ASCII printable" (like clnbts)
-| 2;6 2014-01-18/jes: Provide ways for forcing new line etc. in math mode in
-|     response to codes, and in general enhance format code options;
-|     cease generating "comments" for style refs
-| 2;6a 2014-01-27/cln: chg hard space from "medium" to "thick" for Scientific
-|     Viewer (patch for an early release)
-| 2;7 2014-02-27/jes: Support simple "dot over" cases, e.g. for recurring
-|     decimals indicated that way (uses \dot{} function, supported by SN)
-| 2;8 2018-05-04/dfh: Added support for many European accented letters
-| 3;1 2020-11-15/16/16/jes: Accommodate special markings from new txxtxa.btb
-|     preprocessing step (which generalizes the bar over [overline] and
-|     dot over handling as well)
-| 3;2 2020-12-01/jes: Use \sim i.s.o. \sptilde for tilde as it is apparently
-|     more widely supported;
-|     add additional supported over/under structures
-| 3;3 2021-03-11/pjs: Use \circ i.s.o. \Circle as it is apparently more
-|     widely supported
-| 3;4 2021-04-23/cln: Add rules for math-separation and math-TextInMath styles
-|     and state 6 for text within math
-|     2021-05-07/10/jes: Treat math style start/end like ts/te (ex1000)
-| 3;5 2023-10-29/11-02/pjs: Add U+215x vulgar fractions; update output
-|     for other vulgar fractions
-| 3;6 2024-04-04/cln: handle styles math-separation and OneWordBridge, states 7 and 8 respectively, along with 9 and 10 if started from state 3.
 |  ---
 | states (math/text mode same for both the document and LaTeX except as noted):
 |   1 in text (not math mode)
@@ -74,7 +35,6 @@
 |010~|010~1~ | in text mode, just copy
 |010~\,|010~2~ | in math mode top level
 |010~\,|010~3~ | in math mode lower levels
-| 2012-05-26/jes: pro tem, discard artificial emphasis markers:
 {{]bold}}~~
 {{bold-wd>}}~~
 {{bold>}}~~
@@ -179,7 +139,6 @@
 |028fl|031~~1~
 |028fl|031~}{~2~
 |028fl|031~}{~3~
-| 2012-09-24/jes: fl0 and fls0 not strictly needed, included for good measure
 |028fl0|031~~1~
 |028fl0|031~}{~2~
 |028fl0|031~}{~3~
@@ -189,7 +148,6 @@
 |028fl2|031~~1~
 |028fl2|031~}{~2~
 |028fl2|031~}{~3~
-| 2012-09-24/jes: flNN forms used for forcing in French math
 |028fl00|031~~1~
 |028fl00|031~}{~2~
 |028fl00|031~}{~3~
@@ -289,7 +247,6 @@
 .|031~ </p><p>\(~-2~~)~ | end-fmt-style was in math mode, so resume after par
 | direct symbol conversions added 2012-05-25:
 |029~~ | (assisted-hyphenation code) - discard
-| cln, \: is not honored by Scientific Viewer; use \; instead
 | |030~\:~ | (hard space code) - render as "medium" space
 |030~\;~ | (hard space code) - render as "thick" space
 !~!~ | 0021 0021 Exclamation mark {!}
@@ -323,7 +280,6 @@ $~\$~ | 0024 0024 Dollar sign {$}
 \~$\backslash $~1~
 \~\backslash ~ | 005c 005c Reverse solidus {\}
 ]~\rbrack ~ | 005d 005d Right square bracket {]}
-| 2012-05-26/jes: following apparently not OK with MikTeX:
 | ^~\sphat ~ | 005e 005e Circumflex accent {^}
 ^~\unicode{x005e}~ | 005e 005e Circumflex accent {^}
 _~\_~ | 005f 005f Low line {_}

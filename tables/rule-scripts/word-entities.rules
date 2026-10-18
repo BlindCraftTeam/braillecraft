@@ -2,8 +2,6 @@
 | The net effect of this table is that all recognized entrefs EXCEPT
 | for {&amp; &lt; &gt;} have been converted to direct UTF-8.
 | ---
-| 1;1 2003-4-18 J E Sullivan
-| 1;2 2003-4-22 JES: Switch to complete DocBook set from "Oasis"
 | ---
 &aacute;~á~ | small a, acute accent
 &Aacute;~Á~ | capital A, acute accent

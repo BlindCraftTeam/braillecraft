@@ -1,7 +1,4 @@
 | OpenXML cleanup: boxing styles, table codes, adjacent runs of one style, line breaks, link bytes
-| 1;1 2011-01-04 JES: remove any text contents of boxing styles
-| 1;2 2014-01-18 PJS: revise handling of BoxBegin and BoxEnd, leaving
-|                     handling of these to wrdpost.sbt
 
 | Preserve any opening boxing style tag, but go to state -1 to delete
 | the text contents until a closing tag is encountered.  This logic
@@ -9,7 +6,7 @@
 |028es|~BE-BoxEnd.|031~|028es|~BE-BoxEnd.|031~~-1~(~
 
 | State -1 rules - Delete all until a closing boxing style tag, then
-| resume original state.
+| resume the earlier state.
 |028ee|~BE-BoxEnd.|031~|028ee|~BE-BoxEnd.|031~-1~~)~
 
 | htbs codes are created by word2007.xsl with parameters as plain text, e.g:

@@ -1,5 +1,4 @@
 | dashyp.hct 1;1 - hyphenation control tbl; breaks at dashes or hyphens
-| 1;1 1988-2-17 JES
 -hinit 1
 | hyphenation mode:
 |   0 = no breaks whatsoever (even at dashes)

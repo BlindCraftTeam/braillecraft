@@ -1,9 +1,6 @@
 | Math function spacing, the default convention
 |   (note that this affects mainly the left as there is normally a space on the
 |   right - the exception being an opening sign of enclosure on the right)
-| 1;1 2016-01-11 JES
-| 1;2 2016-04-02/jes: provide for no space on right when an opening sign
-|     of enclosure follows - insert [idle~rfs] in its place
 | states:
 | 1 outside [ts] ... [te]
 | 2 inside [ts] ... [te] seeking [idle~lfs]

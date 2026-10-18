@@ -3,7 +3,7 @@
 //! Windows only: `cargo run --example windows_code_pages -- <folder>`.
 //!
 //! For each code page, `<page>.encode` has one line per UTF-16 unit that the page can write, "XXXX bytes" (hex), as
-//! the original program writes a character of formatted text: one character per call, below code page 50000 with no
+//! the standard program writes a character of formatted text: one character per call, below code page 50000 with no
 //! best-fit replacement (a character for which Windows would use the default character cannot be written), from
 //! 50000 up checked by converting the bytes back. `<page>.decode` has one line per byte (and, for a page with lead
 //! bytes, per lead and trail byte pair) that Windows reads as characters, "bytes XXXX[ XXXX]", read with invalid
@@ -48,7 +48,7 @@ mod windows {
     const WC_NO_BEST_FIT_CHARS: u32 = 0x400;
     const MB_ERR_INVALID_CHARS: u32 = 0x8;
 
-    /// Every code page the original program's formatted text writer gives to Windows (its encoding switch).
+    /// Every code page the standard formatted text writer gives to Windows (its encoding switch).
     pub const PAGES: [u32; 47] = [
         28591, 28592, 28593, 28594, 28595, 28596, 28597, 28598, 28599, 28600, 874, 28603, 28605, 20866, 21866, 437,
         850, 852, 855, 866, 932, 936, 949, 950, 1250, 1251, 1252, 1253, 1254, 1255, 1256, 1257, 1258, 65000, 20932,

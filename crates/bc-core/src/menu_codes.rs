@@ -103,7 +103,7 @@ pub fn insert(id: i32) -> Option<Insert> {
     })
 }
 
-/// The code list (Layout, Code List), as the original lists it: code name, category bit (1 page, 2 line, 4 tab,
+/// The code list (Layout, Code List): code name, category bit (1 page, 2 line, 4 tab,
 /// 8 European, 0x10 Greek letters, 0x20 CBC, 0x40 math, 0x80 miscellaneous) and the label the list shows.
 pub const CODE_LIST: &[(&str, u32, &str)] = &[
     ("#", 0x4, "# (Go to tab stop, by number)"),

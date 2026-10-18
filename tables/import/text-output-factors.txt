@@ -1,13 +1,6 @@
 | book.pot 1;8 - pimbri output style table, books
 | highest used index: 13
 | intermediate unused indices: 0
-| 1;1 1989-8-31/1989-9-8  JES
-| 1;4 1990-7-10 JES: add ability to skip line bfr & after centered head, and
-|     option to omit/use running head
-| 1;5 1991-1-23 JES: add ability to retain accents for French, &c.
-| 1;6 1991-5-8 JES: retain accents for English also
-| 1;7 1991-7-30 JES: add factor 12
-| 1;8 1992-8-28 JES: add factor 13 (to allow partitioned table layout)
 -pimbri o 1
 | For table layout:
 1 2 | Min. space between table columns

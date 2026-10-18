@@ -3,16 +3,16 @@
 //! step's input: the tag script (codes to tags), the italics script (underscore marks to <it> tags), the built-in
 //! `html_step` (the html and body tags, non-ASCII text as numeric references), the styles script (style tags to html
 //! elements), the fix script (html fixes, maths to LaTeX) and the built-in `fixlinks` (link text to anchors). The
-//! recipe's first, optional, translation table is not part of the original's installation, so it is not run.
+//! recipe's first, optional, translation table is not part of the standard installation, so it is not run.
 //!
-//! The two built-in steps are ported byte for byte from the original (spec 21, the section of bytes read 2026-10-17).
+//! The two built-in steps are ported byte for byte from the standard program (spec 21, the section of bytes read 2026-10-17).
 
 use crate::rule_script::RuleScript;
 
 /// The rule scripts of the recipe, in running order (tables/rule-scripts).
 pub const SCRIPTS: [&str; 4] = ["html-tags.rules", "html-italics.rules", "html-styles.rules", "html-fix.rules"];
 
-/// The head and foot of an HTML with MathJax file, byte for byte as the original writes them: the
+/// The head and foot of an HTML with MathJax file, byte for byte: the
 /// body the MathJax rule script writes goes between them.
 pub const MATHJAX_HEAD: &str = "<!DOCTYPE html>\r\n<html>\r\n<head>\r\n<meta charset = \"utf-8\">\r\n<meta name = \"viewport\" content = \"width=device-width\">\r\n<title>MathJax example</title>\r\n<script src=\"https://polyfill.io/v3/polyfill.min.js?features=es6\"></script>\r\n<script id=\"MathJax-script\" async\r\n        src=\"https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js\">\r\n</script>\r\n</head>\r\n<body>\r\n<p>";
 pub const MATHJAX_FOOT: &str = "</p>\r\n</body>\r\n</html>\r\n";
@@ -66,7 +66,7 @@ const CAPITALS: [(u8, u16); 17] = [
 ];
 
 /// The entity texts an escape's second byte may be written as, with the value each stands for; tested in this order
-/// and the last match wins, as the original tests them.
+/// and the last match wins.
 const ENTITIES: [(&[u8], i32); 17] = [
     (b"&lt;", 60), (b"&gt;", 62), (b"<it>", 95), (b"&rsquo;", 96), (b"&ocirc;", 147), (b"&ograve;", 149), (b"&ucirc;", 150),
     (b"&ugrave;", 151), (b"&ucirc;", 150), (b"&Ouml;", 153), (b"&Uuml;", 154), (b"&yen;", 157), (b"&iacute;", 161),
@@ -328,7 +328,7 @@ mod tests {
     }
 
     #[test]
-    fn the_html_step_writes_references_as_the_original() {
+    fn the_html_step_writes_references_as_specified() {
         // Hard space, a hyphen point, a code page 437 letter, a capital through the prefix, an escape with an
         // entity as its second byte, and a plain line.
         let out = html_step(b"a\x1eb\x1dc\x82\x9c\x83\xb0&lt;x\nlast");
@@ -344,7 +344,7 @@ mod tests {
     #[test]
     fn the_link_step_relines_and_makes_anchors() {
         let out = fixlinks(b"see <a>Site (http://x.y)</a>, then\nplain\n<a></a>gone\ntail");
-        // An empty "<a></a>" leaves an empty line, as the original writes it, and the byte after it starts the next.
+        // An empty "<a></a>" leaves an empty line, and the byte after it starts the next.
         assert_eq!(String::from_utf8(out).unwrap(), "see <a href=\"http://x.y\">Site</a>\n, then\nplain\n\ngone\n");
     }
 

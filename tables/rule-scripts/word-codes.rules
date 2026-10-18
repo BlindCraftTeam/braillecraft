@@ -1,54 +1,5 @@
 | Non-emphasis tags to the program's codes
 | This should be run last, after character and apostrophe treatment.
-| 1;1 1995-2-7 JES - adapted from admtxt.sbt 1;3 1993-5-28/31
-|     1995-2-22 JES - accept dollar processing codes
-|     1995-3-10 JES - change = to ~ for "rest is arbitrary"
-| 1;2 1995-4-28 JES - eliminate remaining spaces around tags
-|     1995-5-23 JES - upd comment [vers#] only
-| 2;1 1995-9-29 JES - changes for import into templates with LINEAR styles
-| 2;2 1995-12-28 JES - specifically treat h1-h6, not any h...;
-|     include HTML "title" so not misprocessed as ti, & other HTML;
-|     rename ipp to ref.pg.no
-|     1995-12-29 JES - (temporarily?) issue hl1 i.s.o. hl code for list items
-| 2;3 1996-6-4 PJS: change to use |258 as line ending (new scrub convention)
-| 2;4 1998-9-23 JES: foll'g chg in sgmspc.sbt, use |010 i.s.o. |258 for eol;
-|     make some exceptions to general space deletion around tags (a, code)
-| 2;5 2000-4-11 JES: add <acronym> to codes keeping some surrounding spaces
-| 2;6 2000-5-26 JES: (per input from PS & DH): add line to handle processing
-|     instruction preceded by space, which was being missed
-| 2;7 2003-4-11 JES: change <it>, <b> and <other> treatment to use [fts~...]
-|     (were formerly turned into underscore treatment in prior ewoc step)
-|     2003-4-23 JES: like daitxx 1;3 2003-4-22, include only
-|     "pro tem" exceptions to UTF-8 to DUSCI conversion
-| 2;8 2003-9-9 JES: fix comments that were being treated as element names;
-|     remove "meta" tags
-| 2;9 2006-5-25 PJS: Improved handling of embedded script, style defs,
-|     font defs, <div> tags, link tags.
-|     2006-11-30 MPG: Added mapping of bc-ns to support bc: codes
-|     from XML imports
-|     2007-3-2 MPG: Add mapping for above when preceded by space
-| 2007-3-6 MPG: Convert _ to ~ in state 9 since libxslt can't write a ~
-|     2007-9-7 MPG: Add special codes for href links
-| 2007-9-11 MPG: Convert <bc:tab/> to [>] code
-| 2007-12-28 MPG: Remove <![if]> and <![endif]>, and convert &quot;
-| 2;10 2009-9-4 PJS: Update handling of Registered, Copyright, and Trade
-|      Mark symbols
-| 2;11 2010-12-17/jes: Add certain inline tags whose names are to be preserved
-|      and where any surrounding spaces are also to be preserved (see dated entries)
-| 3;1  2010-12-20/jes: Allow for the possibility that "native" the program commands in TXX
-|      form, including [es~...] and [ee~...] as well as [<] and [>] commands, may
-|      already be present in the input, and if so should be copied through
-|      without interpretation.  (Earlier xmlproc may do this in the program as of date.)
-| 3;2  2011-05-11/jes: Add special treatment for "welsh" style similar to that for
-|      french, spanish etc. (see updates 2010-12-17)
-| 3;3  2013-04-21/jes: Cease mapping en- and em-dash to double hyphen (--)
-|      (leave as UTF-8 for later mapping, e.g. in unimap.txt)
-| 3;4  2014-08-21/pjs: added cleanup of xmlns:bc and xmlns:bcml in state 9
-| 3;5  2015-01-21/jes: remove "pro tem" mapping of specific opening/closing
-|      single and double quote marks to ` and " respectively, as these are
-|      now being handled by separate, later logic and ` in particular is
-|      problematic when an apostrophe, as in the word "don't", has been
-|      imported as U+2019 (right single quote)
 | ---
 | states: 1 = normal text
 |   2 = inside inkprint page (<ipp no=...>) tag

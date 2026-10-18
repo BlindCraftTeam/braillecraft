@@ -41,7 +41,7 @@ and binding margins greyed, and check boxes for Emboss in Interpoint, Emboss Ban
 Print.](docs/screenshots/desktop-embosser-setup.png)
 
 *Embosser Setup opens at the first start, when no embosser is set up yet; with no target embosser the form and the
-margins are greyed, as in the original program.*
+margins are greyed.*
 
 ![BrailleCraft in a web browser: the same menu bar (File, Edit, View, Layout, Table, Document, Global, Help), the
 window title BrailleCraft - Untitled Print Document 1 -- Print Document, a print document with two lines of text,
@@ -62,7 +62,7 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   files (.txt, .brf, .brl), PEF (.pef) files and PDF files. A PDF becomes a print document: a tagged PDF through
   its structure (headings, paragraphs, lists, tables as styles and codes), any other PDF from its page layout
   (paragraphs, line breaks, and ledger tables of dates, text and amounts).
-- **Formatted and coded views.** The editing area is drawn by BrailleCraft itself, as in the original program, and
+- **Formatted and coded views.** The editing area is drawn by BrailleCraft itself, and
   its caret is a place in the document, not in the text on the screen. A document opens in the formatted view: its
   laid-out page lines with the codes hidden and a line across after each page. The caret can stand on a space the
   line does not show (at the end of a line) or on an empty last line, and what you type goes in there. You type,
@@ -70,7 +70,7 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   goes over a code at once. View, Codes (Alt+F3) switches to the coded view,
   the running text with every code in rows of 42 characters (65 in a print document), and back, with the caret kept
   in place. In the coded view each code is drawn in a smaller print font inside a rounded box, whatever the document's
-  font, as in the original: a style begin as `<name>`, a style end as `</name>`, a hard space as `[']`, a marked
+  font: a style begin as `<name>`, a style end as `</name>`, a hard space as `[']`, a marked
   hyphen as `[-]`, any other code in its brackets. Control+Page Up and
   Control+Page Down go to the same line on the previous or next page (Global, Shortcut Preferences sets what Page Up
   and Page Down do).
@@ -78,22 +78,22 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   codes, chosen by region and language (Document, Translation Tables) or by learning course (Learning Tables).
   Language codes in the text switch tables in the middle of a document. Every character the built-in character
   table names translates (accented letters, £, €, œ, dashes, curly quotes and thousands more); File, Open (its file types
-  as the original program lists them, All Files chosen, starting in the folder last opened from) finds a
+  listed, All Files chosen, starting in the folder last opened from) finds a
   file's kind from its name and content (formatted text, formatted braille, coded text, coded braille, PDF, PEF, a
   document file) and, for any file that is not a document file, asks in the import dialog for its template, its
   kind, and the code page or braille encoding to read it in; Insert File does the same and refuses braille in a print
   document and print in a braille one. A document keeps the translation tables its file names. Formatted braille, coded braille, Orbit Reader braille (.obf), coded text and
-  formatted text are imported the way the original program imports them (formatted text is read for its page
+  formatted text are imported (formatted text is read for its page
   layout: centred and left headings, paragraphs, poems and outlines, tables, letters' salutations and closes, running
   heads and page numbers become styles and codes, and its characters go through the character map tables) (an Orbit file's line ends become line codes): formatted braille is read page by page, with the page numbers in its corners taken
   as page numbering, running heads and feet, print page changes, indented, centred and as-is lines turned back into
   codes; then format words ($p, |IND5 and the like), line ends, hyphens at line ends and spaces are read as the import
   scan tables say, and the import rule scripts finish the codes, tables and Nemeth passages. Word documents (.docx)
-  are imported the way the original program imports them: the document's paragraphs, runs, styles, lists, tables,
+  are imported: the document's paragraphs, runs, styles, lists, tables,
   footnotes, endnotes, hyperlinks, page breaks and fields go through the Word style map the template names
   (default, Australian, BANA, French, Russian or UK basic, shipped as data) and the Word import rule scripts, with
   the Global, Word Importer settings (Courier as computer braille, hard page breaks, skipped lines, print page
-  breaks, braille fonts, embedded codes, bold, italics, underline and language switches ignored; the original's
+  breaks, braille fonts, embedded codes, bold, italics, underline and language switches ignored; the standard
   defaults: hard page breaks kept, language switches ignored, codes typed in Word as `[[*code*]]` taken as codes,
   duplicate hyperlinks removed and URLs tagged as computer notation) and the Global,
   Import Options settings (hyperlinks as text, URLs, both or hyperlink codes, duplicates removed, URLs tagged as
@@ -112,13 +112,13 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   item) move to the next page whole rather than break across one. Print page numbers marked in the text show in their corner,
   with a continuation letter on later braille pages, and a print page change line where a print page begins in the
   middle of a braille page.
-- **Layout commands as the original.** Header and Footer place their text on all, odd or even pages (or end it), Set
+- **Layout commands.** Header and Footer place their text on all, odd or even pages (or end it), Set
   Page Number and Document, Page Numbering check the number in the dialog, and Apply Last Style applies the paragraph
   style last ended before the caret. A value a dialog refuses gets its message there, with what was typed kept.
   Delete Style and changing a style's codes ask first, and the last style cannot be deleted; Clear (Del) with nothing
   selected deletes the character at the caret, and Cut ends Highlight. Shortcut Preferences checks its codes in the
   dialog, Notification Settings brings back every message hidden with "do not show again", and a new hyphen table
-  lays the document out again. Words are hyphenated at line ends as the original does, by the document's Hyphen
+  lays the document out again. Words are hyphenated at line ends by the document's Hyphen
   Table (None, Dashes, Dashes and Hyphens, French, French 113; the tables ship as data): at a break marked in the
   text, after or before a dash, after an internal hyphen, or (French, in braille documents) at a syllable break the
   table's automaton finds, with a hyphen inserted; a word longer than a line with no break point is cut at the line
@@ -132,24 +132,24 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   and - (Alt+Right, Alt+Left) raise or lower the hierarchy level code [hlN] of the paragraph style at the caret, up
   to the most levels the [hi] code allows, and renumber every run of level codes in a selection; inside a table they
   move to the next or previous cell of the row; a failure beeps.
-- **Formatter.** The braille layout follows the original's codes: tab stops ([stb], [#], [>], [ctb]), [tas] and [taa],
+- **Formatter.** The braille layout follows the layout codes: tab stops ([stb], [#], [>], [ctb]), [tas] and [taa],
   [lps] and [lpr], the decimal character, the left-margin adjustment [svlma], the relative form of [hi] and its
   paragraph values, [skn], page parity [sd], magazine paragraphs [pm], anticipatory heads and print numbers [svant],
   the word-break modes [wb-no] and [wb-cb], and a print page beginning on the last lines of a page.
 - **Web build.** File, New offers the template list with Mark as Default, Hide, Show Template Always, Region and Show
   Hidden Templates, kept in the browser as the desktop program keeps them; the import dialog has the same list; a
   PEF file opens straight into a braille document.
-- **Find and Replace as the original.** Each document keeps its own Find and Replace. A search looks in the
+- **Find and Replace.** Each document keeps its own Find and Replace. A search looks in the
   selection first, then offers the rest of the document and the other end of it; it can search for codes, for a
   style by its name (Replace renames a style's codes, or takes them out), or with a `*` at the end of a code standing
   for the rest of its name. Find leaves the caret at what it finds. Replace asks Yes, No, All or Stop for each match,
   each replacement is one undo step and All is one together, the caret and selection go back where they were, and
   the number of replacements is shown (with "do not show again").
-- **Tables as the original.** Table, Create puts a new table at the caret: its type (Unrelated Columns, Matrix, or
+- **Tables.** Table, Create puts a new table at the caret: its type (Unrelated Columns, Matrix, or
   one of the six table formats), swap and header rows and columns in the table's start code, and its rows of empty
   cells, with the caret in the first cell. With the caret in a table, Create and Table Properties change that table's
   type, swap and headers. A selection holding a table's start or end code is refused. The formatter lays tables out
-  as the original does: the cells from the start code to the end code are measured and laid in columns (header rows
+  by the table's format: the cells from the start code to the end code are measured and laid in columns (header rows
   underlined, guide dots to the next column, the table repeated with its header rows on every page it runs on, or
   split across two pages when asked), as a stairstep, as a list (each cell under its column heading) or as a linear
   paragraph (cells separated by colons and semicolons), chosen by the start code or automatically (columnar, then
@@ -165,7 +165,7 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   there the text screen readers read is the text shown.
 - **Save As.** Formatted braille (BRF in a choice of braille encodings), PEF (Portable Embosser Format), formatted
   text in a choice of code pages (the encoding or code page chosen in the Save As dialog's own Encoding box; each
-  Windows code page written and read by Windows' own table, on every system), coded braille, refreshable braille (.lbf), eBraille (.ebrl, braille documents) and EPUB 3 (.epub, print documents), HTML, LaTeX, HTML with MathJax (both HTML forms written as the original writes them, with no head, title or language on the plain HTML, and the original's fixed head on the MathJax page), and the older document format. File, Save eBraille saves the same package; Document, eBraille Metadata holds the package's metadata (required, recommended and additional properties, with the language, braille system and attribute dialogs, and an XML preview that can be edited); the quality notice shows before each save until its box is checked. Where the original's behaviour could not be read (the element of a paragraph style, which styles are headings and lists, the metadata property names of the recommended page, the list contents of the dialogs), the choice made is marked in the code.
+  Windows code page written and read by Windows' own table, on every system), coded braille, refreshable braille (.lbf), eBraille (.ebrl, braille documents) and EPUB 3 (.epub, print documents), HTML, LaTeX, HTML with MathJax (both HTML forms written with no head, title or language on the plain HTML, and a fixed head on the MathJax page), and the older document format. File, Save eBraille saves the same package; Document, eBraille Metadata holds the package's metadata (required, recommended and additional properties, with the language, braille system and attribute dialogs, and an XML preview that can be edited); the quality notice shows before each save until its box is checked. Where a choice had to be made (the element of a paragraph style, which styles are headings and lists, the metadata property names of the recommended page, the list contents of the dialogs), it is marked in the code.
 - **Printing.** Print documents and braille (with interline print) through the system printer. In File, Print and
   File, Emboss, Selection lays the selected text out as a document of its own and prints or embosses all of its pages;
   a page-number range (p5, iv, 3-, -5) is matched against the pages' own numbers, nearest first with a question when
@@ -176,7 +176,7 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   returns to the field); Global, Printer Setup and Global, Embosser Setup first say, once unless asked to repeat, that
   they do not change the open document. The embosser setup sheet's General page offers the configuration location
   (current user or all users; kept with the setup) and its Device Settings page lists only the model's own firmware
-  versions and shows the Braillo rows by the model's sub-model, as the original does. A Tiger model is sent to its
+  versions and shows the Braillo rows by the model's sub-model. A Tiger model is sent to its
   printer only. File, Emboss asks for the output file first (an Embossed Braille File, .ebf, asked again while it
   cannot be made), shows the TranSend SE dialog only when the setup names an ink printer, shows a progress window
   with Cancel while the job goes out, and ends a failed job with "Printing failed." after its own message. A document
@@ -185,14 +185,14 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   copies, to a printer queue, a serial port or a file. Embossers on an FTDI USB connection (the EBrailler Cosmo) are
   listed and embossed to through FTDI's own driver library where it is installed. TranSend SE printers get their ink
   pass, and manual interpoint embossers a second pass for the backs. Each embosser gets the job start, margins and
-  line padding its driver gives it in the original: the Index parameter string for its firmware version, the Enabling
+  line padding its driver calls for: the Index parameter string for its firmware version, the Enabling
   codes when escape codes are allowed, and the embosser's own left, right and top margin settings. The web build
   embosses through Web Serial where the browser has it, or to a downloaded file. Embosser Setup fits the page to the
-  embosser as the original does: lines and cells within range and lowered before the margins, a table of the old and
+  embosser: lines and cells within range and lowered before the margins, a table of the old and
   new values when OK had to change them, and a question before a document is reformatted to new cells or lines.
 - **Screen readers.** The editing area gives screen readers its text (the formatted lines or the coded rows, one
   line each), the caret, the selection and every change: through UI Automation on Windows while Global,
-  Internationalization, Support UI Automation is on, as the original program does; through the macOS accessibility
+  Internationalization, Support UI Automation is on; through the macOS accessibility
   interface for VoiceOver; through ATK and AT-SPI for Orca on Linux. On Windows a set of JAWS scripts comes with the
   program, and BrailleCraft offers to install them when it starts; the editing window carries its own window class,
   BrailleCraftEditor, so the scripts tell it from every other window. An NVDA add-on comes with the program too (the
@@ -219,17 +219,17 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   instead, a separate item). The scripts are for the desktop program; the web build has none.
 - **Braille displays.** A braille document's cells reach a display exactly, not as a translation of the ASCII
   letters. With JAWS the scripts turn Grade 2 translation and 8-dot braille off while a braille document is in
-  front, as the original's scripts do; the NVDA add-on switches the braille output table to 6-dot computer braille
+  front; the NVDA add-on switches the braille output table to 6-dot computer braille
   there and puts yours back when you leave. With Global, Internationalization, Report Braille to Screen Readers as
   Unicode Braille Patterns on, the editing area hands the screen reader the cells as Unicode braille patterns, which
   NVDA, JAWS and Orca (with a table that carries the braille patterns, such as the UEB tables) show as their dots: on
-  Windows through UI Automation as the original, and on macOS and Linux too.
+  Windows through UI Automation, and on macOS and Linux too.
 - **Formatted braille import settings.** Global, Formatted Braille Importer: where the braille and print page
   numbers stand on even and odd pages of the file, which pages have a running head or foot, the lines and cells of
   the file's pages, and Read formatted braille without interpretation, which keeps the file's lines and pages as they
   are. Until that is on, importing formatted braille first says that it may be reformatted.
-- **Python Options.** Global, Python Options shows the original's dialog (its custom library path, Include
-  Built-In Library, logging level and log file, kept under the original's keys); BrailleCraft reads PDFs with its
+- **Python Options.** Global, Python Options shows the dialog (a custom library path, Include
+  Built-In Library, logging level and log file, kept under the standard keys); BrailleCraft reads PDFs with its
   own reader and runs no Python, so these have no effect on an import. The web build has the dialog too, and its
   PDF Importer dialog, whose settings its PDF import takes.
 - **PDF import settings.** Global, PDF Importer: whether the dialog shows for each import, PDF/A markup, ledger

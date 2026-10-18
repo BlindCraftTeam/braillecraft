@@ -1,7 +1,6 @@
 | Dash handling
 | This is to recognize certain patterns as informal representations of
 | em dash (U+2014), and remove ordinary spaces surrounding such dashes
-| 1;1 2014-10-27 J E Sullivan
 | single (ordinary) hyphen - only when surrounded by ordinary spaces
  - ~|236D~
 | single hyphen (U+2010 Hyphen) - only when surrounded by ordinary spaces

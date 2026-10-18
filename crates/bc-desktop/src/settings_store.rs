@@ -249,7 +249,7 @@ mod backend {
 
 pub use backend::{clear_section, get, set};
 
-/// Global, Notification Settings, OK: every kept "do not show this again" answer is forgotten, as the original
+/// Global, Notification Settings, OK: every kept "do not show this again" answer is forgotten
 /// empties these sections (Mutable holds the message answers, AddIns the screen reader script offer, EmbossTV and
 /// EmbossTVTemp the embosser prompts).
 pub fn reset_notifications() {
@@ -425,7 +425,7 @@ pub fn save_default_template(name: &str) {
     set(ROOT, "DefaultTemplate", name);
 }
 
-/// File, New's Show Hidden Templates box, kept as the original keeps it (ShowAllTemplates, yes or no).
+/// File, New's Show Hidden Templates box, kept as the standard program keeps it (ShowAllTemplates, yes or no).
 pub fn load_show_all_templates() -> bool {
     get(ROOT, "ShowAllTemplates").is_some_and(|v| v.trim().eq_ignore_ascii_case("yes"))
 }
@@ -532,7 +532,7 @@ pub fn keep_answer(section: &str, key: &str, answer: u32) {
 }
 
 /// The Word importer's Unknown Characters setting, which coded text import uses as well: its list words by position
-/// ("ignore" 0 marks with "*", "asterisc" 1 writes nothing, "hex" 2 the Unicode value, as the original program reads
+/// ("ignore" 0 marks with "*", "asterisc" 1 writes nothing, "hex" 2 the Unicode value
 /// them); 0 when it is not kept.
 pub fn load_unknown_characters() -> u8 {
     get("Word", "UnknownCharacters")

@@ -12,18 +12,6 @@
 |  10 = inside comment tag (within the tag itself) in outer state 9
 |  11 = inside "em" tags
 |  12 = inside comment tag (within the tag itself) in outer state 11
-| 1;1 1993-5-31 J E Sullivan
-| 2;1 1995-12-28 JES: to simplify treatment of HTML, map <b> and <other>
-|     to <it>, and simply delete rather than mark any nestings
-| 2;2 1998-9-23 JES: treat <strong> similarly to <other>
-|     2007-8-17 MPG: Remove mapping of <other> to <it>
-| 3;1 2012-07-10 JES: Change mapping of <strong> from <it> to <b>;
-|     remove mapping of <b> to <it> (remains <b>);
-|     add mapping of <em> to <it> (all these consistent with MS IE normal
-|     treatment, and necessary now that this is being used for imports
-|     other than ICADD and HTML)
-| 3;2 2012-10-19 JES: correct treatment of <em> -- was generating <it>
-|     but not corresponding </it>
 | SGML comments:
 <!--~<!--~1~5~ | beginning of comment to be flushed through
 -->~-->~5~1~ | end of comment

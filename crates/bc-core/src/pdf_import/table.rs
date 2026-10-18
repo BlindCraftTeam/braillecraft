@@ -241,16 +241,16 @@ impl<'a> TableFinder<'a> {
             if !self.untagged_amount(item) {
                 continue;
             }
-            let Some(original) = self.table_row(item) else { continue };
+            let Some(found) = self.table_row(item) else { continue };
             let mut rows: Vec<Row> = Vec::new();
             for neighbor in self.items_below(item) {
                 if !self.untagged_amount(neighbor) {
                     continue;
                 }
                 match self.table_row(neighbor) {
-                    Some(r) if r.line_desc == original.line_desc => {
+                    Some(r) if r.line_desc == found.line_desc => {
                         if rows.is_empty() {
-                            rows.push(original.clone());
+                            rows.push(found.clone());
                         }
                         rows.push(r);
                     }

@@ -1,27 +1,6 @@
 | Spaces around signs of comparison (Add spaces)
 | To add spaces selectively around signs of comparison in math within .txx
 | Note that all characters are as encoded in DUSCI & so should agree with .bts
-|  1;1  2014-03-23/24/jes
-|  1;2  2014-03-25/jes: Allow [bar] to preserve state 3 (see ex0006)| States:
-|  1;3  2015-01-12/cln: Handle signs of comparison after [ts], [l], and [<]
-|     and before [te] and [l] and [<].
-|     When adding space before a comparison sign, insert [big] before the space.
-|     Run a companion scrub table next to deal with the [big] followed by space.
-|     After [ts], [l], and [<] the [big] and space will be removed.
-|     Elsewhere only the [big] will be removed.
-|  1;4  2015-06-15/jes: Add U+221d Proportional to {"varies as"}} (DUSCI |240M)
-|     as sign of comparison (following same patterns as
-|     U+223c Tilde operator (DUSCI |240l);
-|     use clnbts to ensure coding consistent with .bts
-|  1;5  2015-12-06/jes: Allow space addition next to codes generally (not just
-|     [fs] etc. as in previous version), with amspcob.sbt now doing more
-|     cleanup (e.g. when [te] is followed by a space), so that the pattern for
-|     space addition is much simpler and overall more spaces are added;
-|     provide that [ts] & [te] codes with associated "idle" codes indicating
-|     text within math ("embedded" text) are passed through transparently
-|  1;7  2017-07-17/jes: Add support for
-|     D%|221|164 U+2af4 Triple vertical bar binary relation
-|     D%|221|165 U+2af5 Triple vertical bar with horizontal stroke
 |  -----------------------------------------------------------------------------
 |  States:
 |   1 outside [ts]...[te], i.e. not in math

@@ -29,7 +29,7 @@ pub fn is_idle_code(code: &str) -> bool {
 /// The name Document, Add Style starts with.
 pub const NEW_STYLE_NAME: &str = "New Style Name";
 
-/// What the original says about a new style's name in Document, Add Style, or None when it is accepted: empty, longer
+/// What the standard program says about a new style's name in Document, Add Style, or None when it is accepted: empty, longer
 /// than 31, still the starting name, or a character other than a letter, a digit, period, hyphen or underscore.
 pub fn style_name_problem(name: &str) -> Option<String> {
     if name.is_empty() {
@@ -45,7 +45,7 @@ pub fn style_name_problem(name: &str) -> Option<String> {
     }
 }
 
-/// True when the brackets of a codes field are as the original requires: a code not started inside a code, not ended
+/// True when the brackets of a codes field are: a code not started inside a code, not ended
 /// outside one, none left open.
 pub fn codes_properly_marked(text: &str) -> bool {
     let mut open = false;
@@ -61,7 +61,7 @@ pub fn codes_properly_marked(text: &str) -> bool {
     !open
 }
 
-/// What the original says about a style's codes field (Edit Style Codes, codes shown in brackets), or None: longer
+/// What the standard program says about a style's codes field (Edit Style Codes, codes shown in brackets), or None: longer
 /// than 1000, text outside the codes, codes not properly started or ended.
 pub fn style_codes_problem(text: &str) -> Option<String> {
     if text.chars().count() > 1000 {
@@ -259,7 +259,7 @@ impl Shown {
     }
 
     /// Layout, Apply Last Style: the name of the nearest paragraph style ended before `pos`, read from the text as
-    /// the original does (back from the caret or the selection start to the first style end code [ee~name] whose
+    /// the standard program does (back from the caret or the selection start to the first style end code [ee~name] whose
     /// name ends in "."; codes inside a code count too). None when there is none.
     pub fn last_paragraph_style_before(&self, pos: usize) -> Option<String> {
         let mut spans: Vec<(usize, usize)> = self.codes.iter().chain(self.inner.iter()).copied().filter(|c| c.0 < pos).collect();
@@ -271,7 +271,7 @@ impl Shown {
         })
     }
 
-    /// Edit, Change Case, as the original: on `from`..`to`, or with no selection on the letters around the caret (a
+    /// Edit, Change Case: on `from`..`to`, or with no selection on the letters around the caret (a
     /// code ends the word). With no lower-case letter in the range the letters go to lower case; with only lower-case
     /// letters, and a character that is not a letter in the range or the range starting a word, each letter after a
     /// character that is not a letter (a code's end bracket counts) takes a capital; otherwise all go to upper case.
@@ -535,7 +535,7 @@ mod tests {
     }
 
     #[test]
-    fn change_case_steps_as_the_original() {
+    fn change_case_steps_as_specified() {
         let apply = |s: &Shown, from: usize, to: usize| {
             let (_, _, ch) = s.change_case(from, to).unwrap();
             let mut t: Vec<char> = s.text.chars().collect();

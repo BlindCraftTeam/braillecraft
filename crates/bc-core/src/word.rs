@@ -1,4 +1,4 @@
-//! Word import: the .docx package turned into internal text with codes, as the original's Word recipe does it
+//! Word import: the .docx package turned into internal text with codes
 //! (spec 28 sections 3, 6 to 8, 12 and 14): the stylesheet's rules (ported element by element from its 76
 //! templates), the page-break fix, the run combining (font attribute runs joined and written as code instructions),
 //! the style map (the text form of the shipped files and the XML form a document may carry), the tag processor
@@ -28,7 +28,7 @@ impl PrintPages {
     }
 }
 
-/// The Word importer's settings, with the original's defaults (its Global, Word Importer values).
+/// The Word importer's settings, with the standard defaults (its Global, Word Importer values).
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
 pub struct Options {
@@ -71,7 +71,7 @@ impl Default for Options {
             ignore_typeforms: false,
             hard_pages: true,
             skipped_lines: false,
-            // The original's defaults, from its settings descriptor table (spec 28 section 19): section Word,
+            // The standard defaults, from its settings descriptor table (spec 28 section 19): section Word,
             // PrintPages "none", the embedded codes key "yes", PreserveHardPageBreaks "yes", IgnoreLanguageSwitches "yes",
             // the rest "no"; section Hyperlinks, Action "both", RemoveDuplicates "yes", AutoTagCBC "yes"; section
             // ImportOptions, AddSpaces "no", RemoveDashSpaces "no".
@@ -89,7 +89,7 @@ impl Default for Options {
     }
 }
 
-/// The program data file of a template's Word style map name (the "word:mws" pseudo-style's text; the original's
+/// The program data file of a template's Word style map name (the "word:mws" pseudo-style's text; the standard
 /// file names are kept as data under the program's own names).
 pub fn map_file_name(name: &str) -> String {
     match name.trim().to_lowercase().as_str() {
@@ -98,7 +98,7 @@ pub fn map_file_name(name: &str) -> String {
         "francais" | "french" => "french".into(),
         "rus" | "russian" => "russian".into(),
         "ukbasic" | "uk-basic" => "uk-basic".into(),
-        // The original's own map (named after the program), an empty name and any name with no map shipped.
+        // The standard own map (named after the program), an empty name and any name with no map shipped.
         _ => "default".into(),
     }
 }
@@ -186,7 +186,7 @@ pub fn hyperlinks(text: &[u8], action: u8, remove_duplicates: bool, tag_mode: u8
     out
 }
 
-/// Whether a link's text equals its URL, as the original compares them: the text's codes skipped, upper-cased, and
+/// Whether a link's text equals its URL: the text's codes skipped, upper-cased, and
 /// equal when the text runs out and the URL has no further letter or digit.
 fn same_link(text: &[u8], url: &[u8]) -> bool {
     let mut t = 0;
@@ -1042,7 +1042,7 @@ fn attribute_bits(letters: &str) -> u32 {
         .fold(0, |a, b| a | b)
 }
 
-/// The code instructions written when attribute bits turn on and off, in the original's orders.
+/// The code instructions written when attribute bits turn on and off, in the standard orders.
 fn attribute_codes(from: u32, to: u32, braille_fonts: bool, out: &mut Vec<Node>) {
     let off = from & !to;
     let on = to & !from;
@@ -1244,7 +1244,7 @@ pub struct MapEntry {
     pub level: i64,
     pub despace: bool,
     pub no_center: bool,
-    /// The entry's aggregation field (the original's one field at +0x10): the text form starts it at the entry's
+    /// The entry's aggregation field (the standard one field at +0x10): the text form starts it at the entry's
     /// kind, 1 and 2 for a BuiltIn block's paragraph and any-element entries, 3 and 4 for a User block's, 0 for the
     /// alt text entries; the AggregationStyle key then overwrites the paragraph entry's value (None 0, SingleLevel
     /// 1, MultiLevel 2, Paragraphs 3), and at the block's end a 0 with a forward or backward flag becomes 1 (level
@@ -1291,7 +1291,7 @@ fn continue_rules(out: &mut String, s: &str, aggregate: bool) {
 
 impl StyleMap {
     /// The text form of the shipped style map files: blocks "BuiltIn", "User" or "AltText" with a quoted name and
-    /// { Key = Value } lines, read as the original reads them: each block gives two entries, one for the paragraph
+    /// { Key = Value } lines, read: each block gives two entries, one for the paragraph
     /// element and one for any element; MappedName takes a trailing dot; MappedNameInNote, Level, IgnoreCentering,
     /// AggregateForward, AggregateBackward, AggregationStyle and IgnoreContents = Always are kept; Category,
     /// Ignore, IgnoreEmphases, DisableInToc and IgnoreSuperscript are read and not kept. The two alt text entries
@@ -1531,7 +1531,7 @@ impl Numbering {
         self.abstracts.iter().find(|(id, _)| id == abs)?.1.iter().find(|l| l.ilvl == ilvl)
     }
 
-    /// The next number of list `num` at level `ilvl`, formatted; the original's debug text when the list is not
+    /// The next number of list `num` at level `ilvl`, formatted; the standard debug text when the list is not
     /// defined. Deeper levels start again.
     pub fn format(&mut self, num: &str, ilvl: usize) -> String {
         if self.level(num, ilvl).is_none() {
@@ -2071,7 +2071,7 @@ mod tests {
     }
 
     #[test]
-    fn numbering_formats_as_the_original() {
+    fn numbering_formats_as_specified() {
         let numbering = docx::read_xml(r#"<w:numbering><w:abstractNum w:abstractNumId="0"><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="decimal"/><w:lvlText w:val="%1."/></w:lvl><w:lvl w:ilvl="1"><w:start w:val="1"/><w:numFmt w:val="lowerLetter"/><w:lvlText w:val="%1.%2"/></w:lvl></w:abstractNum><w:num w:numId="5"><w:abstractNumId w:val="0"/></w:num></w:numbering>"#).unwrap();
         let mut n = Numbering::new(Some(&numbering));
         assert_eq!(n.format("5", 0), "1. ");
@@ -2084,7 +2084,7 @@ mod tests {
     }
 
     #[test]
-    fn the_text_form_style_map_reads_as_the_original() {
+    fn the_text_form_style_map_reads_as_specified() {
         let m = StyleMap::from_text("# a comment\nUser \"Quote\"\n{\n  MappedName = \"quote\"\n  AggregateForward = Always\n  Level = 2\n  IgnoreContents = Always\n}\nBuiltIn \"heading 1\"\n{\n  MappedName = \"h1.\"\n}\n").unwrap();
         // The alt text defaults come first; a User block's paragraph entry keeps its kind 3 as its aggregation.
         assert_eq!((m.entries[0].element.as_str(), m.entries[0].style.as_str(), m.entries[1].style.as_str()), ("bc:alttext", "note.", "note"));

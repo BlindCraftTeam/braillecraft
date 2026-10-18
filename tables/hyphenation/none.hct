@@ -1,5 +1,4 @@
 | none.hct 1;1 - hyphenation control tbl; breaks nowhere
-| 1;1 1990-1-2 JES: from dash.hct 1;1
 -hinit 1
 | hyphenation mode:
 |   0 = no breaks whatsoever (even at dashes)

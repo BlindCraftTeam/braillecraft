@@ -1,5 +1,5 @@
 //! The character map step of text imports: each character of the UTF-8 text is looked up in the character map tables
-//! and replaced by what they give for it, as the original program's character map step does it.
+//! and replaced by what they give for it.
 //!
 //! The tables are plain text files (tables/unimap). A line "U+00B2: [ps]2[pe]" maps one character (four or five hex
 //! digits) to a text, in which "[" and "]" stand for the code marks 0x1C and 0x1F and "{U+XXXX}" for a character; an

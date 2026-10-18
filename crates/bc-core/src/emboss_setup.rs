@@ -387,10 +387,10 @@ fn version_range(versions: &str) -> Option<(usize, usize)> {
     }
 }
 
-/// The General page's Configuration location choices, in the original's order; the second is `Setup::all_users`.
+/// The General page's Configuration location choices, in the standard order; the second is `Setup::all_users`.
 pub const LOCATIONS: [&str; 2] = ["Current user", "All users on this computer"];
 
-/// The Device Settings version list (5) for a model label, as the original fills it: the versions of the model's
+/// The Device Settings version list (5) for a model label: the versions of the model's
 /// range, with "(unspecified)" first only when the range holds more than one; a model without a range gets the
 /// whole list. Returns the items, the version number of the first real version in them, and whether the model has
 /// a single version (then its one item is chosen).

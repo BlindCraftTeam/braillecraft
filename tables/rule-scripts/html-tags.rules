@@ -1,6 +1,5 @@
 | Codes to tags: a style begin or end code becomes a tag named by the style; every other code becomes a processing code <?$ ... `>
 | This should be run first, before italic treatment.
-| 1;1 2011-2-14 P Sullivan, from txxsgm.sbt
 | states: 1 = normal text
 |   3 = inside general (or unrecognized) begin-tag
 |   4 = inside general (or unrecognized) end-tag

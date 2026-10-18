@@ -770,7 +770,7 @@ impl Dlg {
         self.on_button(cid, move || dialog.end_modal(cid));
     }
 
-    /// OK first runs `check` on the dialog's fields, as the original checks a field before the dialog closes: when it
+    /// OK first runs `check` on the dialog's fields: when it
     /// answers a field and a message, the message is shown, the field gets focus with its text selected, and the
     /// dialog stays open with everything typed in it. An empty message keeps the dialog open with none shown.
     pub fn check_on_ok(&self, check: impl Fn(&Dlg) -> Option<(i32, String)> + 'static) {

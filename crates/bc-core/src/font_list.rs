@@ -1,9 +1,9 @@
-//! The font lists of Global, Fonts, as the original fills them from the system's fonts: symbol, dingbat, braille and
+//! The font lists of Global, Fonts: symbol, dingbat, braille and
 //! vertical (@) fonts are left out; the print font list puts the typewriter fonts (Courier New, any name with
-//! "courier" or "consolas") before the others. Each group is in alphabetical order (INFERENCE: the list the original
+//! "courier" or "consolas") before the others. Each group is in alphabetical order (INFERENCE: the list the standard program
 //! adds to is taken to be a sorted one).
 
-/// Whether the original lists a font at all (its test of the name).
+/// Whether the standard program lists a font at all (its test of the name).
 pub fn listed(name: &str) -> bool {
     if name.starts_with('@') {
         return false;
@@ -43,7 +43,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn lists_as_the_original() {
+    fn lists_as_specified() {
         let names: Vec<String> = ["Verdana", "Wingdings", "@MS Gothic", "Courier New", "Consolas", "Arial", "Braille29", "SimBraille ASCII", "Symbol"]
             .iter()
             .map(|s| s.to_string())

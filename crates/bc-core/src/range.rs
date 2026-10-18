@@ -1,5 +1,5 @@
 //! Page ranges as the Print and Emboss dialogs take them (spec 24 section 2a, spec 25 section 2a), read as the
-//! original reads them.
+//! standard program reads them.
 
 /// What a page range asks for: the pages (indexes into the laid-out pages; None for a blank page, "b"), and what
 /// was wrong with it.
@@ -118,7 +118,7 @@ fn item(s: &[char], i: &mut usize) -> Result<Option<Item>, ()> {
     }
 }
 
-/// How far a typed number is from a page's number, as the original weighs it: only a page with the same letter and
+/// How far a typed number is from a page's number: only a page with the same letter and
 /// the same kind of number counts; each page of difference counts two, less one on the side `up` prefers (above the
 /// typed number when `up`, below it otherwise).
 fn distance(typed: &Num, page: &PageNumber, up: bool) -> Option<i64> {
@@ -157,7 +157,7 @@ fn matched(typed: Option<Num>, table: &[PageNumber], up: bool, adjusted: &mut bo
 }
 
 /// A page range as the Print and Emboss dialogs take it, e.g. "1-7,b,9" (pages 1 through 7, a blank page, page 9),
-/// read as the original reads it: items separated by commas, each a page, a range from-to (to below from runs
+/// read: items separated by commas, each a page, a range from-to (to below from runs
 /// backward), a range to the end "5-", from the last page back "-5", the whole document backward "-", or b for a
 /// blank page; a page is a number, a letter then a number (p5) or a roman numeral. With `numbers` (the pages' own
 /// numbers, Print or Braille page numbers) each typed number is the nearest page number with the same letter and
@@ -241,7 +241,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn page_ranges_read_as_the_original() {
+    fn page_ranges_read_as_specified() {
         assert_eq!(parse_range("1-3,b,5", 6, None), (Range::Pages(vec![Some(0), Some(1), Some(2), None, Some(4)]), false, false));
         assert_eq!(parse_range("4-", 6, None), (Range::Pages(vec![Some(3), Some(4), Some(5)]), false, false));
         // Backward ranges, from the last page back, and the whole document backward.

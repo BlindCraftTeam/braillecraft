@@ -237,7 +237,7 @@ fn wrap_selection(before: &Shown, after: &Shown) {
 }
 
 /// Runs `change` on the active document's running text (codes marked 0x1C ... 0x1F) with the selection's anchor and
-/// the caret as running-text places, as the original's style commands work; its answer (the new text and the caret)
+/// the caret as running-text places; its answer (the new text and the caret)
 /// becomes the document in one undo step. Nothing happens when it answers None.
 fn change_running(change: impl FnOnce(&str, usize, usize) -> Option<(String, usize)>) {
     let Some((shown, anchor, caret)) = app::with(|a| {
@@ -495,7 +495,7 @@ struct TemplateIds {
     show: i32,
     region: i32,
     show_hidden: i32,
-    /// Show Hidden Templates is kept between runs (File, New, as the original keeps it: ShowAllTemplates).
+    /// Show Hidden Templates is kept between runs (File, New: ShowAllTemplates).
     kept: bool,
 }
 
@@ -674,7 +674,7 @@ fn file_new() {
     }
 }
 
-/// The file dialog of File, Open (`insert` false) and Edit, Insert File (`insert` true), with the original program's
+/// The file dialog of File, Open (`insert` false) and Edit, Insert File (`insert` true), with the standard
 /// type lists in its order, the last (All Files) chosen; the type does not limit what opens, the file's content
 /// decides. PEF is BrailleCraft's addition, before All Files. The dialog starts in the folder last opened from
 /// (AutoSave, openPath) and keeps the new one.
@@ -811,7 +811,7 @@ fn open_dx_document(path: &Path) -> Option<u64> {
             d.page_numbers = doc.page_numbering;
             // A document read from its file is a saved one: its title loses "New".
             app::child_set_title(&d.frame, &d.full_name());
-            // The document's own tables, kept as the file names them, as the original program keeps them; only a
+            // The document's own tables, kept as the file names them; only a
             // name the file leaves empty takes a new document's table. A table the shipped set does not have stays
             // named, and translating with it says so.
             let defaults = translation::DEFAULT_TABLES;
@@ -1019,7 +1019,7 @@ fn reformat_notice() -> bool {
     once_notice("BrailleReformatWarning", "BrailleCraft may reformat your braille document. To avoid this, set the \"Read formatted braille without interpretation\" option in the Global: Formatted Braille Importer dialog.")
 }
 
-/// A notice (1054) with its "Do not show this message again" box, kept under Mutable by `key` as the original keeps
+/// A notice (1054) with its "Do not show this message again" box, kept under Mutable by `key`
 /// it. True on OK, or when OK was kept.
 pub fn once_notice(key: &str, text: &str) -> bool {
     const SECTION: &str = "Mutable";
@@ -1058,7 +1058,7 @@ fn read_import(bytes: &[u8], choice: &ImportChoice) -> Option<Shown> {
             None
         }
         // Coded and formatted text, coded and formatted braille and Orbit braille go through the import chain of their
-        // kind. (Formatted text is read as UTF-8 whatever the code page box says, as the original program reads it.)
+        // kind. (Formatted text is read as UTF-8 whatever the code page box says.)
         FileKind::CodedText | FileKind::FormattedText | FileKind::CodedBraille | FileKind::FormattedBraille | FileKind::Orbit => {
             let files = match translation::import_files() {
                 Ok(f) => f,
@@ -1115,7 +1115,7 @@ fn read_import(bytes: &[u8], choice: &ImportChoice) -> Option<Shown> {
 }
 
 /// The Word importer's settings from the Global Word Importer (1036) and Import Options (1037) dialogs as they were
-/// last kept, the original's defaults where a dialog was never confirmed.
+/// last kept, the standard defaults where a dialog was never confirmed.
 fn word_options() -> bc_core::word::Options {
     use crate::dlg::Value;
     let mut o = bc_core::word::Options::default();
@@ -1800,7 +1800,7 @@ fn copies_field(d: &Dlg, cid: i32) -> Option<u32> {
 
 /// The pages a page range group asks for (indexes into the pages printed, None for a blank page), and for Selection
 /// the pages printed in place of the document's: the selection laid out as a document of its own (document `i`'s
-/// places `from` to `to`), all of whose pages are printed, as the original does; or None when a message was shown and
+/// places `from` to `to`), all of whose pages are printed; or None when a message was shown and
 /// the dialog stays open. `caret` and the selection are positions in the document.
 type ChosenPages = (Vec<Option<usize>>, Option<std::rc::Rc<Vec<bc_core::format::Page>>>);
 
@@ -1816,7 +1816,7 @@ fn chosen_pages(d: &Dlg, radios: [i32; 5], fields: (i32, i32), pages: &[bc_core:
         2 => {
             let (a, b) = (from.min(to).max(0) as usize, from.max(to).max(0) as usize);
             let part = app::with(|ap| ap.laid_out_part(i, a, b));
-            // No page made of it: the original shows its message -1, which has no text, so "Error message -1".
+            // No page made of it: the standard program shows its message -1, which has no text, so "Error message -1".
             if part.is_empty() {
                 message("Error message -1");
                 return None;
@@ -2106,7 +2106,7 @@ pub fn emboss_with(skip: Option<u32>) {
     });
     // A SuppressFeedPrompts setting that is not 0 skips the prompts between passes, as in the reference (spec 25 17.5).
     let suppressed = crate::settings_store::get(crate::settings_store::ROOT, "SuppressFeedPrompts").is_some_and(|v| v.trim() != "0" && !v.trim().is_empty());
-    // The output is opened first, before any pass, as the original opens its job (audit print-emboss E14): Write to
+    // The output is opened first, before any pass, as the standard program opens its job (audit print-emboss E14): Write to
     // File with no name asks for the file (its title and filter, strings 10044 and 10046), offering no name, and asks
     // again while the file chosen cannot be made, with the system's own text; Cancel ends the job quietly. A failed
     // job ends with its own message and then message 2694 (E15).
@@ -2159,7 +2159,7 @@ pub fn emboss_with(skip: Option<u32>) {
     use bc_core::emboss::Sides;
     let manual = model.flag("ManualInterpoint") && options.interpoint && flags & 8 != 0;
     let passes: &[Sides] = if manual { &[Sides::Fronts, Sides::Backs] } else { &[Sides::All] };
-    // A progress window with Cancel while the job is sent, checked between sides as the original checks its own
+    // A progress window with Cancel while the job is sent, checked between sides
     // (audit print-emboss E15); the window itself is the toolkit's.
     let frame = app::frame();
     let progress = ProgressDialog::builder(&frame, "Embossing", &name, passes.len() as i32).with_style(ProgressDialogStyle::CanAbort).build();
@@ -2377,7 +2377,7 @@ fn toggle_highlight() {
     });
 }
 
-/// Edit, Change Case, as the original (bc_core doctext change_case): the selection or the word at the caret; the
+/// Edit, Change Case, as the standard program (bc_core doctext change_case): the selection or the word at the caret; the
 /// caret goes to the start of the range.
 fn change_case() {
     let Some(((from_c, to_c), doc)) = app::with(|a| a.doc().map(|d| (d.selection(), d.shown()))) else { return };
@@ -2397,7 +2397,7 @@ fn change_case() {
 }
 
 /// Edit, Goto: a page, line and column of the laid-out pages, as the status line counts them.
-/// Edit, Goto (dialog 1019), as the original: page, line and column checked in the dialog (not a number, below 1,
+/// Edit, Goto (dialog 1019): page, line and column checked in the dialog (not a number, below 1,
 /// above the page count limit, the lines per page or the cells per line); a place with no cell asks 1004 and goes to
 /// the closest one; "Use reference page number" (8) greys out line and column and goes to that print page number.
 fn goto_position() {
@@ -2525,7 +2525,7 @@ fn search_question(q: find::Question) -> bool {
 }
 
 /// The search options of Find (case 8, backward 9, whole words 10, radios 12 to 14) and Replace (10, 11, 12, radios
-/// 14 to 16) filled from `s` and enabled as the original enables them (spec 32 1.1): case sensitive only in a print
+/// 14 to 16) filled from `s` and enabled as the standard program enables them (spec 32 1.1): case sensitive only in a print
 /// document and not for a style name, whole words not for a style name; choosing literal or wildcard enables both,
 /// choosing style name disables both (case only in a print document).
 fn search_options(d: &Dlg, s: &find::Search, case: i32, whole: i32, radios: [i32; 3], print: bool) {
@@ -2548,7 +2548,7 @@ fn search_options(d: &Dlg, s: &find::Search, case: i32, whole: i32, radios: [i32
 }
 
 /// The search the options say, for `text` (running text); a `*` before a code's end becomes the wildcard mark when
-/// wildcards are chosen, as the original stores it (spec 32 1.2).
+/// wildcards are chosen, as the standard program stores it (spec 32 1.2).
 fn read_search(d: &Dlg, text: String, case: i32, whole: i32, radios: [i32; 3]) -> find::Search {
     let r = d.radio(&radios).unwrap_or(0);
     let text = if r == 2 { text.replace("*\u{1f}", "\u{1b}\u{1f}") } else { text };
@@ -2781,7 +2781,7 @@ fn run_replace(cx: &FindContext, mut s: find::Search, with: &str) {
 }
 
 /// "%d replacements were made." in the notice 1054, not shown again once its box was checked (kept under Mutable,
-/// Replacements, as the original keeps it: the answer plus one).
+/// Replacements: the answer plus one).
 fn replacements_message(count: u32) {
     const SECTION: &str = "Mutable";
     const KEY: &str = "Replacements";
@@ -2813,7 +2813,7 @@ fn set_font(font: ViewFont) {
     set_view(|v| v.font = font);
 }
 
-/// View, Six-Key Entry, in either kind of document as in the original: in a print document a chord types its cell's
+/// View, Six-Key Entry, in either kind of document: in a print document a chord types its cell's
 /// braille-encoding character.
 fn six_key(on: bool) {
     if app::with(|a| a.doc().is_some()) {
@@ -2848,7 +2848,7 @@ fn choose_style(dialog: i32) -> Option<Style> {
     app::with(|a| a.doc().and_then(|doc| doc.styles.iter().find(|s| s.name == chosen).cloned()))
 }
 
-/// Applies the style as the original (spec 31): a paragraph style takes whole paragraphs and is cleaned up inside; a
+/// Applies the style as the standard program (spec 31): a paragraph style takes whole paragraphs and is cleaned up inside; a
 /// character style goes round the selection.
 fn apply_named_style(name: &str) {
     let name = name.to_string();
@@ -2862,7 +2862,7 @@ fn apply_style() {
 }
 
 /// The paragraph style ended last before the caret (or the selection start), read from the document text; nothing
-/// happens when there is none, as in the original.
+/// happens when there is none.
 fn apply_last_style() {
     let name = app::with(|a| {
         a.doc().and_then(|d| {
@@ -2877,7 +2877,7 @@ fn apply_last_style() {
 
 /// Layout, Style Level + and - (spec 34): inside a table the caret moves to the next or previous cell of its row;
 /// else the level code of the paragraph style at the caret, and every run of level codes in the selection, move by
-/// `step`. A failure beeps, as in the original.
+/// `step`. A failure beeps.
 fn style_level(step: i32) {
     use bc_core::style_level as sl;
     let Some((shown, anchor, caret, page_start)) = app::with(|a| {
@@ -2935,13 +2935,13 @@ fn new_paragraph() {
     change_running(|r, anchor, caret| Some(bc_core::style_apply::new_paragraph(r, anchor, caret)));
 }
 
-/// A whole number field checked as the original checks one in its dialog: string 2644 when it is not a number, else
+/// A whole number field checked: string 2644 when it is not a number, else
 /// `low` or `high` (with the limit put in for %d) when it is out of 1 ..= 2147483647.
 fn check_number(d: &Dlg, field: i32, low: &str, high: &str) -> Option<(i32, String)> {
     check_range(d, field, 1, 0x7fff_ffff, low, high)
 }
 
-/// A number field checked as the original checks one: not a number, below `min` (`low`, %d the minimum) or above
+/// A number field checked: not a number, below `min` (`low`, %d the minimum) or above
 /// `max` (`high`, %d the maximum).
 fn check_range(d: &Dlg, field: i32, min: i64, max: i64, low: &str, high: &str) -> Option<(i32, String)> {
     match d.number(field) {
@@ -2999,7 +2999,7 @@ const FOOTER: HeaderFooter = HeaderFooter {
     too_long: "The footer text is too long.  It must not be greater than %d characters.",
 };
 
-/// Layout, Header and Footer, as the original: All Pages, Odd Pages, Even Pages write the placement code 3, 1, 2
+/// Layout, Header and Footer: All Pages, Odd Pages, Even Pages write the placement code 3, 1, 2
 /// ([svrhp3]) before the start code, the text and the end code; No Header writes the code that discontinues it and
 /// greys out the text. The text is checked in the dialog: 1 to 80 characters.
 fn header_footer(hf: &'static HeaderFooter) {
@@ -3054,7 +3054,7 @@ fn code_list() {
         return;
     }
     // The category boxes (All, then Page, Line, Tab, European, Greek Letters, CBC, Math, Miscellaneous) and the codes
-    // they show, as the original: the list holds the codes whose category is checked, All shows every code, and the
+    // they show: the list holds the codes whose category is checked, All shows every code, and the
     // boxes are kept for the session from OK (at the start All, Page, Line and Tab).
     const BOXES: [i32; 8] = [9, 10, 11, 12, 13, 14, 15, 16];
     thread_local! {
@@ -3124,7 +3124,7 @@ fn code_list() {
     }
 }
 
-/// Table, Create and Table, Table Properties, one command as in the original (spec 33): with the caret in a table it
+/// Table, Create and Table, Table Properties, one command as in the standard program (spec 33): with the caret in a table it
 /// edits that table's start code, else it puts a new table at the caret; a selection holding a table start or end
 /// code is refused.
 fn table_command() {
@@ -3584,7 +3584,7 @@ fn printer_setup(global: bool) {
     };
     let d = open_dialog(1071, Some(title));
     show_printer_setup(&d, &setup);
-    // The page size fields stay enabled for a braille document (the original only ignores their values there).
+    // The page size fields stay enabled for a braille document (the standard program only ignores their values there).
     d.set_text(2003, &lines.to_string());
     d.set_text(2005, &chars.to_string());
     d.closes_with(1026);
@@ -3643,7 +3643,7 @@ fn printer_setup(global: bool) {
                 };
                 setup.margins = [margins[0], margins[1], margins[2], margins[3]];
                 setup.metric = metric;
-                // The page size as the original checks it: a corrected size is shown and asked about (question
+                // The page size: a corrected size is shown and asked about (question
                 // 1000); Cancel keeps the dialog open on the corrected field.
                 let (l, c, corrected) = bc_core::printer_setup::page_size_check(&d.text(2003), &d.text(2005));
                 if corrected != 0 {
@@ -3757,7 +3757,7 @@ fn choose_learning_step(course: usize) {
     set_document_tables(Some(tables), |i| i.to_string());
 }
 
-/// Document, Hyphen Table: the document's table; as in the original a change marks the document changed and lays it
+/// Document, Hyphen Table: the document's table;
 /// out again (the layout key holds the table).
 fn set_hyphen(id: i32) {
     app::with(|a| {
@@ -3804,7 +3804,7 @@ fn add_style() {
             me.set_text(16, &style.map(|s| codes_for_dialog(&s.end)).unwrap_or_default());
         });
     }
-    // The name is checked in the dialog, as the original: empty, too long, the default name, invalid characters.
+    // The name is checked in the dialog: empty, too long, the default name, invalid characters.
     d.check_on_ok(|d| style_name_problem(&d.text(7)).map(|p| (7, p)));
     let ok = d.show() == 1;
     let (mut name, nested, begin, end) = (d.text(7), d.checked(8), d.text(14), d.text(16));
@@ -3816,7 +3816,7 @@ fn add_style() {
     if !nested && !name.ends_with('.') {
         name.push('.');
     }
-    // Then Edit Style Codes (1044), as in the original, with the codes from the first dialog.
+    // Then Edit Style Codes (1044), with the codes from the first dialog.
     let e = open_dialog(1044, None);
     e.set_text(6, &format!("Edit codes for style: {name}"));
     e.set_text(9, &begin);
@@ -3881,7 +3881,7 @@ fn modify_style() {
         let r = Dlg::open(&outer.dialog, 1027, None);
         r.set_text(7, &old);
         r.set_checked(8, true);
-        // Checked in the dialog, as the original: an empty name does nothing, a name the document has (in any case)
+        // Checked in the dialog: an empty name does nothing, a name the document has (in any case)
         // and invalid characters are refused with their messages.
         r.check_on_ok(|d| {
             let name: String = d.text(7).chars().take(31).collect();
@@ -3931,7 +3931,7 @@ fn modify_style() {
         return;
     }
     if let Some(name) = name {
-        // Changed codes are asked about first (1002), as in the original.
+        // Changed codes are asked about first (1002).
         use crate::translation::{codes_for_dialog, codes_from_dialog};
         let changed = app::with(|a| {
             a.doc()
@@ -3959,7 +3959,7 @@ fn modify_style() {
     }
 }
 
-/// Document, Delete Style, as the original: a document keeps at least one style (2172), and the style chosen is
+/// Document, Delete Style: a document keeps at least one style (2172), and the style chosen is
 /// removed only after Yes to 1026.
 fn delete_style() {
     if let Some(s) = choose_style(1047) {
@@ -4028,7 +4028,7 @@ fn default_views() {
     d.destroy();
 }
 
-/// Global, Internationalization (dialog 1051), as the original's dialog procedure: filled from the settings; Support
+/// Global, Internationalization (dialog 1051): filled from the settings; Support
 /// UI Automation (14) enables the screen reader choice (15, 16); a double-click in either list is OK.
 fn internationalization() {
     let (current, uia, prefer, access) =
@@ -4124,7 +4124,7 @@ fn global_fonts() {
     d.on_check(12, move || output_enabled(&me, !me.checked(12)));
     d.set_items(18, &status_ref, pick(&status, &current.status_face));
     d.set_text(20, &current.status_size.to_string());
-    // The checks of the original's Fonts dialog, in its order: a font chosen in the print font list (none chosen keeps
+    // The checks of the standard Fonts dialog, in its order: a font chosen in the print font list (none chosen keeps
     // the dialog open with no message), each size 5 to 180 points, a font chosen in the status line list.
     d.check_on_ok(|d| {
         const PRINT: (&str, &str) = ("The print font point size must not be less than %d.", "The print font point size must not be greater than %d.");
@@ -4231,7 +4231,7 @@ fn view_preferences() {
     });
 }
 
-/// What the original says about a shortcut code field (Global, Shortcut Preferences), or None when it is accepted.
+/// What the standard program says about a shortcut code field (Global, Shortcut Preferences), or None when it is accepted.
 fn shortcut_field_problem(text: &str) -> Option<String> {
     const LONGEST: usize = 99;
     let n = text.encode_utf16().count();
@@ -4255,7 +4255,7 @@ fn shortcut_preferences() {
     d.set_text(17, &s.new_ref_page);
     d.set_radio(&[19, 20, 21], s.page_nav.min(2));
     d.set_radio(&[23, 24, 25], s.control_page_nav.min(2));
-    // Each code field is checked in the dialog, in order, as the original checks them: not empty, at most 99
+    // Each code field is checked in the dialog, in order: not empty, at most 99
     // characters, codes properly started and ended.
     d.check_on_ok(|d| {
         [7, 9, 11, 13, 15, 17].into_iter().find_map(|field| shortcut_field_problem(&d.text(field)).map(|m| (field, m)))
@@ -4387,7 +4387,7 @@ mod tests {
     }
 
     #[test]
-    fn shortcut_fields_are_checked_as_the_original() {
+    fn shortcut_fields_are_checked_as_specified() {
         assert_eq!(shortcut_field_problem("[g0]"), None);
         assert_eq!(shortcut_field_problem("[l]text"), None);
         assert_eq!(shortcut_field_problem("").as_deref(), Some("The shortcut string is empty."));

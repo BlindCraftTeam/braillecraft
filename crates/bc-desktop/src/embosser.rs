@@ -343,7 +343,7 @@ fn show_general(general: &Dlg, has_model: bool) {
 /// while it is checked; Advanced's Send one character at a time (20) only for a port or a file. With no model none
 /// of them is usable.
 fn show_output(general: &Dlg, advanced: &Dlg, has_model: bool) {
-    // A model whose driver prints only through its system printer driver (the original's driver table marks the
+    // A model whose driver prints only through its system printer driver (the standard driver table marks the
     // Tiger driver alone) can only be sent to a printer: Write to Port and Write to File are disabled and the output
     // becomes Send to Printer (audit print-emboss E12).
     let tiger = has_model
@@ -438,7 +438,7 @@ fn show_device(device: &Dlg, model: Option<&Model>, version: usize, escapes: boo
         (!in_use, !in_use, true)
     };
     let rows = margins && model.is_some();
-    // The Braillo rows by the model's SubModel number (the original's sub-model table): 15 to 18 for 1, 4, 5, 6
+    // The Braillo rows by the model's SubModel number (the standard sub-model table): 15 to 18 for 1, 4, 5, 6
     // and 10; 19 to 23 for 9 and 11.
     let sub = |set: &[i64]| model.and_then(|m| m.number("SubModel")).is_some_and(|n| set.contains(&n));
     let groups: [(i32, i32, bool); 15] = [

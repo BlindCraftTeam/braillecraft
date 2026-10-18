@@ -1,7 +1,4 @@
-| imp-obf.sbt 1;1 heart of "Orbit Reader" importer
-| 1;1  2018-11-1/P J Sullivan
-| 1;2  2022-4-13/cln switch lowercase punctuation to uppercase
-| 1;3  2023-8-14/cln switch uppercase letters to lowercase
+| the script heart of "Orbit Reader" importer
 
 | States:
 |   1 normal

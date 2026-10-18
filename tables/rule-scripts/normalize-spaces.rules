@@ -1,5 +1,4 @@
-| norspa.sbt 1;1 - normalize spaces in DUSCI (.txx) stream
-| 1;1 2017-07-07/08 J E Sullivan
+| the script - normalize spaces in DUSCI (.txx) stream
 | States:
 |   1 BOF - just copying until space or perhaps [fts~...] followed by space
 |   2 after passed-over space(s) awaiting nonspace before which to insert deferred space

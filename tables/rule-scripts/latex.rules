@@ -35,7 +35,6 @@
 |010~|010~1~ | in text mode, just copy
 |010~\,|010~2~ | in math mode top level
 |010~\,|010~3~ | in math mode lower levels
-| 2012-05-26/jes: pro tem, discard artificial emphasis markers:
 {{]bold}}~~
 {{bold-wd>}}~~
 {{bold>}}~~
@@ -140,7 +139,6 @@
 |028fl|031~~1~
 |028fl|031~}{~2~
 |028fl|031~}{~3~
-| 2012-09-24/jes: fl0 and fls0 not strictly needed, included for good measure
 |028fl0|031~~1~
 |028fl0|031~}{~2~
 |028fl0|031~}{~3~
@@ -150,7 +148,6 @@
 |028fl2|031~~1~
 |028fl2|031~}{~2~
 |028fl2|031~}{~3~
-| 2012-09-24/jes: flNN forms used for forcing in French math
 |028fl00|031~~1~
 |028fl00|031~}{~2~
 |028fl00|031~}{~3~
@@ -250,7 +247,6 @@
 .|031~ \par \(~-2~~)~ | end-fmt-style was in math mode, so resume after par
 | direct symbol conversions added 2012-05-25:
 |029~~ | (assisted-hyphenation code) - discard
-| cln, \: is not honored by Scientific Viewer; use \; instead
 | |030~\:~ | (hard space code) - render as "medium" space
 |030~\;~ | (hard space code) - render as "thick" space
 !~!~ | 0021 0021 Exclamation mark {!}
@@ -284,7 +280,6 @@ $~\$~ | 0024 0024 Dollar sign {$}
 \~$\backslash $~1~
 \~\backslash ~ | 005c 005c Reverse solidus {\}
 ]~\rbrack ~ | 005d 005d Right square bracket {]}
-| 2012-05-26/jes: following apparently not OK with MikTeX:
 | ^~\sphat ~ | 005e 005e Circumflex accent {^}
 ^~*u005e*~ | 005e 005e Circumflex accent {^}
 _~\_~ | 005f 005f Low line {_}

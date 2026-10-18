@@ -120,7 +120,7 @@ pub struct Doc {
     pub file_styles: Vec<(String, u16)>,
     /// Edit, Highlight: while on, caret moves extend the selection from where it was turned on.
     pub highlight_anchor: Option<usize>,
-    /// Edit, Find and Edit, Replace as last used in this window, with the search state the original keeps there
+    /// Edit, Find and Edit, Replace as last used in this window, with the search state the standard program keeps there
     /// (spec 32 0.2): the find spec, and the replace spec with its replacement text.
     pub find: bc_core::find::Search,
     pub replace: bc_core::find::Search,
@@ -138,7 +138,7 @@ pub struct Doc {
     /// back as they were (their descriptor's place, kind and bytes).
     pub file_sections: Vec<(usize, u16, Vec<u8>)>,
     /// Document, eBraille Metadata: the package metadata of an eBraille or EPUB 3 save (kept with the open document;
-    /// where the original stores it in the document file is not traced, spec 23 section 2).
+    /// where the standard program stores it in the document file is not traced, spec 23 section 2).
     pub ebraille: bc_core::ebraille::Metadata,
 }
 
@@ -253,7 +253,7 @@ pub struct Settings {
     pub printer: crate::print::PrinterSetup,
     /// Global, Internationalization: "Prefer Unicode Braille Patterns for Braille Display" (braille shown in a
     /// braille font is written as Unicode braille patterns) and "Report Braille to Screen Readers as Unicode Braille
-    /// Patterns" (a braille document's text given to UI Automation clients), as the original (PreferBraillePatterns,
+    /// Patterns" (a braille document's text given to UI Automation clients), as the standard program (PreferBraillePatterns,
     /// AccessUseBraillePatterns).
     pub prefer_patterns: bool,
     pub access_patterns: bool,
@@ -724,7 +724,7 @@ impl App {
     }
 
     /// Document places `from` to `to` of document `i` laid out as a document of their own with its layout, as File
-    /// Print and File Emboss take a selection in the original (audit print-emboss E1): pages numbered from 1.
+    /// Print and File Emboss take a selection in the standard program (audit print-emboss E1): pages numbered from 1.
     pub fn laid_out_part(&self, i: usize, from: usize, to: usize) -> std::rc::Rc<Vec<bc_core::format::Page>> {
         let (_, layout, styles) = self.page_layout(i);
         let part = self.docs[i].shown().slice(from, to);
@@ -774,8 +774,8 @@ impl App {
         // A braille document's cells (Global, Internationalization): drawn as Unicode braille patterns when they are
         // preferred and the document is shown in a braille font; given to screen readers as patterns when Report
         // Braille to Screen Readers as Unicode Braille Patterns is on: on Windows through the UI Automation text while
-        // Support UI Automation is on, as the original; on macOS and Linux through the accessibility text (the
-        // original has no program there; owner order 2026-10-17: a braille display gets the exact braille on every
+        // Support UI Automation is on; on macOS and Linux through the accessibility text (the
+        // standard program has no program there; owner order 2026-10-17: a braille display gets the exact braille on every
         // system). A screen reader passes the patterns to a display dot for dot (research row 965).
         let braille = self.docs[i].kind == DocKind::Braille;
         let enc = self.encoding();

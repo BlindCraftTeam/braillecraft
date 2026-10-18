@@ -1,5 +1,5 @@
-//! Edit, Find, Find Again and Replace, as the original searches (spec 32). The text is the running text (codes marked
-//! 0x1C ... 0x1F) with the two codes [-] and ['] taken as one unit each (0x1D and 0x1E, as the original keeps them);
+//! Edit, Find, Find Again and Replace, as the standard program searches (spec 32). The text is the running text (codes marked
+//! 0x1C ... 0x1F) with the two codes [-] and ['] taken as one unit each (0x1D and 0x1E);
 //! places given to and answered by this module are places in the running text.
 
 use crate::doctext::{CLOSE, OPEN};
@@ -8,7 +8,7 @@ const HYPHEN: char = '\u{1d}';
 const APOSTROPHE: char = '\u{1e}';
 const WILD: char = '\u{1b}';
 
-/// A search: what is looked for and how, with the state the original keeps between searches of one window.
+/// A search: what is looked for and how, with the state the standard program keeps between searches of one window.
 #[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
 pub struct Search {
@@ -103,7 +103,7 @@ pub fn step_from(running: &str, p: usize, s: &Search, backward: bool) -> usize {
     t.at[k]
 }
 
-/// The pattern in units, as the original makes it from the search: codes [-] and ['] as single units, a "*" right
+/// The pattern in units: codes [-] and ['] as single units, a "*" right
 /// before a code's end mark a wildcard when wildcards are on, and for a style search the style's start code.
 fn pattern(s: &Search) -> Vec<char> {
     if s.style {
@@ -175,7 +175,7 @@ fn match_at(t: &Units, pos: usize, pat: &[char], exact: bool) -> Option<Match> {
     Some(Match { start: pos, end: i, spans })
 }
 
-/// The original's whole-word test on [start, start + pattern length) (spec 32 2.4); `print` is a print document.
+/// The standard whole-word test on [start, start + pattern length) (spec 32 2.4); `print` is a print document.
 fn whole_word(t: &Units, start: usize, plen: usize, print: bool) -> bool {
     let u = &t.u;
     let mut k = start;
@@ -245,7 +245,7 @@ fn limit(t: &Units, s: &Search, mode: u8) -> Option<usize> {
     }
 }
 
-/// A search as the original makes it from the caret (running-text place) with its questions (spec 32 2.2, 2.3):
+/// A search as the standard program makes it from the caret (running-text place) with its questions (spec 32 2.2, 2.3):
 /// the selection first, then the rest of the document, then the other end. `replace_all` is the mode of Replace All
 /// (its questions differ). Answers the match in running-text places (start, end) and the spans, and keeps the
 /// search's state up to date.
@@ -363,7 +363,7 @@ pub fn running_to_field(running: &str, codes: bool) -> String {
     out
 }
 
-/// What the original says about a find or replace field (spec 32 1.1, 1.3), or None: the find text 1 to 100
+/// What the standard program says about a find or replace field (spec 32 1.1, 1.3), or None: the find text 1 to 100
 /// characters (2748, 2750), the replace text at most 100 (2726), codes properly started and ended (2264).
 pub fn field_problem(field: &str, replace: bool) -> Option<String> {
     let n = field.chars().count();
@@ -383,7 +383,7 @@ pub fn field_problem(field: &str, replace: bool) -> Option<String> {
 }
 
 /// The style name of a running text that is one whole style start or end code ([es~NAME] or [ee~NAME], any case),
-/// as the original tells a typed code from a bare name in stylename mode.
+///.
 pub fn style_code_name(running: &str) -> Option<String> {
     let r: Vec<char> = running.chars().collect();
     let inner = r.strip_prefix(&[OPEN])?.strip_suffix(&[CLOSE])?;
@@ -528,7 +528,7 @@ mod tests {
     }
 
     #[test]
-    fn dialog_fields_are_checked_as_the_original() {
+    fn dialog_fields_are_checked_as_specified() {
         assert_eq!(field_problem("", false).as_deref(), Some("The search string is empty."));
         assert!(field_problem("", true).is_none());
         assert_eq!(field_problem("[es~x", false).as_deref(), Some("Some codes are not properly started or terminated."));

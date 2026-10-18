@@ -544,7 +544,7 @@ impl Collector {
         self.set_end(end);
         let result = self.finalize().and_then(|_| {
             if self.images.is_empty() && !self.populate()? {
-                // INFERENCE: the original returns from the emit when populate lays no data row; what then shows is
+                // INFERENCE: the standard program returns from the emit when populate lays no data row; what then shows is
                 // not traced. The text is shown as ordinary text, which loses nothing.
                 return Err("populate laid no row".into());
             }
@@ -655,7 +655,7 @@ impl Collector {
     // ---------------------------------------------------------------- measuring (spec 35 5.1, 5.2)
 
     /// The smallest width in which `text` fits in at most `lines_avail` lines broken at spaces (the recursion of
-    /// the original: a break at the last space before the even split point, then at each later space, the
+    /// the standard program: a break at the last space before the even split point, then at each later space, the
     /// narrowest kept), with the lines used and the text with its breaks as '\n'.
     fn count_columns(&self, text: &[(char, Option<usize>)], start: usize, indent: usize, lines_avail: i64, depth: usize) -> R<(usize, usize, Vec<(char, Option<usize>)>)> {
         if self.layout == 0 && depth > 10 {
@@ -889,7 +889,7 @@ impl Collector {
         Ok(n)
     }
 
-    /// The widest cell among the rows laid (below `limit`, from (from_row, from_col) on), as the original searches:
+    /// The widest cell among the rows laid (below `limit`, from (from_row, from_col) on):
     /// header rows and header columns are skipped for the body rows.
     fn widest(&mut self, n: usize, limit: isize, from_row: usize, from_col: usize) -> (isize, usize, usize) {
         let cols = self.n_cols();
@@ -998,7 +998,7 @@ impl Collector {
         let cols_to = if self.layout == TWOPAGE && self.col_fmt == 0 { self.boundary_cur } else { self.n_cols() };
         let rows = self.n_rows();
         if self.row_fmt == 0 && self.rows_fmt < rows && self.images.len() == 1 && self.geometry.first_depth < self.geometry.other_depth {
-            // A table that does not fit the rest of its first page starts on a new page (the original's test
+            // A table that does not fit the rest of its first page starts on a new page (the standard test
             // recomputes the same rows here and so always moves on).
             let n2 = self.format_columnar(false)?;
             if n2 < rows {
@@ -1056,7 +1056,7 @@ impl Collector {
         Ok(self.images.len() == 1 && self.geometry.first_below_head)
     }
 
-    /// Places cell (r, c) of the columnar layout (5.6, the original's cell writer): the underline under the last
+    /// Places cell (r, c) of the columnar layout (5.6, the standard cell writer): the underline under the last
     /// header row, the fences of a matrix, the text with its line breaks at the runover, the markers, the guide dots.
     fn place_cell(&mut self, r: usize, c: usize, row_line: &mut usize, _markers: bool) -> R<()> {
         let (rh, ch) = self.heads();
@@ -1731,7 +1731,7 @@ impl Collector {
 }
 
 /// The table regions of a running text alone (no layout): the cells by row as the editor commands need them
-/// (Table Properties, Style Level, the "in a table" tests), from [htbs] to the first [htbe] (the original's one
+/// (Table Properties, Style Level, the "in a table" tests), from [htbs] to the first [htbe] (the standard one
 /// object swallows every word up to it, so tables do not nest).
 pub fn regions(pieces: &[Piece], braille: bool) -> Vec<TableRegion> {
     let mut out = Vec::new();

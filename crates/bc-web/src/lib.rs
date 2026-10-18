@@ -162,7 +162,7 @@ pub fn import_filters() -> String {
 }
 
 /// The code page a text file is imported in when none has been chosen: ISO-8859-1, as for a system that is not
-/// one of the four the original program names.
+/// one of the four the standard program names.
 #[wasm_bindgen]
 pub fn default_import_code_page() -> String {
     bc_core::codepages::default_import(None).to_string()
@@ -348,7 +348,7 @@ fn remember(t: &mut Tracker, s: Shown) {
     }
 }
 
-/// The original's style commands on the editor's text (bc_core style_apply, spec 31), with the selection's anchor and
+/// The standard style commands on the editor's text (bc_core style_apply, spec 31), with the selection's anchor and
 /// the caret as UTF-16 places: `what` is "apply" (style `name`), "join-lines", "join-styles" or "new-paragraph".
 /// Answers JSON {"text": the editor's new text, "caret": UTF-16 place}, or an empty string when nothing changes.
 #[wasm_bindgen]
@@ -559,7 +559,7 @@ pub fn editor_running_place(r: u32) -> u32 {
     })
 }
 
-/// The Find and Replace fields: what the original says about one (empty when nothing; `replace` for the replace
+/// The Find and Replace fields: what the standard program says about one (empty when nothing; `replace` for the replace
 /// field), a field as running text, and a remembered text as the field shows it.
 #[wasm_bindgen]
 pub fn find_field_problem(field: &str, replace: bool) -> String {
@@ -1160,20 +1160,20 @@ fn check_style_name(name: &str, names: &[String]) -> Result<(), String> {
     if let Some(p) = bc_core::doctext::style_name_problem(name) {
         return Err(p);
     }
-    // The original's list refuses a second style of the same name.
+    // The standard list refuses a second style of the same name.
     if names.iter().any(|n| n == name) {
         return Err("Unable to add style to style list.".into());
     }
     Ok(())
 }
 
-/// Document, Add Style: what the original says about the name typed (empty when it is accepted).
+/// Document, Add Style: what the standard program says about the name typed (empty when it is accepted).
 #[wasm_bindgen]
 pub fn style_name_problem(name: &str) -> String {
     bc_core::doctext::style_name_problem(name).unwrap_or_default()
 }
 
-/// Edit Style Codes: what the original says about a codes field (empty when it is accepted).
+/// Edit Style Codes: what the standard program says about a codes field (empty when it is accepted).
 #[wasm_bindgen]
 pub fn style_codes_problem(text: &str) -> String {
     bc_core::doctext::style_codes_problem(text).unwrap_or_default()
@@ -1281,7 +1281,7 @@ pub fn latex(text: &str, table: &str, script: &[u8]) -> Result<Vec<u8>, JsError>
 }
 
 /// Save As HTML with MathJax (.htm) for a print document (spec 21): as `latex` with the MathJax rule script
-/// (mathjax.rules), between the fixed head and foot the original writes.
+/// (mathjax.rules), between the fixed head and foot the standard program writes.
 #[wasm_bindgen]
 pub fn mathjax(text: &str, table: &str, script: &[u8]) -> Result<Vec<u8>, JsError> {
     let body = latex(text, table, script)?;
@@ -1541,7 +1541,7 @@ pub fn page_count(text: &str, cells: u32, lines: u32, braille: bool) -> usize {
     laid_out(text, cells, lines, braille).len()
 }
 
-/// Printer Setup's typed page size checked as the original checks it: JSON [lines, chars, corrected field (0 none,
+/// Printer Setup's typed page size checked: JSON [lines, chars, corrected field (0 none,
 /// 1 lines, 2 chars)].
 #[wasm_bindgen]
 pub fn printer_page_check(lines: &str, chars: &str) -> String {

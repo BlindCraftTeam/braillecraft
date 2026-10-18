@@ -11,7 +11,7 @@
 //!   braille with the print scan table.
 //! - Formatted text: the page layout read into paragraphs, headings, tables and other styles (`pimbri`), the
 //!   characters through the character map tables (`unimap`), the text written as internal text, then the same steps
-//!   as coded text. (The original's Chinese character step comes between the character map and the internal text;
+//!   as coded text. (The standard Chinese character step comes between the character map and the internal text;
 //!   it changes nothing until Chinese characters are marked for it, and no step here marks them.)
 //! - Orbit Reader braille (.obf): line ends to line codes and capitals to small letters, the import scan with the
 //!   braille scan table, then the Nemeth-in-UEB scripts as for formatted braille.

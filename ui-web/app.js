@@ -248,7 +248,7 @@ const store = {
   },
 };
 
-// Global, Notification Settings, OK: every kept "do not show this again" answer is forgotten, as the original empties
+// Global, Notification Settings, OK: every kept "do not show this again" answer is forgotten
 // these sections.
 async function notificationSettings() {
   const { result } = await showDialog(1023);
@@ -1115,7 +1115,7 @@ async function messageBox(text, yesNo = false, cancel = false, okCancel = false)
 }
 const message = (text) => messageBox(text, false);
 
-// A whole number field checked as the original checks one in its dialog (an onOk): string 2644 when it is not a
+// A whole number field checked as the standard program checks one in its dialog (an onOk): string 2644 when it is not a
 // number, else `low` or `high` with the limit for %d when it is out of 1 ... 2147483647. On a failure the message is
 // shown, the field gets focus with its text selected, and the dialog stays open.
 async function checkNumber(d, field, low, high) {
@@ -1360,7 +1360,7 @@ function showGeneral(general, hasModel) {
 // own field is usable; the Serial group and Initialize Serial Port only for a port beginning "com", the serial
 // settings only while it is checked; Advanced's Send one character at a time (20) only for a port or a file.
 function showOutput(general, advanced, hasModel, tiger = false) {
-  // A model whose driver prints only through its system printer driver (the original's driver table marks the
+  // A model whose driver prints only through its system printer driver (the standard driver table marks the
   // Tiger driver alone) can only be sent to a printer: Write to Port and Write to File are disabled and the output
   // becomes Send to Printer (audit print-emboss E12).
   general.enable(14, hasModel && !tiger);
@@ -1466,7 +1466,7 @@ function fillSheet(general, device, advanced, s, cat, lists, models) {
   advanced.setText(24, String(s.control_delay));
 }
 
-// The General page's Configuration location choices, in the original's order; the second is the setup's all_users.
+// The General page's Configuration location choices, in the standard order; the second is the setup's all_users.
 const LOCATIONS = ["Current user", "All users on this computer"];
 
 // The version number chosen in the Device Settings version list (5), filled for `model`.
@@ -1476,7 +1476,7 @@ function chosenVersion(device, cat, model) {
   return single ? first : place === 0 ? 0 : place + first - 1;
 }
 
-// The Device Settings page as the original shows it (spec 25, resource 10002; the desktop program's show_device):
+// The Device Settings page as the standard program shows it (spec 25, resource 10002; the desktop program's show_device):
 // one group of controls per embosser driver at the same places, only the model's driver's group shown; the margin
 // rows, the interpoint box and the encoding rows by the driver and by whether escape codes are in use; the Braillo
 // rows by the model's SubModel number (15 to 18 for 1, 4, 5, 6 and 10; 19 to 23 for 9 and 11).
@@ -1575,7 +1575,7 @@ function showBlock(d, b) {
   d.setChecked(24, b.layout.interline !== 0);
 }
 
-// A page block corrected to the setup chosen in the list, as the original corrects it (none for no target).
+// A page block corrected to the setup chosen in the list, as the standard program corrects it (none for no target).
 function fitToChoice(d, cat, b) {
   const name = d.selected(7);
   const s = name && name !== NO_EMBOSSER ? loadSetup(name) : null;
@@ -1742,7 +1742,7 @@ async function chosenPages(d, radios, fields, braille, caret, from, to) {
       range = { kind: "pages", pages: [pageOf(caret) - 1] };
       break;
     case 2: {
-      // The selection laid out as a document of its own, all of its pages (as the original); no page: its
+      // The selection laid out as a document of its own, all of its pages (as the standard program); no page: its
       // message -1, which has no text.
       const part = core.editor_part(from, to);
       const n = core.page_count(part, doc.cells, doc.lines, braille);
@@ -1885,7 +1885,7 @@ async function printerSetup(global) {
       d.setItems(1138, ["Automatically Select"], 0);
       d.setRadio([1056, 1057], view.landscape ? 1 : 0);
       margins.forEach((c, i) => d.setText(c, view.margins[i]));
-      // The page size fields stay enabled for a braille document (the original only ignores their values there).
+      // The page size fields stay enabled for a braille document (the standard program only ignores their values there).
       d.setText(2003, String(lines));
       d.setText(2005, String(chars));
       d.get(1026)?.addEventListener("click", () => message("In the browser, the printer and its own settings are chosen in the browser's print dialog when you print."));
@@ -1898,7 +1898,7 @@ async function printerSetup(global) {
         await message(e.message);
         return false;
       }
-      // The page size as the original checks it: a corrected size is shown and asked about (question 1000); Cancel
+      // The page size: a corrected size is shown and asked about (question 1000); Cancel
       // keeps the dialog open on the corrected field.
       const [l, c, corrected] = JSON.parse(core.printer_page_check(d.text(2003), d.text(2005)));
       if (corrected) {
@@ -2274,7 +2274,7 @@ async function reformatNotice() {
   );
 }
 
-// A notice (1054) with its "Do not show this message again" box, kept under Mutable by `key` as the original
+// A notice (1054) with its "Do not show this message again" box, kept under Mutable by `key`
 // keeps it (the answer plus one). True on OK, or when OK was kept.
 async function onceNotice(key, text) {
   const kept = Number(store.get(`Mutable.${key}`));
@@ -2292,7 +2292,7 @@ const GLOBAL_PRINTER_WARNING =
 const GLOBAL_EMBOSSER_WARNING =
   "Changes that you make through Global, Embosser Setup will not affect this document.  Use Document, Embosser Setup instead to change document settings.";
 
-// Global, Formatted Braille Importer, kept by the names the original program keeps them by; a value that is missing
+// Global, Formatted Braille Importer, kept by the names the standard program keeps them by; a value that is missing
 // or not understood keeps its default (main page numbers lower right, reference page numbers upper right, no running
 // head or foot, 30 lines of 40 cells, formatting not preserved).
 const BRAIDE_CORNERS = ["NoPages", "UpperLeft", "UpperRight", "LowerLeft", "LowerRight"];
@@ -2426,7 +2426,7 @@ async function templateTextNamed(name) {
 }
 
 // The Word importer's settings as the Global Word Importer (1036) and Import Options (1037) dialogs last kept them
-// (showDialog memory), the original's defaults where a dialog was never confirmed; the JSON shape of the core's
+// (showDialog memory), the standard defaults where a dialog was never confirmed; the JSON shape of the core's
 // Word options.
 function wordOptions() {
   const kept = (rid) => {
@@ -2450,7 +2450,7 @@ function wordOptions() {
     ignore_bold: flag(w, 14, false),
     ignore_italics: flag(w, 15, false),
     ignore_underline: flag(w, 16, false),
-    // The original's defaults (its settings descriptor table): language switches ignored, hard page breaks kept,
+    // The standard defaults (its settings descriptor table): language switches ignored, hard page breaks kept,
     // embedded codes [[*...*]] allowed, print page breaks ignored.
     ignore_lang: flag(w, 17, true),
     hard_pages: flag(w, 7, true),
@@ -3042,9 +3042,9 @@ async function internationalization() {
   applyView();
 }
 
-// Global, PDF Importer (the original's XRC dialog 3116, as the desktop program shows it): the
-// settings kept under "PDF" with the original's keys and defaults (numbers in thousandths), the fields in the
-// dialog's order (its pages General, Headers, Footers, Fonts, Scraping Setup as groups). The original's dialog also
+// Global, PDF Importer (the standard XRC dialog 3116, as the desktop program shows it): the
+// settings kept under "PDF" with the standard keys and defaults (numbers in thousandths), the fields in the
+// dialog's order (its pages General, Headers, Footers, Fonts, Scraping Setup as groups). The standard dialog also
 // shows a script choice, height units, header and footer trigger texts and "may be shorter" boxes that its code
 // never reads; those are shown too and do nothing, as there.
 const PDF_DEFAULTS = {
@@ -3145,8 +3145,8 @@ async function pdfOptions() {
     f.allTexts = input(form, "pdf-alltexts", "All Texts", s["PDFMiner.AllTexts"], "checkbox");
   });
   if (!ok) return;
-  // The number fields as the original checks them (a number from 0 to its limit); Line Overlap is shown and not
-  // read back, as in the original.
+  // The number fields as the standard program checks them (a number from 0 to its limit); Line Overlap is shown and not
+  // read back.
   const num = (field, label, max, old) => {
     const v = Number(field.value.trim());
     if (field.value.trim() === "" || Number.isNaN(v) || v < 0 || v > max) {
@@ -3193,8 +3193,8 @@ async function pdfOptions() {
   });
 }
 
-// Global, Python Options (the original's XRC dialog 3110): the custom library path, Include
-// Built-In Library, the logging level and the log file, kept under "Python" with the original's keys and
+// Global, Python Options (the standard XRC dialog 3110): the custom library path, Include
+// Built-In Library, the logging level and the log file, kept under "Python" with the standard keys and
 // defaults. BrailleCraft reads PDFs with its own reader and runs no Python, so these have no effect on an import.
 const PYTHON_LEVELS = ["Critical", "Error", "Warning", "Info", "Debug"];
 async function pythonOptions() {
@@ -3283,7 +3283,7 @@ async function viewPreferences() {
   store.set("sixkey.set", settings.sixKeySet);
 }
 
-// What the original says about a shortcut code field, or null when it is accepted: empty, longer than 99, or codes
+// What the standard program says about a shortcut code field, or null when it is accepted: empty, longer than 99, or codes
 // not properly started or ended (a code started inside a code, ended outside one, or left open).
 function shortcutFieldProblem(text) {
   if (text.length === 0) return "The shortcut string is empty.";
@@ -3317,7 +3317,7 @@ async function shortcutPreferences() {
       d.setRadio([23, 24, 25], Math.min(s.control_page_nav, 2));
     },
     async onOk(d) {
-      // Each code field is checked in order, as the original checks them: not empty, at most 99 characters, codes
+      // Each code field is checked in order: not empty, at most 99 characters, codes
       // properly started and ended.
       for (const field of [7, 9, 11, 13, 15, 17]) {
         const problem = shortcutFieldProblem(d.text(field));
@@ -3415,7 +3415,7 @@ async function editStandard(id) {
       }
       if (id === 1203 && from !== to) {
         insertText("");
-        // Cut ends Highlight, as in the original.
+        // Cut ends Highlight.
         doc.highlight = null;
       }
       break;
@@ -3427,7 +3427,7 @@ async function editStandard(id) {
       }
       break;
     case 1206:
-      // With no selection Clear is the Delete key, as in the original: the character after the caret goes (a code
+      // With no selection Clear is the Delete key: the character after the caret goes (a code
       // with it goes whole, as the editor takes codes out).
       if (from === to && to < editorText().length) {
         const next = editorText().codePointAt(to) > 0xffff ? 2 : 1;
@@ -3558,8 +3558,8 @@ async function gotoPosition() {
   showStatus();
 }
 
-// Edit, Find, Find Again and Replace, as the original (bc_core find, spec 32; the desktop program's find and
-// replace). The search is kept with the document, as the original keeps it per window.
+// Edit, Find, Find Again and Replace, as the standard program (bc_core find, spec 32; the desktop program's find and
+// replace). The search is kept with the document.
 const SEARCH_QUESTIONS = {
   rest: "BrailleCraft was unable to find the text within the selected area.  Would you like to search the rest of the document?",
   start: "BrailleCraft has finished searching to the end of the document.  Would you like to continue searching at the beginning?",
@@ -3581,7 +3581,7 @@ async function runSearch(spec, { begin = false, from = -1, step = 0, all = false
 }
 
 // The search options of Find (case 8, backward 9, whole words 10, radios 12 to 14) and Replace (10, 11, 12, radios
-// 14 to 16), filled from `s` and enabled as the original: case only in a print document and not for a style name,
+// 14 to 16), filled from `s` and enabled: case only in a print document and not for a style name,
 // whole words not for a style name; literal or wildcard enables both, style name disables both.
 function searchOptions(d, s, caseId, wholeId, radios) {
   const print = doc.kind === "print";
@@ -3773,7 +3773,7 @@ async function runReplace(spec, withText) {
 }
 
 // "%d replacements were made." in the notice 1054, not shown again once its box was checked (Mutable, Replacements:
-// the answer plus one, as the original keeps it).
+// the answer plus one).
 async function replacementsMessage(count) {
   if (Number(store.get("Mutable.Replacements")) > 0) return;
   const { result, d } = await showDialog(1054, { title: "BrailleCraft", setup: (d) => d.setText(5, `${count} replacements were made.`) });
@@ -3803,7 +3803,7 @@ async function applyStyle() {
   if (result === "ok" && d.selected(7)) applyNamedStyle(d.selected(7));
 }
 
-// The original's style commands (the core's style_apply, spec 31) on the editor: "apply" (a style by name),
+// The standard style commands (the core's style_apply, spec 31) on the editor: "apply" (a style by name),
 // "join-lines", "join-styles", "new-paragraph"; the selection's anchor and the caret are passed, the new text and the
 // caret come back. Nothing happens when the core answers nothing (Join with no selection).
 function styleCommand(what, name = "") {
@@ -3822,7 +3822,7 @@ function styleCommand(what, name = "") {
   showTranslatedLine();
 }
 
-// The original's beep (a failure that shows no message), through the browser's audio.
+// The standard beep (a failure that shows no message), through the browser's audio.
 function beep() {
   try {
     const ctx = new AudioContext();
@@ -3838,7 +3838,7 @@ function beep() {
 
 // Layout, Style Level + and - (spec 34): inside a table the caret moves to the next or previous cell of its row;
 // else the level code of the paragraph style at the caret, and every run of level codes in the selection, move by
-// `step`. A failure beeps, as in the original.
+// `step`. A failure beeps.
 function styleLevel(step) {
   if (!core) return;
   const forward = editor.selectionDirection !== "backward";
@@ -3864,7 +3864,7 @@ function applyNamedStyle(name) {
 }
 
 // Layout, Apply Last Style: the paragraph style ended last before the caret or the selection start, read from the
-// text; nothing happens when there is none, as in the original.
+// text; nothing happens when there is none.
 function applyLastStyle() {
   const name = core.editor_last_paragraph_style(Math.min(editor.selectionStart, editor.selectionEnd));
   if (name) applyNamedStyle(name);
@@ -3903,7 +3903,7 @@ async function addStyle() {
   // A style that cannot be nested is one whose name ends in a period.
   let name = d.text(7);
   if (!d.checked(8) && !name.endsWith(".")) name += ".";
-  // Then Edit Style Codes (1044), as in the original.
+  // Then Edit Style Codes (1044).
   const codes = await showDialog(1044, {
     setup(e) {
       e.setText(6, `Edit codes for style: ${name}`);
@@ -3958,7 +3958,7 @@ async function modifyStyle() {
             r.setText(7, old);
             r.setChecked(8, true);
           },
-          // Checked in the dialog, as the original: an empty name does nothing, a name the document has (in any
+          // Checked in the dialog: an empty name does nothing, a name the document has (in any
           // case) and invalid characters are refused with their messages.
           async onOk(r) {
             const name = [...r.text(7)].slice(0, 31).join("");
@@ -3992,7 +3992,7 @@ async function modifyStyle() {
     },
   });
   if (result !== "ok" || !d.selected(8)) return;
-  // Changed codes are asked about first (1002), as in the original.
+  // Changed codes are asked about first (1002).
   const changed = d.text(12) !== shownCodes[0] || d.text(14) !== shownCodes[1];
   if (changed && !(await yesNo(`Are you sure you want to change the codes associated with style "${d.selected(8)}"?`))) return;
   file.set_style_codes(d.selected(8), d.text(12), d.text(14));
@@ -4001,7 +4001,7 @@ async function modifyStyle() {
   showTranslatedLine();
 }
 
-// Document, Delete Style (dialog 1047), as the original: a document keeps at least one style (2172), and the style
+// Document, Delete Style (dialog 1047): a document keeps at least one style (2172), and the style
 // chosen leaves the document only after Yes to 1026.
 async function deleteStyle() {
   const file = await documentFile();
@@ -4070,7 +4070,7 @@ async function createTemplate() {
 
 // Table, Create Table and Table Properties (dialog 1062): the table settings, kept as the dialog's memory; Create
 // Table puts the table codes around the selection.
-// Table, Create and Table Properties, one command as in the original (bc_core table_cmd, spec 33; the desktop
+// Table, Create and Table Properties, one command as in the standard program (bc_core table_cmd, spec 33; the desktop
 // program's table_command): with the caret in a table it edits that table's start code, else it puts a new table at
 // the caret; a selection holding a table start or end code is refused.
 async function tableProperties() {
@@ -4165,7 +4165,7 @@ async function setPageNumber() {
   if (result === "ok") insertCodes(`[${d.radio([9, 10]) === 1 ? "pntr" : "pnta"}][pv${d.number(7)}]`);
 }
 
-// Layout, Header and Footer (dialogs 1029, 1030), as the original: All Pages, Odd Pages, Even Pages write the
+// Layout, Header and Footer (dialogs 1029, 1030): All Pages, Odd Pages, Even Pages write the
 // placement code 3, 1, 2 ([svrhp3]) before the start code, the text and the end code; No Header writes the code
 // that discontinues it and greys out the text. The text is checked in the dialog: 1 to 80 characters.
 const HEADER = { rid: 1029, start: "[tls]", end: "[tle]", none: "[tld]", placement: "svrhp", empty: "The header text is empty", tooLong: "The header text is too long.  It must not be greater than %d characters." };
@@ -4208,7 +4208,7 @@ async function headerFooter(hf) {
   }
 }
 
-// Layout, Code List (dialog 1041), as the original: the category boxes (All, then Page, Line, Tab, European, Greek
+// Layout, Code List (dialog 1041): the category boxes (All, then Page, Line, Tab, European, Greek
 // Letters, CBC, Math, Miscellaneous) choose the codes listed and are kept for the session from OK (at first All,
 // Page, Line and Tab); a double-click is OK; parameters with a space are refused in the dialog.
 const CODE_BOXES = [9, 10, 11, 12, 13, 14, 15, 16];
@@ -4254,7 +4254,7 @@ async function codeList() {
 }
 
 // Document, Hyphen Table: the document's table; a change marks the document changed and lays the document out
-// again, as in the original.
+// again.
 function setHyphen(id) {
   if (doc.hyphen !== id) doc.dirty = true;
   doc.hyphen = id;
@@ -4397,7 +4397,7 @@ async function chooseLearningStep(course) {
 
 // A Layout menu code item: its codes put in, or put around the selection.
 function insertCode(id) {
-  // New Paragraph closes and opens the paragraph style it is in, as the original.
+  // New Paragraph closes and opens the paragraph style it is in.
   if (id === 1910) return newParagraph();
   const code = core ? core.menu_code(id) : "";
   if (!code) return;
@@ -4454,7 +4454,7 @@ const COMMANDS = {
   1303: () => setView((v) => (v.font = "print")),
   1304: () => setView((v) => (v.font = "braille")),
   1305: () => setView((v) => (v.font = "simbraille")),
-  // Six-key entry in either kind of document, as in the original.
+  // Six-key entry in either kind of document.
   1307: () => setView((v) => (v.six_key = !v.six_key)),
   1309: () => setView((v) => (v.codes = !v.codes)),
   1310: () => setView((v) => (v.translated = !v.translated)),

@@ -1,13 +1,4 @@
-| nindxa.sbt 3;5 - Convert "ninit code" files to dxa (txx, brx) form
-| 1;1  1993-7-26/1993-7-28 J E Sullivan
-| 3;2  1994-12-13 JES: suppress formerly insignificant sp afr $< $> $:
-| 3;3  1995-2-8/9 JES: overhaul: handle most commands by open logic, thus both
-|      shortening & generalizing this table
-| 3;4  1995-2-9 JES: change '=' to '~' for "rest is arbitrary" and
-|      initial (command-proper terminating) ':' to ';'
-|      1995-2-13 JES: accommodate "new" as well as "old" TXT file input
-| 3;5  2008-6-13/jes: Make sure that |127 isn't treated as a significant space
-|      when it's actually the root of a 2-byte DUSCI character
+| the script - Convert "ninit code" files to dxa (txx, brx) form
 | state 1 - in ordinary text
 |029~~1~2~
 |030~~1~5~

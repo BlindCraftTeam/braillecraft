@@ -1,8 +1,4 @@
 | frabrl.hct 1;2 - hyphenation control tbl for French text
-| 1;1 1988-2-9 JES (derived from dash.hct)
-| 1;2 1994-9-16/20 JES: handle lowercase letters as well as u.c., which is
-|     necessary for new .brx files (since there is no internal upcasing, as
-|     with former .sct-based scanning)
 -hinit 1
 | hyphenation mode:
 |   0 = no breaks whatsoever (even at dashes)
