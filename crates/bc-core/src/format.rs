@@ -908,6 +908,20 @@ struct Formatter {
     /// [ifprt] in a braille document or [ifbrl] in a print document: the next item (a word or a code) is dropped
     /// (pgifmt cases 0x68, 0x69; the document object's +0x94 is 1 for a print document).
     skip_next: bool,
+    /// A code that takes the next word (spec 19 section 10.4): 'r' [remw] drops it, 'l' [lec] the print page number
+    /// continuation pages show, 'c' [mec] the guide-word continuation text, 'g' [meg] a main entry, 'd' [med] the dash
+    /// between guide words.
+    next_word: Option<char>,
+    /// The guide-word footer: its mode (0 none, 1 carried from a page before, 2 one entry on this page, 3 more), the
+    /// first and last entries, the continuation and dash texts, an entry waiting for the next line end, and the print
+    /// page continuation number from [lec].
+    guide_mode: u8,
+    guide_first: String,
+    guide_last: String,
+    guide_cont: String,
+    guide_dash: String,
+    guide_pending: Option<String>,
+    print_cont: Option<String>,
 }
 
 impl Formatter {
@@ -1004,6 +1018,14 @@ impl Formatter {
             hyphen_override: None,
             last_word: Vec::new(),
             skip_next: false,
+            next_word: None,
+            guide_mode: 0,
+            guide_first: String::new(),
+            guide_last: String::new(),
+            guide_cont: String::new(),
+            guide_dash: String::new(),
+            guide_pending: None,
+            print_cont: None,
         }
     }
 
@@ -1244,6 +1266,12 @@ impl Formatter {
         }
         self.opened = true;
         self.page_text = Some((self.page_number_text(), self.roman));
+        // [lec]: a page that continues a print page shows the number [lec] gave from then on (spec 19 10.4).
+        if self.print_since > 0 && !self.leaf.1 {
+            if let Some(n) = self.print_cont.take() {
+                self.print_number = Some(n);
+            }
+        }
         self.page_print = self.print_text().filter(|_| self.print_corner() != Corner::None);
         if self.foot.is_some() && self.on_this_page(self.foot_pages) {
             self.page_foot = self.foot.clone();
@@ -1490,6 +1518,23 @@ impl Formatter {
     /// Ends the line; the next one starts at `next_col`.
     fn end_line(&mut self, next_col: usize) {
         self.saved_col = None;
+        // A main entry ([meg]) takes effect at the line end: the first of a page is its first and last guide word,
+        // a later one its last; the page keeps a foot line for them when there is room (spec 19 10.4).
+        if let Some(entry) = self.guide_pending.take() {
+            if self.guide_mode < 2 {
+                self.guide_first = entry.clone();
+                self.guide_mode = 2;
+            } else {
+                self.guide_mode = 3;
+            }
+            self.guide_last = entry;
+            if self.foot.is_none() {
+                self.foot = Some(String::new());
+            }
+            if self.page_foot.is_none() && self.on_this_page(self.foot_pages) && self.page.len() + 2 < self.usable() {
+                self.page_foot = Some(String::new());
+            }
+        }
         let mut line = std::mem::take(&mut self.line);
         while line.text.ends_with(' ') {
             line.text.pop();
@@ -1603,6 +1648,21 @@ impl Formatter {
         if let Some((odd, even)) = self.next_print.take() {
             self.print_odd = odd;
             self.print_even = even;
+        }
+        // The guide-word footer composed (spec 19 10.4): two or more entries on the page give the first, the dash text
+        // and the last; one gives it; none gives the last entry before, a space and the continuation text; cut at the
+        // width less the foot's side room. The next page carries on in mode 1.
+        if self.guide_mode > 0 {
+            if let Some(foot) = &mut self.page_foot {
+                let text = match self.guide_mode {
+                    3 => format!("{}{}{}", self.guide_first, self.guide_dash, self.guide_last),
+                    2 => self.guide_first.clone(),
+                    _ => format!("{} {}", self.guide_last, self.guide_cont),
+                };
+                let room = self.layout.cells.saturating_sub(self.foot_side.left + self.foot_side.right);
+                *foot = text.chars().take(room).collect();
+            }
+            self.guide_mode = 1;
         }
         // The running foot on the last line, sharing it with a page number at the bottom.
         if let Some(foot) = self.page_foot.take() {
@@ -1723,6 +1783,19 @@ impl Formatter {
     /// Places one word (its cells and their sources), wrapping it to the runover margin when it does not fit.
     fn word(&mut self, cells: &[(char, Option<usize>)]) {
         if std::mem::take(&mut self.skip_next) {
+            self.word_marks.clear();
+            return;
+        }
+        // A word a code took (the positioned-word modes 0, 4, 6, 7, 8 of the standard program): not laid out.
+        if let Some(kind) = self.next_word.take() {
+            let text: String = cells.iter().take(36).map(|c| c.0).collect();
+            match kind {
+                'l' => self.print_cont = Some(text),
+                'c' => self.guide_cont = text,
+                'g' => self.guide_pending = Some(text),
+                'd' => self.guide_dash = text,
+                _ => {}
+            }
             self.word_marks.clear();
             return;
         }
@@ -2343,6 +2416,22 @@ impl Formatter {
             // [pntr] roman and [pnta] arabic page numbers, from the next number taken (case 0x76, 0x77).
             "pntr" => self.roman = true,
             "pnta" => self.roman = false,
+            // [remw] drops the next word; [lec], [mec], [meg], [med] take it (cases 100, 0x78, 0x82, 0x83, 0xb8).
+            "remw" => {
+                self.next_word = Some('r');
+                self.place = None;
+            }
+            "lec" | "mec" | "meg" | "med" => {
+                self.next_word = Some(match name {
+                    "lec" => 'l',
+                    "mec" => 'c',
+                    "meg" => 'g',
+                    _ => 'd',
+                });
+                self.place = None;
+            }
+            // [led] ends the print page number (case 0x7f): none is shown from then.
+            "led" => self.print_number = None,
             // [vcsD:N] vertical centering, N of D parts of a page's free lines above its text (D 2, N 1, N at most
             // D); [vce] ends it (cases 0xa8, 0xa7).
             "vcs" => {
@@ -2843,7 +2932,7 @@ fn is_layout(code: &str) -> bool {
                 | "kbs" | "kbe" | "kpf" | "tab" | "run"
                 | "svpnp" | "svpfd" | "hi" | "hl" | "lea" | "svrlb" | "svprg" | "sl" | "st" | "ki"
                 | "tls" | "tle" | "tld" | "rfs" | "rfe" | "rfd" | "svrhp" | "svrfp" | "svrhs" | "svrfs" | "kps" | "kpe" | "sc"
-                | "ctb" | "tas" | "taa" | "svmts" | "lps" | "lpr" | "svlma" | "skn" | "sd" | "pm" | "svant" | "pntr" | "pnta" | "svles" | "vcs" | "vce"
+                | "ctb" | "tas" | "taa" | "svmts" | "lps" | "lpr" | "svlma" | "skn" | "sd" | "pm" | "svant" | "pntr" | "pnta" | "svles" | "vcs" | "vce" | "remw" | "lec" | "led" | "mec" | "meg" | "med"
         )
 }
 
@@ -3698,6 +3787,19 @@ mod tests {
         // A list: level 1 starts at cell 1 and runs over to cell 3, each level two cells further in.
         let pages = format(&m("[hi1:3:0:2:2][hl1]aaa bbb ccc[hl2]aaa bbb ccc[hi]x"), &Layout::braille(9, 8), None);
         assert_eq!(texts(&pages[0])[..6], ["aaa bbb", "  ccc", "  aaa bbb", "    ccc", "x", ""]);
+    }
+
+    #[test]
+    fn guide_words_go_in_the_foot() {
+        // Two entries on page 1: first, dash, last; page 2 with none: the last entry, a space, the continuation.
+        let doc = m("[med]- [mec]cont. [meg]apple a\n[meg]bear b\nc\nd\ne\nf\ng");
+        // (The words are cut at the width less the foot's side room, 8 and 8.)
+        let pages = format(&doc, &Layout::braille(40, 4), None);
+        assert_eq!(texts(&pages[0])[3].trim(), "apple-bear");
+        assert_eq!(texts(&pages[1])[3].trim(), "bear cont.");
+        // [remw] drops the next word.
+        let pages = format(&m("a [remw]b c"), &Layout::braille(20, 2), None);
+        assert_eq!(texts(&pages[0])[0], "a c");
     }
 
     #[test]
