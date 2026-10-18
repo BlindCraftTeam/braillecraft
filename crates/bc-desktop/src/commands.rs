@@ -182,21 +182,221 @@ fn formatted_braille_importer() {
     }
 }
 
-/// A settings dialog: shown with its last values; the values are kept on OK. Returns the dialog on OK.
-fn settings_dialog(id: i32, key: &'static str, title: Option<&str>, setup: impl FnOnce(&Dlg)) -> Option<Dlg> {
-    let d = open_dialog(id, title);
+/// A dialog control whose value the standard program keeps between runs as a setting (spec 18 section 18.6: the
+/// four Global option dialogs copy the settings variables into their controls at open and back on OK): the
+/// control, its section and key, how its value is written, and the default from the settings descriptor table
+/// (spec 18 section 18.2b).
+enum Kept {
+    /// A check box, written "yes" or "no".
+    Flag(i32, &'static str, &'static str, bool),
+    /// A combo box: the word at the chosen item's place in the list given (the box may show its items sorted, so
+    /// the item is found by its text, the texts given in the words' order).
+    Choice(i32, &'static str, &'static str, &'static [&'static str], &'static [&'static str], usize),
+    /// Radio buttons with ids from this one on, one per word: the chosen one's word.
+    Radios(i32, &'static str, &'static str, &'static [&'static str], usize),
+    /// A text field kept as typed.
+    Text(i32, &'static str, &'static str, &'static str),
+    /// A number shown with two decimals and kept in hundredths (the WordPerfect indent, 25 shown as 0.25).
+    Hundredths(i32, &'static str, &'static str, i64),
+    /// Seconds shown as mm:ss (the autosave time).
+    Seconds(i32, &'static str, &'static str, i64),
+}
+
+/// The list items of the kept combo boxes, in the order of their setting words.
+const HYPERLINK_ITEMS: &[&str] = &["Text Only", "URLs Only", "Both Text and URLs", "Structured Hyperlinks"];
+const UNKNOWN_ITEMS: &[&str] = &["Mark with asterisk (*)", "Ignore", "Output Unicode value"];
+const PRINT_PAGE_ITEMS: &[&str] = &["Ignore", "Mark from Word document", "Treat hard page breaks as print page breaks", "Use publishers' <ipp no=#> reference page tags"];
+
+/// Global, Import Options (1037): spec 18 section 18.6.
+const KEPT_IMPORT_OPTIONS: &[Kept] = &[
+    Kept::Choice(7, "Hyperlinks", "Action", &["url", "text", "both", "hyper"], HYPERLINK_ITEMS, 2),
+    Kept::Flag(8, "Hyperlinks", "RemoveDuplicates", true),
+    Kept::Flag(19, "Hyperlinks", "AutoTagCBC", true),
+    Kept::Flag(20, "ImportOptions", "AddSpaces", false),
+    Kept::Flag(21, "ImportOptions", "RemoveDashSpaces", false),
+    Kept::Choice(23, "Word", "UnknownCharacters", &["ignore", "asterisc", "hex"], UNKNOWN_ITEMS, 0),
+    Kept::Flag(24, "Word", "HanScriptAuto", true),
+    Kept::Radios(26, "Word", "HanScriptLanguage", &["Mandarin", "Cantonese", "Japanese", "Korean", "Zhuyin"], 0),
+];
+
+/// Global, WordPerfect Importer (1035).
+const KEPT_WORDPERFECT: &[Kept] = &[
+    Kept::Flag(6, "WordPerfect", "CBCForCourier", false),
+    Kept::Flag(7, "WordPerfect", "PreserveHardPageBreaks", true),
+    Kept::Flag(8, "WordPerfect", "CompressSkippedLines", true),
+    Kept::Flag(9, "WordPerfect", "MarkPrintPageBreaks", false),
+    Kept::Radios(11, "WordPerfect", "ParagraphStyle", &["None", "SkipLine", "NewlineTag", "SkipAndTag"], 1),
+    Kept::Hundredths(16, "Wordperfect", "Indent", 25),
+    Kept::Radios(18, "WordPerfect", "Units", &["Inches", "Centimeters"], 0),
+];
+
+/// Global, Word Importer (1036). The UEB typeform mappings (controls 20 to 36) stay in the dialog memory: the
+/// standard program keeps them beside these in its settings block under no key the descriptor table names.
+const KEPT_WORD: &[Kept] = &[
+    Kept::Flag(6, "Word", "CBC", false),
+    Kept::Flag(7, "Word", "PreserveHardPageBreaks", true),
+    Kept::Flag(8, "Word", "PreserveSkippedLines", false),
+    Kept::Choice(10, "Word", "PrintPages", &["None", "Internal", "Scanned", "Publishers"], PRINT_PAGE_ITEMS, 0),
+    Kept::Flag(11, "Word", "BrailleFonts", false),
+    Kept::Flag(12, "Word", "AllowEmbeddedCodes", true),
+    Kept::Flag(14, "Word", "IgnoreBold", false),
+    Kept::Flag(15, "Word", "IgnoreItalics", false),
+    Kept::Flag(16, "Word", "IgnoreUnderline", false),
+    Kept::Flag(17, "Word", "IgnoreLanguageSwitches", true),
+];
+
+/// Global, File Locations (1060): the two folders and the autosave settings under the AutoSave section. The
+/// autosaved file location's default folder is made when autosave is built (plan line B2).
+const KEPT_FILE_LOCATIONS: &[Kept] = &[
+    Kept::Text(7, "AutoSave", "openPath", ""),
+    Kept::Text(9, "AutoSave", "savePath", ""),
+    Kept::Flag(10, "AutoSave", "Enabled", true),
+    Kept::Text(12, "AutoSave", "path", ""),
+    Kept::Seconds(14, "AutoSave", "Time", 300),
+];
+
+impl Kept {
+    /// The control's value from the kept setting, or the default.
+    fn restore(&self, d: &Dlg) {
+        let kept = |section: &str, key: &str| settings_store::get(section, key).map(|v| v.trim().to_string());
+        let index = |section: &str, key: &str, words: &[&str], default: usize| {
+            kept(section, key).and_then(|v| words.iter().position(|w| w.eq_ignore_ascii_case(&v))).unwrap_or(default)
+        };
+        match *self {
+            Kept::Flag(cid, section, key, default) => {
+                let on = kept(section, key).map_or(default, |v| v.eq_ignore_ascii_case("yes"));
+                d.set_checked(cid, on);
+            }
+            Kept::Choice(cid, section, key, words, items, default) => d.select_text(cid, items[index(section, key, words, default)]),
+            Kept::Radios(first, section, key, words, default) => d.set_checked(first + index(section, key, words, default) as i32, true),
+            Kept::Text(cid, section, key, default) => d.set_text(cid, &kept(section, key).unwrap_or_else(|| default.to_string())),
+            Kept::Hundredths(cid, section, key, default) => {
+                let n = kept(section, key).and_then(|v| v.parse::<i64>().ok()).unwrap_or(default);
+                d.set_text(cid, &hundredths_text(n));
+            }
+            Kept::Seconds(cid, section, key, default) => {
+                let s = kept(section, key).and_then(|v| v.parse::<i64>().ok()).unwrap_or(default);
+                d.set_text(cid, &seconds_text(s));
+            }
+        }
+    }
+
+    /// The control's value written to the kept setting.
+    fn save(&self, d: &Dlg) {
+        match *self {
+            Kept::Flag(cid, section, key, _) => settings_store::set(section, key, if d.checked(cid) { "yes" } else { "no" }),
+            Kept::Choice(cid, section, key, words, items, default) => {
+                let i = d.chosen_in(cid, items).unwrap_or(default).min(words.len() - 1);
+                settings_store::set(section, key, words[i]);
+            }
+            Kept::Radios(first, section, key, words, default) => {
+                let i = (0..words.len()).find(|&k| d.checked(first + k as i32)).unwrap_or(default);
+                settings_store::set(section, key, words[i]);
+            }
+            Kept::Text(cid, section, key, _) => settings_store::set(section, key, &d.text(cid)),
+            Kept::Hundredths(cid, section, key, default) => {
+                settings_store::set(section, key, &parse_hundredths(&d.text(cid)).unwrap_or(default).to_string());
+            }
+            Kept::Seconds(cid, section, key, default) => {
+                settings_store::set(section, key, &parse_seconds(&d.text(cid)).unwrap_or(default).to_string());
+            }
+        }
+    }
+}
+
+/// A number kept in hundredths shown with two decimals (25 is "0.25").
+fn hundredths_text(n: i64) -> String {
+    format!("{}{}.{:02}", if n < 0 { "-" } else { "" }, n.abs() / 100, n.abs() % 100)
+}
+
+/// A number with up to two decimals read back as hundredths; None when the text is not a number.
+fn parse_hundredths(text: &str) -> Option<i64> {
+    text.trim().parse::<f64>().ok().filter(|x| x.is_finite()).map(|x| (x * 100.0).round() as i64)
+}
+
+/// Seconds shown as mm:ss (300 is "05:00").
+fn seconds_text(s: i64) -> String {
+    let s = s.max(0);
+    format!("{:02}:{:02}", s / 60, s % 60)
+}
+
+/// A time typed as mm:ss, or as plain seconds, read back as seconds; None when it is neither.
+fn parse_seconds(text: &str) -> Option<i64> {
+    let t = text.trim();
+    let s = match t.split_once(':') {
+        Some((m, s)) => m.trim().parse::<i64>().ok().zip(s.trim().parse::<i64>().ok()).map(|(m, s)| m * 60 + s)?,
+        None => t.parse::<i64>().ok()?,
+    };
+    Some(s.max(0))
+}
+
+#[cfg(test)]
+mod kept_tests {
+    use super::*;
+
+    #[test]
+    fn hundredths_and_seconds_round_trip() {
+        assert_eq!(hundredths_text(25), "0.25");
+        assert_eq!(hundredths_text(150), "1.50");
+        assert_eq!(hundredths_text(-5), "-0.05");
+        assert_eq!(parse_hundredths("0.25"), Some(25));
+        assert_eq!(parse_hundredths(" 1.5 "), Some(150));
+        assert_eq!(parse_hundredths("2"), Some(200));
+        assert_eq!(parse_hundredths("cm"), None);
+        assert_eq!(seconds_text(300), "05:00");
+        assert_eq!(seconds_text(61), "01:01");
+        assert_eq!(seconds_text(-4), "00:00");
+        assert_eq!(parse_seconds("05:00"), Some(300));
+        assert_eq!(parse_seconds("1:30"), Some(90));
+        assert_eq!(parse_seconds("45"), Some(45));
+        assert_eq!(parse_seconds("five"), None);
+    }
+
+    /// Every kept control of the four dialogs has a default its words can show, and the keys are those of the
+    /// standard program's descriptor table (spec 18 sections 18.2b and 18.6).
+    #[test]
+    fn kept_tables_are_well_formed() {
+        for (table, dialog) in [(KEPT_IMPORT_OPTIONS, 1037), (KEPT_WORDPERFECT, 1035), (KEPT_WORD, 1036), (KEPT_FILE_LOCATIONS, 1060)] {
+            let mut keys = std::collections::HashSet::new();
+            for k in table {
+                let (section, key) = match *k {
+                    Kept::Flag(_, s, k, _) | Kept::Text(_, s, k, _) | Kept::Hundredths(_, s, k, _) | Kept::Seconds(_, s, k, _) => (s, k),
+                    Kept::Choice(_, s, k, words, items, default) => {
+                        assert!(default < words.len() && words.len() == items.len(), "dialog {dialog}: {s}.{k} words and items");
+                        (s, k)
+                    }
+                    Kept::Radios(_, s, k, words, default) => {
+                        assert!(default < words.len(), "dialog {dialog}: {s}.{k} default past its words");
+                        (s, k)
+                    }
+                };
+                assert!(keys.insert((section, key)), "dialog {dialog}: {section}.{key} listed twice");
+            }
+        }
+        assert!(KEPT_IMPORT_OPTIONS.iter().any(|k| matches!(k, Kept::Choice(23, "Word", "UnknownCharacters", _, _, _))));
+    }
+}
+
+/// A Global option dialog whose settings the standard program keeps between runs: its controls are set from the
+/// kept settings (over the dialog memory, which keeps the other controls while the program runs) and written back
+/// on OK (spec 18 section 18.6).
+fn kept_settings_dialog(id: i32, kept: &[Kept], setup: impl FnOnce(&Dlg)) {
+    let d = open_dialog(id, None);
     setup(&d);
-    if let Some(v) = app::with(|a| a.memory.get(id, key).cloned()) {
+    if let Some(v) = app::with(|a| a.memory.get(id, "").cloned()) {
         d.restore(&v);
     }
-    if d.show() == 1 {
-        let values = d.values();
-        app::with(|a| a.memory.put(id, key, values));
-        Some(d)
-    } else {
-        d.destroy();
-        None
+    for k in kept {
+        k.restore(&d);
     }
+    if d.show() == 1 {
+        for k in kept {
+            k.save(&d);
+        }
+        let values = d.values();
+        app::with(|a| a.memory.put(id, "", values));
+    }
+    d.destroy();
 }
 
 // ------------------------------------------------------------------ editing helpers
@@ -409,13 +609,7 @@ pub fn run(id: i32, checked: bool) {
                 printer_setup(true);
             }
         }
-        3104 => {
-            settings_dialog(1060, "", None, |d| {
-                d.set_checked(10, true);
-                d.set_text(12, "");
-                d.set_text(14, "05:00");
-            });
-        }
+        3104 => kept_settings_dialog(1060, KEPT_FILE_LOCATIONS, |_| {}),
         3105 => default_views(),
         3106 => internationalization(),
         3107 => global_fonts(),
@@ -430,27 +624,14 @@ pub fn run(id: i32, checked: bool) {
             }
         }
         3113 => {
-            settings_dialog(1037, "", None, |d| {
-                d.set_items(7, &["Text Only", "URLs Only", "Both Text and URLs", "Structured Hyperlinks"], Some(0));
-                d.set_items(23, &["Mark with asterisk (*)", "Ignore", "Output Unicode value"], Some(0));
-                d.set_checked(26, true);
+            kept_settings_dialog(1037, KEPT_IMPORT_OPTIONS, |d| {
+                d.set_items(7, HYPERLINK_ITEMS, Some(2));
+                d.set_items(23, UNKNOWN_ITEMS, Some(0));
             });
         }
-        3114 => {
-            settings_dialog(1035, "", None, |d| {
-                d.set_checked(13, true);
-                d.set_text(16, "0.25");
-                d.set_checked(18, true);
-            });
-        }
+        3114 => kept_settings_dialog(1035, KEPT_WORDPERFECT, |_| {}),
         3115 => {
-            settings_dialog(1036, "", None, |d| {
-                d.set_items(
-                    10,
-                    &["Ignore", "Mark from Word document", "Treat hard page breaks as print page breaks", "Use publishers' <ipp no=#> reference page tags"],
-                    Some(0),
-                );
-            });
+            kept_settings_dialog(1036, KEPT_WORD, |d| d.set_items(10, PRINT_PAGE_ITEMS, Some(0)));
         }
         3110 => crate::python_options::dialog(),
         3116 => crate::pdf_options::dialog(),

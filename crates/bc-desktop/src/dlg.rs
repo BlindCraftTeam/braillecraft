@@ -704,6 +704,20 @@ impl Dlg {
         text.filter(|t| !t.is_empty())
     }
 
+    /// Chooses the item with this text (a box may sort its items, so a place in the list given is not its place
+    /// in the box).
+    pub fn select_text(&self, cid: i32, text: &str) {
+        if let Some(w) = self.win(cid) {
+            if let Some(l) = w.as_widget::<ListBox>() {
+                l.set_string_selection(text, true);
+            } else if let Some(c) = w.as_widget::<Choice>() {
+                if let Some(at) = (0..c.get_count()).find(|n| c.get_string(*n).as_deref() == Some(text)) {
+                    c.set_selection(at);
+                }
+            }
+        }
+    }
+
     pub fn select(&self, cid: i32, index: u32) {
         if let Some(w) = self.win(cid) {
             if let Some(l) = w.as_widget::<ListBox>() {

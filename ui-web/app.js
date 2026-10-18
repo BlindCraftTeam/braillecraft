@@ -1063,6 +1063,131 @@ function focusFirst(container) {
 // Dialog `rid` shown modally: `setup` fills it, `onOk` checks it. With `memory`, the values chosen last are put back
 // after `setup` and kept on OK, as the desktop program's settings dialogs do. Answers how it was closed and its
 // helpers.
+// Dialog controls whose values the standard program keeps between runs as settings (spec 18 section 18.6): per
+// dialog, [kind, control id, "Section.Key", words, default]. A flag is written "yes" or "no"; a choice (a combo box)
+// and radios (ids from the given one on, one per word) are written as the word at the chosen index; text as typed;
+// hundredths is a number shown with two decimals and kept in hundredths (the WordPerfect indent); seconds is shown as
+// mm:ss (the autosave time). The defaults are the settings descriptor table's (spec 18 section 18.2b).
+const KEPT_SETTINGS = {
+  1037: [
+    ["choice", 7, "Hyperlinks.Action", ["url", "text", "both", "hyper"], 2],
+    ["flag", 8, "Hyperlinks.RemoveDuplicates", null, true],
+    ["flag", 19, "Hyperlinks.AutoTagCBC", null, true],
+    ["flag", 20, "ImportOptions.AddSpaces", null, false],
+    ["flag", 21, "ImportOptions.RemoveDashSpaces", null, false],
+    ["choice", 23, "Word.UnknownCharacters", ["ignore", "asterisc", "hex"], 0],
+    ["flag", 24, "Word.HanScriptAuto", null, true],
+    ["radios", 26, "Word.HanScriptLanguage", ["Mandarin", "Cantonese", "Japanese", "Korean", "Zhuyin"], 0],
+  ],
+  1035: [
+    ["flag", 6, "WordPerfect.CBCForCourier", null, false],
+    ["flag", 7, "WordPerfect.PreserveHardPageBreaks", null, true],
+    ["flag", 8, "WordPerfect.CompressSkippedLines", null, true],
+    ["flag", 9, "WordPerfect.MarkPrintPageBreaks", null, false],
+    ["radios", 11, "WordPerfect.ParagraphStyle", ["None", "SkipLine", "NewlineTag", "SkipAndTag"], 1],
+    ["hundredths", 16, "Wordperfect.Indent", null, 25],
+    ["radios", 18, "WordPerfect.Units", ["Inches", "Centimeters"], 0],
+  ],
+  // The UEB typeform mappings (controls 20 to 36) stay in the dialog memory: the standard program keeps them under
+  // no key the descriptor table names.
+  1036: [
+    ["flag", 6, "Word.CBC", null, false],
+    ["flag", 7, "Word.PreserveHardPageBreaks", null, true],
+    ["flag", 8, "Word.PreserveSkippedLines", null, false],
+    ["choice", 10, "Word.PrintPages", ["None", "Internal", "Scanned", "Publishers"], 0],
+    ["flag", 11, "Word.BrailleFonts", null, false],
+    ["flag", 12, "Word.AllowEmbeddedCodes", null, true],
+    ["flag", 14, "Word.IgnoreBold", null, false],
+    ["flag", 15, "Word.IgnoreItalics", null, false],
+    ["flag", 16, "Word.IgnoreUnderline", null, false],
+    ["flag", 17, "Word.IgnoreLanguageSwitches", null, true],
+  ],
+  // The autosaved file location's default folder is made when autosave is built (plan line B2).
+  1060: [
+    ["text", 7, "AutoSave.openPath", null, ""],
+    ["text", 9, "AutoSave.savePath", null, ""],
+    ["flag", 10, "AutoSave.Enabled", null, true],
+    ["text", 12, "AutoSave.path", null, ""],
+    ["seconds", 14, "AutoSave.Time", null, 300],
+  ],
+};
+
+const two = (n) => String(n).padStart(2, "0");
+
+// The dialog's controls set from the kept settings, or their defaults.
+function restoreKept(d, kept) {
+  const word = (key, words, dflt) => {
+    const v = (store.get(key) ?? "").trim().toLowerCase();
+    const i = words.findIndex((w) => w.toLowerCase() === v);
+    return i >= 0 ? i : dflt;
+  };
+  for (const [kind, id, key, words, dflt] of kept) {
+    const v = store.get(key);
+    switch (kind) {
+      case "flag":
+        d.setChecked(id, v === null ? dflt : v.trim().toLowerCase() === "yes");
+        break;
+      case "choice": {
+        const s = d.get(id);
+        if (s) s.selectedIndex = word(key, words, dflt);
+        break;
+      }
+      case "radios":
+        d.setRadio(words.map((_, k) => id + k), word(key, words, dflt));
+        break;
+      case "text":
+        d.setText(id, v ?? dflt);
+        break;
+      case "hundredths": {
+        const n = v !== null && /^-?\d+$/.test(v.trim()) ? Number(v) : dflt;
+        d.setText(id, `${Math.trunc(n / 100)}.${two(Math.abs(n % 100))}`);
+        break;
+      }
+      case "seconds": {
+        const s = Math.max(v !== null && /^\d+$/.test(v.trim()) ? Number(v) : dflt, 0);
+        d.setText(id, `${two(Math.trunc(s / 60))}:${two(s % 60)}`);
+        break;
+      }
+    }
+  }
+}
+
+// The dialog's controls written to the kept settings (on OK).
+function saveKept(d, kept) {
+  for (const [kind, id, key, words, dflt] of kept) {
+    switch (kind) {
+      case "flag":
+        store.set(key, d.checked(id) ? "yes" : "no");
+        break;
+      case "choice": {
+        const i = d.get(id)?.selectedIndex ?? -1;
+        store.set(key, words[i >= 0 && i < words.length ? i : dflt]);
+        break;
+      }
+      case "radios": {
+        const i = d.radio(words.map((_, k) => id + k));
+        store.set(key, words[i ?? dflt]);
+        break;
+      }
+      case "text":
+        store.set(key, d.text(id));
+        break;
+      case "hundredths": {
+        const x = Number(d.text(id).trim());
+        store.set(key, String(Number.isFinite(x) && d.text(id).trim() !== "" ? Math.round(x * 100) : dflt));
+        break;
+      }
+      case "seconds": {
+        const t = d.text(id).trim();
+        const m = /^(\d+):(\d+)$/.exec(t);
+        const s = m ? Number(m[1]) * 60 + Number(m[2]) : /^\d+$/.test(t) ? Number(t) : dflt;
+        store.set(key, String(Math.max(s, 0)));
+        break;
+      }
+    }
+  }
+}
+
 async function showDialog(rid, { title, setup, onOk, memory, after, closes = [] } = {}) {
   const { dialog, form } = newDialog(title ?? DIALOGS[rid].title, `dlg${rid}`);
   const { controls, keys } = buildControls(rid, form);
@@ -1075,10 +1200,14 @@ async function showDialog(rid, { title, setup, onOk, memory, after, closes = [] 
   const closed = closedPromise(dialog);
   setup?.(d);
   if (memory !== undefined) d.restore(store.json(`dialog.${rid}.${memory}`, null));
+  // The settings the standard program keeps between runs, over the dialog memory (spec 18 section 18.6).
+  const kept = KEPT_SETTINGS[rid];
+  if (kept) restoreKept(d, kept);
   after?.(d);
   dialog.showModal();
   focusFirst(form);
   const result = await closed;
+  if (result === "ok" && kept) saveKept(d, kept);
   if (result === "ok" && memory !== undefined) store.set(`dialog.${rid}.${memory}`, JSON.stringify(d.values()));
   return { result, d };
 }
@@ -4532,7 +4661,7 @@ const COMMANDS = {
     ),
   3101: async () => (await onceNotice("GlobalEmbosserWarning", GLOBAL_EMBOSSER_WARNING)) && embosserSetup(true),
   3102: async () => (await onceNotice("GlobalPrinterWarning", GLOBAL_PRINTER_WARNING)) && printerSetup(true),
-  3104: () => showDialog(1060, { memory: "", setup: (d) => (d.setChecked(10, true), d.setText(12, ""), d.setText(14, "05:00")) }),
+  3104: () => showDialog(1060, { memory: "" }),
   3105: defaultViews,
   3106: internationalization,
   3107: globalFonts,
@@ -4543,12 +4672,11 @@ const COMMANDS = {
     showDialog(1037, {
       memory: "",
       setup(d) {
-        d.setItems(7, ["Text Only", "URLs Only", "Both Text and URLs", "Structured Hyperlinks"], 0);
+        d.setItems(7, ["Text Only", "URLs Only", "Both Text and URLs", "Structured Hyperlinks"], 2);
         d.setItems(23, ["Mark with asterisk (*)", "Ignore", "Output Unicode value"], 0);
-        d.setChecked(26, true);
       },
     }),
-  3114: () => showDialog(1035, { memory: "", setup: (d) => (d.setChecked(13, true), d.setText(16, "0.25"), d.setChecked(18, true)) }),
+  3114: () => showDialog(1035, { memory: "" }),
   3115: () =>
     showDialog(1036, {
       memory: "",

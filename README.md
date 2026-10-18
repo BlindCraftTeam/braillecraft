@@ -108,7 +108,9 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   (.md, .markdown) are imported too (a BrailleCraft addition): the Markdown becomes HTML and goes through the HTML
   import steps, so headings become heading styles, paragraphs and lists their styles, emphasis and strong the
   emphasis codes, inline code the computer-notation style, and links their text with the URL as the Import Options
-  hyperlink setting says. The web build opens files
+  hyperlink setting says. The Global, Import Options, Word Importer, WordPerfect Importer and File Locations
+  dialogs keep their answers between runs, under the standard program's own setting names, and open with the
+  standard defaults the first time. The web build opens files
   the same way, through the same import dialog and import steps, with its settings kept in the browser.
 - **Translated line.** Under the document, the braille (or the print) of the line you are on, updated as you write.
 - **View preferences.** A margin bell a chosen number of cells before the end of a braille line, which codes the
