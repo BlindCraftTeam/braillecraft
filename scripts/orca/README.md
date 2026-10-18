@@ -17,7 +17,10 @@ sh /opt/braillecraft/orca/install.sh
 program). It copies the script to `~/.local/share/orca/orca-scripts/braillecraft-desktop`. Then restart Orca.
 
 Orca 51 and later no longer look there; they load user extensions from `~/.local/share/orca/extensions` after the
-user approves them. A BrailleCraft extension for those versions is a separate item of the plan.
+user approves them. The `extension/braillecraft` folder is the BrailleCraft extension for those versions, with the
+same keys and behaviour through Orca's extension interface; `install.sh` installs it instead of the script when it
+finds Orca 51 or later, and approves it (`orca --approve-extension braillecraft`). Its choices (what up and down
+speak in a braille document, cell names, announcements) are on Orca's User Extensions preferences page.
 
 ## The keys, each with Alt, in a BrailleCraft document window
 

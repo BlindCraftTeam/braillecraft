@@ -215,8 +215,9 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   VoiceOver counterpart. On Linux an Orca script comes in the `orca` folder of the program (`/opt/braillecraft/orca`
   from the .deb or .rpm): run `sh install.sh` there as the user who runs Orca, restart Orca, and the Alt keys of the
   JAWS scripts work in BrailleCraft, braille documents are read as braille cell names, and contracted braille is off
-  while a braille document's editing area has focus; it covers Orca 45 to 50 (Orca 51 and later load user extensions
-  instead, a separate item). The scripts are for the desktop program; the web build has none.
+  while a braille document's editing area has focus. The script serves Orca 45 to 50; for Orca 51 and later the same
+  folder holds a BrailleCraft user extension with the same keys and behaviour, which the installer puts in place and
+  approves instead. The scripts are for the desktop program; the web build has none.
 - **Braille displays.** A braille document's cells reach a display exactly, not as a translation of the ASCII
   letters. With JAWS the scripts turn Grade 2 translation and 8-dot braille off while a braille document is in
   front; the NVDA add-on switches the braille output table to 6-dot computer braille
