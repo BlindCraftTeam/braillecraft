@@ -20,7 +20,7 @@ appdir=$stage/BrailleCraft.AppDir
 install -d "$appdir/usr/bin" "$appdir/usr/share/braillecraft" "$appdir/usr/share/applications" \
   "$appdir/usr/share/icons/hicolor/256x256/apps"
 install -m 755 "$dist/braillecraft-desktop" "$appdir/usr/bin/braillecraft-desktop"
-for d in fonts tables templates embossers; do
+for d in fonts tables templates embossers orca; do
   cp -r "$dist/$d" "$appdir/usr/share/braillecraft/$d"
 done
 # The licences and notices (MIT or Apache-2.0, NOTICE).

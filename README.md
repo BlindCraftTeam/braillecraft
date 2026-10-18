@@ -199,7 +199,11 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   word on the line and T the table entry (End and the arrows are not commander keys), and H lists the keys. VoiceOver
   has no hook for caret moves, typing or the program's own keys, so the braille-cell reading of lines and characters,
   the Alt+U, I, P and W choices and the state announcements after F2, Alt+F3, Control+F8 and Control+H have no
-  VoiceOver counterpart. The scripts are for the desktop program; the web build has none.
+  VoiceOver counterpart. On Linux an Orca script comes in the `orca` folder of the program (`/opt/braillecraft/orca`
+  from the .deb or .rpm): run `sh install.sh` there as the user who runs Orca, restart Orca, and the Alt keys of the
+  JAWS scripts work in BrailleCraft, braille documents are read as braille cell names, and contracted braille is off
+  while a braille document's editing area has focus; it covers Orca 45 to 50 (Orca 51 and later load user extensions
+  instead, a separate item). The scripts are for the desktop program; the web build has none.
 - **Braille displays.** A braille document's cells reach a display exactly, not as a translation of the ASCII
   letters. With JAWS the scripts turn Grade 2 translation and 8-dot braille off while a braille document is in
   front, as the original's scripts do; the NVDA add-on switches the braille output table to 6-dot computer braille
@@ -278,6 +282,7 @@ step does. The installers are made by the scripts in `packaging` (WiX 5 on Windo
 | `scripts/jaws` | The JAWS scripts. |
 | `scripts/nvda` | The NVDA add-on (packed by `tools/nvda/make_addon.py`). |
 | `scripts/voiceover` | The VoiceOver scripts for macOS (compiled, with `BrailleCraft.voprefs`, by `tools/voiceover/build.py`). |
+| `scripts/orca` | The Orca script for Linux, with its installer. |
 | `packaging` | Icons and the installers for Windows, macOS and Linux. |
 | `tools` | The generators for menus, dialogs, fonts, icons, templates, language lists and the web tables. |
 | `vendor/wxdragon-sys` | wxDragon's wxWidgets binding with what BrailleCraft needs added: printing, the drawn editing window with its text for screen readers on each system (UI Automation, the macOS accessibility interface, ATK), the Cursor Locator, and About box texts a screen reader reaches by Tab. The list is in `CHANGES-BrailleCraft.txt`. |

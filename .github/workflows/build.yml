@@ -81,6 +81,8 @@ jobs:
           cp -r scripts/jaws dist/BrailleCraft/jaws
           # The NVDA add-on (scripts/nvda) packed as one .nvda-addon file, its Python compiled on the way.
           python3 tools/nvda/make_addon.py dist/BrailleCraft/nvda
+          # The Orca script with its installer and notes (scripts/orca).
+          cp -r scripts/orca dist/BrailleCraft/orca
           cp LICENSE-MIT LICENSE-APACHE NOTICE dist/BrailleCraft/
 
       - uses: actions/upload-artifact@v7
