@@ -54,8 +54,3 @@ an FTDI USB device; it is FTDI's own software under FTDI's license.
 The braille fonts (BrailleCraft Braille and BrailleCraft SimBraille, every encoding) are drawn by
 tools/fonts and are part of BrailleCraft under the license above. The translation tables in tables/
 and the data in crates/bc-desktop/data are part of BrailleCraft under the license above.
-
-crates/bc-louis holds liblouis (https://liblouis.io/), licensed under the GNU Lesser General Public
-License, version 2.1 or later; its tables keep their own notices. It is used only by crates/bc-shell,
-an earlier interface, and is not part of the BrailleCraft desktop or web programs. The changes made
-to it are listed in crates/bc-louis/vendor/CHANGES-BrailleCraft.txt.

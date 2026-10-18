@@ -300,7 +300,6 @@ step does. The installers are made by the scripts in `packaging` (WiX 5 on Windo
 | `tools` | The generators for menus, dialogs, fonts, icons, templates, language lists and the web tables. |
 | `vendor/wxdragon-sys` | wxDragon's wxWidgets binding with what BrailleCraft needs added: printing, the drawn editing window with its text for screen readers on each system (UI Automation, the macOS accessibility interface, ATK), the Cursor Locator, and About box texts a screen reader reaches by Tab. The list is in `CHANGES-BrailleCraft.txt`. |
 | `vendor/pdf-extract` | The PDF text reader, with marked content, font descent and figures reported for PDF import. The list is in `CHANGES-BrailleCraft.txt`. |
-| `crates/bc-shell`, `crates/bc-louis`, `ui` | An earlier desktop shell (Tauri) and its liblouis binding; not part of the downloads. |
 | `.github/workflows/build.yml` | Builds, tests and packages everything on every push to main. |
 
 ## Notes

@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/bc-core", "crates/bc-louis", "crates/bc-shell", "crates/bc-desktop", "crates/bc-web"]
+members = ["crates/bc-core", "crates/bc-desktop", "crates/bc-web"]
 exclude = ["vendor"]
 
 [workspace.package]
