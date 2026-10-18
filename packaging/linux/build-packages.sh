@@ -77,6 +77,7 @@ cp -a $root/. %{buildroot}/
 %files
 /opt/braillecraft
 /usr/bin/braillecraft
+/usr/bin/braillecraft-cli
 /usr/share/applications/braillecraft.desktop
 /usr/share/mime/packages/braillecraft.xml
 /usr/share/fonts/truetype/braillecraft
