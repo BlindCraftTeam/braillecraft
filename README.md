@@ -139,7 +139,7 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   Table (None, Dashes, Dashes and Hyphens, French, French 113; the tables ship as data): at a break marked in the
   text, after or before a dash, after an internal hyphen, or (French, in braille documents) at a syllable break the
   table's automaton finds, with a hyphen inserted; a word longer than a whole line with no break point gets a hyphen after the last
-  cell that leaves room for it, as the standard program does; a computer braille word ([wb-cb]) breaks after punctuation and carries the continuation sign. Change Case works on the word at the caret when nothing is selected, and steps
+  cell that leaves room for it, as the standard program does; computer braille ([wb-cb], in force until [wb]) looks ahead as the standard program does: a word goes whole on the line, ends the line with a space and the continuation sign when the next computer braille word cannot follow it, moves whole to the next line, or breaks after punctuation with the continuation sign. Change Case works on the word at the caret when nothing is selected, and steps
   lower case to a capital on each word to upper case and back. Six-key entry (F2) works in print documents too. Goto checks its numbers in the dialog,
   offers the closest location when a place has no text, and goes to a print page with Use reference page number. Add Style
   checks the name in the dialog, then opens Edit Style Codes for the codes, and a style that cannot be nested gets

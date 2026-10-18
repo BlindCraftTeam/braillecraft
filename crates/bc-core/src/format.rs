@@ -308,6 +308,142 @@ struct Note {
     end: usize,
 }
 
+/// What follows a [wb-cb] word (spec 36 section 15): whether a space ended it, the mode at its end, and the items after
+/// it (words with their cells and modes, then the code that ends the run).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+struct CbAhead {
+    ended_space: bool,
+    end_mode: u8,
+    items: Vec<CbItem>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+struct CbItem {
+    word: bool,
+    start_mode: u8,
+    end_mode: u8,
+    ended_space: bool,
+    cells: Vec<(char, Option<usize>)>,
+}
+
+/// The [wb-cb] look-ahead of the standard program (spec 36 section 15.6): what to do with word `w` (0 the word being
+/// laid out, k the item k - 1 after it) at pen `pen` in `room`, with `next_room` the room of a following line and `c`
+/// the continuation string's length. 1 lay it whole, 2 lay it whole then a space and the continuation string, 3 and 5
+/// end the line first, 4 split it (the first part's length beside).
+#[allow(clippy::too_many_arguments)]
+fn cb_look(
+    cur: &CbItem,
+    items: &[CbItem],
+    w: usize,
+    room: i64,
+    pen: i64,
+    next_room: i64,
+    c: i64,
+    memo: &mut std::collections::HashMap<(usize, i64, i64), (u8, i64)>,
+) -> (u8, i64) {
+    if let Some(&r) = memo.get(&(w, room, pen)) {
+        return r;
+    }
+    let n = cur.cells.len() as i64;
+    let sp = i64::from(pen > 0);
+    let avail = room - pen - sp;
+    let r = 'r: {
+        if n <= avail && (!cur.ended_space || cur.end_mode != 2) {
+            break 'r (1, 0);
+        }
+        let next = items.get(w);
+        let next_cb = next.is_some_and(|x| x.word && x.start_mode == 2);
+        if n <= avail {
+            let Some(nx) = next.filter(|_| next_cb) else { break 'r (1, 0) };
+            if n + nx.cells.len() as i64 + 2 + c <= avail {
+                break 'r (1, 0);
+            }
+            if matches!(cb_look(nx, items, w + 1, room, pen + sp + n, next_room, c, memo).0, 1 | 2 | 4) {
+                break 'r (1, 0);
+            }
+        }
+        if n + 1 + c <= avail && cur.ended_space && cur.end_mode == 2 && next_cb {
+            let nx = &items[w];
+            if matches!(cb_look(nx, items, w + 1, room, pen + sp + n + 1 + c, next_room, c, memo).0, 3 | 5) {
+                break 'r (2, 0);
+            }
+        }
+        if pen > 0 {
+            let r = cb_look(cur, items, w, next_room, 0, next_room, c, memo);
+            if matches!(r.0, 1 | 2) {
+                break 'r (3, r.1);
+            }
+        }
+        let b = crate::hyphen::cb_split(&cur.cells, (avail - c).max(0) as usize);
+        if b > 0 && n - b + 1 + c <= next_room {
+            break 'r (4, b);
+        }
+        if pen == 0 {
+            break 'r (4, if b < 0 { -b } else if b == 0 { avail - c } else { b });
+        }
+        (5, crate::hyphen::cb_split(&cur.cells, (next_room - c).max(0) as usize).abs())
+    };
+    memo.insert((w, room, pen), r);
+    r
+}
+
+/// The word-break mode a [wb...] code sets (spec 36 section 3): [wb-no] 1, [wb-cb] 2 (1 on a line narrower than
+/// five cells), [wb] 0.
+fn wb_mode(code: &str, cells: usize) -> Option<u8> {
+    match code {
+        "wb-no" => Some(1),
+        "wb-cb" => Some(if cells < 5 { 1 } else { 2 }),
+        c if c.starts_with("wb") => Some(0),
+        _ => None,
+    }
+}
+
+/// What follows a [wb-cb] word ended at piece `at` (spec 36 section 15): the run of items after it, each read as the
+/// standard program's item reader reads it (a space ends a word, a word-break code changes the mode, another code
+/// ends the word or is an item of its own), up to the first item that is not a [wb-cb] word.
+fn cb_scan(pieces: &Pieces, at: usize, mode: u8, cells_per_line: usize) -> CbAhead {
+    let ended_space = matches!(pieces.get(at), Piece::Space);
+    let mut i = if ended_space { at + 1 } else { at };
+    let mut running = mode;
+    let mut items = Vec::new();
+    while items.len() < 16 && i < pieces.len() {
+        let mut item = CbItem { word: true, start_mode: running, ..Default::default() };
+        while i < pieces.len() {
+            match pieces.get(i) {
+                Piece::Space if item.cells.is_empty() => {}
+                Piece::Space => {
+                    item.ended_space = true;
+                    i += 1;
+                    break;
+                }
+                Piece::Char(ch, place) => item.cells.push((if ch == '\u{a0}' { ' ' } else { ch }, Some(place))),
+                Piece::Mark(_) | Piece::Break => {}
+                Piece::Code(code) => {
+                    if let Some(m) = wb_mode(&code, cells_per_line) {
+                        if item.cells.is_empty() {
+                            item.start_mode = m;
+                        }
+                        running = m;
+                    } else if code != ":" && code != ";" {
+                        if item.cells.is_empty() {
+                            item.word = false;
+                        }
+                        break;
+                    }
+                }
+            }
+            i += 1;
+        }
+        item.end_mode = running;
+        let go_on = item.word && item.start_mode == 2 && !item.cells.is_empty();
+        items.push(item);
+        if !go_on {
+            break;
+        }
+    }
+    CbAhead { ended_space, end_mode: mode, items }
+}
+
 /// A reference point ([rpsN] ... [rpe]): the document places of its two codes, N, and the braille page number and
 /// print page number of its first word and of its last.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -1051,6 +1187,10 @@ struct Formatter {
     /// the word being ended (spec 36 section 13): with a right margin of 6 that word's room is its length and one.
     mfc_met: bool,
     next_right_word: Option<usize>,
+    /// The word-break mode in force (0 [wb], 1 [wb-no], 2 [wb-cb]; a word takes the mode at its first cell, spec 36
+    /// section 3), and for a [wb-cb] word being ended what follows it (spec 36 section 15).
+    wb_running: u8,
+    cb_ahead: Option<CbAhead>,
     /// [wlf~X] (spec 19 section 10.10): the line being filled is a whole-line fill: its style's fill cell, its left,
     /// centre and right fields, and the columns [>] marked on it (two at most).
     fill: Option<(char, [bool; 3], Vec<i64>)>,
@@ -1202,6 +1342,8 @@ impl Formatter {
             mfc_levels: 1,
             mfc_met: false,
             next_right_word: None,
+            wb_running: 0,
+            cb_ahead: None,
             fill: None,
             notes: Vec::new(),
             placing: None,
@@ -1513,7 +1655,11 @@ impl Formatter {
     /// The page number as the settings make it now (spec 19 section 8.1): the prefix, then the number sign and the digits,
     /// or the roman indicator (twice before a numeral of more than one letter with [svgrn1]) and the numeral.
     fn page_number_text(&self) -> String {
-        let n = self.counter;
+        self.number_text_for(self.counter)
+    }
+
+    /// Page number `n` as the settings make it (page_number_text).
+    fn number_text_for(&self, n: usize) -> String {
         let mut s: String = self.prefix.into_iter().collect();
         if self.roman {
             let numeral = roman_numeral(n);
@@ -2396,14 +2542,16 @@ impl Formatter {
         let col = if has_text { used } else { self.start_col.max(used).max(self.rooms().0) };
         let mut placed = 0usize;
         let mut k = 0usize;
+        // A [wb-cb] word goes through the look-ahead before the fit test, as in the standard program (0xdd4235).
+        if word_break == 2 {
+            self.computer_braille_word(cells, gap, used, col);
+            return;
+        }
+        self.cb_ahead = None;
         if col + gap + n <= width {
             self.put_piece(&cells, 0, n, &mut k, gap, used, col);
             self.place_word_marks(k, self.line.text.chars().count());
             self.touching = false;
-            return;
-        }
-        if word_break == 2 {
-            self.computer_braille_word(cells, gap, used, col);
             return;
         }
         if word_break == 0 {
@@ -2491,50 +2639,61 @@ impl Formatter {
         }
     }
 
-    /// A [wb-cb] word that does not fit (spec 36 section 6): broken after the last punctuation cell past the third
-    /// within the room less the continuation string, else at that room; the continuation string follows the first
-    /// part; the remainder goes on from the runover margin. INFERENCE: the standard program first looks ahead to the next
-    /// computer-braille word and may join or move the whole word (its five cases are not traced, spec 36 unknown
-    /// 10); here the word is placed whole when it fits, else split.
+    /// A [wb-cb] word (spec 36 sections 6, 14, 15): the look-ahead decides whether it goes whole on this line, whole
+    /// with a space and the continuation string after it (the next computer-braille word then starts the next
+    /// line), on the next line, or split with the continuation string after the first part.
     fn computer_braille_word(&mut self, cells: Vec<(char, Option<usize>)>, gap: usize, used: usize, col: usize) {
+        let ahead = self.cb_ahead.take().unwrap_or_default();
+        let cont = self.cb_cont.clone();
+        let c = cont.chars().count() as i64;
         let mut rest: &[(char, Option<usize>)] = &cells;
         let mut k = 0usize;
         let (mut gap, mut used, mut col) = (gap, used, col);
         loop {
             let width = self.width();
             let n = rest.len();
-            if col + gap + n <= width {
-                self.put_piece(rest, 0, n, &mut k, gap, used, col);
-                break;
-            }
-            let cont = self.cb_cont.clone();
-            let room = width.saturating_sub(col).saturating_sub(cont.chars().count());
-            let mut count = room.min(n);
-            let split = crate::hyphen::cb_split(rest, room).unsigned_abs() as usize;
-            if split > 0 && split < count {
-                count = split;
-            }
-            if count == 0 && self.line_has_text() {
-                self.touching = false;
-                self.end_line(self.runover());
-                used = self.line.text.chars().count();
-                col = self.start_col.max(used).max(self.rooms().0);
-                gap = 0;
-                continue;
-            }
-            let count = count.max(1).min(n);
-            self.put_piece(rest, 0, count, &mut k, gap, used, col);
-            for c in cont.chars() {
-                if self.line.text.chars().count() < width {
-                    self.put(c, None);
+            let (room, pen) = if gap > 0 { (width as i64 + 1, col as i64 + 1) } else { (width as i64 - col as i64, 0) };
+            let next_room = self.next_line_room() as i64;
+            let cur = CbItem { word: true, start_mode: 2, end_mode: ahead.end_mode, ended_space: ahead.ended_space, cells: rest.to_vec() };
+            let (r, split) = cb_look(&cur, &ahead.items, 0, room, pen, next_room, c, &mut std::collections::HashMap::new());
+            match r {
+                1 | 2 => {
+                    self.put_piece(rest, 0, n, &mut k, gap, used, col);
+                    if r == 2 {
+                        // The space that ended the word, then the continuation string; the line goes on.
+                        for ch in std::iter::once(' ').chain(cont.chars()) {
+                            if self.line.text.chars().count() < self.layout.cells {
+                                self.put(ch, None);
+                            }
+                        }
+                    }
+                    break;
+                }
+                3 | 5 if self.line_has_text() => {
+                    self.touching = false;
+                    self.end_line(self.runover());
+                }
+                _ => {
+                    let most = (width as i64 - c - col as i64).clamp(0, n as i64);
+                    let mut count = if split > 0 && split < most { split } else { most } as usize;
+                    if count == 0 && !self.line_has_text() {
+                        count = 1;
+                    }
+                    let count = count.min(n);
+                    self.put_piece(rest, 0, count, &mut k, gap, used, col);
+                    for ch in cont.chars() {
+                        if self.line.text.chars().count() < self.layout.cells {
+                            self.put(ch, None);
+                        }
+                    }
+                    rest = &rest[count..];
+                    self.touching = false;
+                    self.end_line(self.runover());
+                    if rest.is_empty() {
+                        break;
+                    }
                 }
             }
-            rest = &rest[count..];
-            if rest.is_empty() {
-                break;
-            }
-            self.touching = false;
-            self.end_line(self.runover());
             used = self.line.text.chars().count();
             col = self.start_col.max(used).max(self.rooms().0);
             gap = 0;
@@ -2542,6 +2701,49 @@ impl Formatter {
         let at = self.line.text.chars().count();
         self.place_word_marks(k, at);
         self.touching = false;
+    }
+
+    /// The room of the next line as the standard program foresees it (spec 36 section 15.3): the line
+    /// width less the wider of the right margin and a page number's room at the right, and less the wider of the
+    /// runover margin and a page number's room at the left, at least 1. The page numbers count on the page's last
+    /// line, or on the first line of the next page when the next line is there (its number one more, its side the
+    /// other).
+    fn next_line_room(&self) -> usize {
+        let at = self.page.len() + 1;
+        let (mut left, mut right) = (self.runover(), self.right.max(self.number_room));
+        let mut take = |c: Corner, text: Option<String>, top: bool| {
+            let Some(text) = text else { return };
+            if (top && c.top()) || (!top && c.bottom()) {
+                let room = text.chars().count() + 3;
+                if c.right() {
+                    right = right.max(room);
+                } else {
+                    left = left.max(room);
+                }
+            }
+        };
+        if at < self.capacity() {
+            if at + 1 == self.usable() {
+                take(self.corner(), Some(self.number_text()), false);
+                take(self.print_corner(), self.page_print.clone(), false);
+            }
+        } else {
+            let counter = self.next_counter.unwrap_or(self.counter + 1);
+            let odd = !self.odd;
+            let corner = if counter < self.first_number_shown {
+                Corner::None
+            } else if odd {
+                self.numbers_odd
+            } else {
+                self.numbers_even
+            };
+            take(corner, Some(self.number_text_for(counter)), true);
+            let print = if odd { self.print_odd } else { self.print_even };
+            if self.print_number.is_some() && print != corner {
+                take(print, self.print_text(), true);
+            }
+        }
+        self.layout.cells.saturating_sub(right).saturating_sub(left).max(1)
     }
 
     fn code(&mut self, code: &str) {
@@ -3352,7 +3554,13 @@ impl Formatter {
             return;
         }
         match p {
-            Piece::Char(c, at) => word.push((if *c == '\u{a0}' { ' ' } else { *c }, Some(*at))),
+            Piece::Char(c, at) => {
+                // A word takes the word-break mode in force at its first cell.
+                if word.is_empty() {
+                    self.word_break = self.wb_running;
+                }
+                word.push((if *c == '\u{a0}' { ' ' } else { *c }, Some(*at)))
+            }
             Piece::Space => {
                 if !word.is_empty() {
                     self.word(&std::mem::take(word));
@@ -3369,13 +3577,13 @@ impl Formatter {
                     self.word(&std::mem::take(word));
                     self.touching = true;
                 }
-                // The word break mode of the word in progress: [wb-no] none, [wb-cb] computer braille (as [wb-no]
-                // on a line narrower than five cells), [wb] normal.
-                match code.as_str() {
-                    "wb-no" => self.word_break = 1,
-                    "wb-cb" => self.word_break = if self.layout.cells < 5 { 1 } else { 2 },
-                    c if c.starts_with("wb") => self.word_break = 0,
-                    _ => {}
+                // The word-break mode in force from here: [wb-no] none, [wb-cb] computer braille (as [wb-no] on a
+                // line narrower than five cells), [wb] normal; before a word's first cell it is that word's mode too.
+                if let Some(m) = wb_mode(code, self.layout.cells) {
+                    self.wb_running = m;
+                    if word.is_empty() {
+                        self.word_break = m;
+                    }
                 }
                 if is_layout(code) {
                     self.code(code);
@@ -3485,6 +3693,16 @@ impl Formatter {
             self.piece_at = i;
             if self.mfc_met && !word.is_empty() && matches!(piece, Piece::Space | Piece::Code(_)) {
                 self.next_right_word = right_word_after(pieces, i);
+            }
+            if self.word_break == 2 && !word.is_empty() {
+                let ends = match &piece {
+                    Piece::Space => true,
+                    Piece::Code(c) => !(c == ":" || c == ";" || ["wb", "vss", "vse", "fts~", "fte~"].iter().any(|w| c.starts_with(w))),
+                    _ => false,
+                };
+                if ends {
+                    self.cb_ahead = Some(cb_scan(pieces, i, self.wb_running, self.layout.cells));
+                }
             }
             self.step(&piece, &mut word);
             if std::mem::take(&mut self.keep_opened) {
@@ -4642,6 +4860,22 @@ mod tests {
         assert_eq!(texts(&pages[0])[0], "aaaa bbbb ccc dd  12");
         let pages = format(&m("[rm6]aaaa bbbb ccc dd[fr]12"), &l, None);
         assert_eq!(texts(&pages[0])[..2], ["aaaa bbbb ccc", "dd                12"]);
+    }
+
+    #[test]
+    fn computer_braille_words_look_ahead() {
+        let l = Layout::braille(20, 6);
+        let two = |doc: &str| {
+            let pages = format(&m(doc), &l, None);
+            texts(&pages[0])[..2].iter().map(|t| t.to_string()).collect::<Vec<_>>()
+        };
+        // The worked example of spec 36 section 15.7: B cannot be followed by D on its line, so B ends the line with a
+        // space and the continuation string; [wb-cb] stays in force until [wb].
+        assert_eq!(two("[wb-cb]AAAAAAAA BBBBBB DDDDDDDDDD[wb] e"), ["AAAAAAAA BBBBBB _&", "DDDDDDDDDD e"]);
+        // Split after the last punctuation that leaves the rest room on the next line.
+        assert_eq!(two("[wb-cb]www.example.com/path/to/a/page[wb]"), ["www.example.com/_&", "path/to/a/page"]);
+        // Whole on the next line when it fits there.
+        assert_eq!(two("xxxxxxxxxxxx [wb-cb]abcdefghijklmno"), ["xxxxxxxxxxxx", "abcdefghijklmno"]);
     }
 
     #[test]
