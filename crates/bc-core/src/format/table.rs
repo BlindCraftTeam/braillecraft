@@ -185,6 +185,13 @@ fn options(set: i64, braille: bool) -> Options {
     }
 }
 
+/// An item of a table caption: a word and whether a space follows it, or an [l] line break.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Caption {
+    Word(Vec<(char, Option<usize>)>, bool),
+    Line,
+}
+
 /// A page image of the table: its lines as cells with their document places, the places with no cell (markers),
 /// and its depth.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -242,6 +249,10 @@ pub struct Collector {
     /// a code (the mark after it is that code's); and a mark that followed text or a space, which a line-break
     /// code right after it takes as its place.
     pending_codes: Vec<String>,
+    /// The caption ([htbcs] ... [htbce], spec 35 section 11): its words (with whether a space follows) and [l]
+    /// line breaks, drawn at the top of the table's first page; whether one is being collected.
+    caption: Vec<Caption>,
+    in_caption: bool,
     prev_was_code: bool,
     after_mark: Option<usize>,
     kind: u8,
@@ -319,6 +330,8 @@ impl Collector {
             start: 0,
             start_set: false,
             pending_codes: Vec::new(),
+            caption: Vec::new(),
+            in_caption: false,
             // The start code precedes the first piece, so the first mark is the start code's own.
             prev_was_code: true,
             after_mark: None,
@@ -382,6 +395,13 @@ impl Collector {
             }
             Piece::Space => {
                 self.after_mark = None;
+                if self.in_caption {
+                    if !self.word.is_empty() {
+                        let w = std::mem::take(&mut self.word);
+                        self.caption.push(Caption::Word(w, true));
+                    }
+                    return true;
+                }
                 if !self.word.is_empty() {
                     let space = self.last_mark;
                     let mut w = std::mem::take(&mut self.word);
@@ -418,7 +438,11 @@ impl Collector {
             Piece::Code(code) => {
                 if !self.word.is_empty() {
                     let w = std::mem::take(&mut self.word);
-                    self.item(w, None);
+                    if self.in_caption {
+                        self.caption.push(Caption::Word(w, false));
+                    } else {
+                        self.item(w, None);
+                    }
                 }
                 match self.after_mark.take() {
                     Some(pos) => {
@@ -435,6 +459,22 @@ impl Collector {
 
     /// A code at document place `at` (spec 35 3.1): [l], [<], [>] and [htbe] act, every other code is dropped.
     fn apply_code(&mut self, code: &str, at: usize) -> bool {
+        // [htbcs] (pgi 174) starts the caption, [htbce] (175) ends it; inside it [l] breaks the line and other codes
+        // are dropped.
+        if code == "htbcs" {
+            self.in_caption = true;
+            return true;
+        }
+        if code == "htbce" {
+            self.in_caption = false;
+            return true;
+        }
+        if self.in_caption && code != "htbe" {
+            if code == "l" {
+                self.caption.push(Caption::Line);
+            }
+            return true;
+        }
         match code {
             "l" => self.item(Vec::new(), Some(('l', at))),
             "<" => self.item(Vec::new(), Some(('<', at))),
@@ -544,9 +584,10 @@ impl Collector {
         self.set_end(end);
         let result = self.finalize().and_then(|_| {
             if self.images.is_empty() && !self.populate()? {
-                // INFERENCE: the standard program returns from the emit when populate lays no data row; what then shows is
-                // not traced. The text is shown as ordinary text, which loses nothing.
-                return Err("populate laid no row".into());
+                // Populate laid no data row: the emit returns 0, as when it has finished, without emitting a page, and
+                // the formatter goes on after the table's end, so nothing of the table shows (spec 35 section 9,
+                // unknown 2, from the emit's disassembly).
+                self.images.clear();
             }
             Ok(())
         });
@@ -1381,6 +1422,13 @@ impl Collector {
         self.out_row = 0;
         self.discard_pages();
         self.new_image();
+        // The caption at the top of the first page; when it does not fit there and a fuller page follows, on that
+        // page (spec 35 section 11).
+        if !self.draw_caption()? && self.geometry.first_depth < self.geometry.other_depth {
+            self.new_image();
+            self.out_row = 0;
+            self.draw_caption()?;
+        }
         let mut pages = 0;
         loop {
             let more = match self.layout {
@@ -1400,6 +1448,63 @@ impl Collector {
             }
             self.out_row = 0;
         }
+    }
+
+    /// Draws the caption from the current row (spec 35 section 11): each word from cell 1, on the next line when it
+    /// would pass the width, a space after it when one followed and there is room; [l] goes to the next line; the
+    /// row after the last line drawn on. False, with the rows cleared, when the page runs out of lines.
+    fn draw_caption(&mut self) -> R<bool> {
+        if self.caption.is_empty() {
+            return Ok(true);
+        }
+        let start = self.out_row;
+        let width = self.width;
+        let depth = self.image().depth;
+        let (mut row, mut col) = (start, 0usize);
+        let items = self.caption.clone();
+        let mut fits = true;
+        for item in &items {
+            match item {
+                Caption::Word(cells, space) => {
+                    if col + cells.len() > width {
+                        if row + 1 == depth {
+                            fits = false;
+                            break;
+                        }
+                        row += 1;
+                        col = 0;
+                    }
+                    for &(c, src) in cells {
+                        self.putchr(row, col, c, src)?;
+                        col += 1;
+                    }
+                    if *space && col < width {
+                        self.putchr(row, col, ' ', None)?;
+                        col += 1;
+                    }
+                }
+                Caption::Line => {
+                    if col < 1 || row + 1 < depth {
+                        row += 1;
+                        col = 0;
+                    } else {
+                        fits = false;
+                        break;
+                    }
+                }
+            }
+        }
+        if !fits {
+            let img = self.image();
+            for r in start..img.depth {
+                img.cells[r].clear();
+                img.marks[r].clear();
+            }
+            self.out_row = start;
+            return Ok(false);
+        }
+        self.out_row = if col > 0 { row + 1 } else { row };
+        Ok(true)
     }
 
     /// Stairstep offsets (6.2).

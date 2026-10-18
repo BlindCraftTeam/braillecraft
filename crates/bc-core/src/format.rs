@@ -476,6 +476,9 @@ fn pieces(doc: &Shown, styles: Option<&StyleTable>) -> Pieces {
     let mut spans = doc.codes.iter().peekable();
     let mut chars = doc.text.chars().enumerate().peekable();
     let mut after_break_code = false;
+    // Inside a table ([htbs] to [htbe]) places are found through the table's cells (spec 27 5b), and the table's
+    // regions are read from the marks after its codes.
+    let mut in_table = false;
     while let Some(&(i, c)) = chars.peek() {
         if let Some(&&(start, end)) = spans.peek().filter(|s| s.0 == i) {
             spans.next();
@@ -491,11 +494,22 @@ fn pieces(doc: &Shown, styles: Option<&StyleTable>) -> Pieces {
                 }
             }
             after_break_code = crate::doctext::breaks_line(&code);
+            // A code's place is where the pen stands before the code does its work: the standard program records the
+            // asked-for place before its code switch (spec 19 section 9). Table codes keep theirs after them.
+            let table_code = in_table || code.starts_with("htbs");
+            if code.starts_with("htbs") {
+                in_table = true;
+            }
+            if code == "htbe" {
+                in_table = false;
+            }
+            if !table_code {
+                out.push(Piece::Mark(start));
+            }
             expand(&code, styles, &mut out, 0, start);
-            // A code's place is where the pen stands once the code has done its work (a [p] at the start stands
-            // where the paragraph's text starts). INFERENCE: the reference records a place when its input reaches it
-            // (spec 27 5b); whether that is before or after a code's own effect is not traced.
-            out.push(Piece::Mark(start));
+            if table_code {
+                out.push(Piece::Mark(start));
+            }
             continue;
         }
         chars.next();
@@ -611,6 +625,35 @@ struct Place {
 impl Place {
     fn at(col: i64, just: char) -> Place {
         Place { col: Some(col), just, fill: None, partial: false, may_wrap: true, spacing: None, overwrite: false }
+    }
+
+    /// The next word at a tab stop, with the stop's fill (fill kind ' ' none, 'P' partial, any other letter full).
+    fn at_stop(stop: &Stop) -> Place {
+        let fill = (stop.kind != ' ').then_some(stop.fill);
+        Place { fill, partial: stop.kind == 'P', ..Place::at(stop.col, stop.just) }
+    }
+}
+
+/// A tab stop (spec 19 section 9): its cell (from 1), justification, fill kind and fill character.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Stop {
+    col: i64,
+    just: char,
+    kind: char,
+    fill: char,
+}
+
+impl Stop {
+    /// The formatter's stops at the start: 1 to 8 at cells 3, 5 ... 17 justified left, 9 at cell 160 justified right,
+    /// none with a fill (the state initialiser).
+    fn defaults() -> [Stop; 9] {
+        std::array::from_fn(|k| {
+            if k < 8 {
+                Stop { col: k as i64 * 2 + 3, just: 'L', kind: ' ', fill: ' ' }
+            } else {
+                Stop { col: 160, just: 'R', kind: ' ', fill: ' ' }
+            }
+        })
     }
 }
 
@@ -737,6 +780,9 @@ struct Formatter {
     page_print: Option<String>,
     change_line: Option<usize>,
     lea: bool,
+    /// The fill of the American print page line [leaF~X] asked for (spec 19 section 8.2): F 'n' none, 'p' partial
+    /// (a blank cell at each end), else full; X the fill character (dots 3-6 when not given).
+    lea_fill: (char, char),
     next_first_shown: Option<usize>,
     page_start: Option<usize>,
     /// Where the last page finished starts (a page with no text starts there too).
@@ -797,7 +843,7 @@ struct Formatter {
     keep_overflow: Option<usize>,
     /// Tab stops [stbS:A:P] (stop number, justification, column), the minimum spacing of [tas] ([svmtsN]), the
     /// decimal character of 'D' justification ([svdac~X]), the pen column [lps] saved for [lpr].
-    stops: Vec<(usize, char, i64)>,
+    stops: [Stop; 9],
     min_spacing: usize,
     decimal: char,
     saved_col: Option<usize>,
@@ -863,6 +909,7 @@ impl Formatter {
             page_print: None,
             change_line: None,
             lea: false,
+            lea_fill: ('F', '-'),
             next_first_shown: None,
             page_start: None,
             last_start: 0,
@@ -900,7 +947,7 @@ impl Formatter {
             retried: false,
             keep_stop: None,
             keep_overflow: None,
-            stops: Vec::new(),
+            stops: Stop::defaults(),
             min_spacing: 1,
             decimal: '.',
             saved_col: None,
@@ -1285,7 +1332,8 @@ impl Formatter {
         self.print_number = Some(text.clone());
         let had_text = self.line_has_text();
         let next_top = if self.odd { self.print_even } else { self.print_odd }.top();
-        let at_top = !self.line_has_text() && (!self.opened || self.page.len() == 0);
+        // The British line has no corner-only case (spec 19 section 8.2).
+        let at_top = !self.leaf.0 && !self.line_has_text() && (!self.opened || self.page.len() == 0);
         if at_top && self.print_corner().top() {
             self.print_since = 0;
             if self.opened {
@@ -1325,7 +1373,14 @@ impl Formatter {
             lead.push_str(&"\"3"[2usize.saturating_sub(start)..]);
             lead
         } else {
-            "-".repeat(width - len)
+            // [leaF~X]: 'N' blank, 'P' a blank cell after the margin and before the number, else the fill throughout.
+            let (kind, fill) = self.lea_fill;
+            let n = width - len;
+            match kind {
+                'N' => " ".repeat(n),
+                'P' if n >= 2 => format!(" {} ", fill.to_string().repeat(n - 2)),
+                _ => fill.to_string().repeat(n),
+            }
         };
         let n = lead.chars().count();
         let mut line = Line { text: lead, sources: Sources::none(n), marks: Marks::default() };
@@ -1390,6 +1445,7 @@ impl Formatter {
 
     /// Ends the line; the next one starts at `next_col`.
     fn end_line(&mut self, next_col: usize) {
+        self.saved_col = None;
         let mut line = std::mem::take(&mut self.line);
         while line.text.ends_with(' ') {
             line.text.pop();
@@ -1882,31 +1938,64 @@ impl Formatter {
             });
             return;
         }
-        // [stbS:A:P] tab stop S (1 to 9) justified A at cell P; [ctb] clears them; [#S] the next word at stop S; [>]
-        // at the first stop past the pen (nothing without one, INFERENCE).
+        // [stbS:A:P:F~X] tab stop S (1 to 9, 1 when not given) justified A (L) at cell P (1; -1 the middle of the
+        // line), clamped to the line, with fill kind F (none) and fill character X (the second character in a print
+        // document, as [fr]); pgifmt case 0x5d.
         if let Some(rest) = code.strip_prefix("stb") {
-            let parts: Vec<&str> = rest.split(':').collect();
+            let (params, x) = rest.split_once('~').map_or((rest, None), |(a, b)| (a, Some(b)));
+            let parts: Vec<&str> = params.split(':').collect();
             let number = |k: usize| parts.get(k).and_then(|p| p.trim().parse::<i64>().ok());
-            if let Some(s) = number(0).filter(|s| (1..=9).contains(s)) {
-                let just = parts.get(1).and_then(|p| p.trim().chars().next()).map_or('L', |c| c.to_ascii_uppercase());
-                let col = number(2).unwrap_or(1);
-                self.stops.retain(|st| st.0 != s as usize);
-                self.stops.push((s as usize, just, col));
-                self.stops.sort_by_key(|st| st.0);
-            }
+            let letter = |k: usize| parts.get(k).and_then(|p| p.trim().chars().next()).map(|c| c.to_ascii_uppercase());
+            let s = number(0).unwrap_or(1).clamp(1, 9) as usize;
+            let width = self.layout.cells as i64;
+            let col = match number(2).unwrap_or(1) {
+                -1 => (width + 1) / 2,
+                c => c,
+            };
+            let fill = x.and_then(|x| {
+                let second = if self.layout.braille { None } else { x.chars().nth(1) };
+                second.or_else(|| x.chars().next())
+            });
+            self.stops[s - 1] = Stop {
+                col: col.clamp(1, width.max(1)),
+                just: letter(1).unwrap_or('L'),
+                kind: letter(3).unwrap_or(' '),
+                fill: fill.unwrap_or(' '),
+            };
             return;
         }
+        // [#S:F~X] the next word at stop S (1 to 9), with fill kind F and character X in place of the stop's (case
+        // 0x48).
         if let Some(rest) = code.strip_prefix('#') {
-            if let Some(stop) = rest.trim().parse::<usize>().ok().and_then(|s| self.stops.iter().find(|st| st.0 == s)) {
-                self.place = Some(Place::at(stop.2, stop.1));
+            let (params, x) = rest.split_once('~').map_or((rest, None), |(a, b)| (a, Some(b)));
+            let parts: Vec<&str> = params.split(':').collect();
+            let s = parts.first().and_then(|p| p.trim().parse::<i64>().ok()).unwrap_or(0).clamp(1, 9) as usize;
+            let mut stop = self.stops[s - 1];
+            if let Some(k) = parts.get(1).and_then(|p| p.trim().chars().next()) {
+                stop.kind = k.to_ascii_uppercase();
             }
+            if let Some(c) = x.and_then(|x| x.chars().next()) {
+                stop.fill = c;
+            }
+            self.place = Some(Place::at_stop(&stop));
             return;
         }
+        // [>] the next word at the nearest stop at or past the cell after the pen (and past a tab already pending),
+        // counted with the [svlma] adjustment; with none, flush right at the right margin, no fill (case 0x49).
         if code == ">" {
             let pen = self.line.text.chars().count() as i64;
-            if let Some(stop) = self.stops.iter().find(|st| st.2 > pen) {
-                self.place = Some(Place::at(stop.2, stop.1));
+            let mut from = pen + 1 + self.lma;
+            if let Some(Place { col: Some(c), may_wrap: true, .. }) = self.place {
+                from = from.max(c + self.lma);
             }
+            let next = self.stops.iter().filter(|st| st.col >= from).min_by_key(|st| st.col);
+            self.place = Some(match next {
+                Some(stop) => Place::at_stop(stop),
+                None => Place {
+                    col: Some(self.layout.cells.saturating_sub(self.right) as i64),
+                    ..Place::at(1, 'R')
+                },
+            });
             return;
         }
         if let Some(x) = code.strip_prefix("svdac~") {
@@ -1937,6 +2026,18 @@ impl Formatter {
             }
             return;
         }
+        // [leaF~X] the next word is the print page number (pgifmt case 99): F the fill kind (a letter, 'F' when not
+        // given), X the fill character (dots 3-6 when not given).
+        if let Some(rest) = code.strip_prefix("lea") {
+            if rest.is_empty() || rest.starts_with(|c: char| c.is_ascii_alphabetic() || c == '~' || c == ':') {
+                let (params, x) = rest.split_once('~').map_or((rest, None), |(a, b)| (a, Some(b)));
+                let kind = params.trim_start_matches(':').chars().next().map_or('F', |c| c.to_ascii_uppercase());
+                let fill = x.and_then(|x| x.chars().next()).unwrap_or('-');
+                self.lea_fill = (kind, fill);
+                self.lea = true;
+                return;
+            }
+        }
         // [pvN~X] the page number N (the page being filled when it has not opened, else the next), with X before it
         // ("{" or a space none) when a text is given (case 0x89).
         if let Some(rest) = code.strip_prefix("pv") {
@@ -1959,18 +2060,22 @@ impl Formatter {
         let name = if name.starts_with("tab~") { "tab" } else { name };
         let first = n.first().copied();
         match name {
-            "ctb" => self.stops.clear(),
+            // [ctb] every stop at the line end, justified right, no fill (case 0x4c).
+            "ctb" => {
+                let col = self.layout.cells as i64;
+                self.stops = [Stop { col, just: 'R', kind: ' ', fill: ' ' }; 9];
+            }
             // [tasP] the next word at cell P, or its minimum spacing after the pen; [taaP] at cell P whatever is
             // there; [svmtsN] that spacing.
             "tas" => self.place = Some(Place { spacing: Some(self.min_spacing), ..Place::at(first.unwrap_or(1), 'L') }),
             "taa" => self.place = Some(Place { may_wrap: false, overwrite: true, ..Place::at(first.unwrap_or(1), 'L') }),
             "svmts" => self.min_spacing = first.unwrap_or(1).max(0) as usize,
-            // [lps] saves the pen column, [lpr] puts the next word back there (INFERENCE: over what is there).
+            // [lps] saves the pen column; [lpr] moves the pen back there, so what follows is written over what is there
+            // (pgifmt cases 0x74, 0x75: the pen, not a positioned word; the saved column is 0 again at every line end).
             "lps" => self.saved_col = Some(self.line.text.chars().count()),
             "lpr" => {
-                if let Some(col) = self.saved_col {
-                    self.place = Some(Place { may_wrap: false, overwrite: true, ..Place::at(col as i64 + 1, 'L') });
-                }
+                let col = self.saved_col.unwrap_or(0);
+                self.place = Some(Place { may_wrap: false, overwrite: true, ..Place::at(col as i64 + 1, 'L') });
             }
             "svlma" => self.lma = first.unwrap_or(0),
             // [sknL:M] takes back L of the lines the last skip left (M more cancel lines of the next skip).
@@ -2166,7 +2271,6 @@ impl Formatter {
                 self.next_print = Some((corner(p_odd), corner(p_even)));
             }
             // [lea] the next word is the print page number.
-            "lea" => self.lea = true,
             // [pntr] roman and [pnta] arabic page numbers, from the next number taken (case 0x76, 0x77).
             "pntr" => self.roman = true,
             "pnta" => self.roman = false,
@@ -2634,6 +2738,7 @@ fn is_layout(code: &str) -> bool {
         || code.starts_with("svgrn")
         || (code.starts_with("pv") && code[2..].starts_with(|c: char| c.is_ascii_digit() || c == '~'))
         || code == "pv"
+        || (code.starts_with("lea") && code[3..].starts_with(|c: char| c.is_ascii_alphabetic() || c == '~' || c == ':'))
         || code == ">"
         || matches!(
             split_code(code).0,
@@ -3208,8 +3313,9 @@ mod tests {
         assert_eq!(locate(&pages, 11), (1, 2, 4));
         assert_eq!(locate(&pages, 12), (2, 1, 1));
         assert_eq!(locate(&pages, 99), (2, 1, 4));
+        // A code stands where the pen was before it acted: a [p] at the start stands at the first cell.
         let pages = format(&m("[p]\nab"), &Layout::braille(8, 2), None);
-        assert_eq!(locate(&pages, 0), (1, 1, 3));
+        assert_eq!(locate(&pages, 0), (1, 1, 1));
     }
 
     #[test]
@@ -3423,9 +3529,14 @@ mod tests {
 
     #[test]
     fn tab_stops_and_the_tab_variants() {
-        // [#1] goes to stop 1, [>] to the next stop past the pen.
+        // [#1] goes to stop 1, [>] to the nearest stop past the pen (the default stop 3 at cell 7).
         let pages = format(&m("[stb1:L:5][stb2:L:10]a[#1]b[>]c"), &Layout::braille(20, 2), None);
-        assert_eq!(texts(&pages[0])[0], "a   b    c");
+        assert_eq!(texts(&pages[0])[0], "a   b c");
+        // After [ctb] every stop is the line end, justified right; a stop's fill goes from the pen.
+        let pages = format(&m("[ctb]a[>]b"), &Layout::braille(10, 2), None);
+        assert_eq!(texts(&pages[0])[0], "a        b");
+        let pages = format(&m("[stb1:L:8:f~-]a[#1]b"), &Layout::braille(10, 2), None);
+        assert_eq!(texts(&pages[0])[0], "a------b");
         // [tas]: at the cell, or the minimum spacing after the pen when the cell is behind it.
         let pages = format(&m("[tas3]ab[tas2]cd"), &Layout::braille(20, 2), None);
         assert_eq!(texts(&pages[0])[0], "  ab cd");
@@ -3490,6 +3601,14 @@ mod tests {
         // A list: level 1 starts at cell 1 and runs over to cell 3, each level two cells further in.
         let pages = format(&m("[hi1:3:0:2:2][hl1]aaa bbb ccc[hl2]aaa bbb ccc[hi]x"), &Layout::braille(9, 8), None);
         assert_eq!(texts(&pages[0])[..6], ["aaa bbb", "  ccc", "  aaa bbb", "    ccc", "x", ""]);
+    }
+
+    #[test]
+    fn a_table_caption_is_drawn_above_its_rows() {
+        // [htbcs] ... [htbce]: the caption's words from the first cell, [l] a new line, then the rows.
+        let doc = m("[htbs;r:1:1:b:n:a][htbcs]Ages of[l]people[htbce]Name[>]Age[<]Ann[>]12[htbe]After.");
+        let pages = format(&doc, &Layout::print(40, 25), None);
+        assert_eq!(&texts(&pages[0])[..6], ["Ages of", "people", "Name  Age", "----  ---", "Ann   12", "After."]);
     }
 
     #[test]
@@ -3591,6 +3710,23 @@ mod tests {
         // P 1: the text after the line starts at the runover.
         let pages = format(&m("[ind1][ptys3][svles0:0:2:1]a [lea]5 b"), &layout, None);
         assert_eq!(texts(&pages[0])[2], "   b");
+    }
+
+    #[test]
+    fn the_print_page_line_takes_its_fill_from_lea() {
+        let mut layout = Layout::braille(12, 6);
+        layout.print_numbers_odd = Corner::UpperRight;
+        layout.print_numbers_even = Corner::UpperRight;
+        let pages = format(&m("a [lean]5 b"), &layout, None);
+        assert_eq!(texts(&pages[0])[1], format!("{}5", " ".repeat(11)));
+        let pages = format(&m("a [leap~=]5 b"), &layout, None);
+        assert_eq!(texts(&pages[0])[1], format!(" {} 5", "=".repeat(9)));
+        let pages = format(&m("a [lea~*]5 b"), &layout, None);
+        assert_eq!(texts(&pages[0])[1], format!("{}5", "*".repeat(11)));
+        // The British line is laid at the top of a page too.
+        let pages = format(&m("[svles1][lea]5 b"), &layout, None);
+        // (the number is taken before the page opens, so its corner shows it too).
+        assert_eq!(texts(&pages[0])[0], format!("{}\"35{}5", " ".repeat(4), " ".repeat(4)));
     }
 
     #[test]
