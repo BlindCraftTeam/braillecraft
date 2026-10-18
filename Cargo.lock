@@ -56,6 +56,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ac07cdecf99051d9a5238b80f35af32cdeba5b336e55d957b318b50137e18da5"
 
 [[package]]
+name = "bc-cli"
+version = "0.1.0"
+dependencies = [
+ "bc-core",
+ "bc-mcp",
+ "serde_json",
+]
+
+[[package]]
 name = "bc-core"
 version = "0.1.0"
 dependencies = [
@@ -80,6 +89,15 @@ dependencies = [
  "serde_json",
  "wxdragon",
  "wxdragon-sys",
+]
+
+[[package]]
+name = "bc-mcp"
+version = "0.1.0"
+dependencies = [
+ "bc-core",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

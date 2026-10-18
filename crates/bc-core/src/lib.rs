@@ -5,6 +5,7 @@
 //! desktop shell and the web build both call into this crate.
 
 pub mod cmdline;
+pub mod command_table;
 pub mod codepages;
 pub mod doctext;
 pub mod docx;
@@ -33,6 +34,7 @@ pub mod import_chain;
 pub mod internal;
 pub mod lbf;
 pub mod markdown;
+pub mod paths;
 pub mod menu_codes;
 pub mod printer_setup;
 pub mod range;

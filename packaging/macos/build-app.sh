@@ -21,6 +21,8 @@ sed "s/@VERSION@/$version/g" "$here/Info.plist" > "$app/Contents/Info.plist"
 plutil -lint "$app/Contents/Info.plist"
 printf 'APPL????' > "$app/Contents/PkgInfo"
 install -m 755 "$dist/braillecraft-desktop" "$app/Contents/MacOS/braillecraft-desktop"
+# The command-line program (the MCP server for AI agents), beside the program so it finds the same data folders.
+install -m 755 "$dist/braillecraft-cli" "$app/Contents/MacOS/braillecraft-cli"
 for d in fonts tables templates embossers; do
   cp -R "$dist/$d" "$app/Contents/Resources/$d"
 done

@@ -249,6 +249,36 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   `/copies:<n>`, `/pagesize:<lines>x<cells>` and `/template:<name>`. When every file has an option, BrailleCraft does
   the work and ends without opening the editor.
 
+## Using BrailleCraft from an AI agent (MCP)
+
+Every download carries `braillecraft-cli`, whose `mcp` command is a server for the Model Context Protocol: an AI
+agent such as Claude Code or Claude Desktop can open, type into, translate, lay out, export and emboss documents
+through it. The server speaks the protocol over its standard input and output (newline-delimited JSON-RPC 2.0,
+protocol 2025-06-18, older clients answered in their own revision); logs go to the error output.
+
+```
+claude mcp add braillecraft -- braillecraft-cli mcp
+```
+
+or in a `.mcp.json` or the Claude Desktop configuration:
+
+```json
+{ "mcpServers": { "braillecraft": { "command": "braillecraft-cli", "args": ["mcp"] } } }
+```
+
+`braillecraft-cli mcp --in book.md` opens a file first. `--automation-read-root DIR` and `--automation-write-root
+DIR` confine the files the session reads and writes to those folders. The server runs headless, with a session of
+its own over the same core the program uses (the same tables, templates and embosser models, found beside the
+program). Its tools: `list_commands` and `execute` (every menu command by id; the ones that need the program's
+window say so), `new_document`, `open_document` and `import_file` (every kind the program opens), `save_document`,
+`export_file` (BRF, PEF, coded and formatted text and braille, refreshable braille, HTML, HTML with MathJax,
+LaTeX, Markdown, the document formats), `get_text`, `inspect_document`, `type_text`, `select_text`, `translate`
+and `back_translate` (the document, or a given text; braille returned as North American ASCII and as Unicode
+braille patterns), `format_document` (the pages as they would be embossed), `emboss_bytes`, `list_tables`,
+`list_templates`, `list_embossers`, `undo` and `redo`; and resources for the document, the commands, the tables,
+the templates and the embossers. The tool `screenshot`, `key`, `click`, `list_documents` and `activate_document`
+need the running program (the next section of this work).
+
 ## Downloads
 
 The repository is [github.com/BlindCraftTeam/braillecraft](https://github.com/BlindCraftTeam/braillecraft). Every push

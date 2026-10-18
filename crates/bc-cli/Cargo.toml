@@ -1,0 +1,18 @@
+[package]
+name = "bc-cli"
+description = "BrailleCraft command-line program: the MCP server for AI agents, headless or bridged to the running program"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "braillecraft-cli"
+path = "src/main.rs"
+
+[dependencies]
+bc-core = { path = "../bc-core" }
+bc-mcp = { path = "../bc-mcp" }
+serde_json = "1"

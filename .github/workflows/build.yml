@@ -71,9 +71,10 @@ jobs:
       - name: Native program
         shell: bash
         run: |
-          cargo build --release -p bc-desktop
+          cargo build --release -p bc-desktop -p bc-cli
           mkdir -p dist/BrailleCraft
           cp target/release/braillecraft-desktop${{ runner.os == 'Windows' && '.exe' || '' }} dist/BrailleCraft/
+          cp target/release/braillecraft-cli${{ runner.os == 'Windows' && '.exe' || '' }} dist/BrailleCraft/
           cp -r ui/fonts dist/BrailleCraft/fonts
           cp -r tables dist/BrailleCraft/tables
           cp -r templates dist/BrailleCraft/templates
@@ -84,6 +85,21 @@ jobs:
           # The Orca script with its installer and notes (scripts/orca).
           cp -r scripts/orca dist/BrailleCraft/orca
           cp LICENSE-MIT LICENSE-APACHE NOTICE dist/BrailleCraft/
+
+      # The command-line program's MCP server, driven once over stdio from the program folder as installed: the
+      # lifecycle, then a translation through the shipped tables.
+      - name: Command-line program check
+        shell: bash
+        run: |
+          cli=dist/BrailleCraft/braillecraft-cli${{ runner.os == 'Windows' && '.exe' || '' }}
+          printf '%s\n%s\n%s\n' \
+            '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18"}}' \
+            '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
+            '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"translate","arguments":{"text":"Hello world"}}}' \
+            | "$cli" mcp > mcp-check.txt
+          grep -q '"serverInfo"' mcp-check.txt
+          grep -q ',hello _w' mcp-check.txt
+          "$cli" --version
 
       - uses: actions/upload-artifact@v7
         with:

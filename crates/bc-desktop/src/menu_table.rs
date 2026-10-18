@@ -221,7 +221,7 @@ const M17: &[Entry] = &[
     Entry::Item(2902, "&Dashes", Kind::Radio),
     Entry::Item(2903, "Dashes and &Hyphens", Kind::Radio),
     Entry::Item(2904, "&French", Kind::Radio),
-    Entry::Item(2905, "French (Original 11.3 Compatible)", Kind::Radio),
+    Entry::Item(2905, "French (11.3 Compatible)", Kind::Radio),
 ];
 
 const M14: &[Entry] = &[

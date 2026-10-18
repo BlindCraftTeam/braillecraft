@@ -20,8 +20,9 @@ root=$stage/root
 install -d "$root/opt/braillecraft" "$root/usr/bin" "$root/usr/share/applications" "$root/usr/share/mime/packages" \
   "$root/usr/share/fonts/truetype/braillecraft"
 cp -r "$dist/." "$root/opt/braillecraft/"
-chmod 755 "$root/opt/braillecraft/braillecraft-desktop"
+chmod 755 "$root/opt/braillecraft/braillecraft-desktop" "$root/opt/braillecraft/braillecraft-cli"
 ln -s /opt/braillecraft/braillecraft-desktop "$root/usr/bin/braillecraft"
+ln -s /opt/braillecraft/braillecraft-cli "$root/usr/bin/braillecraft-cli"
 install -m 644 "$here/braillecraft.desktop" "$root/usr/share/applications/braillecraft.desktop"
 install -m 644 "$here/braillecraft-mime.xml" "$root/usr/share/mime/packages/braillecraft.xml"
 install -m 644 "$dist"/fonts/*.ttf "$root/usr/share/fonts/truetype/braillecraft/"

@@ -1000,7 +1000,7 @@ export const MENUS = [
      },
      {
       "id": 2905,
-      "label": "French (Original 11.3 Compatible)",
+      "label": "French (11.3 Compatible)",
       "shortcut": "",
       "kind": "radio"
      }
