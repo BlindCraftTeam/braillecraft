@@ -15,7 +15,7 @@ use crate::documents;
 use crate::encodings;
 use crate::settings_store;
 use crate::translation;
-use bc_core::doctext::{codes_properly_marked, style_codes_problem, style_name_problem, Shown, NEW_STYLE_NAME};
+use bc_core::doctext::{codes_properly_marked, style_codes_problem, style_name_problem_with, Shown, NEW_STYLE_NAME};
 use bc_core::find;
 use bc_core::table_list::TableList;
 
@@ -26,8 +26,6 @@ const PLANNED_TEMPLATES: &str = "Templates are built with the BrailleCraft docum
 const PLANNED_PICTURES: &str = "Pictures are built after the core features of version 1.";
 const PLANNED_FORMATTER: &str = "This needs the page formatter, built in step 8 of the plan.";
 
-const STYLE_SHOW: &[&str] = &["Recommended and In-Use Styles", "All Styles", "Styles In-Use", "Only Recommended Styles"];
-
 // ------------------------------------------------------------------ messages
 
 pub fn message(text: &str) {
@@ -36,6 +34,41 @@ pub fn message(text: &str) {
         .with_style(MessageDialogStyle::OK | MessageDialogStyle::IconInformation)
         .build()
         .show_modal();
+}
+
+/// A message of the command line run shown as a box: titled "Error" with the warning icon.
+pub fn error_box(text: &str) {
+    let f = app::frame();
+    MessageDialog::builder(&f, text, "Error")
+        .with_style(MessageDialogStyle::OK | MessageDialogStyle::IconWarning)
+        .build()
+        .show_modal();
+}
+
+/// The command line's usage shown as a box: titled "Note" with the information icon.
+pub fn note_box(text: &str) {
+    let f = app::frame();
+    MessageDialog::builder(&f, text, "Note")
+        .with_style(MessageDialogStyle::OK | MessageDialogStyle::IconInformation)
+        .build()
+        .show_modal();
+}
+
+/// /resetfilesavefolder (`save`) and /resetfileopenfolder: the Save or the Open dialog shown once, titled "Save:",
+/// with four file types, started in the Documents folder, so the system's file dialog takes that folder as the one
+/// it starts in next. Nothing is done with the answer and no setting is changed (AutoSave openPath and savePath stay
+/// as they are).
+pub fn reset_file_folder(save: bool) {
+    const TYPES: [&str; 4] = ["HTML (*.htm)|*.htm", "HTML with MathJax (*.htm)|*.htm", "LaTeX (*.tex)|*.tex", "Coded text (*.txt)|*.txt"];
+    let f = app::frame();
+    let style = if save { FileDialogStyle::Save } else { FileDialogStyle::Open };
+    let dialog = FileDialog::builder(&f)
+        .with_message("Save:")
+        .with_wildcard(&TYPES.join("|"))
+        .with_style(style)
+        .with_default_dir(&StandardPaths::documents_dir())
+        .build();
+    dialog.show_modal();
 }
 
 fn yes_no(text: &str) -> bool {
@@ -79,23 +112,45 @@ pub fn open_dialog(id: i32, title: Option<&str>) -> Dlg {
 
 /// Document, Page Numbering: the document's own page numbering (from its template or its file), changed on OK. The
 /// four groups are braille page numbers on even and on odd pages, print page numbers on even and on odd pages, each
-/// none, upper left, upper right, lower left, lower right; then the first page number shown.
+/// none, upper left, upper right, lower left, lower right; then the first page number shown. A corner one group has
+/// chosen is greyed in its partner group (even braille with even print, odd braille with odd print), redone on
+/// every click. The first page field is read as its first five characters. An accepted OK marks the document
+/// changed whether or not a value changed.
 fn page_numbering() {
+    use bc_core::number_field::{read_number, FIRST_PAGE_WIDTH};
+    use bc_core::page_numbering::disabled_corners;
     const GROUPS: [[i32; 5]; 4] = [[7, 8, 9, 10, 11], [13, 14, 15, 16, 17], [19, 20, 21, 22, 23], [25, 26, 27, 28, 29]];
+    fn sync(d: &Dlg) {
+        let chosen: [u32; 4] = std::array::from_fn(|g| d.radio(&GROUPS[g]).unwrap_or(0) as u32);
+        for (g, off) in disabled_corners(chosen).iter().enumerate() {
+            for (k, &grey) in off.iter().enumerate() {
+                d.enable(GROUPS[g][k], !grey);
+            }
+        }
+    }
     let Some(numbers) = app::with(|a| a.doc().map(|d| d.page_numbers)) else { return };
     let d = open_dialog(1031, None);
     for (g, n) in GROUPS.iter().zip(numbers) {
         d.set_radio(g, n as usize);
     }
+    sync(&d);
+    for id in GROUPS.iter().flatten() {
+        let me = Dlg { id: d.id, dialog: d.dialog, page: d.page };
+        d.on_radio(*id, move || sync(&me));
+    }
     d.set_text(31, &numbers[4].to_string());
+    if let Some(t) = d.win(31).and_then(|w| w.as_widget::<TextCtrl>()) {
+        t.select_all();
+    }
     d.check_on_ok(|d| {
-        check_number(
-            d,
+        check_number_read(
+            read_number(&d.text(31), FIRST_PAGE_WIDTH),
             31,
             "The first page to display page numbers must not be less than %d.",
             "The first page to display page numbers must not be greater than %d.",
         )
     });
+    d.place_third();
     let ok = d.show() == 1;
     let mut chosen = numbers;
     for (k, g) in GROUPS.iter().enumerate() {
@@ -103,7 +158,7 @@ fn page_numbering() {
             chosen[k] = i as u32;
         }
     }
-    let first = d.number(31);
+    let first = read_number(&d.text(31), FIRST_PAGE_WIDTH);
     d.destroy();
     if !ok {
         return;
@@ -111,12 +166,11 @@ fn page_numbering() {
     if let Some(n) = first {
         chosen[4] = n as u32;
     }
+    // BrailleCraft has no write-protected documents, so an accepted OK always changes the document.
     app::with(|a| {
         if let Some(doc) = a.doc_mut() {
-            if doc.page_numbers != chosen {
-                doc.page_numbers = chosen;
-                doc.dirty = true;
-            }
+            doc.page_numbers = chosen;
+            doc.dirty = true;
         }
         a.update_status();
     });
@@ -219,8 +273,14 @@ const KEPT_IMPORT_OPTIONS: &[Kept] = &[
     Kept::Flag(21, "ImportOptions", "RemoveDashSpaces", false),
     Kept::Choice(23, "Word", "UnknownCharacters", &["ignore", "asterisc", "hex"], UNKNOWN_ITEMS, 0),
     Kept::Flag(24, "Word", "HanScriptAuto", true),
-    Kept::Radios(26, "Word", "HanScriptLanguage", &["Mandarin", "Cantonese", "Japanese", "Korean", "Zhuyin"], 0),
+    // The setting has the four words Mandarin, Cantonese, Japanese and Korean (Zhuyin is reached only through the
+    // zhtwcp table, import_chain::han_start_state). INFERENCE: the dialog's fifth button, Zhuyin (30), has no word,
+    // so choosing it keeps the default.
+    Kept::Radios(26, "Word", "HanScriptLanguage", HAN_LANGUAGES, 0),
 ];
+
+/// The words of the HanScriptLanguage setting, by value (0 Mandarin to 3 Korean).
+const HAN_LANGUAGES: &[&str] = &["Mandarin", "Cantonese", "Japanese", "Korean"];
 
 /// Global, WordPerfect Importer (1035).
 const KEPT_WORDPERFECT: &[Kept] = &[
@@ -421,16 +481,16 @@ fn insert_shown(s: &Shown) {
     }
 }
 
-/// Puts `before` at the start of the selection and `after` at its end (codes, as a pair); the selection itself is
-/// left as it is.
+/// Puts `before` at the start of the selection and `after` at its end (codes, as a pair); the same text stays
+/// selected between them. With no selection the caret goes between the two.
 fn wrap_selection(before: &Shown, after: &Shown) {
     let area = app::with(|a| {
         let i = a.active?;
         let (from, to) = a.docs[i].selection();
         a.edit(i, to, to, after);
         a.edit(i, from, from, before);
-        let caret = to + before.text.chars().count();
-        a.docs[i].select_doc(caret, caret);
+        let (start, end) = bc_core::menu_codes::pair_selection(from, to, before.text.chars().count());
+        a.docs[i].select_doc(start, end);
         a.show_area(i, None);
         Some(a.docs[i].area)
     });
@@ -469,6 +529,55 @@ fn change_running(change: impl FnOnce(&str, usize, usize) -> Option<(String, usi
     select_range(caret as i64, caret as i64);
 }
 
+/// The one-line prompts of the editing area's keys (dialog 30070).
+#[derive(Clone, Copy, Debug)]
+pub enum Prompt {
+    /// F9 or Ctrl+[: a code and its parameters.
+    Code,
+    /// Ctrl+F9 or Ctrl+<: a style name ("/name" ends the style).
+    Style,
+    /// Alt+F9 or Ctrl+]: a character by its Unicode number.
+    Char,
+}
+
+/// A prompt key in the active document: the prompt asks for one line, its default the code (or style) at the caret,
+/// which the answer then replaces; else the answer goes in at the caret, as one undo step. An empty answer or
+/// Cancel puts nothing in; an answer refused gives its message.
+pub fn prompt(which: Prompt) {
+    use bc_core::doctext as t;
+    let Some((shown, caret, coded)) = app::with(|a| a.doc().map(|d| (d.shown(), d.caret(), d.view.codes))) else {
+        return;
+    };
+    let (question, (default, range), max) = match which {
+        Prompt::Code => (t::PROMPT_CODE, t::code_prompt_default(&shown, caret, coded), t::PROMPT_CODE_MAX),
+        Prompt::Style => (t::PROMPT_STYLE, t::style_prompt_default(&shown, caret), t::PROMPT_STYLE_MAX),
+        Prompt::Char => (t::PROMPT_CHAR, (String::new(), None), t::PROMPT_CHAR_MAX),
+    };
+    let Some(answer) = crate::dlg::ask_text(&app::frame(), question, &default, max) else { return };
+    let put = match which {
+        Prompt::Code => t::code_from_answer(&answer).map(|c| c.map(|c| Shown::marked(&c))),
+        Prompt::Style => t::style_code_from_answer(&answer).map(|c| c.map(|c| Shown::marked(&c))),
+        Prompt::Char => t::char_from_hex_answer(&answer).map(|c| c.map(|c| Shown::plain(&c.to_string()))),
+    };
+    match put {
+        Err(m) => message(m),
+        Ok(None) => {}
+        Ok(Some(s)) => {
+            let area = app::with(|a| {
+                let i = a.active?;
+                match range {
+                    Some((from, to)) => a.edit(i, from, to, &s),
+                    None => documents::type_in(a, i, &s),
+                }
+                Some(a.docs[i].area)
+            });
+            if let Some(area) = area {
+                area.set_focus();
+            }
+        }
+    }
+}
+
 /// Selects document places `from` to `to` in the active document.
 fn select_range(from: i64, to: i64) {
     app::with(|a| {
@@ -481,12 +590,50 @@ fn select_range(from: i64, to: i64) {
     });
 }
 
+/// Puts `code` before every line start inside the selection and at its start (one undo step); with no selection
+/// at the caret.
+fn insert_each_line(code: &Shown) {
+    let area = app::with(|a| {
+        let i = a.active?;
+        let (from, to) = a.docs[i].selection();
+        if from == to {
+            documents::type_in(a, i, code);
+            return Some(a.docs[i].area);
+        }
+        let places = bc_core::menu_codes::each_line_places(&a.docs[i].shown().text, from, to);
+        let code = code.clone();
+        a.edit_by(i, move |e| {
+            let mut removed = Shown::plain("");
+            for p in places {
+                removed = e.replace(p, p, &code);
+            }
+            removed
+        });
+        Some(a.docs[i].area)
+    });
+    if let Some(area) = area {
+        area.set_focus();
+    }
+}
+
+/// A Layout menu code item: a pair wraps the selection, an each-line item goes at each line start of it, and any
+/// other item, with text selected, first asks whether the selection is to be replaced (No leaves it as it is).
 fn insert_code(id: i32) {
     let Some(code) = codes::insert(id) else { return };
+    let selected = app::with(|a| a.doc().is_some_and(|d| {
+        let (from, to) = d.selection();
+        from != to
+    }));
+    let replace = || !selected || yes_no(bc_core::menu_codes::REPLACE_QUESTION);
     // What a code item puts in is codes, except the signs and the hard space, which are text.
     match code {
-        Insert::Text(s) => insert_shown(&Shown::marked(s)),
+        Insert::Text(s) => {
+            if replace() {
+                insert_shown(&Shown::marked(s));
+            }
+        }
         Insert::Pair(a, b) => wrap_selection(&Shown::marked(a), &Shown::marked(b)),
+        Insert::EachLine(s) => insert_each_line(&Shown::marked(s)),
         Insert::Setting(which) => {
             let s = app::with(|a| {
                 let sc = &a.settings.shortcuts;
@@ -502,7 +649,9 @@ fn insert_code(id: i32) {
                     Dynamic::HardSpace => Shown::plain("\u{a0}"),
                 }
             });
-            insert_shown(&s);
+            if replace() {
+                insert_shown(&s);
+            }
         }
     }
 }
@@ -546,27 +695,67 @@ pub fn run(id: i32, checked: bool) {
         1218 => replace(),
         1220 | 1221 => message(PLANNED_SPELL),
 
-        1301 => set_view(|v| v.full_page = checked),
+        1301 => {
+            // View, Full-Page: refused with message 2634 when the editing area would not hold one row at the size
+            // Full-Page gives (or goes back to); the menu mark is put back.
+            let fits = app::with(|a| {
+                a.active.is_none_or(|i| a.row_fits(i, &app::View { full_page: checked, ..a.docs[i].view }, 0))
+            });
+            if fits {
+                set_view(|v| v.full_page = checked);
+            } else {
+                app::with(|a| a.apply_view());
+                message(TOO_SMALL_FOR_FONT);
+            }
+        }
         1303 => set_font(ViewFont::Print),
         1304 => set_font(ViewFont::Braille),
         1305 => set_font(ViewFont::SimBraille),
         1307 => six_key(checked),
         1309 => {
-            // View, Codes (Alt+F3): the coded view or the formatted view (spec 27 2b and 2c).
-            app::with(|a| {
-                if let Some(i) = a.active {
-                    a.set_view_codes(i, checked);
-                }
-                a.apply_view();
+            // View, Codes (Alt+F3): the coded view or the formatted view (spec 27 2b and 2c); refused with message
+            // 2634 when the editing area would not hold one row in the other view's font.
+            let fits = app::with(|a| {
+                a.active.is_none_or(|i| {
+                    let view = app::View { codes: checked, ..a.docs[i].view };
+                    a.row_fits(i, &view, 0)
+                })
             });
-            // The Cursor Locator after a switch of view, when Global, View Preferences asks for it.
-            if app::with(|a| a.settings.view_prefs.locator_on_view_switch) {
-                if let Some(key) = app::with(|a| a.doc().map(|d| d.key)) {
-                    wxdragon::call_after(Box::new(move || documents::show_cursor_locator(key)));
+            if !fits {
+                app::with(|a| a.apply_view());
+                message(TOO_SMALL_FOR_FONT);
+            } else {
+                app::with(|a| {
+                    if let Some(i) = a.active {
+                        a.set_view_codes(i, checked);
+                    }
+                    a.apply_view();
+                });
+                // The Cursor Locator after a switch of view, when Global, View Preferences asks for it.
+                if app::with(|a| a.settings.view_prefs.locator_on_view_switch) {
+                    if let Some(key) = app::with(|a| a.doc().map(|d| d.key)) {
+                        wxdragon::call_after(Box::new(move || documents::show_cursor_locator(key)));
+                    }
                 }
             }
         }
-        1310 => set_view(|v| v.translated = checked),
+        1310 => {
+            // View, Translated Line: turning it on is refused with message 2636 when the editing area, less the
+            // translated line, would not hold one row; turning it off is never refused.
+            let fits = !checked
+                || app::with(|a| {
+                    a.active.is_none_or(|i| {
+                        let extra = a.docs[i].line.get_best_size().height;
+                        a.row_fits(i, &a.docs[i].view, extra)
+                    })
+                });
+            if fits {
+                set_view(|v| v.translated = checked);
+            } else {
+                app::with(|a| a.apply_view());
+                message(TOO_SMALL_FOR_LINE);
+            }
+        }
 
         1401 => apply_style(),
         1402 => apply_last_style(),
@@ -591,7 +780,9 @@ pub fn run(id: i32, checked: bool) {
         2701..=2705 => set_region(TableList::region_bit((id - 2701) as usize)),
         2706 => set_region(bc_core::table_list::ALL_REGIONS),
         9000..=9399 => choose_language((id - crate::menu::LANGUAGE_BASE) as usize),
-        9500..=9509 => choose_learning_step((id - crate::menu::COURSE_BASE) as usize),
+        _ if (crate::menu::COURSE_BASE..crate::menu::COURSE_BASE + crate::menu::COURSE_MAX as i32).contains(&id) => {
+            choose_learning_step((id - crate::menu::COURSE_BASE) as usize)
+        }
         2801 => set_grade("[g1l]"),
         2802 => set_grade("[g2u]"),
         2901..=2905 => set_hyphen(id),
@@ -936,10 +1127,13 @@ fn open_dx_document(path: &Path) -> Option<u64> {
     let key = documents::new_document(if braille { DocKind::Braille } else { DocKind::Print }, name, &shown);
     let mut undefined_setup: Option<String> = None;
     app::with(|a| {
+        let global_page = (a.settings.printer.lines, a.settings.printer.chars);
         if let Some(i) = a.index_of(key) {
             let d = &mut a.docs[i];
             d.dirty = false;
             d.saved = true;
+            // Read from a document file: File, Save writes it here again (spec A15.10).
+            d.document_file = true;
             d.path = Some(path.to_path_buf());
             // The document's own styles, as loaded from the file (spec 05-B (c)).
             if !doc.styles.is_empty() {
@@ -952,6 +1146,8 @@ fn open_dx_document(path: &Path) -> Option<u64> {
             d.file_styles = doc.styles.iter().map(|s| s.0.clone()).zip(doc.style_index.iter().copied()).collect();
             d.file_settings = doc.settings.clone();
             d.file_sections = doc.sections.clone();
+            // The document's eBraille metadata, as the file keeps it.
+            d.ebraille = doc.ebraille.as_deref().map(bc_core::ebraille::metadata_from_opf).unwrap_or_default();
             // The document's own embosser setup, by name, as the file keeps it; a setup no longer kept gives message
             // 2358 after the open and leaves the name empty (spec 25 10.1, audit print-emboss E16).
             if !doc.embosser.is_empty() {
@@ -976,6 +1172,7 @@ fn open_dx_document(path: &Path) -> Option<u64> {
                     interpoint: l.interpoint,
                     banner: l.banner != 0,
                     interline: u32::from(l.interline),
+                    double_size: l.double_size != 0,
                 };
                 if braille {
                     d.cells = u32::from(l.cells);
@@ -984,23 +1181,35 @@ fn open_dx_document(path: &Path) -> Option<u64> {
                     d.emb_page = (u32::from(l.cells), u32::from(l.lines));
                 }
             }
-            // A print document is laid out on its own Printer Setup page (settings +129 and +131), 54 lines of 65
-            // characters when the file holds none (spec 05 section A10).
-            if !braille {
-                let (l, c) = if doc.print_page.0 == 0 { bc_core::dxfile::PRINT_PAGE_DEFAULT } else { doc.print_page };
-                d.lines = u32::from(l);
-                d.cells = u32::from(c);
+            // The document's own Printer Setup page (settings +129 and +131), the Global, Printer Setup page size
+            // when the file holds none (spec A16.4 unknown 6). A print document is laid out on it; a braille document
+            // keeps it for Document, Printer Setup and its file (spec A16.2).
+            let (l, c) = bc_core::dxfile::print_page_or(doc.print_page, global_page);
+            if braille {
+                d.print_page = (l, c);
+            } else {
+                d.lines = l;
+                d.cells = c;
             }
-            d.view.translated = doc.translated_line;
-            d.view.six_key = braille && doc.six_key;
-            // The view it was saved in: coded or formatted view, view font, hyphenation.
-            d.view.codes = doc.coded_view;
-            d.ed.set_view(doc.coded_view);
-            match doc.view_font {
-                1201 => d.view.font = app::ViewFont::Print,
-                1202 => d.view.font = app::ViewFont::Braille,
-                1203 => d.view.font = app::ViewFont::SimBraille,
-                _ => {}
+            // The view it was saved in (coded or formatted view, view font, translated line, six-key entry) and its
+            // caret are taken only for a file reopened from the recent documents list with a valid view font in it;
+            // any other file opens in the Global, Default Views settings (which new_document gave it) with the caret
+            // at the start (spec 27 section 9, unknown 6). BrailleCraft keeps no recent documents list yet, so no
+            // file is in it.
+            let in_recent = false;
+            let restore = bc_core::dxfile::restores_view(in_recent, doc.view_font);
+            if restore {
+                d.view.translated = doc.translated_line;
+                // Six-key entry is kept in the file for both kinds of document.
+                d.view.six_key = doc.six_key;
+                d.view.codes = doc.coded_view;
+                d.ed.set_view(doc.coded_view);
+                match bc_core::dxfile::view_font_id(doc.view_font) {
+                    Some(1201) => d.view.font = app::ViewFont::Print,
+                    Some(1202) => d.view.font = app::ViewFont::Braille,
+                    Some(1203) => d.view.font = app::ViewFont::SimBraille,
+                    _ => {}
+                }
             }
             d.hyphen = match doc.hyphenation {
                 0 => app::Hyphen::None,
@@ -1010,6 +1219,9 @@ fn open_dx_document(path: &Path) -> Option<u64> {
                 _ => app::Hyphen::DashesHyphens,
             };
             d.page_numbers = doc.page_numbering;
+            // The caret where the document was saved (settings +22, spec 05 section A10), when the view is taken.
+            let at = if restore { Shown::shown_place(&doc.text, doc.caret as usize) } else { 0 };
+            d.select_doc(at, at);
             // A document read from its file is a saved one: its title loses "New".
             app::set_tab_title(&d.page, &d.full_name());
             // The document's own tables, kept as the file names them; only a
@@ -1053,7 +1265,7 @@ pub fn open_path(path: &Path) -> Option<u64> {
     open_path_asking(path, false)
 }
 
-fn open_path_asking(path: &Path, ask: bool) -> Option<u64> {
+pub fn open_path_asking(path: &Path, ask: bool) -> Option<u64> {
     let path = path.to_path_buf();
     let bytes = match std::fs::read(&path) {
         Ok(b) => b,
@@ -1259,15 +1471,23 @@ fn shown_of(imported: &bc_core::import_chain::Imported) -> (Shown, Option<bool>)
 /// The file through its import chain: the text shown, and the document kind the file itself asked for (None when
 /// it said nothing; the file's kind decides then).
 fn read_import(bytes: &[u8], choice: &ImportChoice) -> Option<(Shown, Option<bool>)> {
-    let kind_name = FileKind::filters().iter().find(|f| f.0 == choice.kind).map_or("", |f| f.1);
+    // An older Excel workbook, RTF and any other unsupported file are refused with their messages.
+    if let Some(text) = bc_core::filekind::refusal(choice.kind, bytes) {
+        message(&text);
+        return None;
+    }
     match choice.kind {
-        FileKind::Unsupported | FileKind::Music => {
-            message("This document cannot be imported into BrailleCraft.  It appears to be in an unsupported file format.");
-            None
-        }
-        FileKind::Rtf => {
-            message("This document cannot be imported into BrailleCraft.  It appears to be in Rich Text Format (RTF).  If Microsoft® Word is installed, you can use it to convert your document to a native Word format and import that into BrailleCraft.");
-            None
+        // A PDF inserted with Edit, Insert File (File, Open goes through open_pdf): with the styles of the document
+        // it goes into.
+        FileKind::Pdf => {
+            let styles: Vec<String> = app::with(|a| a.doc().map(|d| d.styles.iter().map(|s| s.name.clone()).collect())).unwrap_or_default();
+            match bc_core::pdf_import::import(bytes, &crate::pdf_options::PdfSettings::load().options(), &styles) {
+                Ok(running) => Some((Shown::from_running(&running), Some(false))),
+                Err(e) => {
+                    message(&e);
+                    None
+                }
+            }
         }
         // Coded and formatted text, coded and formatted braille and Orbit braille go through the import chain of their
         // kind. (Formatted text is read as UTF-8 whatever the code page box says.)
@@ -1312,7 +1532,7 @@ fn read_import(bytes: &[u8], choice: &ImportChoice) -> Option<(Shown, Option<boo
             };
             let template = choice.template.clone().unwrap_or_else(translation::default_template);
             let map = translation::word_map_of_template(&template);
-            let recipe = Recipe::Docx(word_options(), map, settings_store::load_unknown_characters());
+            let recipe = Recipe::Docx(word_options(&template), map, settings_store::load_unknown_characters());
             let imported = bc_core::import_chain::run(bytes, &recipe, &files);
             if !imported.errors.is_empty() {
                 message(&imported.errors.join("\n"));
@@ -1329,23 +1549,25 @@ fn read_import(bytes: &[u8], choice: &ImportChoice) -> Option<(Shown, Option<boo
                     return None;
                 }
             };
-            let recipe = Recipe::Markdown(word_options(), settings_store::load_unknown_characters());
+            let options = word_options(&translation::default_template());
+            let recipe = Recipe::Markdown(options, settings_store::load_unknown_characters());
             let imported = bc_core::import_chain::run(bytes, &recipe, &files);
             if !imported.errors.is_empty() {
                 message(&imported.errors.join("\n"));
             }
             Some(shown_of(&imported))
         }
-        _ => {
-            message(&format!("BrailleCraft cannot import {kind_name} files yet."));
+        kind => {
+            message(&bc_core::filekind::not_yet(kind));
             None
         }
     }
 }
 
 /// The Word importer's settings from the Global Word Importer (1036) and Import Options (1037) dialogs as they were
-/// last kept, the defaults where a dialog was never confirmed.
-fn word_options() -> bc_core::word::Options {
+/// last kept, the defaults where a dialog was never confirmed; the Han script settings, with the print-to-braille
+/// table of the document the import goes into (made with `template`).
+fn word_options(template: &str) -> bc_core::word::Options {
     use crate::dlg::Value;
     let mut o = bc_core::word::Options::default();
     let (w, i) = app::with(|a| (a.memory.get(1036, "").cloned(), a.memory.get(1037, "").cloned()));
@@ -1372,6 +1594,13 @@ fn word_options() -> bc_core::word::Options {
     o.auto_tag_cbc = flag(&i, 19, o.auto_tag_cbc);
     o.add_spaces = flag(&i, 20, o.add_spaces);
     o.remove_dash_spaces = flag(&i, 21, o.remove_dash_spaces);
+    o.han_auto =
+        settings_store::get("Word", "HanScriptAuto").map_or(o.han_auto, |v| v.trim().eq_ignore_ascii_case("yes"));
+    o.han_language = settings_store::get("Word", "HanScriptLanguage")
+        .and_then(|v| HAN_LANGUAGES.iter().position(|w| w.eq_ignore_ascii_case(v.trim())))
+        .map_or(o.han_language, |n| n as u8);
+    o.forward_table = translation::template_tables(template)
+        .map_or_else(|| translation::DEFAULT_TABLES[0].to_string(), |t| t[0].clone());
     o
 }
 
@@ -1412,10 +1641,20 @@ fn insert_file() {
     // A document file is inserted with its codes; any other file through the import dialog.
     let (shown, braille) = if detected == FileKind::Document {
         let Ok(doc) = bc_core::dxfile::read(&bytes) else {
-            message("This document cannot be imported into BrailleCraft.  It appears to be in an unsupported file format.");
+            message(bc_core::filekind::UNSUPPORTED);
             return;
         };
         (Shown::from_running(&doc.text), doc.kind == bc_core::DocumentKind::Braille)
+    } else if detected == FileKind::Pef {
+        // A PEF file is inserted as braille with no import dialog, as File, Open opens it (BrailleCraft's addition).
+        let text = match pef_text(&String::from_utf8_lossy(&bytes)) {
+            Ok(t) => t,
+            Err(e) => {
+                message(&e);
+                return;
+            }
+        };
+        (Shown::plain(&text), true)
     } else {
         let Some(choice) = import_dialog(detected) else { return };
         let Some((shown, forced)) = read_import(&bytes, &choice) else { return };
@@ -1505,19 +1744,24 @@ fn save_types(braille: bool) -> &'static [(&'static str, &'static str, SaveType)
 }
 
 /// File, Save (`as_new` false) and File, Save As (true) for the document with this key (the active one when None).
-/// A document read from or saved to a document file (.dxp, .dxb) is saved there again; any other is asked about.
-/// Returns false when nothing was saved.
+/// A document read from or saved to a document file in the current format is saved there again, whatever the
+/// file's extension; any other is asked about with Save As, titled "Save:" (spec A15.10). Returns false when
+/// nothing was saved.
 fn save(key: Option<u64>, as_new: bool) -> bool {
     let Some(key) = key.or_else(|| app::with(|a| a.doc().map(|d| d.key))) else { return false };
-    let Some((kind, path, saved, name)) =
-        app::with(|a| a.index_of(key).map(|i| (a.docs[i].kind, a.docs[i].path.clone(), a.docs[i].saved, a.docs[i].name.clone())))
-    else {
+    let Some((kind, path, document_file, name)) = app::with(|a| {
+        a.index_of(key).map(|i| {
+            let d = &a.docs[i];
+            (d.kind, d.path.clone(), d.document_file, d.name.clone())
+        })
+    }) else {
         return false;
     };
     let braille = kind == DocKind::Braille;
     let own = if braille { "dxb" } else { "dxp" };
-    if !as_new && saved {
-        if let Some(p) = path.as_ref().filter(|p| p.extension().is_some_and(|e| e.eq_ignore_ascii_case(own))) {
+    if !as_new {
+        let shown = path.as_ref().map(|p| p.to_string_lossy().into_owned()).unwrap_or_default();
+        if let Some(p) = path.as_ref().filter(|_| bc_core::dxfile::saves_in_place(document_file, &shown)) {
             return write_document(key, p, 1);
         }
     }
@@ -1531,7 +1775,7 @@ fn save(key: Option<u64>, as_new: bool) -> bool {
     let shown_for: Vec<i32> = types.iter().enumerate().filter(|(_, t)| t.2 == SaveType::Formatted).map(|(i, _)| i as i32).collect();
     let c = |t: &str| std::ffi::CString::new(t).unwrap_or_default();
     let (title, wildcard, dir, file, label, list) = (
-        c("Save As"),
+        c(if as_new { bc_core::dxfile::SAVE_AS_TITLE } else { bc_core::dxfile::SAVE_TITLE }),
         c(&wildcard),
         c(&path.as_ref().and_then(|p| p.parent()).map(|d| d.to_string_lossy().into_owned()).unwrap_or_default()),
         c(&format!("{stem}.{own}")),
@@ -1591,8 +1835,9 @@ fn save(key: Option<u64>, as_new: bool) -> bool {
     }
 }
 
-/// Writes the document as a document file (.dxp or .dxb) in format `version` (1, or 0 for the older format), then
-/// takes that file as its own.
+/// Writes the document as a document file (.dxp or .dxb) in format `version` (1, or 0 for the older format). In the
+/// current format the document then takes that file as its own (File, Save writes there again); a file in the older
+/// format is a copy only: the document keeps its earlier file, name and state (spec A15.10).
 pub(crate) fn write_document(key: u64, path: &Path, version: u16) -> bool {
     let Some(doc) = app::with(|a| {
         let i = a.index_of(key)?;
@@ -1609,7 +1854,7 @@ pub(crate) fn write_document(key: u64, path: &Path, version: u16) -> bool {
             version,
             page_numbering: d.page_numbers,
             translated_line: d.view.translated,
-            six_key: braille && d.view.six_key,
+            six_key: d.view.six_key,
             tables: {
                 // A table is named as the file it was read from names it (the program matches names in small letters).
                 let named: [String; 4] = std::array::from_fn(|i| {
@@ -1620,7 +1865,7 @@ pub(crate) fn write_document(key: u64, path: &Path, version: u16) -> bool {
                 });
                 // The older format gives older names where its code is among the document's initial codes.
                 if version == 0 {
-                    bc_core::dxfile::older_table_names(&named, |code| bc_core::dxfile::codes_hold(&d.initial_codes, code))
+                    bc_core::dxfile::older_table_names(&named, |code| bc_core::dxfile::codes_hold(&d.initial_codes(), code))
                 } else {
                     named
                 }
@@ -1645,6 +1890,8 @@ pub(crate) fn write_document(key: u64, path: &Path, version: u16) -> bool {
             settings: d.file_settings.clone(),
             embosser: d.embosser.clone(),
             sections: d.file_sections.clone(),
+            // The eBraille metadata, kept when the document has any.
+            ebraille: (d.ebraille != bc_core::ebraille::Metadata::default()).then(|| bc_core::ebraille::opf_text(&d.ebraille)),
             // The embosser page layout (a print document's own embosser page, a braille document's page); byte +11,
             // DoubleSizePrint, is kept as the file had it.
             layout: Some(&d.layout).filter(|l| !l.form.is_empty()).map(|l| bc_core::dxfile::DxLayout {
@@ -1658,11 +1905,13 @@ pub(crate) fn write_document(key: u64, path: &Path, version: u16) -> bool {
                 double_size: d.file_settings.get(108 + 11).copied().unwrap_or(0),
                 form: l.form.clone(),
             }),
-            // A print document's Printer Setup page (settings +129 and +131).
-            print_page: if d.kind == DocKind::Print {
-                (d.lines.min(u32::from(u16::MAX)) as u16, d.cells.min(u32::from(u16::MAX)) as u16)
-            } else {
-                (0, 0)
+            // The caret's place in the body (settings +22).
+            caret: d.ed.doc.running_place(d.caret()).min(u32::MAX as usize) as u32,
+            // The document's Printer Setup page (settings +129 and +131): a print document's page, a braille
+            // document's kept one (spec A16.2).
+            print_page: {
+                let (l, c) = if d.kind == DocKind::Print { (d.lines, d.cells) } else { d.print_page };
+                (l.min(u32::from(u16::MAX)) as u16, c.min(u32::from(u16::MAX)) as u16)
             },
         })
     }) else {
@@ -1673,9 +1922,14 @@ pub(crate) fn write_document(key: u64, path: &Path, version: u16) -> bool {
         message(&format!("{}: {e}", path.display()));
         return false;
     }
+    // An older-format file is not the document's own (INFERENCE: the document's changed mark stays as it was).
+    if version == 0 {
+        return true;
+    }
     app::with(|a| {
         if let Some(i) = a.index_of(key) {
             let d = &mut a.docs[i];
+            d.document_file = true;
             d.path = Some(path.to_path_buf());
             d.name = path.file_name().map_or_else(|| d.name.clone(), |n| n.to_string_lossy().into_owned());
             d.untitled = false;
@@ -1767,11 +2021,18 @@ fn prf_bytes(pages: &[bc_core::format::Page], code_page: &str) -> Vec<u8> {
     bc_core::format::formatted_text_file(pages, code_page)
 }
 
+/// A text export: the running text and the document's styles to the file's bytes.
+pub(crate) type TextExport = fn(&str, &bc_core::engine::StyleTable) -> Result<Vec<u8>, String>;
+
 /// Save As LaTeX (.tex), HTML (.htm) or HTML with MathJax (.htm) for a print document: the running text through
-/// `make` (translation::latex, html, mathjax). The document keeps its own file and name.
-pub(crate) fn write_text_export(key: u64, path: &Path, make: fn(&str) -> Result<Vec<u8>, String>) -> bool {
-    let Some(running) = app::with(|a| a.index_of(key).map(|i| a.docs[i].shown().to_running())) else { return false };
-    let out = match make(&running) {
+/// `make` (translation::latex, html, mathjax) with the document's styles. The document keeps its own file and name.
+pub(crate) fn write_text_export(key: u64, path: &Path, make: TextExport) -> bool {
+    let Some((running, styles)) = app::with(|a| {
+        a.index_of(key).map(|i| (a.docs[i].shown().to_running(), translation::style_table(&a.docs[i].styles)))
+    }) else {
+        return false;
+    };
+    let out = match make(&running, &styles) {
         Ok(o) => o,
         Err(e) => {
             message(&e);
@@ -1872,6 +2133,22 @@ fn civil_date(secs: u64) -> String {
     format!("{y:04}-{m:02}-{d:02}")
 }
 
+/// A PEF file's pages as a braille document's text: each row a line of cells in the display encoding, each page
+/// ending in a line break.
+fn pef_text(xml: &str) -> Result<String, String> {
+    let pages = bc_core::pef::read(xml)?;
+    let enc = app::with(|a| a.encoding());
+    let mut text = String::new();
+    for page in &pages {
+        for row in page {
+            text.extend(row.chars().map(|c| enc.cell_char(((c as u32) - 0x2800) as usize & 0x3f)));
+            text.push('\n');
+        }
+        text.push('\n');
+    }
+    Ok(text)
+}
+
 /// Opens a PEF file as a braille document: each row a line of cells in the display encoding, each page ending in a
 /// line break as a formatted braille file's form feed does.
 fn open_pef(path: &Path) -> Option<u64> {
@@ -1882,22 +2159,13 @@ fn open_pef(path: &Path) -> Option<u64> {
             return None;
         }
     };
-    let pages = match bc_core::pef::read(&xml) {
-        Ok(p) => p,
+    let text = match pef_text(&xml) {
+        Ok(t) => t,
         Err(e) => {
             message(&e);
             return None;
         }
     };
-    let enc = app::with(|a| a.encoding());
-    let mut text = String::new();
-    for page in &pages {
-        for row in page {
-            text.extend(row.chars().map(|c| enc.cell_char(((c as u32) - 0x2800) as usize & 0x3f)));
-            text.push('\n');
-        }
-        text.push('\n');
-    }
     let name = path.file_name().map(|n| n.to_string_lossy().into_owned());
     let key = documents::new_document(DocKind::Braille, name, &Shown::plain(&text));
     app::with(|a| {
@@ -2021,6 +2289,10 @@ pub fn exit_program() {
     app::with(|a| {
         for d in a.docs.drain(..) {
             d.page.destroy();
+            // macOS: the document's own window.
+            if let Some(w) = d.window {
+                w.destroy();
+            }
         }
         a.frame.destroy();
     });
@@ -2131,8 +2403,12 @@ pub fn print_with(skip: Option<u32>) {
     let Some((i, key, braille, caret, (from, to), interline_before)) = app::with(|a| {
         a.active.map(|i| {
             let d = &a.docs[i];
-            // Interline Print starts from the document's embosser layout (spec 24); the choice is the job's only.
-            (i, d.key, d.kind == DocKind::Braille, d.caret() as i64, { let (f, t) = d.selection(); (f as i64, t as i64) }, d.layout.interline != 0)
+            // Interline Print starts checked when the document's embosser layout has interline or DoubleSizePrint
+            // (layout bytes 10 and 11; spec A16.5); the choice is the job's only.
+            let double_size = d.file_settings.get(108 + 11).copied().unwrap_or(0);
+            let interline = bc_core::print_geometry::interline_starts(d.layout.interline.min(255) as u8, double_size);
+            let (from, to) = d.selection();
+            (i, d.key, d.kind == DocKind::Braille, d.caret() as i64, (from as i64, to as i64), interline)
         })
     }) else {
         return;
@@ -2177,13 +2453,26 @@ pub fn print_with(skip: Option<u32>) {
     };
     let job = app::with(|a| {
         let doc = &a.docs[i];
-        let (face, _) = a.face(doc.view.font);
-        let print_face = a.settings.fonts.print_face.clone();
         let f = &a.settings.fonts;
-        // INFERENCE (spec 24, unknown 2): the page text prints in the document's current view font.
+        // The page text prints in the document's view font (observed, spec A16.1), in its printing face: the Print
+        // font's face, BrailleCraft's own braille or SimBraille font for the display encoding (the fonts the program
+        // ships, not the face chosen for the screen), or the Moon font for a Moon table.
+        let view = match doc.view.font {
+            ViewFont::Print => 0,
+            ViewFont::Braille => 1,
+            ViewFont::SimBraille => 2,
+        };
+        let page_font = bc_core::print_geometry::PageFont::of(view, &doc.tables[0], app::moon_installed());
+        let face = match page_font {
+            bc_core::print_geometry::PageFont::Braille => a.encoding().font_family("Braille"),
+            bc_core::print_geometry::PageFont::SimBraille => a.encoding().font_family("SimBraille"),
+            _ => page_font.printing_face().map_or_else(|| f.print_face.clone(), str::to_string),
+        };
         let size = (!f.print_auto).then_some(if doc.view.font == ViewFont::Print { f.print_output_size } else { f.braille_output_size });
-        // Line numbers (spec 24 3d): a braille document, the setting on, and not in coded view.
-        let line_numbers = braille && a.settings.view_prefs.line_numbers && !doc.view.codes;
+        // Line numbers (spec 24 3d, A16.5): a braille document with the setting on, in coded view too, in the
+        // document window's font at its screen size.
+        let line_numbers = braille && a.settings.view_prefs.line_numbers;
+        let (number_face, number_size) = a.view_face(i, &doc.view);
         let enc = a.encoding();
         let styles = translation::style_table(&doc.styles);
         let pages_rc: Vec<Option<std::rc::Rc<bc_core::format::Page>>> = chosen.iter().map(|p| p.map(|p| std::rc::Rc::new(pages[p].clone()))).collect();
@@ -2197,7 +2486,7 @@ pub fn print_with(skip: Option<u32>) {
                         .map(|l| {
                             let t = l.text.trim_end();
                             (!t.trim().is_empty())
-                                .then(|| translation::back(&doc.tables[2], &Shown::plain(t), &doc.initial_codes, enc, &styles).ok().map(|s| s.text))
+                                .then(|| translation::back(&doc.tables[2], &Shown::plain(t), &doc.initial_codes(), enc, &styles).ok().map(|s| s.text))
                                 .flatten()
                         })
                         .collect(),
@@ -2217,13 +2506,15 @@ pub fn print_with(skip: Option<u32>) {
             title: doc.name.clone(),
             pages: pages_rc,
             interline: interline_lines,
+            page_font,
             face,
             size,
-            print_face,
             lines: doc.lines.max(1) as usize,
             chars: doc.cells.max(1) as usize,
             line_numbers,
-            margins: setup.margins,
+            number_face,
+            number_size,
+            margins: setup.margins_stored.then_some(setup.margins),
             attributes: bc_core::format::text_attributes(&doc.shown()),
         };
         (job, setup, fallback)
@@ -2255,14 +2546,19 @@ pub fn emboss_with(skip: Option<u32>) {
     let Some((i, name, setup_name, layout, cells, lines, caret, selection)) = app::with(|a| {
         a.active.map(|i| {
             let d = &a.docs[i];
-            (i, d.name.clone(), d.embosser.clone(), d.layout.clone(), d.cells, d.lines, d.caret() as i64, { let (f, t) = d.selection(); (f as i64, t as i64) })
+            // The form check counts double-size print as interline print (spec A17.14 list 7 item 1).
+            let double_size = d.file_settings.get(108 + 11).is_some_and(|b| *b != 0);
+            let layout = crate::embosser::Layout { double_size, ..d.layout.clone() };
+            let (f, t) = d.selection();
+            (i, d.name.clone(), d.embosser.clone(), layout, d.cells, d.lines, d.caret() as i64, (f as i64, t as i64))
         })
     }) else {
         return;
     };
     // The checks before a job, in the order of spec 25 9.1: a setup chosen (2892), the document's paper
     // size defined on that embosser (2364, the job stops), its layout fitting that paper (2362, a question).
-    // INFERENCE: a setup name that is no longer kept here is treated as no setup chosen.
+    // A document opened with a setup that is not kept has none (spec 25 10.1). INFERENCE: a document whose setup is
+    // removed while it is open is treated as having no setup chosen (spec A17.7).
     use bc_core::emboss_setup::{check, does_not_fit_message, form_not_defined_message, Check, NO_SETUP_MESSAGE};
     let Some(setup) = Some(&setup_name).filter(|n| !n.is_empty()).and_then(|n| emb::load_setup(n)) else {
         message(NO_SETUP_MESSAGE);
@@ -2376,7 +2672,7 @@ pub fn emboss_with(skip: Option<u32>) {
     // File with no name asks for the file (its title and filter, strings 10044 and 10046), offering no name, and asks
     // again while the file chosen cannot be made, with the system's own text; Cancel ends the job quietly. A failed
     // job ends with its own message and then message 2694 (E15).
-    let target = match emb::target(&setup) {
+    let target = match emb::target(&setup, &model) {
         Some(t) => t,
         None => loop {
             let f = app::frame();
@@ -2425,19 +2721,25 @@ pub fn emboss_with(skip: Option<u32>) {
     use bc_core::emboss::Sides;
     let manual = model.flag("ManualInterpoint") && options.interpoint && flags & 8 != 0;
     let passes: &[Sides] = if manual { &[Sides::Fronts, Sides::Backs] } else { &[Sides::All] };
-    // A progress window with Cancel while the job is sent, checked between sides
-    // (audit print-emboss E15); the window itself is the toolkit's.
-    let frame = app::frame();
-    let progress = ProgressDialog::builder(&frame, "Embossing", &name, passes.len() as i32).with_style(ProgressDialogStyle::CanAbort).build();
+    // The progress window (dialog 28000, modeless): the job's name, and its status: "Starting Document", then
+    // "Embossing Page N" before each page, "Cancelling..." once cancelled. Cancel, the close box, Enter, Space and
+    // Escape cancel; the job stops at the next page.
+    let progress = EmbossProgress::open(&name);
     let mut failed = false;
     for (n, &which) in passes.iter().enumerate() {
         if n > 0 && !suppressed && !ok_cancel("Please re-insert the stack of embossed sheets to emboss the second side.") {
+            progress.cancel();
             break;
         }
+        if progress.cancelled() {
+            break;
+        }
+        progress.status(28000, 0);
         // A port that is an FTDI device is written through the FTDI library (spec 25 21.1); the Typewriter driver
-        // sends messages with the embosser's status and answer around each (21.2). To any other output the
-        // Typewriter messages go as their bytes, without the status and answer, as no device was
-        // opened there to answer them; that part is BrailleCraft's own.
+        // sends messages with the embosser's status and answer around each (21.2). The status and answer need the
+        // FTDI connection, which alone can answer; to any other output (a file, a printer queue, a serial or
+        // parallel port) the Typewriter messages go as their bytes, without the status and answer: BrailleCraft's
+        // own choice, as that output has no answer to wait for (spec A17.9).
         let ftdi = match &target {
             bc_core::emboss_out::Target::Port { name, .. } if crate::ftdi::is_device(name) => Some(name.clone()),
             _ => None,
@@ -2449,24 +2751,120 @@ pub fn emboss_with(skip: Option<u32>) {
                 None => bc_core::emboss_out::send(&target, &name, &messages.concat()),
             }
         } else {
-            let bytes = bc_core::emboss::job_sides(&options, &sides, copies, which);
-            match &ftdi {
-                Some(device) => crate::ftdi::send(device, &bytes),
-                None => bc_core::emboss_out::send(&target, &name, &bytes),
-            }
+            send_by_page(&progress, &target, ftdi.as_deref(), &name, bc_core::emboss::job_pieces(&options, &sides, copies, which))
         };
         if let Err(e) = sent {
+            progress.close();
             message(&e.message());
             failed = true;
             break;
         }
-        if !progress.update(n as i32 + 1, None) {
-            break;
-        }
     }
-    progress.destroy();
+    progress.close();
     if failed {
         message("Printing failed.");
+    }
+}
+
+/// The embossing progress window (dialog 28000), shown without stopping the program while a job is sent.
+struct EmbossProgress {
+    d: Dlg,
+    cancelled: std::rc::Rc<std::cell::Cell<bool>>,
+}
+
+impl EmbossProgress {
+    /// Opens the window over the main window, centred across and a third of the way down, with the job's name in
+    /// label 11. INFERENCE: whether a page label is ever given in place of the page number is not known; the
+    /// number is shown.
+    fn open(name: &str) -> EmbossProgress {
+        let d = open_dialog(28000, None);
+        d.set_text(11, name);
+        d.set_text(12, "");
+        d.place_third();
+        let cancelled = std::rc::Rc::new(std::cell::Cell::new(false));
+        let c = cancelled.clone();
+        d.on_button(2, move || c.set(true));
+        let c = cancelled.clone();
+        d.dialog.on_close(move |_| c.set(true));
+        // Enter, line feed, Space and Escape cancel too.
+        if let Some(b) = d.win(2).and_then(|w| w.as_widget::<Button>()) {
+            let c = cancelled.clone();
+            b.on_key_down(move |e| {
+                if let WindowEventData::Keyboard(k) = &e {
+                    match k.get_key_code().unwrap_or(0) {
+                        13 | 10 | 32 | 27 | 370 => c.set(true),
+                        _ => k.event.skip(true),
+                    }
+                }
+            });
+        }
+        d.dialog.show(true);
+        d.dialog.raise();
+        if let Some(b) = d.win(2) {
+            b.set_focus();
+        }
+        EmbossProgress { d, cancelled }
+    }
+
+    /// Label 12 set to message `msgid`'s text for page `page` (bc_core::emboss::progress_text); the events waiting
+    /// are then handled, so the window shows it and Cancel can be pressed.
+    fn status(&self, msgid: u32, page: usize) {
+        self.d.set_text(12, &bc_core::emboss::progress_text(msgid, page, None));
+        unsafe { wxdragon_sys::wxd_App_HandlePendingEvents() };
+    }
+
+    fn cancelled(&self) -> bool {
+        unsafe { wxdragon_sys::wxd_App_HandlePendingEvents() };
+        self.cancelled.get()
+    }
+
+    fn cancel(&self) {
+        self.cancelled.set(true);
+        self.status(28004, 0);
+    }
+
+    fn close(&self) {
+        self.d.dialog.show(false);
+        self.d.dialog.destroy();
+    }
+}
+
+/// Sends a braille pass a page at a time to `target` (or the FTDI device `ftdi`): before each page the progress
+/// window shows "Embossing Page N" and Cancel is looked at; a cancelled job shows "Cancelling..." and is ended
+/// with what was sent.
+fn send_by_page(
+    progress: &EmbossProgress,
+    target: &bc_core::emboss_out::Target,
+    ftdi: Option<&str>,
+    title: &str,
+    job: bc_core::emboss::JobPieces,
+) -> Result<(), bc_core::emboss_out::Failure> {
+    use bc_core::emboss_out::Output;
+    enum Sink {
+        Out(Output),
+        Device(crate::ftdi::Device),
+    }
+    let mut sink = match ftdi {
+        Some(d) => Sink::Device(crate::ftdi::Device::open(d)?),
+        None => Sink::Out(Output::open(target, title)?),
+    };
+    let mut write = |bytes: &[u8]| match &mut sink {
+        Sink::Out(o) => o.write(bytes),
+        Sink::Device(d) => crate::ftdi::send_piece(d, bytes),
+    };
+    write(&job.start)?;
+    for (page, bytes) in &job.sides {
+        if progress.cancelled() {
+            progress.cancel();
+            break;
+        }
+        progress.status(28002, *page);
+        write(bytes)?;
+    }
+    write(&job.end)?;
+    match sink {
+        Sink::Out(o) => o.finish(),
+        Sink::Device(_) => Ok(()),
     }
 }
 
@@ -2513,7 +2911,6 @@ fn ink_job(
         // The document's text, which the layout's map points into (spec 25 20.1).
         let text = doc.shown();
         let chars: Vec<char> = text.text.chars().collect();
-        let code_start = |p: usize| text.codes.iter().any(|c| c.0 == p);
         chosen
             .iter()
             .zip(sides)
@@ -2522,31 +2919,23 @@ fn ink_job(
                 let (Some(p), Some(lines)) = (page, side) else { return Vec::new() };
                 let page = &pages[*p];
                 let shown: Vec<Vec<char>> = page.lines.iter().map(|l| l.text.chars().collect()).collect();
-                // The end of the text a cell came from: the next place any cell of the page has, but not past a
-                // space or a code. INFERENCE: spec 25 20.3 counts the cell's own item; the layout
-                // here keeps only each cell's start.
-                let mut places: Vec<usize> = page.lines.iter().flat_map(|l| l.sources.iter().flatten()).collect();
-                places.sort_unstable();
-                places.dedup();
-                let end_of = |p: usize| {
-                    let next = places.iter().copied().find(|&q| q > p).unwrap_or(chars.len());
-                    let stop = (p + 1..next).find(|&q| chars[q].is_whitespace() || code_start(q)).unwrap_or(next);
-                    Some(stop.min(chars.len()))
-                };
+                // The end of the text a cell came from: its place and one more, as each character of the text is one
+                // stored character (spec A17.8).
+                let end_of = |p: usize| Some((p + 1).min(chars.len()));
                 let runs: Vec<Vec<ink::Run>> = lines
                     .iter()
                     .enumerate()
                     .map(|(n, line)| ink::runs_mapped(line, page.lines.get(n).map(|l| &l.sources), &end_of))
                     .collect();
                 let back = layout.interpoint && (k + 1) % 2 == 0;
-                ink::page_items(&runs, &place, back, |n, run| {
+                ink::page_items(&runs, &place, back, |p| chars.get(p).copied(), |n, run| {
                     // A run of document text: the back-translation of its span of the text, codes and all; else the
                     // run's cells as the document shows them (spec 25 20.3). Codes then give their ink text (20.4).
                     let source = match run.source {
                         Some((s, e)) => text.slice(s, e),
                         None => Shown::plain(&shown.get(n).map(|l| l.iter().skip(run.start).take(run.cells.chars().count()).collect::<String>()).unwrap_or_default()),
                     };
-                    translation::back(&doc.tables[2], &source, &doc.initial_codes, enc, &styles).map(|s| ink::without_codes(&s)).unwrap_or_default()
+                    translation::back(&doc.tables[2], &source, &doc.initial_codes(), enc, &styles).map(|s| ink::without_codes(&s)).unwrap_or_default()
                 })
             })
             .collect()
@@ -2599,7 +2988,7 @@ pub fn translate_input(key: u64) -> Option<TranslateInput> {
             text: d.shown(),
             kind: d.kind,
             tables: d.tables.clone(),
-            initial: d.initial_codes.clone(),
+            initial: d.initial_codes(),
             template: d.template.clone(),
             styles: d.styles.clone(),
             numbers: d.page_numbers,
@@ -2637,7 +3026,7 @@ pub fn translate_from(input: TranslateInput) -> Result<u64, String> {
     app::with(|a| {
         if let Some(i) = a.index_of(key) {
             a.docs[i].tables = tables.clone();
-            a.docs[i].initial_codes = initial.clone();
+            a.docs[i].set_initial_codes(&initial);
             a.docs[i].template = template.clone();
             a.docs[i].styles = styles.clone();
             a.docs[i].page_numbers = numbers;
@@ -2889,6 +3278,8 @@ fn find(again: bool) {
     }
     let d = open_dialog(1020, None);
     d.set_text(7, &find::running_to_field(&stored.text, cx.codes));
+    // Six-key entry works in the field to find (A11.1 item 9).
+    documents::six_key_field(&d, 7);
     search_options(&d, &stored, 8, 10, [12, 13, 14], cx.print);
     d.check_on_ok(|d| find::field_problem(&d.text(7), false).map(|m| (7, m)));
     let ok = d.show() == 1;
@@ -3109,8 +3500,28 @@ fn set_view(change: impl FnOnce(&mut app::View)) {
     });
 }
 
+/// Message 2634: a view switch or a font the editing area cannot hold one row of.
+const TOO_SMALL_FOR_FONT: &str = concat!(
+    "The window is not large enough to use that font.  ",
+    "Make the window larger, or make the font size smaller, and try again."
+);
+/// Message 2636: the translated line turned on in an editing area that would then hold no row.
+const TOO_SMALL_FOR_LINE: &str = concat!(
+    "The window is not large enough for a translated line.  ",
+    "Make the window larger, or make the font size smaller, and try again."
+);
+
+/// View, Print Font, Braille Font, SimBraille Font: refused with message 2634 when the editing area would not hold
+/// one row in the new font.
 fn set_font(font: ViewFont) {
-    set_view(|v| v.font = font);
+    let fits = app::with(|a| a.active.is_none_or(|i| a.row_fits(i, &app::View { font, ..a.docs[i].view }, 0)));
+    if fits {
+        set_view(|v| v.font = font);
+    } else {
+        // The menu's mark goes back to the font in use.
+        app::with(|a| a.apply_view());
+        message(TOO_SMALL_FOR_FONT);
+    }
 }
 
 /// View, Six-Key Entry, in either kind of document: in a print document a chord types its cell's
@@ -3127,17 +3538,66 @@ fn style_names() -> Vec<String> {
     app::with(|a| a.doc().map(|d| d.styles.iter().map(|s| s.name.clone()).collect()).unwrap_or_default())
 }
 
-/// Apply Style and Delete Style: a list of the document's styles. Returns the chosen one.
+/// The styles a style dialog lists for Show choice `show` (bc_core::doctext::style_list, A12.1 and A12.6): in list
+/// order, filtered by whether each style is recommended and whether the document uses it.
+fn listed_styles(show: usize) -> Vec<String> {
+    app::with(|a| {
+        a.doc().map(|d| {
+            let styles: Vec<(String, String)> = d.styles.iter().map(|s| (s.name.clone(), s.begin.clone())).collect();
+            let in_use = bc_core::doctext::styles_in_use(&d.shown().to_running());
+            bc_core::doctext::style_list(&styles, show, &in_use)
+        })
+    })
+    .unwrap_or_default()
+}
+
+/// The Show choice of a style dialog (combo `show`).
+fn show_choice(d: &Dlg, show: i32) -> usize {
+    d.selection(show).map_or(bc_core::doctext::STYLE_SHOW_DEFAULT, |s| s as usize)
+}
+
+/// Fills a style dialog's list `list` for its Show choice `show`: `lead` first (Add Style's "(No Style)"), then the
+/// styles listed; the item named `want` chosen (case ignored when its flag is set), else the first. OK is enabled
+/// only while the list holds an item.
+fn fill_style_list(d: &Dlg, list: i32, show: i32, lead: Option<&str>, want: Option<(&str, bool)>) {
+    let names = listed_styles(show_choice(d, show));
+    let mut items: Vec<&str> = lead.into_iter().collect();
+    items.extend(names.iter().map(String::as_str));
+    let at = want
+        .and_then(|(w, fold)| items.iter().position(|n| if fold { n.eq_ignore_ascii_case(w) } else { *n == w }))
+        .unwrap_or(0);
+    d.set_items(list, &items, (!items.is_empty()).then_some(at as u32));
+    d.enable(1, !items.is_empty());
+}
+
+/// A style dialog's Show choice `show` and list `list`: the choices in their order with "Recommended and In-Use
+/// Styles" chosen, the list filled (fill_style_list); a change of the choice fills the list again, keeping the
+/// chosen name when it is still listed.
+fn style_show(d: &Dlg, list: i32, show: i32, lead: Option<&'static str>, want: Option<(&str, bool)>) {
+    use bc_core::doctext::{STYLE_SHOW, STYLE_SHOW_DEFAULT};
+    d.set_items(show, &STYLE_SHOW, Some(STYLE_SHOW_DEFAULT as u32));
+    fill_style_list(d, list, show, lead, want);
+    let me = Dlg { id: d.id, dialog: d.dialog, page: d.page };
+    d.on_select(show, move || {
+        let keep = me.selected_text(list);
+        fill_style_list(&me, list, show, lead, keep.as_deref().map(|k| (k, false)));
+    });
+}
+
+/// Apply Style (1046) and Delete Style (1047): a list of the document's styles, with the Show choice; with no style
+/// listed OK is disabled. Apply Style opens on the style last applied in the document, and a double click in its
+/// list is OK. Returns the chosen one.
 fn choose_style(dialog: i32) -> Option<Style> {
-    let names = style_names();
-    if names.is_empty() {
-        message("This document has no styles yet. Use Document, Add Style to create one.");
-        return None;
-    }
+    let last = app::with(|a| a.doc().map(|d| d.last_applied.clone()))?;
     let d = open_dialog(dialog, None);
-    let refs: Vec<&str> = names.iter().map(String::as_str).collect();
-    d.set_items(7, &refs, Some(0));
-    d.set_items(9, STYLE_SHOW, Some(0));
+    let apply = dialog == 1046;
+    style_show(&d, 7, 9, None, (apply && !last.is_empty()).then_some((last.as_str(), true)));
+    if apply {
+        if let Some(list) = d.win(7).and_then(|w| w.as_widget::<ListBox>()) {
+            let dialog = d.dialog;
+            list.on_item_double_clicked(move |_| dialog.end_modal(wxdragon::id::ID_OK));
+        }
+    }
     let ok = d.show() == 1;
     let chosen = d.selected_text(7);
     d.destroy();
@@ -3145,7 +3605,13 @@ fn choose_style(dialog: i32) -> Option<Style> {
         return None;
     }
     let chosen = chosen?;
-    app::with(|a| a.doc().and_then(|doc| doc.styles.iter().find(|s| s.name == chosen).cloned()))
+    app::with(|a| {
+        let doc = a.doc_mut()?;
+        if apply {
+            doc.last_applied = chosen.clone();
+        }
+        doc.styles.iter().find(|s| s.name == chosen).cloned()
+    })
 }
 
 /// Applies the style (spec 31): a paragraph style takes whole paragraphs and is cleaned up inside; a
@@ -3187,16 +3653,24 @@ fn style_level(step: i32) {
                 (d.shown(), d.selection(), d.caret())
             };
             let pages = a.laid_out(i, &shown);
-            let page = bc_core::format::locate(&pages, c).0;
+            let (page, line, _) = bc_core::format::locate(&pages, c);
             let page_start = pages.get(page.saturating_sub(1)).map_or(0, |p| p.start);
-            (shown, if c == f { t } else { f }, c, page_start)
+            // The first place of the caret's formatted line, where the [hi] limit in force is read (spec 34 8.1).
+            let line_start = pages
+                .get(page.saturating_sub(1))
+                .and_then(|p| p.lines.get(line.saturating_sub(1)))
+                .and_then(|l| l.sources.first())
+                .map_or(c, |s| s.min(c));
+            (shown, if c == f { t } else { f }, c, (page_start, line_start))
         })
     }) else {
         return;
     };
+    let (page_start, line_start) = page_start;
     let to_running = |p: usize| shown.slice(0, p).to_running().chars().count();
     let running = shown.to_running();
     let (a_r, c_r, start_r) = (to_running(anchor), to_running(caret), to_running(page_start));
+    let line_r = to_running(line_start);
     if bc_core::table_cmd::table_at(&running, c_r).is_some() {
         match sl::cell_move(&running, c_r, step > 0) {
             Some(r) => {
@@ -3207,7 +3681,8 @@ fn style_level(step: i32) {
         }
         return;
     }
-    let out = sl::change(&running, a_r, c_r, anchor != caret, step, start_r, sl::page_style(&running, start_r), sl::max_level(&running, c_r));
+    let (page_style, max) = (sl::page_style(&running, start_r), sl::max_level(&running, line_r));
+    let out = sl::change(&running, a_r, c_r, anchor != caret, step, start_r, page_style, max);
     if out.beep {
         crate::bell::ring();
     }
@@ -3220,19 +3695,43 @@ fn style_level(step: i32) {
 /// Layout, Join Lines (spec 31 5.4): only with a selection; the paragraph style is joined over it, then its line and
 /// style codes are taken out with a space between the words they parted.
 fn join_lines() {
-    change_running(bc_core::style_apply::join_lines);
+    change_running_paged(bc_core::style_apply::join_lines);
 }
 
 /// Layout, Join Styles (spec 31 5.3): only with a selection; the paragraph style open at its anchor (or the caret)
 /// applied again over it.
 fn join_styles() {
-    change_running(bc_core::style_apply::join_styles);
+    change_running_paged(bc_core::style_apply::join_styles);
 }
 
-/// Layout, New Paragraph (spec 31): in an open paragraph style it ends and starts the style again, else the paragraph
-/// code; with a selection at its end and then at its start.
+/// Layout, New Paragraph (spec 31, A12.4): in an open paragraph style it ends and starts the style again, else the
+/// paragraph code; with a selection at its end and then at the lesser of the anchor and the caret as they then stand.
 fn new_paragraph() {
-    change_running(|r, anchor, caret| Some(bc_core::style_apply::new_paragraph(r, anchor, caret)));
+    change_running_paged(|r, anchor, caret, page| Some(bc_core::style_apply::new_paragraph(r, anchor, caret, page)));
+}
+
+/// As change_running, the change also given the first running place of the formatted page each running place is
+/// on (0 on the first page), for the open style search of Join Styles, Join Lines and New Paragraph.
+fn change_running_paged(change: impl FnOnce(&str, usize, usize, &dyn Fn(usize) -> usize) -> Option<(String, usize)>) {
+    let Some(pages) = app::with(|a| {
+        a.active.map(|i| {
+            let shown = a.docs[i].shown();
+            a.laid_out(i, &shown)
+        })
+    }) else {
+        return;
+    };
+    change_running(move |r, anchor, caret| {
+        let shown = Shown::from_running(r);
+        let page_start = |p: usize| -> usize {
+            let page = bc_core::format::locate(&pages, Shown::shown_place(r, p)).0;
+            match pages.get(page.saturating_sub(1)) {
+                Some(pg) if page > 1 => shown.running_place(pg.start),
+                _ => 0,
+            }
+        };
+        change(r, anchor, caret, &page_start)
+    });
 }
 
 /// A whole number field checked: string 2644 when it is not a number, else
@@ -3241,10 +3740,19 @@ fn check_number(d: &Dlg, field: i32, low: &str, high: &str) -> Option<(i32, Stri
     check_range(d, field, 1, 0x7fff_ffff, low, high)
 }
 
-/// A number field checked: not a number, below `min` (`low`, %d the minimum) or above
-/// `max` (`high`, %d the maximum).
+/// A number field checked: not a number by the dialogs' whole-number rule (bc_core::number_field: an optional "-"
+/// and digits, no spaces, no "+"), below `min` (`low`, %d the minimum) or above `max` (`high`, %d the maximum).
 fn check_range(d: &Dlg, field: i32, min: i64, max: i64, low: &str, high: &str) -> Option<(i32, String)> {
-    match d.number(field) {
+    range_problem(bc_core::number_field::whole_number(&d.text(field)), field, min, max, low, high)
+}
+
+/// The check of a number already read from field `field`, for 1 ..= 2147483647 (see check_number).
+fn check_number_read(n: Option<i64>, field: i32, low: &str, high: &str) -> Option<(i32, String)> {
+    range_problem(n, field, 1, 0x7fff_ffff, low, high)
+}
+
+fn range_problem(n: Option<i64>, field: i32, min: i64, max: i64, low: &str, high: &str) -> Option<(i32, String)> {
+    match n {
         None => Some((field, "The number entered is not valid.".into())),
         Some(n) if n < min => Some((field, low.replace("%d", &min.to_string()))),
         Some(n) if n > max => Some((field, high.replace("%d", &max.to_string()))),
@@ -3310,6 +3818,8 @@ fn header_footer(hf: &'static HeaderFooter) {
         return;
     }
     let d = open_dialog(hf.dialog, None);
+    // Six-key entry works in the header or footer field (A11.1 item 9).
+    documents::six_key_field(&d, 7);
     d.set_radio(&RADIOS, 0);
     for (k, &id) in RADIOS.iter().enumerate() {
         let me = Dlg { id: d.id, dialog: d.dialog, page: d.page };
@@ -3354,23 +3864,60 @@ fn code_list() {
         return;
     }
     // The category boxes (All, then Page, Line, Tab, European, Greek Letters, CBC, Math, Miscellaneous) and the codes
-    // they show: the list holds the codes whose category is checked, All shows every code, and the
-    // boxes are kept for the session from OK (at the start All, Page, Line and Tab).
+    // they show: the list holds the codes whose category is checked, All shows every code, and the boxes are kept
+    // for the session from OK or a double-click, before the parameters are checked (bc_core::menu_codes).
+    // INFERENCE: the boxes at the start (All, Page, Line and Tab) are not known.
+    use bc_core::menu_codes::{code_list_kept_after, code_list_ok, code_list_shown, CodeListAction};
     const BOXES: [i32; 8] = [9, 10, 11, 12, 13, 14, 15, 16];
     thread_local! {
         static KEPT: std::cell::Cell<(bool, u32)> = const { std::cell::Cell::new((true, 7)) };
+        /// What OK (or a double-click) chose to put in, read after the dialog closes.
+        static OUTCOME: std::cell::RefCell<Option<(String, bool)>> = const { std::cell::RefCell::new(None) };
+    }
+    fn boxes(d: &Dlg) -> (bool, u32) {
+        (d.checked(8), BOXES.iter().enumerate().filter(|(_, &b)| d.checked(b)).fold(0, |m, (k, _)| m | 1 << k))
     }
     fn shown(d: &Dlg) -> Vec<usize> {
-        let mask = if d.checked(8) { u32::MAX } else { 0 }
-            | BOXES.iter().enumerate().filter(|(_, &b)| d.checked(b)).fold(0, |m, (k, _)| m | 1 << k);
-        (0..codes::CODE_LIST.len()).filter(|&i| codes::CODE_LIST[i].1 & mask != 0).collect()
+        let (all, mask) = boxes(d);
+        code_list_shown(all, mask)
     }
+    // A box click refills the list; the code shown in 20 stays until another code is chosen.
     fn fill(d: &Dlg) {
         let list = shown(d);
         let items: Vec<&str> = list.iter().map(|&i| codes::CODE_LIST[i].2).collect();
         d.set_items(18, &items, None);
-        d.set_text(20, "");
     }
+    fn chosen_code(d: &Dlg) -> Option<usize> {
+        d.selection(18).and_then(|i| shown(d).get(i as usize).copied())
+    }
+    // OK and a double-click: the boxes are kept first, then the parameters checked. With a code chosen, a space
+    // in them is refused with the dialog left open; with none chosen the dialog closes first.
+    fn accept(d: &Dlg, double_click: bool) {
+        let chosen = chosen_code(d).map(|i| codes::CODE_LIST[i].0);
+        let outcome = code_list_ok(chosen, &d.text(22));
+        let action = match (double_click, outcome.close) {
+            (true, _) => CodeListAction::DoubleClick,
+            (false, true) => CodeListAction::Ok,
+            (false, false) => CodeListAction::OkRefused,
+        };
+        KEPT.with(|k| k.set(code_list_kept_after(action, k.get(), boxes(d))));
+        if outcome.close {
+            OUTCOME.with(|o| *o.borrow_mut() = outcome.insert.clone());
+            d.dialog.end_modal(wxdragon::id::ID_OK);
+        }
+        if let Some(m) = outcome.message {
+            message(m);
+        }
+        if !outcome.close {
+            if let Some(w) = d.win(22) {
+                w.set_focus();
+                if let Some(t) = w.as_widget::<TextCtrl>() {
+                    t.select_all();
+                }
+            }
+        }
+    }
+    OUTCOME.with(|o| *o.borrow_mut() = None);
     let d = open_dialog(1041, None);
     let (all, mask) = KEPT.with(|k| k.get());
     d.set_checked(8, all);
@@ -3378,49 +3925,39 @@ fn code_list() {
         d.set_checked(b, mask & (1 << k) != 0);
     }
     fill(&d);
+    d.set_text(20, "");
     d.set_text(22, "");
     for b in std::iter::once(8).chain(BOXES) {
         let me = Dlg { id: d.id, dialog: d.dialog, page: d.page };
         d.on_check(b, move || fill(&me));
     }
-    let chosen_code = |d: &Dlg| d.selection(18).and_then(|i| shown(d).get(i as usize).copied());
     if let Some(list) = d.win(18).and_then(|w| w.as_widget::<ListBox>()) {
         let me = Dlg { id: d.id, dialog: d.dialog, page: d.page };
+        // The label shows the code with each "&" doubled, so it is not taken as a mnemonic.
         list.on_selection_changed(move |_| {
             let code = chosen_code(&me).map(|i| format!("[{}]", codes::CODE_LIST[i].0)).unwrap_or_default();
-            me.set_text(20, &code);
+            me.set_text(20, &code.replace('&', "&&"));
         });
-        // A double-click on a code is OK, with the same check.
         let me = Dlg { id: d.id, dialog: d.dialog, page: d.page };
-        list.on_item_double_clicked(move |_| {
-            if me.text(22).contains(' ') {
-                message("The parameters to a code must not contain spaces.");
-                if let Some(w) = me.win(22) {
-                    w.set_focus();
-                }
-            } else {
-                me.dialog.end_modal(wxdragon::id::ID_OK);
-            }
-        });
+        list.on_item_double_clicked(move |_| accept(&me, true));
     }
-    // Parameters with a space are refused in the dialog.
-    d.check_on_ok(|d| d.text(22).contains(' ').then(|| (22, "The parameters to a code must not contain spaces.".to_string())));
-    d.closes_with(6);
-    let r = d.show();
-    let chosen = chosen_code(&d);
-    let params = d.text(22);
-    let kept = (d.checked(8), BOXES.iter().enumerate().filter(|(_, &b)| d.checked(b)).fold(0, |m, (k, _)| m | 1 << k));
+    // OK goes through `accept` (wxDialog's own close on OK is moved to an id no control has, as check_on_ok does).
+    d.dialog.set_affirmative_id(0x7ffe);
+    let me = Dlg { id: d.id, dialog: d.dialog, page: d.page };
+    d.on_button(1, move || accept(&me, false));
+    // Help keeps the dialog open.
+    d.on_button(6, || message(PLANNED_HELP));
+    d.place_third();
+    let r = d.show_focused(18);
     d.destroy();
-    if r == 6 {
-        message(PLANNED_HELP);
-        return;
-    }
+    let insert = OUTCOME.with(|o| o.borrow_mut().take());
     if r != 1 {
         return;
     }
-    KEPT.with(|k| k.set(kept));
-    if let Some(i) = chosen {
-        insert_shown(&Shown::marked(&format!("[{}{params}]", codes::CODE_LIST[i].0)));
+    match insert {
+        Some((text, true)) => insert_shown(&Shown::marked(&text)),
+        Some((text, false)) => insert_shown(&Shown::plain(&text)),
+        None => {}
     }
 }
 
@@ -3653,12 +4190,77 @@ fn fit_to_choice(d: &Dlg, block: &bc_core::emboss_setup::Block) -> bc_core::embo
 /// Document / Global: Embosser Setup (dialog 1032, spec 25 section 2b). Document: the document's setup and its
 /// embosser page layout. Global: the default setup and the layout new documents take; New, Modify Embosser and
 /// Remove (shown in Global only) open the setup sheet and change the kept setups.
-/// At start-up, Global, Embosser Setup when no embosser is set up (spec 25 section 11: it opens after the
-/// start-up autoprobe finds no embosser installed). The autoprobe of the Windows embosser driver is not built.
+/// At start-up (spec 25 section 11, spec A18): whether any embosser is set up is noted first; then the autoprobe
+/// offers to set up the embossers installed as Windows printers; then Global, Embosser Setup opens when no embosser
+/// was set up before or the autoprobe set one up.
 pub fn embosser_setup_at_start() {
-    if crate::embosser::setup_names().is_empty() {
+    let none = crate::embosser::setup_names().is_empty();
+    let added = autoprobe();
+    if none || added > 0 {
         embosser_setup(true);
     }
+}
+
+/// The start-up autoprobe (spec A18.3): the number of setups it made. Only on Windows, where a printer's driver name
+/// tells its embosser model; elsewhere it makes none and the system's print queues are listed as they are.
+fn autoprobe() -> usize {
+    #[cfg(windows)]
+    {
+        autoprobe_offer()
+    }
+    #[cfg(not(windows))]
+    {
+        0
+    }
+}
+
+/// The autoprobe's offer: the system's printers whose driver is an embosser model's (bc_core::emboss_setup::
+/// autoprobe_candidates), less those a kept setup sends to and those the user chose not to set up. With any, dialog
+/// 10005 lists them all chosen; on OK each printer still chosen gets a setup of its own (named after the printer, sent
+/// to it, with the model's values), and each one not chosen is not offered again. Closing the dialog makes and marks
+/// nothing, so they are offered at the next start.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn autoprobe_offer() -> usize {
+    use crate::embosser as emb;
+    let printers: Vec<(String, String)> =
+        bc_core::emboss_out::printers().into_iter().map(|p| (p.name, p.driver)).collect();
+    let ignored: Vec<String> = printers.iter().map(|p| p.0.clone()).filter(|n| emb::autoprobe_ignored(n)).collect();
+    let kept: Vec<String> = emb::setup_names()
+        .iter()
+        .filter_map(|n| emb::load_setup(n))
+        .map(|s| bc_core::emboss_setup::target_name(&s).to_string())
+        .collect();
+    use bc_core::emboss_setup::autoprobe_candidates;
+    let found = emb::with_catalog(|cat| cat.ok().map(|cat| autoprobe_candidates(&printers, cat, &kept, &ignored)));
+    let Some(found) = found else { return 0 };
+    if found.is_empty() {
+        return 0;
+    }
+    let d = open_dialog(10005, None);
+    let names: Vec<&str> = found.iter().map(|(n, _)| n.as_str()).collect();
+    d.set_items(9, &names, None);
+    for k in 0..names.len() {
+        d.select(9, k as u32);
+    }
+    if d.show() != 1 {
+        d.destroy();
+        return 0;
+    }
+    let chosen: Vec<bool> = (0..names.len()).map(|k| d.is_selected(9, k as u32)).collect();
+    d.destroy();
+    let mut count = 0;
+    emb::with_catalog(|cat| {
+        let Ok(cat) = cat else { return };
+        for ((printer, label), on) in found.iter().zip(chosen) {
+            if on {
+                emb::save_setup(&emb::autoprobe_setup(cat, label, printer), None);
+                count += 1;
+            } else {
+                emb::autoprobe_ignore(printer);
+            }
+        }
+    });
+    count
 }
 
 fn embosser_setup(global: bool) {
@@ -3864,14 +4466,19 @@ fn show_printer_setup(d: &Dlg, s: &crate::print::PrinterSetup) {
 }
 
 /// Document, Printer Setup and Global, Printer Setup (dialog 1071, spec 24, 2b): the paper, orientation and margins,
-/// the printer (Printer... opens the system's printer dialog), and the formatted page size. A print document takes
-/// its lines per page and characters per line from here; a braille document takes its page size from Embosser
-/// Setup, so the two fields are shown but not changed here (INFERENCE: spec 24, 3c reads a braille document's page
-/// size from the embosser setup).
+/// the printer (Printer... opens the system's printer dialog), and the formatted page size. Every document keeps its
+/// own page size here: a print document is laid out again on it; a braille document, laid out on its embosser page
+/// (observed: the page size of a braille document comes from its embosser setup), only keeps it, and its file
+/// keeps it (spec A16.2).
 fn printer_setup(global: bool) {
     use crate::print::{parse_margin, PrinterSetup, PAPERS};
     let title = if global { "Global: Printer Setup..." } else { "Document: Printer Setup..." };
-    let doc = app::with(|a| a.doc().map(|d| (d.key, d.kind, d.cells, d.lines, d.printer.clone())));
+    let doc = app::with(|a| {
+        a.doc().map(|d| {
+            let (lines, cells) = if d.kind == DocKind::Print { (d.lines, d.cells) } else { d.print_page };
+            (d.key, d.kind, cells, lines, d.printer.clone())
+        })
+    });
     if !global && doc.is_none() {
         return;
     }
@@ -3886,7 +4493,6 @@ fn printer_setup(global: bool) {
     };
     let d = open_dialog(1071, Some(title));
     show_printer_setup(&d, &setup);
-    // The page size fields stay enabled for a braille document (only their values are ignored there).
     d.set_text(2003, &lines.to_string());
     d.set_text(2005, &chars.to_string());
     d.closes_with(1026);
@@ -3945,6 +4551,7 @@ fn printer_setup(global: bool) {
                 };
                 setup.margins = [margins[0], margins[1], margins[2], margins[3]];
                 setup.metric = metric;
+                setup.margins_stored = true;
                 // The page size: a corrected size is shown and asked about (question
                 // 1000); Cancel keeps the dialog open on the corrected field.
                 let (l, c, corrected) = bc_core::printer_setup::page_size_check(&d.text(2003), &d.text(2005));
@@ -3980,10 +4587,12 @@ fn printer_setup(global: bool) {
             settings_store::save_printer(&setup);
             a.settings.printer = setup;
         } else if let Some(doc) = a.doc_mut() {
-            // The new size applies to a print document only.
+            // A print document is laid out on the new size; a braille document keeps it.
             if doc.kind == DocKind::Print {
                 doc.lines = new_lines;
                 doc.cells = new_chars;
+            } else {
+                doc.print_page = (new_lines, new_chars);
             }
             doc.printer = Some(setup);
         }
@@ -4002,7 +4611,8 @@ fn set_document_tables(tables: Option<[String; 4]>, initial: impl FnOnce(&str) -
             if let Some(t) = tables {
                 d.tables = t;
             }
-            d.initial_codes = initial(&d.initial_codes);
+            let codes = initial(&d.initial_codes());
+            d.set_initial_codes(&codes);
             d.last_line_key.clear();
             d.dirty = true;
         }
@@ -4039,24 +4649,30 @@ fn choose_language(entry: usize) {
     set_document_tables(Some(tables), |i| regrade(i, ""));
 }
 
-/// Document, Learning Tables, a learning course: a list of its steps; the step chosen takes the place of the
-/// print-to-braille rules table, the language's other three tables staying.
+/// Document, Learning Tables, a learning course: dialog 1052 lists its steps ("Choose a contraction level:"), the
+/// step in use chosen; OK gives the chosen step's table in place of the print-to-braille rules table, the
+/// language's other three tables staying, and takes every grade code out of the initial codes. A double-click in
+/// the list does nothing.
 fn choose_learning_step(course: usize) {
     let Some((entry, step, e)) = active_entry() else { return };
     let courses = translation::with_list(|l| l.courses(entry));
     let Some(c) = courses.get(course) else { return };
     let names: Vec<String> = c.steps.iter().map(|&s| e.steps[s].name.clone()).collect();
     let choices: Vec<&str> = names.iter().map(String::as_str).collect();
-    let frame = app::frame();
-    let dialog = SingleChoiceDialog::builder(&frame, "Learning step:", &format!("{} - Learning Tables", c.name), &choices).build();
-    dialog.set_selection(step.and_then(|s| c.steps.iter().position(|&x| x == s)).unwrap_or(0) as i32);
-    if dialog.show_modal() != wxdragon::id::ID_OK {
+    let selected = step.and_then(|s| c.steps.iter().position(|&x| x == s)).unwrap_or(0);
+    let d = open_dialog(1052, None);
+    d.set_items(7, &choices, Some(selected as u32));
+    d.place_third();
+    let ok = d.show_focused(7) == 1;
+    let chosen = d.selection(7);
+    d.destroy();
+    if !ok {
         return;
     }
-    let Some(&s) = c.steps.get(dialog.get_selection().max(0) as usize) else { return };
+    let Some(&s) = c.steps.get(chosen.unwrap_or(0) as usize) else { return };
     let mut tables = e.tables.clone();
     tables[0] = e.steps[s].table.clone();
-    set_document_tables(Some(tables), |i| i.to_string());
+    set_document_tables(Some(tables), |i| regrade(i, ""));
 }
 
 /// Document, Hyphen Table: the document's table;
@@ -4082,35 +4698,40 @@ fn set_hyphen(id: i32) {
     });
 }
 
+/// Document, Add Style (dialog 1025, A12.5): the name, "Style can be nested", a style for basis ("(No Style)" first,
+/// then the styles the Show choice lists), then Edit Style Codes (1044). A name the document has (case ignored)
+/// asks 'Replace existing "NAME"?': Yes puts the new style in place of the old one, No gives message 2170.
 fn add_style() {
     if active_area().is_none() {
         return;
     }
     use crate::translation::{codes_for_dialog, codes_from_dialog};
-    let names = style_names();
+    const NO_STYLE: &str = "(No Style)";
     let d = open_dialog(1025, None);
     d.set_text(7, NEW_STYLE_NAME);
-    let mut basis = vec!["(No Style)".to_string()];
-    basis.extend(names.iter().cloned());
-    let refs: Vec<&str> = basis.iter().map(String::as_str).collect();
-    d.set_items(10, &refs, Some(0));
-    d.set_items(12, STYLE_SHOW, Some(0));
+    style_show(&d, 10, 12, Some(NO_STYLE), None);
     // "Style can be nested" starts checked for a name without the period (the default name has none).
     d.set_checked(8, true);
-    // Choosing a style for basis puts its codes in the code fields.
+    // Choosing a style for basis puts its codes in the code fields: item k takes the style before, in the whole
+    // sorted style list, the style listed at k (bc_core::doctext::basis_style).
     let me = Dlg { id: d.id, dialog: d.dialog, page: d.page };
     if let Some(list) = d.win(10).and_then(|w| w.as_widget::<ListBox>()) {
         list.on_selection_changed(move |_| {
-            let chosen = me.selected_text(10);
-            let style = chosen.and_then(|n| app::with(|a| a.doc().and_then(|doc| doc.styles.iter().find(|s| s.name == n).cloned())));
+            let k = me.selection(10).map_or(0, |k| k as usize);
+            let listed = listed_styles(show_choice(&me, 12));
+            let basis = bc_core::doctext::basis_style(&style_names(), &listed, k);
+            let style =
+                basis.and_then(|n| app::with(|a| a.doc().and_then(|doc| doc.styles.iter().find(|s| s.name == n).cloned())));
             me.set_text(14, &style.as_ref().map(|s| codes_for_dialog(&s.begin)).unwrap_or_default());
             me.set_text(16, &style.map(|s| codes_for_dialog(&s.end)).unwrap_or_default());
         });
     }
-    // The name is checked in the dialog: empty, too long, the default name, invalid characters.
-    d.check_on_ok(|d| style_name_problem(&d.text(7)).map(|p| (7, p)));
+    // The name is checked in the dialog: empty, too long, the default name, invalid characters (that last check
+    // left out with BypassStyleNameValidityCheck on).
+    let bypass = settings_store::load_bypass_style_name_check();
+    d.check_on_ok(move |d| style_name_problem_with(&d.text(7), bypass).map(|p| (7, p)));
     let ok = d.show() == 1;
-    let (mut name, nested, begin, end) = (d.text(7), d.checked(8), d.text(14), d.text(16));
+    let (mut name, nested, mut begin, end) = (d.text(7), d.checked(8), d.text(14), d.text(16));
     d.destroy();
     if !ok {
         return;
@@ -4118,6 +4739,11 @@ fn add_style() {
     // A style that cannot be nested is one whose name ends in a period.
     if !nested && !name.ends_with('.') {
         name.push('.');
+    }
+    // A name the period makes 32 characters long runs into the beginning codes, which Edit Style Codes then shows
+    // empty.
+    if bc_core::doctext::style_name_overruns_codes(&name) {
+        begin.clear();
     }
     // Then Edit Style Codes (1044), with the codes from the first dialog.
     let e = open_dialog(1044, None);
@@ -4131,9 +4757,16 @@ fn add_style() {
     if !ok {
         return;
     }
-    if names.contains(&name) {
-        message("Unable to add style to style list.");
-        return;
+    if let Some(at) = bc_core::doctext::style_index_ignoring_case(&style_names(), &name) {
+        if !yes_no(&format!("Replace existing \"{name}\"?")) {
+            message("Unable to add style to style list.");
+            return;
+        }
+        app::with(|a| {
+            if let Some(doc) = a.doc_mut() {
+                doc.styles.remove(at);
+            }
+        });
     }
     app::with(|a| {
         if let Some(doc) = a.doc_mut() {
@@ -4157,9 +4790,7 @@ fn modify_style() {
         return;
     }
     let d = open_dialog(1026, None);
-    let refs: Vec<&str> = names.iter().map(String::as_str).collect();
-    d.set_items(8, &refs, Some(0));
-    d.set_items(10, STYLE_SHOW, Some(0));
+    style_show(&d, 8, 10, None, None);
     let load = move |d: &Dlg| {
         if let Some(name) = d.selected_text(8) {
             if let Some(s) = app::with(|a| a.doc().and_then(|doc| doc.styles.iter().find(|s| s.name == name).cloned())) {
@@ -4222,10 +4853,8 @@ fn modify_style() {
                 }
             }
         });
-        let names = style_names();
-        let refs: Vec<&str> = names.iter().map(String::as_str).collect();
-        let pos = names.iter().position(|n| *n == new).map(|p| p as u32);
-        outer.set_items(8, &refs, pos);
+        // The list is filled again in its order, the renamed style chosen where it now stands.
+        fill_style_list(&outer, 8, 10, None, Some((&new, false)));
     });
     let ok = d.show() == 1;
     let (name, begin, end) = (d.selected_text(8), d.text(12), d.text(14));
@@ -4483,7 +5112,8 @@ fn global_fonts() {
 }
 
 /// Global, View Preferences (dialog 1034, spec 24 2d.1 and 2d.2): filled from the settings, not from dialog memory.
-/// OK takes the six-key set first; a set that is not six keys gives the message and the dialog stays open.
+/// OK takes the six-key set first: a set changed from the one kept is checked (bc_core::sixkey::six_key_set_problem),
+/// and one refused gives message 2768 with the field selected, the dialog staying open.
 /// Then the other values are kept, and every open document is redrawn when verbose labels, line
 /// numbers or the translated line codes changed.
 fn view_preferences() {
@@ -4498,17 +5128,19 @@ fn view_preferences() {
     d.set_checked(15, p.locator_on_shift);
     d.set_items(17, &["Hide All", "Hide Idle", "Show All"], Some(p.line_codes.index() as u32));
     d.set_text(19, &set);
-    let keys = loop {
-        if d.show() != 1 {
-            d.destroy();
-            return;
-        }
+    let kept = set.clone();
+    d.check_on_ok(move |d| {
         let keys = d.text(19);
-        if keys.chars().count() == 6 {
-            break keys.to_lowercase();
+        if keys == kept {
+            return None;
         }
-        message("You must type exactly six keys in as the \"Six-Key Key Set.\"  The keys you type represent, in order, what you will type for Dots 1, 2, 3, 4, 5, and 6 when entering braille by six-key chording.");
-    };
+        bc_core::sixkey::six_key_set_problem(&keys).map(|m| (19, m.to_string()))
+    });
+    if d.show() != 1 {
+        d.destroy();
+        return;
+    }
+    let keys = d.text(19).to_lowercase();
     // The margin bell position is read as a whole number, with no range check (an entry that is not one keeps 0).
     let new = app::ViewPrefs {
         bell_position: d.text(7).trim().parse().unwrap_or(0),
@@ -4558,26 +5190,58 @@ fn shortcut_preferences() {
     d.set_text(17, &s.new_ref_page);
     d.set_radio(&[19, 20, 21], s.page_nav.min(2));
     d.set_radio(&[23, 24, 25], s.control_page_nav.min(2));
+    // The page-navigation radio buttons are kept as soon as one is clicked; Cancel does not take them back.
+    for (group, ids) in [(0, [19, 20, 21]), (1, [23, 24, 25])] {
+        for (k, id) in ids.into_iter().enumerate() {
+            d.on_radio(id, move || {
+                let (page, control) = app::with(|a| {
+                    let sc = &mut a.settings.shortcuts;
+                    if group == 0 {
+                        sc.page_nav = k;
+                    } else {
+                        sc.control_page_nav = k;
+                    }
+                    (sc.page_nav, sc.control_page_nav)
+                });
+                settings_store::save_page_nav(page, control);
+            });
+        }
+    }
     // Each code field is checked in the dialog, in order: not empty, at most 99
     // characters, codes properly started and ended.
-    d.check_on_ok(|d| {
-        [7, 9, 11, 13, 15, 17].into_iter().find_map(|field| shortcut_field_problem(&d.text(field)).map(|m| (field, m)))
-    });
-    if d.show() == 1 {
-        let new = app::Shortcuts {
-            grade0: d.text(7),
-            flush_right_leader: d.text(9),
-            cbc: d.text(11),
-            new_line: d.text(13),
-            new_page: d.text(15),
-            new_ref_page: d.text(17),
-            page_nav: d.radio(&[19, 20, 21]).unwrap_or(s.page_nav),
-            control_page_nav: d.radio(&[23, 24, 25]).unwrap_or(s.control_page_nav),
-        };
-        settings_store::save_shortcuts(&new);
-        app::with(|a| a.settings.shortcuts = new);
+    d.check_on_ok(|d| first_shortcut_problem([7, 9, 11, 13, 15, 17].map(|f| d.text(f))));
+    d.place_third();
+    if d.show_focused(7) == 1 {
+        let codes = [7, 9, 11, 13, 15, 17].map(|f| d.text(f));
+        app::with(|a| {
+            let new = shortcuts_after(&a.settings.shortcuts, Some(codes));
+            settings_store::save_shortcuts(&new);
+            a.settings.shortcuts = new;
+        });
     }
     d.destroy();
+}
+
+/// The first shortcut field refused, in the order 7, 9, 11, 13, 15, 17 (`fields` holds their texts in that order),
+/// with its message; each field is checked for its length, then its codes.
+fn first_shortcut_problem(fields: [String; 6]) -> Option<(i32, String)> {
+    [7, 9, 11, 13, 15, 17].into_iter().zip(fields).find_map(|(field, text)| shortcut_field_problem(&text).map(|m| (field, m)))
+}
+
+/// The shortcuts after Shortcut Preferences closes: OK (`codes` the six field texts, in the order of
+/// first_shortcut_problem) takes the six codes; Cancel keeps them. The page-navigation choices in `now` are already
+/// the ones clicked, kept either way.
+fn shortcuts_after(now: &app::Shortcuts, codes: Option<[String; 6]>) -> app::Shortcuts {
+    let mut new = now.clone();
+    if let Some([grade0, flush, cbc, line, page, ref_page]) = codes {
+        new.grade0 = grade0;
+        new.flush_right_leader = flush;
+        new.cbc = cbc;
+        new.new_line = line;
+        new.new_page = page;
+        new.new_ref_page = ref_page;
+    }
+    new
 }
 
 /// At start-up on Windows: offers the JAWS script set in `source` for installing (jaws_install.rs), with the
@@ -4708,5 +5372,39 @@ mod tests {
         for bad in ["[g0", "g0]", "[[g0]]", "[a]]"] {
             assert_eq!(shortcut_field_problem(bad).as_deref(), Some("Some codes are not properly started or terminated."), "{bad}");
         }
+        // The first failing field wins, in the order 7, 9, 11, 13, 15, 17.
+        let fields = |f: [&str; 6]| f.map(String::from);
+        let bad = first_shortcut_problem(fields(["[cz]", "[x", "[cb]", "[<]", "", "[lea]"]));
+        assert_eq!(bad.map(|b| b.0), Some(9));
+        // A field is checked for its length before its codes: an empty field 7 reports only that it is empty.
+        let bad = first_shortcut_problem(fields(["", "[x", "[cb]", "[<]", "[pg]", "[lea]"]));
+        assert_eq!(bad, Some((7, "The shortcut string is empty.".to_string())));
+        assert_eq!(first_shortcut_problem(fields(["[cz]", "[fr]", "[cb]", "[<]", "[pg]", "[lea]"])), None);
+    }
+
+    #[test]
+    fn page_nav_saved_without_ok() {
+        let old = app::Settings::default().shortcuts;
+        // The radios clicked change the kept choices at once; Cancel then keeps them and the old six codes.
+        let mut now = old.clone();
+        now.page_nav = 2;
+        now.control_page_nav = 0;
+        let after = shortcuts_after(&now, None);
+        assert_eq!((after.page_nav, after.control_page_nav), (2, 0));
+        assert_eq!((after.grade0.as_str(), after.new_ref_page.as_str()), (old.grade0.as_str(), old.new_ref_page.as_str()));
+        let codes = ["a", "b", "c", "d", "e", "f"].map(String::from);
+        let after = shortcuts_after(&now, Some(codes));
+        assert_eq!((after.grade0.as_str(), after.new_ref_page.as_str(), after.page_nav), ("a", "f", 2));
+    }
+
+    #[test]
+    fn page_numbering_messages() {
+        let (low, high) = ("not less than %d.", "not greater than %d.");
+        let read = |t: &str| bc_core::number_field::read_number(t, bc_core::number_field::FIRST_PAGE_WIDTH);
+        assert_eq!(check_number_read(read("0"), 31, low, high), Some((31, "not less than 1.".to_string())));
+        assert_eq!(check_number_read(read("x"), 31, low, high), Some((31, "The number entered is not valid.".to_string())));
+        assert_eq!(check_number_read(read(" 5"), 31, low, high).map(|p| p.1), Some("The number entered is not valid.".into()));
+        assert_eq!(check_number_read(read("123456"), 31, low, high), None);
+        assert_eq!(check_number_read(read("7"), 31, low, high), None);
     }
 }

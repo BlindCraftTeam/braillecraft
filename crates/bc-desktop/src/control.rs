@@ -274,7 +274,7 @@ fn ensure_timer() {
         if t.borrow().is_some() {
             return;
         }
-        let timer = wxdragon::timer::Timer::new(&app::frame());
+        let timer = wxdragon::timer::Timer::new(&app::host());
         timer.on_tick(|_| drain());
         timer.start(30, false);
         *t.borrow_mut() = Some(timer);
@@ -283,7 +283,7 @@ fn ensure_timer() {
         if t.borrow().is_some() {
             return;
         }
-        let timer = wxdragon::timer::Timer::new(&app::frame());
+        let timer = wxdragon::timer::Timer::new(&app::host());
         timer.on_tick(|_| {
             wxdragon::app::process_main_thread_queue();
         });
@@ -414,6 +414,8 @@ fn inspect_doc(i: usize) -> Value {
 /// The open documents, as ui.documents lists them.
 fn documents_list() -> Value {
     app::with(|a| {
+        // macOS: in the order of the window tabs as they stand.
+        a.reconcile_tabs();
         Value::Array(
             a.docs
                 .iter()
@@ -427,8 +429,9 @@ fn documents_list() -> Value {
                         "path": d.path.as_ref().map(|p| p.display().to_string()),
                         "dirty": d.dirty,
                         "active": a.active == Some(i),
-                        // The document's tab and its close button, each as a point in the main window's
-                        // coordinates (for the click tool), where the system reports them (not on macOS).
+                        // The document's tab and its close button (on Windows the close sign at the right of the
+                        // tab's text), each as a point in the main window's coordinates (for the click tool), where
+                        // the system reports them (not on macOS, whose window tabs give no rectangles).
                         "tab": a.tabs.tab_rect(i).map(|r| {
                             let at = a.frame.screen_to_client(Point::new(r.x + r.width / 2, r.y + r.height / 2));
                             json!([at.x, at.y])
@@ -464,7 +467,7 @@ fn forward(i: usize, text: &str, language: Option<&str>) -> Result<Shown, String
     app::with(|a| {
         let d = &a.docs[i];
         let st = translation::style_table(&d.styles);
-        let out = translation::forward(&tables[0], &Shown::marked(text), &d.initial_codes, a.encoding(), &st).map_err(|e| format!("Translation failed: {e}"))?;
+        let out = translation::forward(&tables[0], &Shown::marked(text), &d.initial_codes(), a.encoding(), &st).map_err(|e| format!("Translation failed: {e}"))?;
         Ok(translation::convert_braille(&out, a.encoding(), na()))
     })
 }
@@ -475,7 +478,7 @@ fn backward(i: usize, text: &str, language: Option<&str>) -> Result<Shown, Strin
         let d = &a.docs[i];
         let st = translation::style_table(&d.styles);
         let input = braille_in(a, text);
-        translation::back(&tables[2], &input, &d.initial_codes, a.encoding(), &st).map_err(|e| format!("Translation failed: {e}"))
+        translation::back(&tables[2], &input, &d.initial_codes(), a.encoding(), &st).map_err(|e| format!("Translation failed: {e}"))
     })
 }
 
@@ -850,7 +853,9 @@ fn execute(p: &Value) -> Result<Value, String> {
     match id {
         1101 => return new_document(&params),
         1102 if has_path => return open_document(&params),
-        1105 if has_path || app::with(|a| a.doc().is_some_and(|d| d.saved && d.path.is_some())) => return save_document(&params),
+        1105 if has_path || app::with(|a| a.doc().is_some_and(|d| d.document_file && d.path.is_some())) => {
+            return save_document(&params)
+        }
         1106 if has_path => return export_document(&params),
         1109 => {
             let key = commands::translate_active()?;
@@ -873,6 +878,23 @@ fn execute(p: &Value) -> Result<Value, String> {
                     let braille = a.docs[i].kind == DocKind::Braille;
                     let put = match what {
                         Insert::Text(t) => Shown::marked(t),
+                        // Before each line start of the selection and at its start, in one undo step.
+                        Insert::EachLine(t) => {
+                            let (from, to) = a.docs[i].selection();
+                            if from != to {
+                                let places = bc_core::menu_codes::each_line_places(&a.docs[i].shown().text, from, to);
+                                let code = Shown::marked(t);
+                                a.edit_by(i, move |e| {
+                                    let mut removed = Shown::plain("");
+                                    for p in places {
+                                        removed = e.replace(p, p, &code);
+                                    }
+                                    removed
+                                });
+                                return;
+                            }
+                            Shown::marked(t)
+                        }
                         Insert::Pair(x, y) => {
                             let (from, to) = a.docs[i].selection();
                             let middle = a.docs[i].shown().slice(from, to);
@@ -939,7 +961,7 @@ fn save_document(p: &Value) -> Result<Value, String> {
     let i = active()?;
     let (key, braille, own) = app::with(|a| {
         let d = &a.docs[i];
-        (d.key, d.kind == DocKind::Braille, d.path.clone().filter(|_| d.saved))
+        (d.key, d.kind == DocKind::Braille, d.path.clone().filter(|_| d.document_file))
     });
     let path = match p.get("path").and_then(Value::as_str) {
         Some(s) => PathBuf::from(s),

@@ -3,8 +3,7 @@
 //
 // wxWidgets has no accessibility layer on GTK (wxUSE_ACCESSIBILITY is Windows only). The window's GTK widget gets an
 // accessible object of our own: a GtkWidgetAccessible that also has the ATK text interface, over the window's text
-// for screen readers (each text row followed by a line feed, page break rows not in it: the reference's own text for
-// its editing window, spec 27 section 6). It tells screen readers when the text changes (only the stretch that
+// for screen readers (each text row followed by a line feed, page break rows not in it, spec 27 section 6). It tells screen readers when the text changes (only the stretch that
 // changed), when the caret moves and when the selection changes. A screen reader that moves the caret or selects
 // through the interface does so as a click would.
 //

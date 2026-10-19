@@ -109,7 +109,7 @@ fn files_in_and_out() {
     let (_, text) = tool(&mut s, "get_text", json!({}));
     let v: Value = serde_json::from_str(&text).unwrap();
     assert!(v["text"].as_str().unwrap().contains("[es~h1.]Heading[ee~h1.]"), "{text}");
-    for (name, kind) in [("out.dxp", "dxp"), ("out.htm", "htm"), ("out.md", "md"), ("out.tex", "tex"), ("out.txt", "txt"), ("out.prf", "prf"), ("out.lbf", "lbf")] {
+    for (name, kind) in [("out.dxp", "dxp"), ("out.htm", "htm"), ("out.md", "md"), ("out.tex", "tex"), ("out.txt", "txt"), ("out.prf", "prf"), ("out.lbf", "lbf"), ("out.epub", "epub")] {
         let p = dir.join(name);
         let (err, text) = tool(&mut s, "export_file", json!({"path": p.display().to_string()}));
         assert!(!err, "{kind}: {text}");
@@ -124,14 +124,21 @@ fn files_in_and_out() {
     // Translated and written as BRF and PEF.
     let (err, text) = tool(&mut s, "translate", json!({}));
     assert!(!err, "{text}");
-    for name in ["out.brf", "out.pef", "out.bru", "braille.md"] {
+    for name in ["out.brf", "out.pef", "out.bru", "braille.md", "out.ebrl"] {
         let p = dir.join(name);
         let (err, text) = tool(&mut s, "export_file", json!({"path": p.display().to_string()}));
         assert!(!err, "{name}: {text}");
     }
     let brf = std::fs::read_to_string(dir.join("out.brf")).unwrap();
-    // Observed: the heading style is uncontracted, the paragraph contracted.
-    assert!(brf.contains(",heading") && brf.contains(",a p>agraph") && brf.contains('\u{c}'), "{brf:?}");
+    // The heading and the paragraph both contracted: the h1 style holds no grade code, and the template's
+    // initial codes are in force from the start.
+    assert!(brf.contains(",h1d+") && brf.contains(",a p>agraph") && brf.contains('\u{c}'), "{brf:?}");
+    // The EPUB 3 and eBraille packages: zips whose package.opf names its identifier's id.
+    for name in ["out.epub", "out.ebrl"] {
+        let parts = bc_core::docx::parts(&std::fs::read(dir.join(name)).unwrap()).unwrap();
+        let opf = String::from_utf8(bc_core::docx::part(&parts, "package.opf").unwrap().to_vec()).unwrap();
+        assert!(opf.contains("unique-identifier=\"pub-id\"") && opf.contains("<dc:identifier id=\"pub-id\">"), "{name}: {opf}");
+    }
     let pef = std::fs::read_to_string(dir.join("out.pef")).unwrap();
     assert!(pef.contains("<row>") && pef.contains('\u{2800}'), "{pef}");
     // Lists.

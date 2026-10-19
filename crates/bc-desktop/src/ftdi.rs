@@ -168,10 +168,8 @@ impl Drop for Device {
     }
 }
 
-/// Sends a byte job to the device described `description`, in writes of at most 512 bytes
-/// (spec 25 21.2).
-pub fn send(description: &str, bytes: &[u8]) -> Result<(), Failure> {
-    let mut d = Device::open(description)?;
+/// Sends a piece of a byte job to the open device `d`, in writes of at most 512 bytes (spec 25 21.2).
+pub fn send_piece(d: &mut Device, bytes: &[u8]) -> Result<(), Failure> {
     bytes.chunks(512).try_for_each(|c| d.write_all(c))
 }
 

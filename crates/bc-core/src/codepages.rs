@@ -3,14 +3,16 @@
 //!
 //! A converter is made for the chosen name: a Windows code page where one exists, dedicated converters for
 //! UTF-16 and UTF-32, and plain Latin-1 for a name with no converter. A character the converter cannot write is
-//! written '#', and nothing is written before the text (no byte-order mark). Text is converted one character at a
-//! time.
+//! written '#', and no converter writes anything before the text (no byte-order mark, spec A15.5). Text is converted
+//! one UTF-16 unit at a time, as the page writer hands the converter one unit: a character above U+FFFF is written
+//! as its surrogate pair in UTF-16; every other converter fails on each lone half, so it is written "##".
 //!
 //! A name written through a Windows code page uses that page's own table, as Windows itself wrote it
 //! (data/windows-code-pages.bin, from the windows-code-pages CI artifact by tools/codepages/make_windows_tables.py).
 //! ISO-8859-14, which is not written through a Windows code page, and ISO-8859-10, whose Windows code page
-//! (28600) a standard Windows does not have, keep the tables of data/codepages.txt (INFERENCE for
-//! ISO-8859-10: the fallback for a missing page is not given past spec 04d-F). ISO-2022-JP is read by
+//! (28600) a standard Windows does not have, keep the tables of data/codepages.txt. For ISO-8859-10 the missing
+//! page falls back to the toolkit's own conversion table, which is the standard ISO-8859-10 mapping and the same as
+//! the data/codepages.txt row for 0x80 to 0xFF; a character it cannot write is written '#'. ISO-2022-JP is read by
 //! encoding_rs: Windows gives no table for reading it one byte sequence at a time.
 
 use std::collections::HashMap;
@@ -314,9 +316,13 @@ fn decode_utf7(bytes: &[u8]) -> String {
     out
 }
 
-/// One character in the named code page; None when the code page cannot write it.
+/// One character in the named code page; None when the code page cannot write it. A character above U+FFFF is
+/// written only by UTF-16 (one unit at a time, spec A15.5).
 pub fn encode_char(name: &str, c: char) -> Option<Vec<u8>> {
     let mut units = [0u16; 2];
+    if c.len_utf16() > 1 && !name.starts_with("UTF-16") {
+        return None;
+    }
     match name {
         "UTF-7" => return Some(utf7(c)),
         "UTF-8" => return Some(c.to_string().into_bytes()),
@@ -338,13 +344,19 @@ pub fn encode_char(name: &str, c: char) -> Option<Vec<u8>> {
     ((c as u32) <= 0xFF).then(|| vec![c as u32 as u8])
 }
 
-/// Text in the named code page, one character at a time; a character it cannot write is written '#'.
+/// Text in the named code page, one character at a time; a character it cannot write is written '#', once for each
+/// of its UTF-16 units (a character above U+FFFF is "##").
 pub fn encode(name: &str, text: &str) -> Vec<u8> {
     let mut out = Vec::with_capacity(text.len());
     for c in text.chars() {
         match encode_char(name, c) {
             Some(b) => out.extend(b),
-            None => out.extend(encode_char(name, '#').unwrap_or_else(|| vec![b'#'])),
+            None => {
+                let hash = encode_char(name, '#').unwrap_or_else(|| vec![b'#']);
+                for _ in 0..c.len_utf16() {
+                    out.extend(&hash);
+                }
+            }
         }
     }
     out
@@ -390,6 +402,17 @@ mod tests {
     }
 
     #[test]
+    fn unicode_converters_write_no_byte_order_mark_and_one_unit_at_a_time() {
+        assert_eq!(encode("UTF-16LE", "a"), vec![0x61, 0x00]);
+        assert_eq!(encode("UTF-32BE", "a"), vec![0, 0, 0, 0x61]);
+        // A character above U+FFFF: its surrogate pair in UTF-16, "##" in every other converter.
+        assert_eq!(encode("UTF-16BE", "\u{1F600}"), vec![0xd8, 0x3d, 0xde, 0x00]);
+        assert_eq!(encode("UTF-32LE", "\u{1F600}"), "#\0\0\0#\0\0\0".as_bytes().to_vec());
+        assert_eq!(encode("UTF-8", "\u{1F600}"), b"##".to_vec());
+        assert_eq!(encode("WINDOWS-1252", "\u{1F600}"), b"##".to_vec());
+    }
+
+    #[test]
     fn text_is_read_in_the_chosen_code_page() {
         assert_eq!(decode("WINDOWS-1252", b"\x80 \x93a\x94"), "\u{20ac} \u{201c}a\u{201d}");
         assert_eq!(decode("ISO-8859-1", b"Caf\xe9"), "Caf\u{e9}");
@@ -399,5 +422,12 @@ mod tests {
         assert_eq!(decode("WINDOWS-1252", b"\x81"), "\u{81}");
         assert_eq!(decode("WINDOWS-437", b"\x82"), "\u{e9}");
         assert_eq!(decode("UTF-7", b"A+AOk-+-"), "A\u{e9}+");
+    }
+
+    #[test]
+    fn iso_8859_10_matches_the_toolkit_table() {
+        assert_eq!(decode("ISO-8859-10", b"\xa1\xbd\xff"), "\u{104}\u{2015}\u{138}");
+        assert_eq!(encode("ISO-8859-10", "\u{104}\u{2015}\u{138}"), b"\xa1\xbd\xff".to_vec());
+        assert_eq!(encode("ISO-8859-10", "\u{20ac}"), b"#".to_vec());
     }
 }

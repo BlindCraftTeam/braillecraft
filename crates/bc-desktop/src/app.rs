@@ -68,9 +68,13 @@ pub struct View {
 
 pub struct Doc {
     pub key: u64,
-    /// The document's page in the tab bar across the main window (tabs.rs): it holds the editing area, the
-    /// translated line and the status line.
+    /// The document's page: in the tab bar across the main window (Windows, Linux), or the only child of the
+    /// document's own window (macOS; tabs.rs). It holds the editing area, the translated line and the status line.
     pub page: Panel,
+    /// The document's own window on macOS, one of the window tabs (tabs.rs); None elsewhere.
+    pub window: Option<Frame>,
+    /// The edited mark last given to the document's window (macOS), so it is set again only when `dirty` changes.
+    pub edited_shown: bool,
     /// The editing area: the program-drawn editing window (editor_view), showing `ed`.
     pub area: crate::editor_view::Area,
     /// The document's status line, the window after the editing area (where screen
@@ -81,12 +85,13 @@ pub struct Doc {
     pub kind: DocKind,
     pub untitled: bool,
     pub saved: bool,
+    /// Read from or saved to a document file in the current format: File, Save writes it there again without asking
+    /// (bc_core::dxfile::saves_in_place, spec A15.10). An imported document and an older-format Save As do not set it.
+    pub document_file: bool,
     pub dirty: bool,
     pub path: Option<PathBuf>,
     /// The document's tables by code: print-to-braille rules and scan table, braille-to-print rules and scan table.
     pub tables: [String; 4],
-    /// Codes in force from the start of the document (Document, Learning Tables sets the grade code here).
-    pub initial_codes: String,
     /// The template the document was made with (its name as File, New lists it); its styles were copied into the
     /// document's own style list.
     pub template: String,
@@ -97,6 +102,10 @@ pub struct Doc {
     /// The embosser page (cells, lines) of a print document's embosser setup, kept apart from its print page
     /// (spec 05 section A10); a braille document uses `cells` and `lines`.
     pub emb_page: (u32, u32),
+    /// A braille document's own Printer Setup page (lines per page, characters per line; settings +129 and +131):
+    /// Document, Printer Setup shows and keeps it and the document file keeps it; the braille layout does not use it
+    /// (spec A16.2). A print document's is its `lines` and `cells`.
+    pub print_page: (u32, u32),
     /// Page numbering, in the order the document file keeps it: braille page numbers on even pages and on odd pages,
     /// print page numbers on even pages and on odd pages (0 none, 1 upper left, 2 upper right, 3 lower left, 4 lower
     /// right), then the first page whose number is shown.
@@ -132,8 +141,15 @@ pub struct Doc {
     pub replace: bc_core::find::Search,
     pub replace_with: String,
     pub last_line_key: String,
-    pub six_down: HashSet<usize>,
-    pub chord: usize,
+    /// The codes carried in ahead of the translated line (running text) and what they translate to alone, kept while
+    /// the caret moves among lines with the same codes before them.
+    pub line_lead: (String, String),
+    /// Six-key entry (bc_core::sixkey): the keys held down (by their US places), to tell a repeat from a press, and
+    /// the chord being held.
+    pub six_down: HashSet<char>,
+    pub chord: bc_core::sixkey::Chord,
+    /// The style chosen last in Apply Style for this document (not saved); Apply Style opens on it.
+    pub last_applied: String,
     /// Document, Printer Setup: the document's own printer, paper and margins; None prints with the global ones.
     pub printer: Option<crate::print::PrinterSetup>,
     /// Document, Embosser Setup: the name of the document's embosser setup (empty: no target embosser) and its
@@ -143,12 +159,33 @@ pub struct Doc {
     /// The optional sections of the document file it was read from that BrailleCraft does not use itself, written
     /// back as they were (their descriptor's place, kind and bytes).
     pub file_sections: Vec<(usize, u16, Vec<u8>)>,
-    /// Document, eBraille Metadata: the package metadata of an eBraille or EPUB 3 save (kept with the open document;
-    /// where the document file stores it is not traced, spec 23 section 2).
+    /// Document, eBraille Metadata: the package metadata of an eBraille or EPUB 3 save, kept in the document file's
+    /// version 2 section as ebraille/package.opf (bc_core::dxfile::DxDocument::ebraille).
     pub ebraille: bc_core::ebraille::Metadata,
 }
 
 impl Doc {
+    /// The codes in force from the start of the document, in brackets: the beginning codes of its style named
+    /// "initial" (case ignored), as a template gives them and Document, Learning Tables changes them (spec 05
+    /// section A10); empty when the document has no such style.
+    pub fn initial_codes(&self) -> String {
+        self.styles
+            .iter()
+            .find(|s| s.name.eq_ignore_ascii_case("initial"))
+            .map(|s| crate::translation::codes_for_dialog(&s.begin))
+            .unwrap_or_default()
+    }
+
+    /// Puts `codes` (in brackets) as the beginning codes of the document's "initial" style, adding the style at the
+    /// end of the list when the document has none.
+    pub fn set_initial_codes(&mut self, codes: &str) {
+        let begin = crate::translation::codes_from_dialog(codes);
+        match self.styles.iter_mut().find(|s| s.name.eq_ignore_ascii_case("initial")) {
+            Some(s) => s.begin = begin,
+            None => self.styles.push(Style { name: "initial".to_string(), nested: true, begin, end: String::new() }),
+        }
+    }
+
     /// The document: its text and which runs are codes.
     pub fn shown(&self) -> Shown {
         self.ed.doc.clone()
@@ -357,9 +394,16 @@ impl Default for ViewPrefs {
 }
 
 pub struct App {
+    /// The main window (Windows, Linux); on macOS the program's own frame, never shown, which holds the menu bar and
+    /// the timers while the documents are window tabs.
     pub frame: Frame,
-    /// The tab bar across the top of the window: one tab per document, in the order of `docs`.
+    /// The tab bar across the top of the window: one tab per document, in the order of `docs`. None on macOS
+    /// (tabs::Tabs::none), where each document has its own window.
     pub tabs: crate::tabs::Tabs,
+    /// macOS: where the last document window closed in this run was (position and size), for the next window opened
+    /// alone; and whether the tab bar has been shown for the first document.
+    pub last_frame: Option<(Point, Size)>,
+    pub tab_bar_shown: bool,
     pub menus: Menus,
     pub docs: Vec<Doc>,
     pub active: Option<usize>,
@@ -406,30 +450,16 @@ pub fn try_with(f: impl FnOnce(&mut App)) {
     });
 }
 
-/// The main window, for parenting dialogs.
+/// The window dialogs belong to: the main window; on macOS the active document's window (the program's own frame
+/// while no document is open).
 pub fn frame() -> Frame {
+    with(|a| a.dialog_parent())
+}
+
+/// The program's own frame (the main window; on macOS the frame that holds the menu bar), for what must outlive any
+/// document window: the control channel's timers.
+pub fn host() -> Frame {
     with(|a| a.frame)
-}
-
-// ------------------------------------------------------------------ text positions
-
-/// The text of a control and the caret, selection and positions as character counts (wxWidgets positions count
-/// characters; the controls are created with the rich text style on Windows so a line break counts as one).
-pub fn char_to_byte(s: &str, chars: i64) -> usize {
-    s.char_indices().nth(chars.max(0) as usize).map_or(s.len(), |(b, _)| b)
-}
-
-pub fn byte_to_char(s: &str, byte: usize) -> i64 {
-    s[..byte.min(s.len())].chars().count() as i64
-}
-
-/// The line the caret is on, with its codes.
-pub fn line_of(doc: &Shown, pos: i64) -> Shown {
-    let text = &doc.text;
-    let b = char_to_byte(text, pos);
-    let start = text[..b].rfind('\n').map_or(0, |i| i + 1);
-    let end = text[b..].find('\n').map_or(text.len(), |i| b + i);
-    doc.slice(byte_to_char(text, start) as usize, byte_to_char(text, end) as usize)
 }
 
 /// The status line's parts are shared with the web build (bc_core::status).
@@ -441,6 +471,26 @@ pub use bc_core::status::open_styles;
 
 pub fn font(face: &str, size: i32) -> Option<Font> {
     Font::builder().with_face_name(face).with_point_size(size).with_family(FontFamily::Modern).build()
+}
+
+/// The width of a character and the height of a row of `face` at `size` points, on the screen; None when the font
+/// cannot be made. INFERENCE: the character measured is "x"; the measured string is not known.
+pub fn font_metrics(face: &str, size: i32) -> Option<(i32, i32)> {
+    let f = font(face, size)?;
+    let dc = ScreenDC::new();
+    dc.set_font(&f);
+    let (w, _) = dc.get_text_extent("x");
+    Some((w.max(1), dc.get_char_height().max(1)))
+}
+
+/// Whether a font named "RNIB Moon" is installed (a braille view font becomes it for a Moon table; spec A16.1),
+/// looked up once.
+pub fn moon_installed() -> bool {
+    thread_local! {
+        static MOON: std::cell::OnceCell<bool> = const { std::cell::OnceCell::new() };
+    }
+    let find = || crate::print::font_names().iter().any(|n| n == bc_core::print_geometry::MOON_FACE);
+    MOON.with(|m| *m.get_or_init(find))
 }
 
 /// The font with the attribute bits of a text run: 1 bold, 2 italic, 4 underline.
@@ -480,27 +530,129 @@ impl App {
         }
     }
 
+    /// The face and size document `i` shows `font` in: as `face`, except that a braille view font is the Moon font
+    /// when the document's print-to-braille table is a Moon table and the font is installed (spec A16.1).
+    pub fn doc_face(&self, i: usize, font: ViewFont) -> (String, i32) {
+        let (face, size) = self.face(font);
+        let moon =
+            font != ViewFont::Print && bc_core::print_geometry::uses_moon(&self.docs[i].tables[0], moon_installed());
+        if moon {
+            (bc_core::print_geometry::MOON_FACE.to_string(), size)
+        } else {
+            (face, size)
+        }
+    }
+
     /// The title bar: "BrailleCraft - [name -- New Print Document]"; the active document's tab carries the same
-    /// name.
+    /// name. On macOS the tab is the document window's title, so the window is titled with the name alone.
     pub fn set_title(&self) {
+        if crate::tabs::WINDOW_TABS {
+            if let Some(d) = self.doc() {
+                if let Some(w) = d.window {
+                    w.set_label(&d.full_name());
+                }
+            }
+            return;
+        }
         match self.doc().map(|d| d.full_name()) {
             Some(n) => self.frame.set_label(&format!("BrailleCraft - [{n}]")),
             None => self.frame.set_label("BrailleCraft"),
         }
     }
 
+    /// The window dialogs belong to (app::frame).
+    pub fn dialog_parent(&self) -> Frame {
+        self.doc().and_then(|d| d.window).unwrap_or(self.frame)
+    }
+
+    /// The window document `i` is shown in: its own window on macOS, the main window elsewhere.
+    pub fn window_of(&self, i: usize) -> Frame {
+        self.docs.get(i).and_then(|d| d.window).unwrap_or(self.frame)
+    }
+
+    /// macOS: the edited mark of every document window as its document's `dirty`.
+    pub fn sync_edited(&mut self) {
+        for d in &mut self.docs {
+            if let Some(w) = d.window {
+                if d.edited_shown != d.dirty {
+                    crate::tabs::set_edited(&w, d.dirty);
+                    d.edited_shown = d.dirty;
+                }
+            }
+        }
+    }
+
+    /// macOS: the document list put in the order of the window tabs (tabs::reconcile), each tab group read once;
+    /// the active document stays the active one. True when the order changed (the menus are then refreshed).
+    pub fn reconcile_tabs(&mut self) -> bool {
+        if !crate::tabs::WINDOW_TABS || self.docs.len() < 2 {
+            return false;
+        }
+        let key_of = |a: &App, p: *mut wxdragon_sys::wxd_Window_t| {
+            a.docs.iter().find(|d| d.window.is_some_and(|w| w.handle_ptr() == p)).map(|d| d.key)
+        };
+        let mut groups: Vec<Vec<u64>> = Vec::new();
+        for d in &self.docs {
+            let Some(w) = d.window else { continue };
+            if groups.iter().any(|g| g.contains(&d.key)) {
+                continue;
+            }
+            let group: Vec<u64> = crate::tabs::group_order(&w).into_iter().filter_map(|p| key_of(self, p)).collect();
+            if !group.is_empty() {
+                groups.push(group);
+            }
+        }
+        let keys: Vec<u64> = self.docs.iter().map(|d| d.key).collect();
+        let order = crate::tabs::reconcile(&keys, &groups);
+        if order == keys {
+            return false;
+        }
+        let active = self.doc().map(|d| d.key);
+        let mut docs = std::mem::take(&mut self.docs);
+        for k in &order {
+            if let Some(at) = docs.iter().position(|d| d.key == *k) {
+                self.docs.push(docs.remove(at));
+            }
+        }
+        // Nothing is dropped (reconcile keeps every key); kept in case.
+        self.docs.append(&mut docs);
+        self.active = active.and_then(|k| self.index_of(k));
+        self.refresh_menus();
+        true
+    }
+
+    /// The face and size document `i`'s editing area shows `view` in. With Full-Page on, the size is fitted to the
+    /// window (spec 27 section 9, unknown 3): the print font only in the formatted view, the braille fonts in
+    /// either view. The fit tries sizes 5 to 48 against the main window's client width and the area's client height
+    /// (bc_core::fview::full_page_size).
+    pub fn view_face(&self, i: usize, view: &View) -> (String, i32) {
+        let (face, size) = self.doc_face(i, view.font);
+        let d = &self.docs[i];
+        let fitted = view.full_page && (view.font != ViewFont::Print || !view.codes);
+        if !fitted {
+            return (face, size);
+        }
+        let width = self.window_of(i).get_client_size().width;
+        let height = d.area.get_client_size().height;
+        let size = bc_core::fview::full_page_size(|s| font_metrics(&face, s), width, height, d.cells as i32, d.lines as i32);
+        (face, size)
+    }
+
+    /// Whether document `i`'s editing area keeps at least one text row in `view`'s font, with `extra` more pixels
+    /// taken from it (the translated line's height when it is being turned on): a view switch, a font change or
+    /// turning the translated line on is refused when it does not (spec 27 section 9, unknown 1).
+    pub fn row_fits(&self, i: usize, view: &View, extra: i32) -> bool {
+        let (face, size) = self.view_face(i, view);
+        let Some((_, row)) = font_metrics(&face, size) else { return true };
+        bc_core::fview::one_row_fits(self.docs[i].area.get_client_size().height, row, extra)
+    }
+
     /// Applies the active document's view settings: font, full page, translated line; then the menu marks.
     pub fn apply_view(&mut self) {
         let Some(i) = self.active else { return };
-        let (face, mut size) = self.face(self.docs[i].view.font);
+        let view = self.docs[i].view;
+        let (face, size) = self.view_face(i, &view);
         let d = &self.docs[i];
-        if d.view.full_page {
-            // Full-Page: the font is sized so one whole page (lines by cells) fits the window.
-            let area = d.area.get_client_size();
-            let by_height = area.height * 72 / 96 / (d.lines as i32 + 1);
-            let by_width = area.width * 72 / 96 * 10 / 6 / (d.cells as i32 + 1);
-            size = by_height.min(by_width).max(4);
-        }
         if let Some(f) = font(&face, size) {
             d.area.set_font(&f);
         }
@@ -517,10 +669,16 @@ impl App {
     }
 
     pub fn refresh_menus(&mut self) {
+        self.sync_edited();
         let names: Vec<String> = self.docs.iter().map(|d| d.full_name()).collect();
         self.menus.set_documents(&names, self.active);
         self.refresh_table_menus();
-        let Some(d) = self.doc() else { return };
+        let Some(d) = self.doc() else {
+            // With no document, Table, Create and Table Properties are both greyed (spec 33 unknown 6).
+            self.menus.enable(1501, false);
+            self.menus.enable(1503, false);
+            return;
+        };
         let v = d.view;
         let hyphen = d.hyphen;
         let highlight = d.highlight_anchor.is_some();
@@ -570,7 +728,7 @@ impl App {
             }),
             None => (Vec::new(), false, None),
         };
-        let initial = self.doc().map(|d| d.initial_codes.clone()).unwrap_or_default();
+        let initial = self.doc().map(|d| d.initial_codes()).unwrap_or_default();
         let checked = match step.and_then(|s| courses.iter().position(|c| c.steps.contains(&s))) {
             Some(c) => crate::menu::COURSE_BASE + c as i32,
             None if initial.contains("[g1") => 2801,
@@ -583,6 +741,7 @@ impl App {
     /// The active document's status line (current style, Page, Line, Column, the character at the caret, Keys);
     /// then its translated line.
     pub fn update_status(&mut self) {
+        self.sync_edited();
         let Some(i) = self.active else { return };
         // The editing window is given the document again when it was set from outside an edit, or when what the
         // document is laid out by (page size, numbering, styles) changed.
@@ -605,8 +764,12 @@ impl App {
         };
         let d = &self.docs[i];
         // Inside a table the style text gives way to the table's text (spec 35 7.5).
-        let style = bc_core::format::table_at(&ed.pages, pos.max(0) as usize)
-            .map_or_else(|| bc_core::status::style_text(&shown, pos), |t| t.status(pos.max(0) as usize));
+        let table = bc_core::format::table_at(&ed.pages, pos.max(0) as usize);
+        // Table, Create is enabled outside a table and Table Properties inside one, by the same test (spec 33
+        // unknown 6): a table holds the caret and the caret is at or after its first cell's start.
+        self.menus.enable(1501, table.is_none());
+        self.menus.enable(1503, table.is_some());
+        let style = table.map_or_else(|| bc_core::status::style_text(&shown, pos), |t| t.status(pos.max(0) as usize));
         let status = StatusLine {
             style,
             location,
@@ -637,32 +800,50 @@ impl App {
         }
     }
 
-    /// View, Translated Line: the line the caret is on, translated. A print document shows its braille in the font
-    /// chosen in Global, Default Views; a braille document shows its print.
+    /// View, Translated Line: the line the caret is on, translated: in the formatted view the laid-out page line, in
+    /// the coded view the coded row (bc_core::translated_line), with the codes before it in force. A print document
+    /// shows its braille in the font chosen in Global, Default Views; a braille document shows its print.
     fn update_translated_line(&mut self, shown: &Shown, pos: i64) {
+        use std::hash::{Hash, Hasher};
         let Some(i) = self.active else { return };
         if !self.docs[i].view.translated {
             return;
         }
-        let line = line_of(shown, pos);
+        let p = pos.max(0) as usize;
+        let (from, to) = {
+            let ed = &self.docs[i].ed;
+            if ed.coded {
+                bc_core::translated_line::coded_row_span(&ed.view, ed.len(), p)
+            } else {
+                bc_core::translated_line::page_line_span(&ed.pages, p)
+            }
+        };
+        let (carried, line) = bc_core::translated_line::line_parts(shown, from, to);
         let d = &self.docs[i];
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        (&carried.text, &carried.codes, &carried.inner).hash(&mut h);
         let key = format!(
-            "{}|{:?}|{}|{}|{}|{}|{}|{:?}|{}|{:?}",
+            "{}|{:?}|{}|{}|{}|{}|{}|{:?}|{}|{:?}|{:x}",
             d.key,
             d.kind,
             d.tables.join("+"),
-            d.initial_codes,
+            d.initial_codes(),
             d.template,
             self.settings.encoding,
             line.text,
             line.codes,
             d.view.codes,
-            self.settings.view_prefs.line_codes
+            self.settings.view_prefs.line_codes,
+            h.finish()
         );
         if key == self.docs[i].last_line_key {
             return;
         }
-        let shown = self.translate_line(i, &line);
+        // A key cleared (the styles or the tables changed) drops what the carried codes were kept translating to.
+        if self.docs[i].last_line_key.is_empty() {
+            self.docs[i].line_lead = Default::default();
+        }
+        let shown = self.translate_line(i, &carried, &line);
         let d = &self.docs[i];
         d.line.set_value(&shown);
         d.line.set_accessibility_value(&shown);
@@ -670,9 +851,10 @@ impl App {
     }
 
     /// One line of document `i` translated: a print line into braille (in the display encoding), a braille line
-    /// into print, with the document's initial codes in force. The engine passes those codes through at the start
-    /// of what it writes; the translated line leaves them off.
-    pub fn translate_line(&self, i: usize, line: &Shown) -> String {
+    /// into print, with the document's initial codes and then the codes `carried` (those before the line) in force.
+    /// The engine passes the initial codes through at the start of what it writes, and what the carried codes write
+    /// alone is left off too (bc_core::translated_line::leave_off_lead).
+    pub fn translate_line(&mut self, i: usize, carried: &Shown, line: &Shown) -> String {
         let enc = self.encoding();
         let d = &self.docs[i];
         // A braille document with no braille-to-print table shows the text for message 0;
@@ -681,9 +863,31 @@ impl App {
             return "Error message 0".to_string();
         }
         let styles = crate::translation::style_table(&d.styles);
-        let r = match d.kind {
-            DocKind::Print => crate::translation::forward(&d.tables[0], line, &d.initial_codes, enc, &styles),
-            DocKind::Braille => crate::translation::back(&d.tables[2], line, &d.initial_codes, enc, &styles),
+        let initial = d.initial_codes();
+        let run = |text: &Shown| match d.kind {
+            DocKind::Print => crate::translation::forward(&d.tables[0], text, &initial, enc, &styles),
+            DocKind::Braille => crate::translation::back(&d.tables[2], text, &initial, enc, &styles),
+        };
+        let mut lead_kept = None;
+        let r = if carried.text.is_empty() {
+            run(line)
+        } else {
+            // What the carried codes write alone, kept while the caret moves among lines with the same codes before
+            // them.
+            let lead_key = format!("{}|{}|{}", d.tables.join("+"), initial, carried.to_running());
+            let lead = if d.line_lead.0 == lead_key {
+                Ok(d.line_lead.1.clone())
+            } else {
+                run(carried).map(|s| s.to_running())
+            };
+            let mut whole = carried.clone();
+            whole.push(line);
+            lead.and_then(|lead| {
+                let out = run(&whole)?;
+                let rest = bc_core::translated_line::leave_off_lead(&lead, &out.to_running());
+                lead_kept = Some((lead_key, lead));
+                Ok(Shown::from_running(&rest))
+            })
         };
         // The codes the line shows (spec 24 2d.2): every code while the document shows its codes, else
         // as Global, View Preferences says: all, all but the idle code, or none.
@@ -691,12 +895,17 @@ impl App {
         // A print document's braille, shown in a braille font, as Unicode braille patterns when they are preferred.
         let patterns = d.kind == DocKind::Print && self.settings.prefer_patterns && self.settings.default_views.translated_font != ViewFont::Print;
         let r = r.map(|s| if patterns { crate::translation::as_patterns(&s, enc) } else { s });
-        r.map(|s| match codes {
-            LineCodes::ShowAll => s.text,
-            LineCodes::HideIdle => s.text_keeping_codes(|c| !bc_core::doctext::is_idle_code(c)),
-            LineCodes::HideAll => s.text_keeping_codes(|_| false),
-        })
-        .unwrap_or_else(|e| e)
+        let text = r
+            .map(|s| match codes {
+                LineCodes::ShowAll => s.text,
+                LineCodes::HideIdle => s.text_keeping_codes(|c| !bc_core::doctext::is_idle_code(c)),
+                LineCodes::HideAll => s.text_keeping_codes(|_| false),
+            })
+            .unwrap_or_else(|e| e);
+        if let Some(kept) = lead_kept {
+            self.docs[i].line_lead = kept;
+        }
+        text
     }
 
     /// Keeps text taken out or copied, with its codes (the last few).
@@ -830,14 +1039,21 @@ impl App {
     }
 
     /// View, Codes for document `i` (spec 27 2c): the coded view shows the document's text with its codes in rows,
-    /// the formatted view its laid-out lines. The caret keeps its place in the document and its row on the screen.
+    /// the formatted view its laid-out lines. The caret keeps its place in the document, and its row on the screen
+    /// when it was on screen (spec 27 section 9, unknown 2); else the view shows the caret with the least scrolling.
     pub fn set_view_codes(&mut self, i: usize, codes: bool) {
-        let keep = self.docs[i].area.caret_screen_row();
+        let keep = self.kept_caret_row(i);
         let d = &mut self.docs[i];
         d.view.codes = codes;
         d.ed.set_view(codes);
-        self.show_area(i, Some(keep));
+        self.show_area(i, keep);
         self.docs[i].last_line_key.clear();
+    }
+
+    /// The caret's row less the top row of document `i`'s editing area, when the caret is on screen.
+    pub fn kept_caret_row(&self, i: usize) -> Option<usize> {
+        let d = &self.docs[i];
+        bc_core::fview::kept_row(d.ed.caret_place().0, d.area.top_row(), d.area.visible_rows())
     }
 
     pub fn mark_dirty(&mut self) {
@@ -847,8 +1063,15 @@ impl App {
     }
 }
 
-/// The tab text of the document whose page is `page`: its full name, after a rename, a save or an open.
+/// The tab text of the document whose page is `page`: its full name, after a rename, a save or an open. On macOS the
+/// tab is the title of the document's window, the page's parent.
 pub fn set_tab_title(page: &Panel, title: &str) {
+    if crate::tabs::WINDOW_TABS {
+        if let Some(w) = page.get_parent() {
+            w.set_label(title);
+        }
+        return;
+    }
     crate::tabs::set_title(page, title);
 }
 

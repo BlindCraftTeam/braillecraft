@@ -763,4 +763,28 @@ mod tests {
         assert_eq!(e.caret_place(), (1, 5));
         assert_eq!(e.pos_at(1, 3), 2);
     }
+
+    /// In Highlight, Shift with a move starts the selection again from the caret (the editing area does this before
+    /// the move): a selection of 0..3 with the caret at 3, then Shift+Right, selects 3..4 only.
+    #[test]
+    fn highlight_shift_move_starts_again_at_the_caret() {
+        let mut e = ed("abcdef", 40, 25);
+        e.select(0, 3);
+        let caret = e.caret;
+        e.select(caret, caret);
+        e.move_caret(Move::Right, true);
+        assert_eq!(e.selection(), (3, 4));
+    }
+
+    /// Formatted pages always have the layout's lines, holding no document text after the text (a page number may
+    /// stand there), and the rows are the pages' lines with a page break row after each page.
+    #[test]
+    fn short_pages_are_padded_to_the_layout_lines() {
+        let e = ed("one[pg]two", 10, 4);
+        assert_eq!(e.pages.len(), 2);
+        let last = e.pages.last().unwrap();
+        assert_eq!(last.lines.len(), 4);
+        assert!(last.lines[1..].iter().all(|l| l.sources.iter().flatten().next().is_none()));
+        assert_eq!(e.rows(), e.pages.len() * (4 + 1));
+    }
 }

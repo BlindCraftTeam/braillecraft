@@ -57,6 +57,13 @@ pub struct Options {
     /// Global, Import Options: spaces around math signs of comparison; spaces around dashes removed.
     pub add_spaces: bool,
     pub remove_dash_spaces: bool,
+    /// Global, Import Options: the Han characters' language is chosen by the document's print-to-braille table
+    /// (HanScriptAuto), else it is `han_language` (HanScriptLanguage: 0 Mandarin, 1 Cantonese, 2 Japanese, 3
+    /// Korean); spec A15.11.
+    pub han_auto: bool,
+    pub han_language: u8,
+    /// The print-to-braille table name of the document the import goes into, for `han_auto`.
+    pub forward_table: String,
 }
 
 impl Default for Options {
@@ -85,6 +92,10 @@ impl Default for Options {
             codes: true,
             add_spaces: false,
             remove_dash_spaces: false,
+            // Section Word, HanScriptAuto "yes" and HanScriptLanguage "Mandarin".
+            han_auto: true,
+            han_language: 0,
+            forward_table: String::new(),
         }
     }
 }
@@ -1464,14 +1475,14 @@ impl StyleMap {
                     1 | 2 => {
                         if !e.forward || e.backward {
                             out.push_str(&format!("{O}ee|~{s}{C}{O}es|~{s}{C}~{O}l{C}~\n"));
-                        } else if e.aggregate == 2 {
-                            // Forward-only aggregation (no shipped map sets it): the loader formats
-                            // "[ee~S][es~S][hlN]" and writes it as one rule; read as the end and start becoming the
-                            // level code (INFERENCE: the bracket text's split into match and replacement was not
-                            // traced).
-                            out.push_str(&format!("{O}ee|~{s}{C}{O}es|~{s}{C}~{O}hl{}{C}~\n", e.level));
                         } else {
-                            out.push_str(&format!("{O}ee|~{s}{C}{O}es|~{s}{C}~{O}l{C}~\n"));
+                            // Forward-only aggregation (no shipped map sets it): the loader formats
+                            // "[ee~S][es~S][hlN]" (aggregate 2) or "[ee~S][es~S][l]" (aggregate 1) and makes the
+                            // match and the replacement from that same text (spec A15.7), so the rule writes back
+                            // the three codes it matched and changes nothing.
+                            let last = if e.aggregate == 2 { format!("hl{}", e.level) } else { "l".to_string() };
+                            let codes = format!("{O}ee|~{s}{C}{O}es|~{s}{C}{O}{last}{C}");
+                            out.push_str(&format!("{codes}~{codes}~\n"));
                         }
                     }
                     // Paragraphs (a User block's paragraph entry as read): the end followed by the start becomes a
@@ -2255,5 +2266,22 @@ mod tests {
         // A BuiltIn block writes the line code rule for both of its entries (the same text when the mapped name was
         // written with its dot).
         assert_eq!(rules.matches("\x1cee|~h1.\x1f\x1ces|~h1.\x1f~\x1cl\x1f~\n").count(), 2, "{rules:?}");
+    }
+
+    #[test]
+    fn forward_only_aggregation_rule_leaves_the_text_unchanged() {
+        let entry = MapEntry {
+            element: "p".into(),
+            style: "x".into(),
+            aggregate: 2,
+            level: 3,
+            forward: true,
+            ..MapEntry::default()
+        };
+        let rules = StyleMap { entries: vec![entry], xml_form: false }.scrub_rules();
+        assert_eq!(rules, "\x1cee|~x\x1f\x1ces|~x\x1f\x1chl3\x1f~\x1cee|~x\x1f\x1ces|~x\x1f\x1chl3\x1f~\n");
+        let text = b"\x1cee~x\x1f\x1ces~x\x1f\x1chl3\x1ftext".to_vec();
+        let mut script = crate::rule_script::RuleScript::from_bytes(rules.as_bytes(), None).unwrap();
+        assert_eq!(script.run(&text).unwrap(), text);
     }
 }

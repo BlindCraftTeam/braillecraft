@@ -1,13 +1,13 @@
 // Added for BrailleCraft: the drawn document editing window's UI Automation provider on Windows (spec 15, spec 27
 // section 6, spec 30 section on UI Automation).
 //
-// The reference program gives its own drawn editing window a UI Automation provider: the window answers
+// BrailleCraft gives its own drawn editing window a UI Automation provider: the window answers
 // WM_GETOBJECT for UiaRootObjectId with an element that has the Text pattern over the window's text (the formatted
 // page lines or the coded rows, each followed by a line feed), with text ranges by character, word (ending at white
 // space), line and paragraph (one row), page (one formatted page) and document; it raises Text_TextChanged and
 // Text_TextSelectionChanged when the window is refreshed and the caret moves; all of it only while Global,
-// Internationalization, Support UI Automation is on. GetVisibleRanges is not offered (as in the reference) and
-// ScrollIntoView does nothing (as in the reference). The system caret the window keeps (wxCaret, the Win32 caret)
+// Internationalization, Support UI Automation is on. GetVisibleRanges is not offered and
+// ScrollIntoView does nothing. The system caret the window keeps (wxCaret, the Win32 caret)
 // gives screen readers and magnifiers the caret through MSAA as well.
 
 #if defined(__WXMSW__)
@@ -87,7 +87,7 @@ public:
         VariantInit(out);
         if (!m_editor) return UIA_E_ELEMENTNOTAVAILABLE;
         switch (id) {
-        // The reference's answers (spec 30 section 13, unknown 10): a Document, its strings, and the
+        // The answers (spec 30 section 13, unknown 10): a Document, its strings, and the
         // class name under BrailleCraft's own name.
         case UIA_ControlTypePropertyId:
             out->vt = VT_I4;
@@ -214,7 +214,7 @@ public:
     HRESULT STDMETHODCALLTYPE GetSelection(SAFEARRAY** out) override;
     HRESULT STDMETHODCALLTYPE GetVisibleRanges(SAFEARRAY** out) override
     {
-        // Not offered by the reference (spec 30).
+        // Not offered (spec 30).
         if (out) *out = nullptr;
         return E_NOTIMPL;
     }
@@ -542,7 +542,7 @@ public:
     }
     HRESULT STDMETHODCALLTYPE AddToSelection() override { return Select(); }
     HRESULT STDMETHODCALLTYPE RemoveFromSelection() override { return S_OK; }
-    // The reference does nothing here (spec 30).
+    // Does nothing here (spec 30).
     HRESULT STDMETHODCALLTYPE ScrollIntoView(BOOL) override { return S_OK; }
     HRESULT STDMETHODCALLTYPE GetChildren(SAFEARRAY** out) override
     {
@@ -584,7 +584,7 @@ HRESULT Provider::RangeFromPoint(UiaPoint point, ITextRangeProvider** out)
     if (!out) return E_INVALIDARG;
     *out = nullptr;
     if (!m_editor) return UIA_E_ELEMENTNOTAVAILABLE;
-    // The point is on the screen; the reference used it as a window point (spec 30), which places it wrongly.
+    // The point is on the screen; it is converted to a window point with ScreenToClient (spec 30).
     const wxPoint p = m_editor->ScreenToClient(wxPoint((int)point.x, (int)point.y));
     int vx = 0, vy = 0;
     m_editor->CalcUnscrolledPosition(p.x, p.y, &vx, &vy);
@@ -636,7 +636,7 @@ void DocEditor::AccessibleTextChanged(int, const wxString&, const wxString&)
     RaiseUiaEvent(this, UIA_Text_TextChangedEventId);
 }
 
-// As the standard program's caret notification (spec 30 section 12 unknown 12): the selection changed event and the
+// The caret notification (spec 30 section 12 unknown 12): the selection changed event and the
 // text changed event, both, whenever the caret moves.
 void DocEditor::AccessibleCaretMoved()
 {

@@ -229,15 +229,30 @@ pub struct Item {
 /// The ink of one braille page (`back` for an interpoint back page) whose lines (from 0) are given as North American
 /// ASCII braille, each with its runs (from `runs_mapped`, or `runs` for none): each run given its print by `print`
 /// (it is given the line number and the run: the back-translation of the run's span of document text, or of its cells
-/// for a run with no span), except that a run with no span that is a fill row gives full stops; each run's text ends
-/// in a space, as it is sent (spec 25 17.4 and 20.3).
-pub fn page_items(lines: &[Vec<Run>], place: &Placement, back: bool, mut print: impl FnMut(usize, &Run) -> String) -> Vec<Item> {
+/// for a run with no span), except that a run with no span that is a fill row gives full stops (spec 25 17.4 and
+/// 20.3). The print is kept as given, but one space at its end is dropped unless the document's character before the
+/// span's end is a space (`source_char` gives the character at a place of the document's text; a run with no span
+/// has none there) (spec A17.8; INFERENCE: whether the back-translation itself ends in a space is not known).
+pub fn page_items(
+    lines: &[Vec<Run>],
+    place: &Placement,
+    back: bool,
+    source_char: impl Fn(usize) -> Option<char>,
+    mut print: impl FnMut(usize, &Run) -> String,
+) -> Vec<Item> {
     let mut items = Vec::new();
     for (n, line) in lines.iter().enumerate() {
         for run in line.iter().cloned() {
             let text = match run.fill().filter(|_| run.source.is_none()) {
                 Some(dots) => dots,
-                None => format!("{} ", print(n, &run).trim_end()),
+                None => {
+                    let mut text = print(n, &run);
+                    let spaced = run.source.and_then(|(_, e)| e.checked_sub(1)).and_then(&source_char) == Some(' ');
+                    if !spaced && text.ends_with(' ') {
+                        text.pop();
+                    }
+                    text
+                }
             };
             if text.trim().is_empty() {
                 continue;
@@ -254,7 +269,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_three_choices_give_the_references_passes() {
+    fn the_three_choices_give_their_passes() {
         assert_eq!(PassChoice::InkAndBraille.flags(), 0xff);
         assert_eq!(passes(PassChoice::InkAndBraille.flags(), "Epson LQ-590", true), (true, true));
         assert_eq!(passes(PassChoice::InkOnly.flags(), "Epson LQ-590", true), (true, false));
@@ -275,7 +290,7 @@ mod tests {
     }
 
     #[test]
-    fn places_follow_the_references_formulas() {
+    fn places_follow_the_place_formulas() {
         let p = Placement { binding: 2, left_prog: 1, top_margin: 1, top_prog: 1, cells: 40, form_cells: 42, form_width: 115, vshift: 576, ..Placement::default() };
         // Column 0 is half an inch from the left; each cell 346 twips on.
         assert_eq!(p.column(0, false), 1);
@@ -306,8 +321,10 @@ mod tests {
         assert_eq!(Run { start: 0, cells: "\"".into(), source: None }.fill(), None);
         let p = Placement { vshift: 576, form_width: 85, ..Placement::default() };
         let lines = [runs("  ,! cat"), Vec::new(), runs("\"\"\"\"")];
-        let items = page_items(&lines, &p, false, |_, r| if r.cells == ",! cat" { "The cat".into() } else { r.cells.to_uppercase() });
-        assert_eq!(items.iter().map(|i| (i.x, i.top, i.text.as_str())).collect::<Vec<_>>(), vec![(720 + 2 * 346, 0, "The cat "), (720, 1152, "....")]);
+        let print = |_: usize, r: &Run| if r.cells == ",! cat" { "The cat".into() } else { r.cells.to_uppercase() };
+        let items = page_items(&lines, &p, false, |_| None, print);
+        let got: Vec<_> = items.iter().map(|i| (i.x, i.top, i.text.as_str())).collect();
+        assert_eq!(got, vec![(720 + 2 * 346, 0, "The cat"), (720, 1152, "....")]);
         assert_eq!(items[0].width, 85 * 144);
     }
 
@@ -328,8 +345,19 @@ mod tests {
         assert_eq!(r.iter().map(|r| (r.cells.as_str(), r.source)).collect::<Vec<_>>(), vec![("ab-", None)]);
         // A placed fill row is text, not full stops.
         let lines = [runs_mapped("\"\"\"", Some(&[Some(0), Some(1), Some(2)].into_iter().collect::<crate::format::Sources>()), |p| Some(p + 1))];
-        let items = page_items(&lines, &Placement::default(), false, |_, _| "quoted".into());
-        assert_eq!(items[0].text, "quoted ");
+        let items = page_items(&lines, &Placement::default(), false, |_| None, |_, _| "quoted".into());
+        assert_eq!(items[0].text, "quoted");
+    }
+
+    #[test]
+    fn a_trailing_space_stays_only_where_the_text_has_one() {
+        // "cat" at 0 to 3; the character before the span's end decides.
+        let line = vec![Run { start: 0, cells: "cat".into(), source: Some((0, 3)) }];
+        let p = Placement::default();
+        let ends_t = page_items(&[line.clone()], &p, false, |i| "cat ".chars().nth(i), |_, _| "cat ".into());
+        assert_eq!(ends_t[0].text, "cat");
+        let ends_space = page_items(&[line], &p, false, |i| "ca  ".chars().nth(i), |_, _| "cat ".into());
+        assert_eq!(ends_space[0].text, "cat ");
     }
 
     #[test]

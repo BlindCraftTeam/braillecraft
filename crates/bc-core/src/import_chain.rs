@@ -313,7 +313,7 @@ fn html_chain(html: std::borrow::Cow<str>, opt: &crate::word::Options, unknown: 
         Err(e) => out.errors.push(format!("unimap: {e}")),
     }
     progress("unimap", text.len());
-    script("word-han-chars.rules", &mut text, &mut out.errors, progress);
+    han_script(files, &mut text, &mut out.errors, opt, progress);
     // utf8dusci with no arguments: the quotes classed by their neighbours, no apostrophe override.
     text = quotes_to_internal(&text, None, unknown);
     progress("utf8dusci", text.len());
@@ -388,7 +388,7 @@ fn docx(bytes: &[u8], opt: &crate::word::Options, map: &str, unknown: u8, files:
         Err(e) => out.errors.push(format!("unimap: {e}")),
     }
     progress("unimap", text.len());
-    script("word-han-chars.rules", &mut text, &mut out.errors, progress);
+    han_script(files, &mut text, &mut out.errors, opt, progress);
     script("word-kana.rules", &mut text, &mut out.errors, progress);
     // utf8dusci(U+02BC,U+2018,U+2019): the apostrophe override only, the quotes classed by their neighbours.
     text = quotes_to_internal(&text, Some('\u{2bc}'), unknown);
@@ -414,6 +414,50 @@ fn docx(bytes: &[u8], opt: &crate::word::Options, map: &str, unknown: u8, files:
     script("word-tables.rules", &mut text, &mut out.errors, progress);
     script("normalize-spaces.rules", &mut text, &mut out.errors, progress);
     out.text = text;
+}
+
+/// The state the Han script (word-han-chars.rules) starts in, as the import job gives it (spec A15.11): 1 when the
+/// step's text holds no character U+3400 to U+9FFF; else by the language: the document's print-to-braille table
+/// with HanScriptAuto on (zhmpcp Mandarin, zhyjcp Cantonese, jakncp Japanese, korecp Korean, zhtwcp Zhuyin; another
+/// table keeps HanScriptLanguage), else HanScriptLanguage; Mandarin gives 4 (Pinyin), Cantonese 5, Japanese 2,
+/// Korean 3, Zhuyin 6, any other value 4.
+pub fn han_start_state(text: &[u8], opt: &crate::word::Options) -> i32 {
+    if !String::from_utf8_lossy(text).chars().any(|c| ('\u{3400}'..='\u{9fff}').contains(&c)) {
+        return 1;
+    }
+    let mut language = opt.han_language;
+    if opt.han_auto {
+        let table = opt.forward_table.to_ascii_lowercase();
+        if let Some(n) = ["zhmpcp", "zhyjcp", "jakncp", "korecp", "zhtwcp"].iter().position(|t| *t == table) {
+            language = n as u8;
+        }
+    }
+    match language {
+        1 => 5,
+        2 => 2,
+        3 => 3,
+        4 => 6,
+        _ => 4,
+    }
+}
+
+/// The Han script, run from the state han_start_state gives.
+fn han_script(
+    files: &dyn Files,
+    text: &mut Vec<u8>,
+    errors: &mut Vec<String>,
+    opt: &crate::word::Options,
+    progress: &mut dyn FnMut(&str, usize),
+) {
+    const NAME: &str = "word-han-chars.rules";
+    match files.rule_script(NAME) {
+        Ok(mut s) => match s.run_from(text, han_start_state(text, opt)) {
+            Ok(t) => *text = t,
+            Err(e) => errors.push(format!("{NAME}: {e}")),
+        },
+        Err(e) => errors.push(format!("{NAME}: {e}")),
+    }
+    progress(NAME, text.len());
 }
 
 /// The Nemeth-in-UEB scripts: the first, the text reversed, the second on the reversed text, reversed back. In the
@@ -562,6 +606,28 @@ mod tests {
         fn word_map(&self, name: &str) -> Result<String, String> {
             std::fs::read(tables().join("word-styles").join(format!("{name}.map"))).map(|b| String::from_utf8_lossy(&b).into_owned()).map_err(|e| e.to_string())
         }
+    }
+
+    #[test]
+    fn han_script_start_state_follows_the_text_and_the_settings() {
+        let korean = crate::word::Options { han_auto: false, han_language: 3, ..crate::word::Options::default() };
+        let han = "\u{4e00}".as_bytes();
+        assert_eq!(han_start_state(han, &korean), 3);
+        // From state 3 the Korean rules are applied.
+        let (mut text, mut errors) = (han.to_vec(), Vec::new());
+        han_script(&Shipped, &mut text, &mut errors, &korean, &mut |_, _| {});
+        assert!(errors.is_empty(), "{errors:?}");
+        assert!(String::from_utf8_lossy(&text).contains('\u{110b}'), "{:?}", String::from_utf8_lossy(&text));
+        // No Han character: state 1, the text unchanged.
+        assert_eq!(han_start_state(b"abc", &korean), 1);
+        let (mut plain, mut errors) = (b"abc".to_vec(), Vec::new());
+        han_script(&Shipped, &mut plain, &mut errors, &korean, &mut |_, _| {});
+        assert_eq!(plain, b"abc");
+        // HanScriptAuto with the table zhmpcp: Mandarin (state 4) whatever the language setting.
+        let auto = crate::word::Options { han_auto: true, forward_table: "ZHMPCP".into(), ..korean };
+        assert_eq!(han_start_state(han, &auto), 4);
+        assert_eq!(han_start_state(han, &crate::word::Options { forward_table: "zhtwcp".into(), ..auto.clone() }), 6);
+        assert_eq!(han_start_state(han, &crate::word::Options { forward_table: "amerc".into(), ..auto }), 3);
     }
 
     /// Every sample Word document (BC_DOCX_SAMPLES) goes through the whole recipe with the default map and every

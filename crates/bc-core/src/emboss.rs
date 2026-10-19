@@ -35,7 +35,7 @@ pub struct Options {
     /// No left padding at all (Index level 5 and above, an Index booklet at level 4 and above, Thiel advanced).
     pub no_pad: bool,
     /// The embosser's own margins as the Device Settings page gives them: its leftmost cell placement, its rightmost
-    /// cell placement (0 when not given) and its top margin setting.
+    /// cell placement (a new setup takes the model's MaximumCells) and its top margin setting.
     pub device_left: u32,
     pub device_right: u32,
     pub device_top: u32,
@@ -50,8 +50,6 @@ pub struct Options {
     /// Send the line end after a full line; send the page end after a full page.
     pub eol_on_full_line: bool,
     pub eop_on_full_page: bool,
-    /// Pad short lines with spaces to the full width.
-    pub pad_lines: bool,
     /// Add a blank side to an odd number of interpoint sides.
     pub make_up_sides: bool,
     /// The job start sequence (the driver's, then the custom codes) and the custom end codes.
@@ -65,7 +63,8 @@ pub struct Options {
     pub copies_by_embosser: bool,
     /// The Typewriter driver (spec 25 section 21): the job goes as messages (typewriter_job), not as a byte stream.
     pub typewriter: bool,
-    /// The form's line count and the model's PageWrap, which the Typewriter driver's page end looks at.
+    /// The form's line count and the setup's PageWrap (its full page choice off), which the Typewriter driver's page
+    /// end looks at.
     pub form_lines: u32,
     pub page_wrap: bool,
 }
@@ -91,7 +90,6 @@ impl Default for Options {
             end_of_page: 0,
             eol_on_full_line: true,
             eop_on_full_page: true,
-            pad_lines: false,
             make_up_sides: true,
             start: Vec::new(),
             end: Vec::new(),
@@ -218,11 +216,9 @@ impl Writer<'_> {
         }
     }
 
-    /// The rightmost cell the embosser places: its setting, else the document's line with its binding margin
-    /// (INFERENCE: the value when the field is not given).
+    /// The rightmost cell the embosser places: the setup's setting as it is, 0 included (spec A17.1).
     fn rightmost(&self) -> u32 {
-        let o = self.o;
-        if o.device_right > 0 { o.device_right } else { o.cells + o.binding }
+        self.o.device_right
     }
 
     /// The left padding of a line (the Generic driver's send line): none when the job sets no padding; on a
@@ -253,7 +249,9 @@ impl Writer<'_> {
             self.byte(b' ');
         }
         let cells: Vec<u8> = text.chars().map(|c| if c.is_ascii() { c as u8 } else { b' ' }).collect();
-        // A line is never sent as a bare line end: an empty line with no padding is one space.
+        // A line is never sent as a bare line end: an empty line with no padding is one space. That is the only
+        // padding the line gets; the setup's Pad lines choice is kept with the setup but changes no byte (spec
+        // A17.2; INFERENCE: whether a part of the send line not seen tests it is not known).
         if pad + cells.len() as u32 == 0 {
             self.byte(b' ');
         }
@@ -261,14 +259,9 @@ impl Writer<'_> {
             self.byte(c);
         }
         let len = cells.len() as u32;
-        if o.pad_lines {
-            for _ in len..o.cells {
-                self.byte(b' ');
-            }
-        }
         // The line end goes after a line that ends before the rightmost cell, or after every line when the setup
         // sends it after a full line.
-        let column = pad + len.max(if o.pad_lines { o.cells } else { 0 });
+        let column = pad + len;
         if column + o.device_left >= self.rightmost() && !o.eol_on_full_line {
             return;
         }
@@ -369,11 +362,32 @@ pub fn job(o: &Options, pages: &[Option<Vec<String>>], copies: u32) -> Vec<u8> {
 /// side flag turns over after each side through all the copies (spec 25). The start and end codes are sent
 /// on every pass.
 pub fn job_sides(o: &Options, pages: &[Option<Vec<String>>], copies: u32, which: Sides) -> Vec<u8> {
+    let p = job_pieces(o, pages, copies, which);
+    let mut out = p.start;
+    for (_, side) in p.sides {
+        out.extend(side);
+    }
+    out.extend(p.end);
+    out
+}
+
+/// A braille pass in the pieces it is sent in, so the job goes to the embosser a page at a time (the progress
+/// window shows each page and the job can be cancelled between pages): the start codes, each side sent with its
+/// page number (from 1; a side the pass drops is not listed), and the end codes. Joined, they are `job_sides`.
+pub struct JobPieces {
+    pub start: Vec<u8>,
+    pub sides: Vec<(usize, Vec<u8>)>,
+    pub end: Vec<u8>,
+}
+
+pub fn job_pieces(o: &Options, pages: &[Option<Vec<String>>], copies: u32, which: Sides) -> JobPieces {
     let mut w = Writer { o, t: char_table(o), out: Vec::new(), held: false };
     w.out.extend_from_slice(&o.start);
     if o.end_of_page == 6 {
         w.byte(0x12);
     }
+    let start = std::mem::take(&mut w.out);
+    let mut out_sides = Vec::new();
     let mut sides: Vec<Option<&[String]>> = pages.iter().map(|p| p.as_deref()).collect();
     if o.interpoint && sides.len() % 2 == 1 && o.make_up_sides {
         sides.push(None);
@@ -383,23 +397,22 @@ pub fn job_sides(o: &Options, pages: &[Option<Vec<String>>], copies: u32, which:
     let mut last_dropped = false;
     for _ in 0..copies {
         for (i, side) in sides.iter().enumerate() {
-            let start = w.out.len();
             w.side(*side, i % 2 == 0);
             last_dropped = match which {
                 Sides::All => false,
                 Sides::Fronts => !front,
                 Sides::Backs => front,
             };
-            if last_dropped {
-                w.out.truncate(start);
+            let piece = std::mem::take(&mut w.out);
+            if !last_dropped {
+                out_sides.push((i + 1, piece));
             }
             front = !front;
         }
     }
-    let start = w.out.len();
     w.release();
     if last_dropped {
-        w.out.truncate(start);
+        w.out.clear();
     }
     w.out.extend_from_slice(&o.end);
     if o.control_d {
@@ -409,7 +422,22 @@ pub fn job_sides(o: &Options, pages: &[Option<Vec<String>>], copies: u32, which:
         w.out.push(0x1a);
     }
     w.out.extend_from_slice(&o.close_sync);
-    w.out
+    JobPieces { start, sides: out_sides, end: w.out }
+}
+
+/// The status line of the embossing progress window (dialog 28000) for message `msgid`: 28000 "Starting
+/// Document", 28002 "Embossing Page %d" with the page number (or the page's label when one is given), 28004
+/// "Cancelling..."; empty for any other id.
+pub fn progress_text(msgid: u32, page: usize, label: Option<&str>) -> String {
+    match msgid {
+        28000 => "Starting Document".to_string(),
+        28002 => match label {
+            Some(l) => format!("Embossing Page {l}"),
+            None => format!("Embossing Page {page}"),
+        },
+        28004 => "Cancelling...".to_string(),
+        _ => String::new(),
+    }
 }
 
 /// One Typewriter message: 0x00, the command, the line's cells as dot patterns (at most 62), 0xFF (spec 25 21.2).
@@ -439,18 +467,22 @@ fn typewriter_message(command: u8, line: &str) -> Vec<u8> {
 
 /// The messages of one braille pass for the Typewriter driver (the EBrailler Cosmo, spec 25 section 21): each is sent
 /// as one write, with the status check before it and the answer after it. A side: a blank line for each top margin
-/// line, each line of text (blank lines too, trailing ones left off), then the page end by the End of Page setting:
-/// 2, blank lines until three past the form's lines; 4, nothing; else command 10 when the model does not wrap pages
-/// or the page is not full. No job start bytes; the custom end codes, if any, go as a last message.
+/// line less the embosser's own top margin setting (none when that leaves less than one), each line of text (blank
+/// lines too, trailing ones left off), then the page end by the End of Page setting: 2, blank lines until three past
+/// the form's lines; 4, nothing; else command 10 when the setup does not wrap pages or the page is not full. The
+/// lines counted are the top lines (top margin less the setting, which may be below 0) and the lines sent (spec
+/// A17.9). No job start bytes; the custom end codes, if any, go as a last message.
 pub fn typewriter_job(o: &Options, pages: &[Option<Vec<String>>], copies: u32, which: Sides) -> Vec<Vec<u8>> {
     let blank = || typewriter_message(0x08, "");
     let mut out = Vec::new();
     let copies = copies.max(1);
     let mut front = true;
+    let top = o.top_margin as i64 - o.device_top as i64;
+    let form_lines = i64::from(o.form_lines);
     for _ in 0..copies {
         for page in pages {
             let mut side = Vec::new();
-            for _ in 0..o.top_margin {
+            for _ in 0..top.max(0) {
                 side.push(blank());
             }
             let lines: &[String] = page.as_deref().unwrap_or(&[]);
@@ -458,17 +490,17 @@ pub fn typewriter_job(o: &Options, pages: &[Option<Vec<String>>], copies: u32, w
             for l in &lines[..last] {
                 side.push(typewriter_message(0x08, l.trim_end()));
             }
-            let mut used = o.top_margin + last as u32;
+            let mut used = top + last as i64;
             match o.end_of_page {
                 2 => {
-                    while used < o.form_lines + 3 {
+                    while used < form_lines + 3 {
                         side.push(blank());
                         used += 1;
                     }
                 }
                 4 => {}
                 _ => {
-                    if !o.page_wrap || used < o.form_lines {
+                    if !o.page_wrap || used < form_lines {
                         side.push(typewriter_message(0x0a, ""));
                     }
                 }
@@ -587,27 +619,30 @@ pub fn index_fields(s: &IndexStart) -> Vec<String> {
     f
 }
 
-/// The Index job start: ESC D, the fields separated by commas, and a semicolon. With the model's field list the
-/// fields go out in its order: a bare name takes the field built here, a field written with its value is sent as
-/// written. INFERENCE: the merge with the model's list was seen, not traced field by field; this is the reading
-/// that gives the built order for the lists the models carry. Fields MC and MC1 are never sent.
+/// The Index job start: ESC D, the fields separated by commas, and a semicolon (spec A17.3). The built fields and
+/// the model's field list are each split at the commas; the fields go out in the list's order. A field of the list
+/// with nothing after its first two characters (a bare name) takes the built field whose first two characters are
+/// the same, the last one if more than one is; a bare name with no built field is sent as written; any other field
+/// is sent as written. Fields MC and MC1 are never sent. A model with no field list sends "BT0" and then the built
+/// fields (INFERENCE: its list is taken to be "BT0," and the built list).
 pub fn index_start(s: &IndexStart) -> Vec<u8> {
     let built = index_fields(s);
     if built.is_empty() {
         return Vec::new();
     }
+    let first_two = |f: &str| f.chars().take(2).collect::<String>();
     let fields: Vec<String> = if s.sequence.trim().is_empty() {
-        built
+        std::iter::once("BT0".to_string()).chain(built).collect()
     } else {
         s.sequence
             .split(',')
             .map(str::trim)
             .filter(|f| !f.is_empty())
-            .filter_map(|f| {
-                if f.len() == 2 && f.bytes().all(|b| b.is_ascii_uppercase()) {
-                    built.iter().find(|b| b.starts_with(f)).cloned()
+            .map(|f| {
+                if f.chars().count() <= 2 {
+                    built.iter().rev().find(|b| first_two(b) == first_two(f)).cloned().unwrap_or_else(|| f.to_string())
                 } else {
-                    Some(f.to_string())
+                    f.to_string()
                 }
             })
             .collect()
@@ -630,36 +665,43 @@ pub fn index_start(s: &IndexStart) -> Vec<u8> {
 /// What the Enabling job start is built from (spec 25 section 8.2).
 #[derive(Debug, Clone, Default)]
 pub struct EnablingStart {
-    /// The start of a job (the whole set); otherwise only the side is chosen again.
+    /// The start of a braille pass (the whole set); false only to choose the side again after a graphic, which
+    /// sends again the codes that do not need a pass start, and the side (spec A17.4).
     pub full: bool,
     /// The ESC i argument.
     pub side: u8,
+    /// The setup's Seek Top of Form.
     pub seek_top_of_form: bool,
-    /// The model speaks (ET Speaks), and its voice is left on.
+    /// Escape codes allowed and the setup's Manage ET Speaks; and its Leave ET Speaks On.
     pub voice: bool,
     pub voice_on: bool,
-    /// An 8-dot table is in use, and the 8-dot case of it.
+    /// TranSend SE interline: an ink printer named and interline print on.
     pub dot_table: bool,
+    /// TranSend SE large interline font: TranSend SE interline with the Large Interline font size.
     pub eight_dot: bool,
-    /// Perforation skip and the interpoint side choice (one setup flag, not traced), and interpoint itself.
+    /// The model's CanDoInterpoint (perforation skip and the interpoint side choice), and interpoint itself.
     pub perforation_skip: bool,
     pub interpoint: bool,
+    /// The model's LabellerROM.
     pub label_mode: bool,
     /// Form length (tenths of an inch), lines per page, cells and binding margin.
     pub form_length: u32,
     pub lines: u32,
     pub cells: u32,
     pub binding: u32,
-    /// The setup's init string; a <Tag> in it takes that code's place.
+    /// The setup's custom start codes when it uses them, as typed (<esc> and the like); a <Tag> in them takes that
+    /// code's place.
     pub init: String,
 }
 
 /// The Enabling job start: each code in the driver's order, sent when its condition holds, or put in place of its
-/// <Tag> where the init string holds that tag; then the init string.
+/// <Tag> where the init string holds that tag (whether or not its condition holds); then the init string, its
+/// named bytes turned into those bytes.
 pub fn enabling_start(e: &EnablingStart) -> Vec<u8> {
     const ESC: u8 = 0x1b;
     let pick = |on: bool, a: u8, b: u8| if on { b } else { a };
-    let mut init = e.init.clone().into_bytes();
+    // An unknown <...> such as a tag comes through parse_codes as written, so the tags are found in its bytes.
+    let mut init = parse_codes(&e.init);
     let mut out = Vec::new();
     let items: [(&str, bool, Vec<u8>); 18] = [
         ("SeekTOF", e.full && e.seek_top_of_form, vec![ESC, b'g']),
@@ -718,6 +760,135 @@ mod tests {
         assert_eq!(typewriter_job(&fill, &full, 1, Sides::All).len(), 29);
     }
 
+    #[test]
+    fn typewriter_top_lines_and_setup_page_wrap() {
+        let blank = vec![0x00, 0x08, 0xff];
+        let pages = vec![Some(vec!["a".to_string()])];
+        // The embosser's own top margin setting comes off the top lines.
+        let o = Options { typewriter: true, form_lines: 26, top_margin: 1, device_top: 1, ..Options::default() };
+        assert_ne!(typewriter_job(&o, &pages, 1, Sides::All)[0], blank);
+        let o = Options { top_margin: 2, ..o };
+        let m = typewriter_job(&o, &pages, 1, Sides::All);
+        assert_eq!((m[0].clone(), m[1].clone()), (blank, vec![0x00, 0x08, 0x01, 0xff]));
+        // A setup that does not wrap pages ends a full page with command 10 too.
+        let full = vec![Some(vec!["a".to_string(); 26])];
+        let o = Options { top_margin: 0, device_top: 0, page_wrap: false, ..o };
+        assert_eq!(typewriter_job(&o, &full, 1, Sides::All).last(), Some(&vec![0x00, 0x0a, 0xff]));
+    }
+
+    #[test]
+    fn rightmost_cell_setting_decides_the_line_end() {
+        let forty = "A".repeat(40);
+        let o = Options { cells: 40, binding: 0, device_right: 42, eol_on_full_line: false, ..Options::default() };
+        let mut want = b"a".repeat(40);
+        want.extend_from_slice(b"\r\n\x0c");
+        assert_eq!(job(&o, &[page(&[&forty])], 1), want);
+        // At the rightmost cell the line end is left off.
+        let at = Options { device_right: 40, ..o.clone() };
+        let mut want = b"a".repeat(40);
+        want.push(0x0c);
+        assert_eq!(job(&at, &[page(&[&forty])], 1), want);
+        // A setting of 0 leaves it off every line.
+        let zero = Options { device_right: 0, ..o };
+        assert_eq!(job(&zero, &[page(&["A"])], 1), vec![0x61, 0x0c]);
+    }
+
+    #[test]
+    fn index_fields_merge_with_the_model_list() {
+        let v3 = IndexStart {
+            level: 4,
+            form_width: 115,
+            form_length: 110,
+            form_cells: 42,
+            form_id: "11_w".into(),
+            to_mm: true,
+            cells: 40,
+            lines: 25,
+            copies: 1,
+            sequence: "BT0,DP,XY,MC".into(),
+            ..IndexStart::default()
+        };
+        // A bare name with no built field is sent as written; MC is never sent.
+        assert_eq!(index_start(&v3), esc_d(b"BT0,DP1,XY;"));
+        let none = IndexStart { copies: 2, interpoint: true, sequence: String::new(), ..v3 };
+        assert_eq!(index_start(&none), esc_d(b"BT0,DP2,PW292,PL279,IM0,OM2,TM0,BM0,MC2;"));
+    }
+
+    #[test]
+    fn enabling_ink_interline_codes() {
+        let e = EnablingStart {
+            full: true,
+            dot_table: true,
+            form_length: 110,
+            lines: 25,
+            cells: 40,
+            binding: 2,
+            ..EnablingStart::default()
+        };
+        let want: Vec<u8> = [
+            &b"\x1bK@"[..],
+            b"\x1b[",
+            b"\x1bW@",
+            b"\x1bH@",
+            b"\x1b&@",
+            b"\x1bs@",
+            b"\x1bTK",
+            b"\x1bQY",
+            b"\x1bLA",
+            b"\x1bRj",
+        ]
+        .concat();
+        assert_eq!(enabling_start(&e), want);
+    }
+
+    #[test]
+    fn enabling_custom_start_takes_the_tag_codes() {
+        let e = EnablingStart {
+            full: true,
+            form_length: 110,
+            lines: 25,
+            cells: 40,
+            binding: 2,
+            init: "<FormLength><esc>Z".into(),
+            ..EnablingStart::default()
+        };
+        let out = enabling_start(&e);
+        assert_eq!(out, b"\x1bK@\x1bW@\x1bH@\x1b&@\x1bQY\x1bLA\x1bRj\x1bTK\x1bZ".to_vec());
+        assert!(out.ends_with(&[0x1b, 0x54, 0x4b, 0x1b, 0x5a]));
+    }
+
+    #[test]
+    fn progress_texts() {
+        assert_eq!(progress_text(28000, 1, None), "Starting Document");
+        assert_eq!(progress_text(28002, 3, None), "Embossing Page 3");
+        assert_eq!(progress_text(28002, 3, Some("c4")), "Embossing Page c4");
+        assert_eq!(progress_text(28004, 3, None), "Cancelling...");
+        assert_eq!(progress_text(28001, 3, None), "");
+    }
+
+    #[test]
+    fn pieces_join_to_the_job() {
+        let page = |t: &str| Some(vec![t.to_string(), String::new()]);
+        let pages = vec![page("ab"), None, page("cd"), page("ef"), page("")];
+        for o in [
+            Options::default(),
+            Options { interpoint: true, make_up_sides: true, ..Options::default() },
+            Options { end_of_page: 6, eop_on_full_page: true, control_d: true, ..Options::default() },
+        ] {
+            for which in [Sides::All, Sides::Fronts, Sides::Backs] {
+                let p = job_pieces(&o, &pages, 2, which);
+                let mut joined = p.start.clone();
+                for (_, s) in &p.sides {
+                    joined.extend(s);
+                }
+                joined.extend(&p.end);
+                assert_eq!(joined, job_sides(&o, &pages, 2, which), "{which:?}");
+            }
+        }
+        let p = job_pieces(&Options::default(), &pages, 1, Sides::All);
+        assert_eq!(p.sides.iter().map(|s| s.0).collect::<Vec<_>>(), vec![1, 2, 3, 4, 5]);
+    }
+
     /// ESC D and the Index fields after it.
     fn esc_d(fields: &[u8]) -> Vec<u8> {
         let mut v = vec![0x1b, b'D'];
@@ -742,9 +913,9 @@ mod tests {
             ..IndexStart::default()
         };
         assert_eq!(index_start(&v3), esc_d(b"BT0,DP1,PW292,PL279,IM0,OM2,TM0,BM0;"));
-        // Two copies add MC2; interpoint is DP2; without a field list the built order is sent.
+        // Two copies add MC2; interpoint is DP2; without a field list "BT0" and the built order are sent.
         let two = IndexStart { copies: 2, interpoint: true, sequence: String::new(), ..v3.clone() };
-        assert_eq!(index_start(&two), esc_d(b"DP2,PW292,PL279,IM0,OM2,TM0,BM0,MC2;"));
+        assert_eq!(index_start(&two), esc_d(b"BT0,DP2,PW292,PL279,IM0,OM2,TM0,BM0,MC2;"));
         // V5 (level 6): line spacing, cells, binding, lines; LS50 written in the list is sent as written.
         let v5 = IndexStart { level: 6, binding: 2, sequence: "BT0,TD0,PN0,DP,LS50,TM,BI,CH,LP,MC".into(), ..v3.clone() };
         assert_eq!(index_start(&v5), esc_d(b"BT0,TD0,PN0,DP1,LS50,TM0,BI2,CH40,LP25;"));
@@ -835,7 +1006,7 @@ mod tests {
 
     #[test]
     fn full_lines_and_page_end_modes() {
-        let base = Options { cells: 2, lines: 2, ..Options::default() };
+        let base = Options { cells: 2, lines: 2, device_right: 2, ..Options::default() };
         // A full line without the line end; a full page without the page end.
         let o = Options { eol_on_full_line: false, eop_on_full_page: false, ..base.clone() };
         assert_eq!(job(&o, &[page(&["AB", "C"])], 1), b"abc\r\n".to_vec());

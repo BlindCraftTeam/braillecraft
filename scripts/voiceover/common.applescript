@@ -43,38 +43,92 @@ end elementsOf
 
 -- The front document window of the program and its three parts: {window, editing area, status line, translated line}.
 -- The translated line is missing value while it is hidden; the whole record is missing value when no document window
--- is in front.
+-- is in front. Each document is a window of its own, the open documents tabs of one window (or of several): the main
+-- window (the window of the selected tab of the front window) is tried first, then the others as the system lists
+-- them. The program's own window, which holds the menu bar, is never shown and has no editing area.
 on docParts()
 	set proc to bcProcess()
 	if proc is missing value then return missing value
-	tell application "System Events"
-		set ws to windows of proc
-		repeat with w in ws
-			set area to missing value
-			set statusLine to missing value
-			set trans to missing value
-			repeat with e in (my elementsOf(w))
-				set r to ""
-				try
-					set r to role of e
-				end try
-				if r is "AXTextArea" and area is missing value then
-					set area to e
-				else if r is "AXStaticText" and statusLine is missing value then
-					set v to ""
-					try
-						set v to value of e
-					end try
-					if v starts with "Current Style" or v contains "Row " then set statusLine to e
-				else if r is "AXTextField" and trans is missing value then
-					set trans to e
-				end if
-			end repeat
-			if area is not missing value then return {w, area, statusLine, trans}
-		end repeat
-	end tell
+	tell application "System Events" to set ws to windows of proc
+	set mains to {}
+	set others to {}
+	repeat with w in ws
+		set isMain to false
+		try
+			tell application "System Events" to set isMain to ((value of attribute "AXMain" of w) is true)
+		end try
+		if isMain then
+			set end of mains to (contents of w)
+		else
+			set end of others to (contents of w)
+		end if
+	end repeat
+	repeat with w in (mains & others)
+		set parts to my partsOf(contents of w)
+		if parts is not missing value then return parts
+	end repeat
 	return missing value
 end docParts
+
+-- A window's three parts as docParts gives them, or missing value when it is no document window.
+on partsOf(w)
+	set area to missing value
+	set statusLine to missing value
+	set trans to missing value
+	tell application "System Events"
+		repeat with e in (my elementsOf(w))
+			set r to ""
+			try
+				set r to role of e
+			end try
+			if r is "AXTextArea" and area is missing value then
+				set area to e
+			else if r is "AXStaticText" and statusLine is missing value then
+				set v to ""
+				try
+					set v to value of e
+				end try
+				if v starts with "Current Style" or v contains "Row " then set statusLine to e
+			else if r is "AXTextField" and trans is missing value then
+				set trans to e
+			end if
+		end repeat
+	end tell
+	if area is missing value then return missing value
+	return {w, area, statusLine, trans}
+end partsOf
+
+-- Where the document window's tab is among the tabs of its window: "tab 2 of 3"; "" when the window has one tab or
+-- its tab bar cannot be read. The tab bar is the system's tab group, a radio button per tab, the selected one on.
+on tabPlace(w)
+	try
+		tell application "System Events"
+			set bars to (every UI element of w whose role is "AXTabGroup")
+			if bars is {} then
+				set bars to {}
+				repeat with e in (my elementsOf(w))
+					try
+						if role of e is "AXTabGroup" then set end of bars to (contents of e)
+					end try
+				end repeat
+			end if
+			repeat with b in bars
+				set tabList to (every radio button of b)
+				set n to count of tabList
+				if n > 1 then
+					repeat with i from 1 to n
+						set v to 0
+						try
+							set v to (value of item i of tabList) as integer
+						end try
+						if v is 1 then return "tab " & i & " of " & n
+					end repeat
+				end if
+			end repeat
+		end tell
+	end try
+	return ""
+end tabPlace
 
 -- The title of the document window.
 on docTitle(w)

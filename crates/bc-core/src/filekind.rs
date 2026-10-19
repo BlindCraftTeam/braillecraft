@@ -180,9 +180,16 @@ pub fn detect(name: &str, bytes: &[u8]) -> FileKind {
     if starts(b"HWP Document File") {
         return FileKind::Hangul;
     }
-    if starts(&[0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1]) {
-        // A compound file: Word 6 to 2003 (an old Excel or a Hangul file is not supported here).
-        return if ext == "hwp" { FileKind::Hangul } else { FileKind::Word };
+    if starts(&COMPOUND) {
+        // A compound file: Word 6 to 2003; one with a Workbook stream is an older Excel workbook, not supported
+        // (refusal gives it its own message).
+        return if ext == "hwp" {
+            FileKind::Hangul
+        } else if old_excel(bytes) {
+            FileKind::Unsupported
+        } else {
+            FileKind::Word
+        };
     }
     if starts(b"PK\x03\x04") {
         let has = |s: &[u8]| bytes.windows(s.len()).any(|w| w == s);
@@ -225,6 +232,72 @@ pub fn detect(name: &str, bytes: &[u8]) -> FileKind {
     let Some(s) = text_stats(head) else { return FileKind::Unsupported };
     kind_of_text(&s)
 }
+
+/// The signature of a compound file (OLE structured storage).
+const COMPOUND: [u8; 8] = [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
+
+/// The names of the streams and storages in a compound file's directory (empty when the file does not add up).
+fn compound_names(bytes: &[u8]) -> Vec<String> {
+    let u16_at = |at: usize| bytes.get(at..at + 2).map(|b| u16::from_le_bytes([b[0], b[1]]));
+    let u32_at = |at: usize| bytes.get(at..at + 4).map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]));
+    if !bytes.starts_with(&COMPOUND) {
+        return Vec::new();
+    }
+    let Some(shift) = u16_at(0x1E).filter(|s| (7..=16).contains(s)) else { return Vec::new() };
+    let size = 1usize << shift;
+    let sector = |n: u32| 512usize.max(size) + n as usize * size;
+    // The allocation table: the sectors the header lists (the first 109; enough for a file of several megabytes).
+    let fat: Vec<u32> = (0..109)
+        .filter_map(|i| u32_at(0x4C + 4 * i))
+        .take_while(|&n| n < 0xFFFF_FFFA)
+        .flat_map(|n| (0..size / 4).map(move |i| (n, i)))
+        .map_while(|(n, i)| u32_at(sector(n) + 4 * i))
+        .collect();
+    let mut names = Vec::new();
+    let mut at = u32_at(0x30).unwrap_or(u32::MAX);
+    let mut seen = 0;
+    while at < 0xFFFF_FFFA && seen < 4096 {
+        let start = sector(at);
+        for e in 0..size / 128 {
+            let entry = start + e * 128;
+            let Some(len) = u16_at(entry + 0x40) else { break };
+            let units: Vec<u16> = (0..(len as usize / 2).saturating_sub(1).min(31)).filter_map(|i| u16_at(entry + 2 * i)).collect();
+            if !units.is_empty() {
+                names.push(String::from_utf16_lossy(&units));
+            }
+        }
+        at = fat.get(at as usize).copied().unwrap_or(u32::MAX);
+        seen += 1;
+    }
+    names
+}
+
+/// Whether the file is a compound file with a "Workbook" stream: an Excel workbook older than Excel 2007.
+pub fn old_excel(bytes: &[u8]) -> bool {
+    compound_names(bytes).iter().any(|n| n.eq_ignore_ascii_case("Workbook"))
+}
+
+/// The message for a file the import refuses, by its kind: an older Excel workbook, Rich Text Format, and any other
+/// unsupported file (also music files). None for a kind that has an importer, or that BrailleCraft does not import
+/// yet (not_yet).
+pub fn refusal(kind: FileKind, bytes: &[u8]) -> Option<String> {
+    match kind {
+        FileKind::Unsupported | FileKind::Music if old_excel(bytes) => Some(OLD_EXCEL.to_string()),
+        FileKind::Unsupported | FileKind::Music => Some(UNSUPPORTED.to_string()),
+        FileKind::Rtf => Some(RTF.to_string()),
+        _ => None,
+    }
+}
+
+/// The message for a kind BrailleCraft has no importer for yet (BrailleCraft's own wording).
+pub fn not_yet(kind: FileKind) -> String {
+    let name = FileKind::filters().iter().find(|f| f.0 == kind).map_or("", |f| f.1);
+    format!("BrailleCraft cannot import {name} files yet.")
+}
+
+pub const OLD_EXCEL: &str = "BrailleCraft only supports EXCEL 2007 documents, but this document was saved with an older version of Excel.  Try saving the document in the newer format if possible or pasting its contents into a Word document.";
+pub const UNSUPPORTED: &str = "This document cannot be imported into BrailleCraft.  It appears to be in an unsupported file format.";
+pub const RTF: &str = "This document cannot be imported into BrailleCraft.  It appears to be in Rich Text Format (RTF).  If Microsoft\u{ae} Word is installed, you can use it to convert your document to a native Word format and import that into BrailleCraft.";
 
 /// A text file's kind from its counts, in this order: coded text, coded braille, formatted braille,
 /// formatted text.
@@ -407,5 +480,81 @@ mod tests {
         // A control byte other than tab, line feed, carriage return or form feed: not supported.
         assert_eq!(detect("a.txt", b"ab\x01cd"), FileKind::Unsupported);
         assert_eq!(detect("a.rtf", b"{\\rtf1\\ansi"), FileKind::Rtf);
+    }
+
+    /// A compound file of one allocation sector and one directory sector, with these entries after the root.
+    fn compound(names: &[&str]) -> Vec<u8> {
+        let mut d = vec![0u8; 512 * 3];
+        d[..8].copy_from_slice(&COMPOUND);
+        d[0x1A..0x1C].copy_from_slice(&3u16.to_le_bytes());
+        d[0x1C..0x1E].copy_from_slice(&0xFFFEu16.to_le_bytes());
+        d[0x1E..0x20].copy_from_slice(&9u16.to_le_bytes());
+        d[0x20..0x22].copy_from_slice(&6u16.to_le_bytes());
+        d[0x2C..0x30].copy_from_slice(&1u32.to_le_bytes());
+        d[0x30..0x34].copy_from_slice(&1u32.to_le_bytes());
+        for i in 0..109 {
+            d[0x4C + 4 * i..0x50 + 4 * i].copy_from_slice(&u32::MAX.to_le_bytes());
+        }
+        d[0x4C..0x50].copy_from_slice(&0u32.to_le_bytes());
+        // The allocation sector (sector 0): itself, then the directory's one sector.
+        for i in 0..128 {
+            d[512 + 4 * i..516 + 4 * i].copy_from_slice(&u32::MAX.to_le_bytes());
+        }
+        d[512..516].copy_from_slice(&0xFFFF_FFFDu32.to_le_bytes());
+        d[516..520].copy_from_slice(&0xFFFF_FFFEu32.to_le_bytes());
+        for (e, name) in std::iter::once("Root Entry").chain(names.iter().copied()).enumerate() {
+            let at = 1024 + 128 * e;
+            let units: Vec<u16> = name.encode_utf16().collect();
+            for (i, u) in units.iter().enumerate() {
+                d[at + 2 * i..at + 2 * i + 2].copy_from_slice(&u.to_le_bytes());
+            }
+            d[at + 0x40..at + 0x42].copy_from_slice(&((units.len() as u16 + 1) * 2).to_le_bytes());
+            d[at + 0x42] = if e == 0 { 5 } else { 2 };
+        }
+        d
+    }
+
+    #[test]
+    fn refusal_old_excel() {
+        let xls = compound(&["Workbook", "\u{5}SummaryInformation"]);
+        assert!(old_excel(&xls));
+        assert_eq!(detect("sheet.xls", &xls), FileKind::Unsupported);
+        assert_eq!(refusal(detect("sheet.xls", &xls), &xls).as_deref(), Some(OLD_EXCEL));
+        // A Word 6 to 2003 document is still Word.
+        let doc = compound(&["WordDocument", "1Table"]);
+        assert!(!old_excel(&doc));
+        assert_eq!(detect("letter.doc", &doc), FileKind::Word);
+    }
+
+    #[test]
+    fn refusal_rtf() {
+        let rtf = b"{\\rtf1\\ansi x}";
+        assert_eq!(refusal(detect("a.rtf", rtf), rtf).as_deref(), Some(RTF));
+    }
+
+    #[test]
+    fn refusal_unsupported() {
+        let junk = b"ab\x01\x02cd";
+        assert_eq!(refusal(detect("a.bin", junk), junk).as_deref(), Some(UNSUPPORTED));
+    }
+
+    #[test]
+    fn refusal_none_for_docx() {
+        assert_eq!(refusal(FileKind::Docx, b"PK\x03\x04word/"), None);
+        assert_eq!(not_yet(FileKind::Sgml), "BrailleCraft cannot import SGML/ICADD/HTML files yet.");
+    }
+
+    /// An eBraille or EPUB 3 package is a zip with no word/, xl/ or OpenDocument part: it is not opened.
+    #[test]
+    fn an_ebrl_or_epub_zip_is_unsupported() {
+        let meta = crate::ebraille::Metadata::default();
+        let kinds = |name: &str| crate::ebraille::kind_of(name, "");
+        let cell = |_: char| 0u8;
+        for braille in [true, false] {
+            let input = crate::ebraille::Input { running: "\x1ces~para.\x1fText\x1cee~para.\x1f", braille, kinds: &kinds, cell: &cell, meta: &meta, default_language: None, default_system: None, name: "book" };
+            let bytes = crate::ebraille::package(&input);
+            assert_eq!(detect("book.ebrl", &bytes), FileKind::Unsupported);
+            assert_eq!(detect("book.epub", &bytes), FileKind::Unsupported);
+        }
     }
 }

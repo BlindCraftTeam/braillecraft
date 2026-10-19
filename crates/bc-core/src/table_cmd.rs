@@ -213,11 +213,25 @@ fn codes_in(r: &[char], from: usize, to: usize) -> Vec<(String, usize, usize)> {
     out
 }
 
-/// True when the selection from `a` to `b` holds a table start code (a name beginning htbs) or end code (htbe):
-/// Table, Create and Table Properties (spec 33 2.2).
+/// True when the selection from `a` to `b` holds a table start code (a name whose first four letters are htbs) or
+/// end code (the name htbe), case ignored in both: Table, Create and Table Properties (spec 33 2.2, unknown 4).
 pub fn selection_has_table_code(running: &str, a: usize, b: usize) -> bool {
     let r: Vec<char> = running.chars().collect();
-    codes_in(&r, a.min(b), a.max(b)).iter().any(|(n, _, _)| n.starts_with("htbs") || n == "htbe")
+    codes_in(&r, a.min(b), a.max(b)).iter().any(|(n, _, _)| {
+        n.get(..4).is_some_and(|p| p.eq_ignore_ascii_case("htbs")) || n.eq_ignore_ascii_case("htbe")
+    })
+}
+
+/// Whether the caret counts as in a table for the Table menu (spec 33 unknown 6): a table region holds it and it is
+/// at or after the start of the table's first cell. Create is enabled when this is false, Table Properties when it
+/// is true; both are greyed with no document.
+pub fn in_table_for_menu(running: &str, caret: usize) -> bool {
+    let doc = crate::doctext::Shown::from_running(running);
+    crate::format::table_regions(&doc)
+        .iter()
+        .find(|t| t.holds(caret))
+        .and_then(|t| t.first_cell_start())
+        .is_some_and(|first| caret >= first)
 }
 
 /// The table the caret is in: its start code (the place of its 0x1C and after its 0x1F) and its number of rows and
@@ -287,5 +301,59 @@ mod tests {
         let (new, delta) = set_start_code(&r, open, after, &Table { kind: 'u', ..Table::default() });
         assert_eq!(new, run("x[htbs;u]a[>]b[<]c[>]d[htbe]y"));
         assert_eq!(delta, 6 - 16);
+    }
+
+    #[test]
+    fn refusal_ignores_case() {
+        for code in ["[HTBS;r:1:1:b:n:a]", "[HtBe]", "[htbsx]"] {
+            let r = run(&format!("a{code}b"));
+            assert!(selection_has_table_code(&r, 0, r.chars().count()), "{code}");
+        }
+        let r = run("a[htbe;x]b");
+        assert!(!selection_has_table_code(&r, 0, r.chars().count()));
+    }
+
+    #[test]
+    fn nested_start_code_is_dropped() {
+        let r = run("x[htbs]a[htbs]b[>]c[htbe]d[htbe]y");
+        let at = |s: &str| r.find(s).map(|b| r[..b].chars().count()).unwrap();
+        assert_eq!(table_at(&r, at("a")).map(|t| t.0), Some(1));
+        assert!(table_at(&r, at("d")).is_none());
+    }
+
+    #[test]
+    fn hidden_letter_kept() {
+        assert_eq!(Table::parse("htbs;r:1:1:v:n:a").code(), "htbs;r:1:1:v:n:a");
+        assert_eq!(Table::parse("htbs;r:1:1:x:n:a").code(), "htbs;r:1:1:x:n:a");
+    }
+
+    #[test]
+    fn create_caret_is_first_cell() {
+        let (t, caret) = Table::default().new_table();
+        let c: Vec<char> = t.chars().collect();
+        assert_eq!(c[caret], OPEN);
+        assert_eq!(c[caret + 1], '>');
+    }
+
+    #[test]
+    fn menu_state() {
+        let r = run("[htbs]a[>]b[htbe]");
+        let at = |s: &str| r.find(s).map(|b| r[..b].chars().count()).unwrap();
+        // Just after the start code: in the table region, and the menu's test asks for the first cell's start.
+        let first = crate::doctext::Shown::from_running(&r);
+        let first = crate::format::table_regions(&first)[0].first_cell_start().unwrap();
+        assert!(table_at(&r, 6).is_some());
+        assert_eq!(in_table_for_menu(&r, 6), 6 >= first);
+        assert!(in_table_for_menu(&r, at("\u{1f}b") + 1));
+        assert!(!in_table_for_menu(&r, r.chars().count()));
+        assert!(!in_table_for_menu(&r, 0));
+    }
+
+    #[test]
+    fn delta_longer_code() {
+        let r = run("x[htbs;u]a[htbe]");
+        let t = Table::parse("htbs;r:2:0:b:y:c");
+        let (_, delta) = set_start_code(&r, 1, 9, &t);
+        assert_eq!(delta, 10);
     }
 }

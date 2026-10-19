@@ -1,5 +1,6 @@
 //! eBraille and EPUB 3 (spec 23): Save As eBraille (.ebrl) for braille documents and EPUB 3 (.epub) for print
-//! documents, File, Save eBraille, and Document, eBraille Metadata with its three sub-dialogs. The dialogs are
+//! documents, File, Save eBraille (a developer build's test save), and Document, eBraille Metadata with its three
+//! sub-dialogs. Save As shows the quality notice, then Document, eBraille Metadata; Cancel in either stops the save. The dialogs are
 //! XRC dialogs (kept with the decoded resource data outside the repository) loaded by resource id 2606 (the menu
 //! command) and 26061 to 26063 (the Attributes, Braille Systems and Languages dialogs); their controls are found by
 //! their XRC names. The package itself is built by bc_core::ebraille.
@@ -8,7 +9,7 @@ use std::cell::RefCell;
 use std::path::Path;
 use std::rc::Rc;
 
-use bc_core::ebraille::{self, BrailleSystem, Metadata, Property, StyleKind};
+use bc_core::ebraille::{self, BrailleSystem, Metadata, Property};
 use wxdragon::datetime::DateTime;
 use wxdragon::prelude::*;
 use wxdragon::window::Window;
@@ -111,35 +112,60 @@ fn on_button(d: &Dlg, name: &str, handler: impl FnMut() + 'static) {
     }
 }
 
-/// The package bytes of document `key`: its running text, its styles' kinds, its braille encoding's cells and its
-/// metadata through bc_core::ebraille.
-fn package(key: u64) -> Option<Vec<u8>> {
+/// The eBraille language and braille system of the document's translation table entry (None for the table
+/// list's "language" and "system").
+fn table_defaults(tables: &[String; 4]) -> (Option<String>, Option<String>) {
+    crate::translation::with_list(|l| match l.entry_for(tables) {
+        Some((i, _)) => (l.entries[i].ebraille_language().map(str::to_string), l.entries[i].ebraille_system().map(str::to_string)),
+        None => (None, None),
+    })
+}
+
+/// The package bytes of document `key`: its running text, its styles' kinds, its braille encoding's cells, its
+/// metadata and its translation table's language and system through bc_core::ebraille; `path` is the file it is
+/// saved as (its name is the package's title when the metadata has none and the document has no heading).
+fn package(key: u64, path: &Path) -> Option<Vec<u8>> {
+    let tables = app::with(|a| a.index_of(key).map(|i| a.docs[i].tables.clone()))?;
+    let (language, system) = table_defaults(&tables);
     app::with(|a| {
         let i = a.index_of(key)?;
         let d = &a.docs[i];
         let running = d.shown().to_running();
         let styles: Vec<(String, String)> = d.styles.iter().map(|s| (s.name.clone(), s.begin.clone())).collect();
-        let kinds = |name: &str| -> StyleKind {
-            // A style the document does not define is written as a paragraph style.
-            styles.iter().find(|(n, _)| n == name).map_or(StyleKind::Block, |(n, begin)| ebraille::kind_of(n, begin))
-        };
+        // A style the document does not define is known by its name alone.
+        let kinds = |name: &str| ebraille::kind_of(name, styles.iter().find(|(n, _)| n == name).map_or("", |(_, begin)| begin.as_str()));
         let enc = a.encoding();
         let cell = |c: char| enc.text_to_cells(&c.to_string()).chars().next().map_or(0, |u| (u as u32).saturating_sub(0x2800) as u8);
-        Some(ebraille::package(&ebraille::Input { running: &running, braille: d.kind == DocKind::Braille, kinds: &kinds, cell: &cell, meta: &d.ebraille }))
+        Some(ebraille::package(&ebraille::Input {
+            running: &running,
+            braille: d.kind == DocKind::Braille,
+            kinds: &kinds,
+            cell: &cell,
+            meta: &d.ebraille,
+            default_language: language.as_deref(),
+            default_system: system.as_deref(),
+            name: &path.to_string_lossy(),
+        }))
     })
 }
 
 /// Save As eBraille or EPUB 3 to `path`: the quality notice first (every save until its box is checked; Cancel
-/// stops the save), then the package written. The document keeps its own file and name.
+/// stops the save), then Document, eBraille Metadata (Cancel stops the save; OK keeps the metadata with the
+/// document), then the package written. The document keeps its own file and name.
 pub fn save_as(key: u64, path: &Path) -> bool {
     if !once_notice(ebraille::QUALITY_WARNING_KEY, ebraille::QUALITY_WARNING) {
+        return false;
+    }
+    if !edit_metadata(key) {
         return false;
     }
     write_package(key, path)
 }
 
-fn write_package(key: u64, path: &Path) -> bool {
-    let Some(bytes) = package(key) else { return false };
+/// The package of document `key` written to `path` with the metadata it has, asking nothing (the /ebrl command
+/// line option, and Save As after its dialogs).
+pub(crate) fn write_package(key: u64, path: &Path) -> bool {
+    let Some(bytes) = package(key, path) else { return false };
     if let Err(e) = std::fs::write(path, bytes) {
         message(&format!("{}: {e}", path.display()));
         return false;
@@ -147,36 +173,35 @@ fn write_package(key: u64, path: &Path) -> bool {
     true
 }
 
-/// File, Save eBraille (1107): the quality notice first (spec 23
-/// 8.1), then the file asked for (eBraille for a braille document, EPUB 3 for a print one; the name is
-/// asked for as Save As asks it), then the package written.
+/// File, Save eBraille (1107): a test save for a developer build only; in a release build the item does nothing.
+/// The package goes to test.ebrl (a braille document) or test.epub (a print one) in the folder the setting
+/// EBrailleTestOutputPath or EPUBTestOutputPath names, with no quality notice and no dialog. Not known: the name made with the free number tried from 9999 down when the file
+/// is there already (the file is written over), the section the two settings are kept in (the top section is
+/// read), and what the second, folder-and-ASCII pass writes (not made).
 pub fn save_ebraille() {
-    let Some((key, braille, name)) = app::with(|a| a.doc().map(|d| (d.key, d.kind == DocKind::Braille, d.name.clone()))) else { return };
-    if !once_notice(ebraille::QUALITY_WARNING_KEY, ebraille::QUALITY_WARNING) {
+    if !cfg!(debug_assertions) {
         return;
     }
-    let stem = name.rsplit_once('.').map_or(name.as_str(), |(s, _)| s).to_string();
-    let (wildcard, ext) = if braille { ("eBraille (*.ebrl)|*.ebrl", "ebrl") } else { ("EPUB 3 (*.epub)|*.epub", "epub") };
-    let f = app::frame();
-    let dialog = FileDialog::builder(&f)
-        .with_message("Save eBraille")
-        .with_wildcard(wildcard)
-        .with_default_file(&format!("{stem}.{ext}"))
-        .with_style(FileDialogStyle::Save | FileDialogStyle::OverwritePrompt)
-        .build();
-    if dialog.show_modal() != ID_OK {
-        return;
-    }
-    let Some(path) = dialog.get_path() else { return };
-    let chosen = std::path::PathBuf::from(path);
-    let chosen = if chosen.extension().is_some_and(|e| e.eq_ignore_ascii_case(ext)) { chosen } else { chosen.with_extension(ext) };
-    write_package(key, &chosen);
+    let Some((key, braille)) = app::with(|a| a.doc().map(|d| (d.key, d.kind == DocKind::Braille))) else { return };
+    let (setting, file) = if braille { ("EBrailleTestOutputPath", "test.ebrl") } else { ("EPUBTestOutputPath", "test.epub") };
+    let Some(folder) = crate::settings_store::get("", setting).filter(|f| !f.trim().is_empty()) else { return };
+    write_package(key, &std::path::Path::new(folder.trim()).join(file));
 }
 
-/// The language names the Languages and Braille Systems dialogs offer: the translation table list's languages
-/// (INFERENCE: the dialogs' own list contents are not known).
+/// The language codes the Languages and Braille Systems dialogs offer: the translation table entries' eBraille
+/// languages (such as "eng-Brai"), each once, in the list's order. Not known: the dialogs' own list contents.
 fn language_names() -> Vec<String> {
-    crate::translation::with_list(|l| l.entries.iter().map(|e| e.name.clone()).collect())
+    crate::translation::with_list(|l| {
+        let mut out: Vec<String> = Vec::new();
+        for e in &l.entries {
+            if let Some(code) = e.ebraille_language() {
+                if !out.iter().any(|c| c == code) {
+                    out.push(code.to_string());
+                }
+            }
+        }
+        out
+    })
 }
 
 /// The Attributes dialog (26061) for one field: a name chosen from the attribute names, a value, the chosen
@@ -354,13 +379,7 @@ fn read_back(d: &Dlg, state: &Metadata) -> Metadata {
 /// The identifier the preview shows: as the package writes it, with the template's placeholder where the save
 /// makes a new UUID.
 fn identifier_of(m: &Metadata) -> String {
-    let value = m.identifier.trim();
-    match (m.id_type, value.is_empty()) {
-        (_, true) => "urn:uuid:{GUID}".to_string(),
-        (0, _) => format!("urn:isbn:{value}"),
-        (1, _) => format!("urn:doi:{value}"),
-        _ => format!("urn:uuid:{value}"),
-    }
+    ebraille::identifier_text(m)
 }
 
 fn refresh_preview(d: &Dlg, state: &Metadata) {
@@ -370,11 +389,21 @@ fn refresh_preview(d: &Dlg, state: &Metadata) {
     set_text(d, "tcXMLPreview", &ebraille::metadata_xml(&shown, &identifier_of(&shown)));
 }
 
-/// Document, eBraille Metadata (2606): the dialog filled from the document's metadata; the sub-dialogs from its
-/// buttons; on OK the metadata is read back (the preview as edited when Allow editing is on and it was changed)
-/// and the document is marked modified when it changed.
+/// Document, eBraille Metadata (2606).
 pub fn metadata_dialog() {
-    let Some((key, meta)) = app::with(|a| a.doc().map(|d| (d.key, d.ebraille.clone()))) else { return };
+    if let Some(key) = app::with(|a| a.doc().map(|d| d.key)) {
+        edit_metadata(key);
+    }
+}
+
+/// The eBraille Metadata dialog for document `key`: filled from the document's metadata, with its translation
+/// table's eBraille language and braille system where the metadata names none; the sub-dialogs from its buttons;
+/// on OK the metadata is read back (the preview as edited when Allow editing is on and it was changed) and kept,
+/// the document marked modified, only when it changed. Answers whether OK was chosen.
+fn edit_metadata(key: u64) -> bool {
+    let Some((stored, tables)) = app::with(|a| a.index_of(key).map(|i| (a.docs[i].ebraille.clone(), a.docs[i].tables.clone()))) else { return false };
+    let (language, system) = table_defaults(&tables);
+    let meta = stored.with_defaults(language.as_deref(), system.as_deref());
     let d = Rc::new(Dlg::open_xrc(&app::frame(), 2606));
     let state = Rc::new(RefCell::new(meta.clone()));
     set_text(&d, "tcTitle", &meta.titles.join("\n"));
@@ -491,7 +520,8 @@ pub fn metadata_dialog() {
         });
     }
     let answer = d.show();
-    if answer == 1 {
+    let ok = answer == 1;
+    if ok {
         let mut new = read_back(&d, &state.borrow());
         new.edited_xml = if checked(&d, "chkAllowEditing") {
             let shown = text(&d, "tcXMLPreview");
@@ -511,4 +541,5 @@ pub fn metadata_dialog() {
         });
     }
     Rc::try_unwrap(d).ok().map(|d| d.destroy());
+    ok
 }

@@ -347,6 +347,62 @@ fn end_of(page: &Page) -> usize {
     page.lines.iter().flat_map(|l| l.sources.iter().flatten()).last().map_or(page.start, |s| s + 1)
 }
 
+/// Whether the editing area keeps at least one text row (spec 27 section 9, unknown 1): a view switch, a font
+/// change or turning the translated line on is refused when the area, less `extra_h` (the translated line's height
+/// when it is being turned on, else 0), is lower than one row of the new font.
+pub fn one_row_fits(area_h: i32, row_h: i32, extra_h: i32) -> bool {
+    row_h + extra_h <= area_h
+}
+
+/// View, Translated Line (spec 27 section 9): turning the line off (`on_now`) is never refused; turning it on is
+/// refused (message 2636) when the editing area, less the line's height `line_h`, would not hold one row.
+pub fn translated_line_allowed(on_now: bool, area_h: i32, row_h: i32, line_h: i32) -> bool {
+    on_now || one_row_fits(area_h, row_h, line_h)
+}
+
+/// The caret's screen row kept through a view switch or a page move (spec 27 section 9, unknowns 2 and 7): its
+/// row less the top row, only when the caret is on screen (top <= row < top + rows, at least one row); None scrolls
+/// only as far as needed to show the caret.
+pub fn kept_row(caret_row: usize, top: usize, rows: usize) -> Option<usize> {
+    (caret_row >= top && caret_row < top + rows.max(1)).then(|| caret_row - top)
+}
+
+/// The Full-Page font size (spec 27 section 9, unknown 3): sizes 5 to 48 are tried in turn, `measure` giving the
+/// font's character width and row height at a size (None when the font cannot be made). The first size at which
+/// the frame's width holds no more than `cells` characters, or the area's height no more than `lines` rows, stops
+/// the search and the size before it is taken, never less than 5; 47 when no size stops it; 6 when the font
+/// cannot be made.
+pub fn full_page_size(measure: impl Fn(i32) -> Option<(i32, i32)>, frame_w: i32, area_h: i32, cells: i32, lines: i32) -> i32 {
+    for size in 5..=48 {
+        let Some((char_w, row_h)) = measure(size) else { return 6 };
+        let cols = frame_w / char_w.max(1);
+        let rows = area_h / row_h.max(1);
+        if cols <= cells || rows <= lines {
+            return (size - 1).max(5);
+        }
+    }
+    47
+}
+
+/// The caret's column for a click in a formatted row (spec 27 section 9, unknown 4): the click is moved left by
+/// half a character width (`half`), cells with no source (`has_source` false: filler, page numbers, running
+/// heads) are skipped, and the caret goes before the first source cell whose left edge (`lefts`) is right of that
+/// point; past the middle of the last source cell it goes after that cell. None for a row with no source cell.
+pub fn click_column(lefts: &[i32], has_source: &[bool], x: i32, half: i32) -> Option<usize> {
+    let at = x - half;
+    let mut last = None;
+    for (i, &left) in lefts.iter().enumerate() {
+        if !has_source.get(i).copied().unwrap_or(false) {
+            continue;
+        }
+        if left > at {
+            return Some(i);
+        }
+        last = Some(i);
+    }
+    last.map(|i| i + 1)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -440,5 +496,57 @@ mod tests {
         assert_eq!(View::coded(&Shown::marked("abcd[es~x]ghij"), 10).text, "abcd<x>\nghij");
         // A code at the start of a row is never cut, however long.
         assert_eq!(View::coded(&Shown::marked("[abcdefghijkl]m"), 5).text, "[abcdefghijkl]\nm");
+    }
+
+    #[test]
+    fn one_row_fits_rule() {
+        assert!(one_row_fits(20, 20, 0));
+        assert!(!one_row_fits(19, 20, 0));
+        assert!(one_row_fits(30, 20, 10));
+        assert!(!one_row_fits(30, 20, 11));
+    }
+
+    #[test]
+    fn turning_off_is_never_refused() {
+        assert!(translated_line_allowed(true, 0, 20, 30));
+        assert!(!translated_line_allowed(false, 40, 20, 30));
+        assert!(translated_line_allowed(false, 50, 20, 30));
+    }
+
+    #[test]
+    fn kept_row_only_on_screen() {
+        assert_eq!(kept_row(5, 0, 10), Some(5));
+        assert_eq!(kept_row(10, 0, 10), None);
+        assert_eq!(kept_row(3, 4, 10), None);
+        assert_eq!(kept_row(4, 4, 0), Some(0));
+    }
+
+    #[test]
+    fn full_page_size_rule() {
+        // A font whose character is `size` wide and `2 * size` high, in a frame 400 wide and an area 600 high.
+        let m = |s: i32| Some((s, 2 * s));
+        // Size 5 already fails: 400 / 5 = 80 columns <= 80 cells.
+        assert_eq!(full_page_size(m, 400, 600, 80, 25), 5);
+        // Size 10 first gives 40 columns == 40 cells (equality stops).
+        assert_eq!(full_page_size(m, 400, 6000, 40, 25), 9);
+        // No size stops the search.
+        assert_eq!(full_page_size(m, 100_000, 100_000, 40, 25), 47);
+        assert_eq!(full_page_size(|_| None, 400, 600, 40, 25), 6);
+    }
+
+    #[test]
+    fn click_column_rule() {
+        // Cells 10 wide at 0, 10, 20, 30; the cell at 20 has no source.
+        let lefts = [0, 10, 20, 30];
+        let src = [true, true, false, true];
+        // Left half of cell 1 gives cell 1; right half gives cell 2's place, skipped to the next source cell 3.
+        assert_eq!(click_column(&lefts, &src, 12, 5), Some(1));
+        assert_eq!(click_column(&lefts, &src, 17, 5), Some(3));
+        // Exactly half goes right.
+        assert_eq!(click_column(&lefts, &src, 15, 5), Some(3));
+        assert_eq!(click_column(&lefts, &src, 5, 5), Some(1));
+        // Past the middle of the last cell: after it.
+        assert_eq!(click_column(&lefts, &src, 36, 5), Some(4));
+        assert_eq!(click_column(&lefts, &[false; 4], 5, 5), None);
     }
 }

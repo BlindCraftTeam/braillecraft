@@ -1,5 +1,6 @@
-//! BrailleCraft, the desktop program: a native main window holding the document windows, the menu bar, the status
-//! line and native dialogs (wxWidgets through wxDragon). Translation runs through the BrailleCraft engine with the
+//! BrailleCraft, the desktop program: a native main window holding the documents as tabs (on macOS each document a
+//! window of its own, the windows tabs of one window; tabs.rs), the menu bar, the status line and native dialogs
+//! (wxWidgets through wxDragon). Translation runs through the BrailleCraft engine with the
 //! tables shipped beside the program (translation.rs).
 
 mod app;
@@ -206,12 +207,22 @@ fn main() {
 
         let frame = Frame::builder().with_title("BrailleCraft").with_size(Size::new(1000, 720)).build();
         let menus = menu::install(&frame);
-        // The tab bar is the window's only child, so it fills the window; each document is a page of it.
-        let tabs = tabs::create(&frame);
+        // The tab bar is the window's only child, so it fills the window; each document is a page of it. On macOS
+        // the frame holds the menu bar and is never shown; each document is a window of its own, one of the window
+        // tabs (tabs.rs), and the frame is the top window wxWidgets puts the menu bar up from.
+        let tabs = if tabs::WINDOW_TABS {
+            tabs::enable(&frame);
+            wxdragon::app::set_top_window(&frame);
+            tabs::Tabs::none()
+        } else {
+            tabs::create(&frame)
+        };
 
         app::set(app::App {
             frame,
             tabs,
+            last_frame: None,
+            tab_bar_shown: false,
             menus,
             docs: Vec::new(),
             active: None,
@@ -225,6 +236,13 @@ fn main() {
         // The command line is read now: --control PORT starts the control channel (control.rs) with the window,
         // as does the Global, MCP Server setting; the files it names are opened once the window is up.
         let cl = command_line::read();
+        // /help, ? or /? as the first argument: the usage, and the program ends with no editor, no start-up dialog
+        // and no file handled.
+        if cl.help {
+            command_line::show_usage(&cl);
+            app::with(|a| a.frame.destroy());
+            return;
+        }
         control::start_at_launch(cl.control);
         // Windows: the JAWS script set shipped beside the program is offered for installing first (not on a
         // command line that runs without the editor, which no one is there to answer).
@@ -248,37 +266,45 @@ fn main() {
             }
             wxdragon::call_after(Box::new(commands::exit_program));
         });
+        // macOS: the View menu's document list follows a tab dragged since it was last read.
+        if tabs::WINDOW_TABS {
+            frame.on_menu_opened(|_| {
+                app::try_with(|a| {
+                    a.reconcile_tabs();
+                });
+            });
+        }
 
         // Global, Embosser Setup at start-up when no embosser is set up, once the main window is first active: a
         // dialog opened before that is stacked under the main window by the window manager, out of reach.
         // Layout check, the picture of a dialog as a command opens it (BC_LAYOUT_RUN=<command id>): that menu command
         // runs in place of the start-up Embosser Setup, so its dialog is filled as it is in use.
         let run_for_picture: Option<i32> = std::env::var("BC_LAYOUT_RUN").ok().and_then(|c| c.parse().ok());
-        let started = std::rc::Rc::new(std::cell::Cell::new(false));
-        if let Some(cmd) = run_for_picture {
+        // The tab pictures (tabs::picture_run) open no start-up dialog, which would cover the tabs.
+        let tabs_picture = std::env::var("BC_LAYOUT_TABS").ok();
+        // A command line that runs without the editor (every file came with an option) opens no start-up dialog:
+        // no one is there to answer it, and it held the /brf run on a computer with no embosser set up.
+        let batch = cl.is_batch();
+        if !batch && tabs_picture.is_none() {
+            // Taken once, by the first window to become active (documents::run_start_hook).
+            documents::set_start_hook(Box::new(move || match run_for_picture {
+                Some(cmd) => wxdragon::call_after(Box::new(move || commands::run(cmd, false))),
+                None => wxdragon::call_after(Box::new(commands::embosser_setup_at_start)),
+            }));
+        }
+        if run_for_picture.is_some() {
             // A program started from a build machine's shell is not always made the active one (macOS), so the
             // command also runs two seconds after start-up if the main window has not become active by then.
             let timer = wxdragon::timer::Timer::new(&frame);
-            let started = started.clone();
-            timer.on_tick(move |_| {
-                if !started.replace(true) {
-                    commands::run(cmd, false);
-                }
-            });
+            timer.on_tick(move |_| documents::run_start_hook());
             timer.start(2000, true);
             // Kept for the life of the program, which a picture run ends by being stopped.
             std::mem::forget(timer);
         }
-        // A command line that runs without the editor (every file came with an option) opens no start-up dialog:
-        // no one is there to answer it, and it held the /brf run on a computer with no embosser set up.
-        let batch = cl.is_batch();
         frame.on_activate(move |e| {
             if let WindowEventData::Activate(a) = &e {
-                if a.is_active() && !batch && !started.replace(true) {
-                    match run_for_picture {
-                        Some(cmd) => wxdragon::call_after(Box::new(move || commands::run(cmd, false))),
-                        None => wxdragon::call_after(Box::new(commands::embosser_setup_at_start)),
-                    }
+                if a.is_active() {
+                    documents::run_start_hook();
                 }
                 a.event.skip(true);
             }
@@ -296,6 +322,13 @@ fn main() {
             dlg::layout_show(page);
             return;
         }
+        if let Some(path) = tabs_picture {
+            if !tabs::WINDOW_TABS {
+                frame.show(true);
+            }
+            tabs::picture_run(path, std::env::var("BC_LAYOUT_TABS_STAGE").unwrap_or_default());
+            return;
+        }
 
         // macOS: documents opened from the Finder (double-click, Open With, a drop on the program icon) come as an
         // Apple event, not on the command line; each is opened in the editor.
@@ -305,32 +338,41 @@ fn main() {
                 commands::open_path(Path::new(&f));
             }
         });
+        // macOS: the Dock icon clicked; with no document window open, a new document (documents::reopen).
+        #[cfg(target_os = "macos")]
+        wx_app.on_reopen_app(|| wxdragon::call_after(Box::new(documents::reopen)));
         #[cfg(not(target_os = "macos"))]
         let _ = wx_app;
 
         // The command line (spec 26 section 26.5): files given are opened, and printed, embossed or saved when an
         // option says so. When every file came with an option, the work is done without the editor and the program
         // ends.
-        let opened = command_line::run(&cl);
+        if cl.is_batch() {
+            documents::hide_new_windows();
+        }
+        command_line::run(&cl);
         if cl.is_batch() {
             app::with(|a| {
                 for d in a.docs.drain(..) {
                     d.page.destroy();
+                    if let Some(w) = d.window {
+                        w.destroy();
+                    }
                 }
                 a.frame.destroy();
             });
             return;
         }
-        // INFERENCE: a new empty print document when no file was opened in the editor, as at a plain start.
-        if !opened {
-            let key = documents::new_document(app::DocKind::Print, None, &bc_core::doctext::Shown::default());
-            app::with(|a| {
-                if let Some(i) = a.index_of(key) {
-                    a.docs[i].dirty = false;
-                }
-            });
+        // With no file opened the program starts with no document: File, New (Control-N) or File, Open makes one.
+        // On macOS the program frame is not shown (the documents are windows of their own); with no document open
+        // no window becomes active, so the start-up dialog is opened now.
+        if tabs::WINDOW_TABS {
+            if app::with(|a| a.docs.is_empty()) {
+                wxdragon::call_after(Box::new(documents::run_start_hook));
+            }
+        } else {
+            frame.show(true);
         }
-        frame.show(true);
         if fonts == 0 {
             commands::message("The braille fonts could not be loaded; Braille Font and SimBraille Font show print characters.");
         }

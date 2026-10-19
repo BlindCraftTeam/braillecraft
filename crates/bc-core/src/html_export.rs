@@ -37,7 +37,7 @@ pub fn html(body: &[u8], scripts: &mut [RuleScript; 4]) -> Result<Vec<u8>, Strin
     Ok(fixlinks(&text))
 }
 
-/// The reference text for one escape byte: (first byte, page, offset).
+/// The table for one escape byte: (first byte, page, offset).
 const PAGES: [(u8, u16, i32); 66] = [
     (0xB0, 0x28, -0x30), (0xB1, 0x28, 0x50), (0xB2, 0x01, -0x30), (0xB3, 0x01, 0x50), (0xB4, 0x02, -0x30), (0xB5, 0x02, 0x50),
     (0xB6, 0x04, -0x30), (0xB7, 0x04, 0x50), (0xB8, 0x1E, -0x30), (0xB9, 0x1E, 0x50), (0xBA, 0x17, -0x30), (0xBB, 0x17, 0x50),
@@ -358,5 +358,20 @@ mod tests {
         assert!(text.contains("</p><p>"), "{text}");
         assert!(text.contains("_one_"), "{text}");
         assert!(text.ends_with("</body>\n</html>\n"), "{text}");
+    }
+
+    #[test]
+    fn html_body_lines_end_in_cr_lf() {
+        // The italics step reads and writes line ends natively, so every line feed of the body becomes CR LF, and the
+        // CR travels in the line text through the html step; only the html step's own last line ends in a bare LF.
+        let body = b"\x1cp\x1fOne paragraph.\n\x1cp\x1fTwo paragraphs.\n";
+        let text = String::from_utf8(html(body, &mut scripts()).unwrap()).unwrap();
+        let start = text.find("<body>\n").unwrap() + "<body>\n".len();
+        let end = text.rfind("\n</body>").unwrap();
+        let lines = &text[start..end];
+        assert!(lines.ends_with("\r\n\n"), "{lines:?}");
+        let inner = &lines[..lines.len() - 1];
+        assert!(inner.matches("\r\n").count() >= 2, "{lines:?}");
+        assert_eq!(inner.matches('\n').count(), inner.matches("\r\n").count(), "{lines:?}");
     }
 }

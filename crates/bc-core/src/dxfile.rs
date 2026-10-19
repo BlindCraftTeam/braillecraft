@@ -1,4 +1,4 @@
-//! Reading .dxp (print) and .dxb (braille) document files, format versions 0 and 1.
+//! Reading and writing .dxp (print) and .dxb (braille) document files, format versions 0, 1 and 2.
 //!
 //! Layout (all numbers big-endian):
 //! - 10-byte signature: u32 0xFF445349, u16 2, u16 document type (1 print, 0 braille), u16 format version.
@@ -19,6 +19,9 @@
 //!   are 10-byte descriptors of optional sections after the styles (u16 kind, u32 file offset, u32 length; all zero
 //!   for a section that is absent): +88 kind 1 is the name of the document's embosser setup, NUL terminated; the
 //!   others (the extra block and its second copy, embedded objects) are kept as they are read and written back.
+//! - The version 2 section (descriptor +153, kind 0) is a zip archive: the embedded objects, then the folder entry
+//!   "ebraille" and the entry "/ebraille/package.opf" holding the document's eBraille metadata as package.opf text
+//!   (bc_core::ebraille::opf_text). A file that has this section is format version 2.
 //! - Settings +108 to +128 hold the document's embosser page layout (DxLayout, spec 25 section 10); +129 and +131 a
 //!   print document's page size from Document, Printer Setup (lines, characters; spec 05 section A10).
 //!
@@ -66,14 +69,88 @@ pub struct DxDocument {
     pub sections: Vec<(usize, u16, Vec<u8>)>,
     /// The document's embosser page layout (settings +108); None when the file holds none.
     pub layout: Option<DxLayout>,
-    /// A print document's page size from Document, Printer Setup: lines per page and characters per line (settings
-    /// +129 and +131, the document's +0x58c and +0x590; spec 05 section A10). 0 in either is read
-    /// as no size, and a print document without one is laid out at 54 lines of 65 characters.
+    /// The document's page size from Document, Printer Setup: lines per page and characters per line (settings
+    /// +129 and +131, the document's +0x58c and +0x590; spec 05 section A10, A16.2), kept for both kinds of
+    /// document. 0 in either is read as no size, and a document without one takes the Global, Printer Setup page
+    /// size (print_page_or).
     pub print_page: (u16, u16),
+    /// The caret's place when the document was saved (settings +22, u32): a place in the body, one for each of its
+    /// bytes; the document opens with the caret there (spec 05 section A10). 0 for a new document.
+    pub caret: u32,
+    /// The document's eBraille metadata as package.opf text (Document, eBraille Metadata), kept in the version 2
+    /// section; None when the document has none.
+    pub ebraille: Option<String>,
 }
 
-/// The print page size a print document without its own size is laid out at (lines, characters; spec 05 A10).
+/// The descriptor place and kind of the version 2 section.
+const VERSION2_SLOT: usize = 153;
+const VERSION2_KIND: u16 = 0;
+/// The version 2 section's eBraille entries: the folder, and the metadata entry as it is written (a name read
+/// without the leading "/" is the same entry).
+const EBRAILLE_FOLDER: &str = "ebraille/";
+const EBRAILLE_OPF: &str = "/ebraille/package.opf";
+
+fn is_ebraille_entry(name: &str) -> bool {
+    let name = name.trim_start_matches('/');
+    name == "ebraille" || name == "ebraille/" || name == "ebraille/package.opf"
+}
+
+/// The package.opf text in a version 2 section's archive (the entry "ebraille/package.opf", with or without a
+/// leading "/"); None when the section is not an archive or has no such entry.
+pub fn section_opf(section: &[u8]) -> Option<String> {
+    let parts = crate::docx::parts(section).ok()?;
+    let part = parts.iter().find(|p| p.name.trim_start_matches('/') == "ebraille/package.opf")?;
+    Some(String::from_utf8_lossy(&part.bytes).into_owned())
+}
+
+/// The version 2 section with `opf` as its eBraille metadata: the section's other entries (the embedded objects)
+/// first, as read, then the folder "ebraille" and "/ebraille/package.opf"; with no metadata only the other entries.
+/// None when nothing is left to keep. A section that is not an archive is kept as it is (its metadata cannot be
+/// put in).
+pub fn section_with_opf(section: Option<&[u8]>, opf: Option<&str>) -> Option<Vec<u8>> {
+    let kept = match section {
+        Some(bytes) => match crate::docx::parts(bytes) {
+            Ok(parts) => parts.into_iter().filter(|p| !is_ebraille_entry(&p.name)).collect(),
+            Err(_) => return Some(bytes.to_vec()),
+        },
+        None => Vec::new(),
+    };
+    if kept.is_empty() && opf.is_none() {
+        return None;
+    }
+    let mut entries: Vec<(&str, &[u8])> = kept.iter().map(|p| (p.name.as_str(), p.bytes.as_slice())).collect();
+    if let Some(opf) = opf {
+        entries.push((EBRAILLE_FOLDER, b""));
+        entries.push((EBRAILLE_OPF, opf.as_bytes()));
+    }
+    Some(crate::docx::deflated_zip(&entries))
+}
+
+/// The Global, Printer Setup page size before it is changed (lines, characters: the settings DesiredLinesPerPage
+/// and DesiredCharsPerLine, defaults 54 and 65; spec A16.4 unknown 6).
 pub const PRINT_PAGE_DEFAULT: (u16, u16) = (54, 65);
+
+/// A document's print page size: the file's own, or the Global, Printer Setup page size `global` (lines,
+/// characters) when the file holds none (spec A16.4 unknown 6).
+pub fn print_page_or(own: (u16, u16), global: (u32, u32)) -> (u32, u32) {
+    if own.0 == 0 || own.1 == 0 {
+        global
+    } else {
+        (u32::from(own.0), u32::from(own.1))
+    }
+}
+
+/// Save As's dialog title when File, Save As asks.
+pub const SAVE_AS_TITLE: &str = "Save as:";
+/// Save As's dialog title when File, Save falls back to it.
+pub const SAVE_TITLE: &str = "Save:";
+
+/// Whether File, Save writes the document in place, without asking (spec A15.10): it was read from or saved to a
+/// document file in the current format (`document_file`) and has a file name. Otherwise Save asks with Save As,
+/// titled SAVE_TITLE.
+pub fn saves_in_place(document_file: bool, path: &str) -> bool {
+    document_file && !path.is_empty()
+}
 /// Where the print page size is in the settings block.
 const PRINT_PAGE_AT: usize = 129;
 
@@ -274,7 +351,9 @@ pub fn read(d: &[u8]) -> Result<DxDocument, DxError> {
             sections.push((slot, kind, bytes.to_vec()));
         }
     }
+    let ebraille = sections.iter().find(|s| s.0 == VERSION2_SLOT).and_then(|s| section_opf(&s.2));
     Ok(DxDocument {
+        ebraille,
         kind,
         version,
         page_numbering,
@@ -291,6 +370,7 @@ pub fn read(d: &[u8]) -> Result<DxDocument, DxError> {
         embosser,
         sections,
         layout: read_layout(&d[HEADER..BODY]),
+        caret: u32_at(d, s + 22),
         print_page: {
             let (l, c) = (u16_at(d, HEADER + PRINT_PAGE_AT), u16_at(d, HEADER + PRINT_PAGE_AT + 2));
             if l == 0 || c == 0 { (0, 0) } else { (l, c) }
@@ -426,15 +506,31 @@ pub fn write(doc: &DxDocument) -> Vec<u8> {
     out.extend_from_slice(&SIGNATURE.to_be_bytes());
     out.extend_from_slice(&2u16.to_be_bytes());
     out.extend_from_slice(&(if doc.kind == DocumentKind::Print { 1u16 } else { 0 }).to_be_bytes());
+    // The version 2 section with the document's eBraille metadata: kept as read while the metadata is the one it
+    // holds, else made again with it.
+    let mut sections: Vec<(usize, u16, Vec<u8>)> = doc.sections.iter().filter(|s| s.0 != EMBOSSER_SLOT).cloned().collect();
+    let old = sections.iter().position(|s| s.0 == VERSION2_SLOT);
+    let same = old.is_some_and(|i| section_opf(&sections[i].2) == doc.ebraille) || (old.is_none() && doc.ebraille.is_none());
+    if !same {
+        let made = section_with_opf(old.map(|i| sections[i].2.as_slice()), doc.ebraille.as_deref());
+        let kind = old.map_or(VERSION2_KIND, |i| sections[i].1);
+        if let Some(i) = old {
+            sections.remove(i);
+        }
+        if let Some(bytes) = made {
+            sections.push((VERSION2_SLOT, kind, bytes));
+        }
+    }
     // Version 2 when the document carries the version-2 section (its descriptor at +153: embedded objects or
     // eBraille data), else the version asked for (0 or 1).
-    let version = if doc.sections.iter().any(|s| s.0 == 153) && doc.version >= 1 { 2 } else { doc.version.min(1) };
+    let version = if sections.iter().any(|s| s.0 == VERSION2_SLOT) && doc.version >= 1 { 2 } else { doc.version.min(1) };
     out.extend_from_slice(&version.to_be_bytes());
     let mut s = if doc.settings.len() == SETTINGS { doc.settings.clone() } else { new_settings() };
     for (i, v) in doc.page_numbering.iter().enumerate() {
         s[2 * i..2 * i + 2].copy_from_slice(&(*v as u16).to_be_bytes());
     }
     s[18..22].copy_from_slice(&(body.len() as u32).to_be_bytes());
+    s[22..26].copy_from_slice(&doc.caret.min(body.len() as u32).to_be_bytes());
     s[14..16].copy_from_slice(&u16::from(doc.coded_view).to_be_bytes());
     s[16..18].copy_from_slice(&doc.hyphenation.to_be_bytes());
     s[26..28].copy_from_slice(&u16::from(doc.translated_line).to_be_bytes());
@@ -481,7 +577,6 @@ pub fn write(doc: &DxDocument) -> Vec<u8> {
     }
     write_block(&mut out, None, &codes);
     // The optional sections after the styles, each with its descriptor pointing at where it now lies.
-    let mut sections: Vec<(usize, u16, Vec<u8>)> = doc.sections.iter().filter(|s| s.0 != EMBOSSER_SLOT).cloned().collect();
     if !doc.embosser.is_empty() {
         let mut name: Vec<u8> = doc.embosser.chars().map(to_cp437).collect();
         name.push(0);
@@ -502,6 +597,49 @@ pub fn write(doc: &DxDocument) -> Vec<u8> {
     out
 }
 
+/// The styles in the order of a document file's style-name list: as given when `kept` (the order a file was read
+/// with), else sorted as `write` sorts the names.
+pub fn name_list_order(styles: &[(String, String, String)], kept: bool) -> Vec<(String, String, String)> {
+    let mut out = styles.to_vec();
+    if !kept {
+        out.sort_by(|a, b| name_order(&codes_bytes(&a.0), &codes_bytes(&b.0)));
+    }
+    out
+}
+
+/// What the command line's /RemoveEmbosserInfo, /RemovePrinterInfo and /RemovePageInfo take out of a document file.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Remove {
+    /// The embosser part: the embosser setup name (descriptor +88) and the embosser layout (settings +108, 21 bytes).
+    Embosser,
+    /// The printer part: the extra block (descriptor +98), the page size of Document, Printer Setup (+129 and +131)
+    /// and the section at +143.
+    Printer,
+    /// Both parts: "page info" is the embosser part and the printer part together.
+    Page,
+}
+
+/// The descriptor places of the printer part.
+const PRINTER_SLOTS: [usize; 2] = [98, 143];
+
+/// Takes the embosser part, the printer part or both out of a document read from a file, so that `write` gives the
+/// file again with those parts zero and everything else (body, styles, table names, the other sections) as read.
+/// The body's table names are not checked against the tables installed: a remove run changes only what it removes.
+pub fn remove_info(doc: &mut DxDocument, what: Remove) {
+    if matches!(what, Remove::Embosser | Remove::Page) {
+        doc.embosser.clear();
+        doc.layout = None;
+        // `write` keeps the settings bytes when there is no layout, so they are zeroed here.
+        if doc.settings.len() == SETTINGS {
+            doc.settings[LAYOUT_AT..LAYOUT_AT + LAYOUT_LEN].fill(0);
+        }
+    }
+    if matches!(what, Remove::Printer | Remove::Page) {
+        doc.sections.retain(|s| !PRINTER_SLOTS.contains(&s.0));
+        doc.print_page = (0, 0);
+    }
+}
+
 /// The order of two style names: byte by byte, each lowered from A to Z and taken
 /// as a signed byte, the end of a name counting as 0 (so a byte from 0x80 sorts before the end and before ASCII).
 fn name_order(a: &[u8], b: &[u8]) -> std::cmp::Ordering {
@@ -516,9 +654,38 @@ fn name_order(a: &[u8], b: &[u8]) -> std::cmp::Ordering {
     }
 }
 
+/// The view font a file's +30 names, as 1201 print, 1202 braille or 1203 SimBraille: the ids 1093 to 1095 stand
+/// for the same three fonts. None for any other value.
+pub fn view_font_id(raw: u16) -> Option<u16> {
+    match raw {
+        1201..=1203 => Some(raw),
+        1093..=1095 => Some(raw - 1093 + 1201),
+        _ => None,
+    }
+}
+
+/// Whether an opened file's saved view (view font, coded view, translated line, six-key entry) and caret are used
+/// (spec 27 section 9, unknown 6): only when the file is reopened from the recent documents list and its +30 holds
+/// a valid view font. Any other file takes the Global Default Views settings with the caret at the start; Full-Page
+/// always comes from those settings.
+pub fn restores_view(in_recent: bool, view_font: u16) -> bool {
+    in_recent && view_font_id(view_font).is_some()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn saved_view_only_from_recent_list() {
+        assert!(restores_view(true, 1202));
+        assert!(restores_view(true, 0x446));
+        assert!(!restores_view(false, 1202));
+        assert!(!restores_view(true, 0));
+        assert_eq!(view_font_id(1093), Some(1201));
+        assert_eq!(view_font_id(1095), Some(1203));
+        assert_eq!(view_font_id(1204), None);
+    }
 
     /// Names sort as they are inserted, case ignored; each keeps the number of its place in the
     /// document's list and its codes go there.
@@ -553,6 +720,8 @@ mod tests {
             sections: Vec::new(),
             layout: None,
             print_page: (0, 0),
+            caret: 0,
+            ebraille: None,
         };
         let back = read(&write(&doc)).unwrap();
         let names: Vec<&str> = back.styles.iter().map(|s| s.0.as_str()).collect();
@@ -651,6 +820,46 @@ mod tests {
     }
 
     #[test]
+    fn a_print_document_keeps_six_key_through_save_and_open() {
+        let doc = DxDocument {
+            kind: DocumentKind::Print,
+            version: 1,
+            page_numbering: [0, 0, 0, 0, 1],
+            translated_line: false,
+            six_key: true,
+            tables: ["amerc".into(), "AMEDXP".into(), "AMEBPC".into(), "AMEDXB".into()],
+            text: "words".into(),
+            styles: Vec::new(),
+            style_index: Vec::new(),
+            coded_view: false,
+            hyphenation: 1,
+            view_font: 1201,
+            settings: Vec::new(),
+            embosser: String::new(),
+            sections: Vec::new(),
+            layout: None,
+            print_page: (0, 0),
+            caret: 0,
+            ebraille: None,
+        };
+        let back = read(&write(&doc)).unwrap();
+        assert_eq!(back.kind, DocumentKind::Print);
+        assert!(back.six_key && !back.translated_line);
+    }
+
+    #[test]
+    fn print_page_falls_back_to_global_and_save_writes_in_place_only_for_a_document_file() {
+        assert_eq!(print_page_or((0, 0), (50, 70)), (50, 70));
+        assert_eq!(print_page_or((40, 0), (50, 70)), (50, 70));
+        assert_eq!(print_page_or((40, 72), (50, 70)), (40, 72));
+        // An imported document asks; one read from "x.DXP" is written in place; a document file needs a name.
+        assert!(!saves_in_place(false, "/home/a/import.docx"));
+        assert!(saves_in_place(true, "/home/a/x.DXP"));
+        assert!(!saves_in_place(true, ""));
+        assert_eq!((SAVE_AS_TITLE, SAVE_TITLE), ("Save as:", "Save:"));
+    }
+
+    #[test]
     fn a_new_document_is_written_and_read_back() {
         let doc = DxDocument {
             kind: DocumentKind::Braille,
@@ -670,6 +879,8 @@ mod tests {
             sections: Vec::new(),
             layout: None,
             print_page: (0, 0),
+            caret: 0,
+            ebraille: None,
         };
         let bytes = write(&doc);
         assert_eq!(&bytes[..10], b"\xFFDSI\x00\x02\x00\x00\x00\x01");
@@ -681,7 +892,7 @@ mod tests {
         assert!(back.coded_view);
         assert_eq!((back.hyphenation, back.view_font), (1, 1203));
         assert_eq!(back.print_page, (0, 0));
-        // A print document's own page size goes to settings +129 and +131 and comes back.
+        // A document's own print page size goes to settings +129 and +131 and comes back (a braille one here).
         let sized = read(&write(&DxDocument { print_page: (40, 72), ..back.clone() })).unwrap();
         assert_eq!(sized.print_page, (40, 72));
         assert_eq!(&write(&DxDocument { print_page: (40, 72), ..back.clone() })[10 + 129..10 + 133], &[0, 40, 0, 72]);
@@ -722,6 +933,88 @@ mod tests {
         assert!(none[at..at + 10].iter().all(|&b| b == 0));
     }
 
+    /// A document with an embosser name and layout, a printer page size and sections at 98, 133 and 143, written and
+    /// read back.
+    fn with_page_info() -> DxDocument {
+        let mut doc = read(&sample(0, b"abc\x1cp\x1fdef")).unwrap();
+        doc.embosser = "Index Everest-D V5".into();
+        doc.layout = Some(DxLayout {
+            lines: 25,
+            top_margin: 1,
+            cells: 40,
+            binding: 2,
+            interpoint: true,
+            banner: 1,
+            interline: 1,
+            double_size: 0,
+            form: "11_w".into(),
+        });
+        doc.print_page = (54, 65);
+        doc.sections = vec![(98, 3, b"printer".to_vec()), (133, 2, b"objects".to_vec()), (143, 4, b"pdesc".to_vec())];
+        doc.styles = vec![("h1.".into(), "\x1cfr\x1f".into(), "\x1cfx\x1f".into()), ("para.".into(), "\x1cp\x1f".into(), String::new())];
+        doc.style_index = vec![1, 0];
+        read(&write(&doc)).unwrap()
+    }
+
+    fn removed(what: Remove) -> (Vec<u8>, DxDocument) {
+        let mut doc = with_page_info();
+        remove_info(&mut doc, what);
+        let bytes = write(&doc);
+        let back = read(&bytes).unwrap();
+        (bytes, back)
+    }
+
+    #[test]
+    fn remove_info_embosser_clears_name_and_layout() {
+        let (bytes, back) = removed(Remove::Embosser);
+        assert_eq!(back.embosser, "");
+        assert_eq!(back.layout, None);
+        assert!(bytes[HEADER + 108..HEADER + 129].iter().all(|&b| b == 0));
+        assert!(bytes[HEADER + 88..HEADER + 98].iter().all(|&b| b == 0));
+        assert!(back.sections.iter().any(|s| s.0 == 98));
+        assert_eq!(back.print_page, (54, 65));
+    }
+
+    #[test]
+    fn remove_info_printer_clears_extra_block_and_print_page() {
+        let (bytes, back) = removed(Remove::Printer);
+        assert!(!back.sections.iter().any(|s| s.0 == 98 || s.0 == 143));
+        assert!(back.sections.iter().any(|s| s.0 == 133));
+        assert!(bytes[HEADER + 129..HEADER + 133].iter().all(|&b| b == 0));
+        assert!(bytes[HEADER + 98..HEADER + 108].iter().all(|&b| b == 0));
+        assert!(bytes[HEADER + 143..HEADER + 153].iter().all(|&b| b == 0));
+        assert_eq!(back.embosser, "Index Everest-D V5");
+        assert!(back.layout.is_some());
+    }
+
+    #[test]
+    fn remove_info_page_clears_both() {
+        let (bytes, back) = removed(Remove::Page);
+        assert_eq!((back.embosser.as_str(), back.layout.is_none(), back.print_page), ("", true, (0, 0)));
+        assert_eq!(back.sections.iter().map(|s| s.0).collect::<Vec<_>>(), vec![133]);
+        assert!(bytes[HEADER + 88..HEADER + 108].iter().all(|&b| b == 0));
+        assert!(bytes[HEADER + 108..HEADER + 133].iter().all(|&b| b == 0));
+    }
+
+    #[test]
+    fn remove_info_keeps_body_styles_and_table_names() {
+        let before = with_page_info();
+        for what in [Remove::Embosser, Remove::Printer, Remove::Page] {
+            let (bytes, back) = removed(what);
+            assert_eq!(back.text, before.text);
+            assert_eq!(back.styles, before.styles);
+            assert_eq!(back.style_index, before.style_index);
+            assert_eq!(back.tables, before.tables);
+            // The body and the style blocks are the same bytes.
+            let full = write(&before);
+            let body_at = BODY;
+            let body_len = u32_at(&full, HEADER + 18) as usize;
+            assert_eq!(bytes[body_at..body_at + body_len], full[body_at..body_at + body_len]);
+            // The settings outside the removed parts are the same bytes.
+            assert_eq!(bytes[HEADER..HEADER + 88], full[HEADER..HEADER + 88]);
+        }
+    }
+
     #[test]
     fn the_embosser_layout_is_kept_in_21_bytes_at_settings_108() {
         let mut doc = read(&sample(0, b"abc")).unwrap();
@@ -760,5 +1053,40 @@ mod tests {
         assert_eq!(older_table_names(&t("BRITIC", "ENGDXP"), |c| c == "caplv1"), t("BRITIC", "ENGDXN"));
         // The scan table must match where the list names one.
         assert_eq!(older_table_names(&t("BRITIC", "OTHER"), |_| true), t("BRITIC", "OTHER"));
+    }
+
+    #[test]
+    fn ebraille_metadata_survives_save_and_open() {
+        let meta = crate::ebraille::Metadata { titles: vec!["Book".into()], date: "2026-01-02".into(), date_copyrighted: "2026-01-02".into(), ..Default::default() };
+        let mut doc = read(&sample(0, b"abc")).unwrap();
+        doc.ebraille = Some(crate::ebraille::opf_text(&meta));
+        let bytes = write(&doc);
+        assert_eq!(u16_at(&bytes, 8), 2);
+        let back = read(&bytes).unwrap();
+        assert_eq!(back.version, 2);
+        assert_eq!(crate::ebraille::metadata_from_opf(back.ebraille.as_deref().unwrap()), meta);
+        let section = &back.sections.iter().find(|s| s.0 == VERSION2_SLOT).unwrap().2;
+        let parts = crate::docx::parts(section).unwrap();
+        let names: Vec<&str> = parts.iter().map(|p| p.name.as_str()).collect();
+        assert_eq!(names, ["ebraille/", "/ebraille/package.opf"]);
+        // Written again unchanged, the file is the same.
+        assert_eq!(write(&back), bytes);
+        // Edited metadata replaces the old entry and keeps another entry of the section.
+        let other = crate::docx::stored_zip(&[("ObjectCollection.xml", b"<objects/>"), ("ebraille/package.opf", b"<package/>")]);
+        let mut with_objects = back.clone();
+        with_objects.sections = vec![(VERSION2_SLOT, 0, other)];
+        with_objects.ebraille = Some(crate::ebraille::opf_text(&crate::ebraille::Metadata { titles: vec!["New".into()], ..meta.clone() }));
+        let again = read(&write(&with_objects)).unwrap();
+        let parts = crate::docx::parts(&again.sections.iter().find(|s| s.0 == VERSION2_SLOT).unwrap().2).unwrap();
+        let names: Vec<&str> = parts.iter().map(|p| p.name.as_str()).collect();
+        assert_eq!(names, ["ObjectCollection.xml", "ebraille/", "/ebraille/package.opf"]);
+        assert_eq!(crate::docx::part(&parts, "ObjectCollection.xml"), Some(&b"<objects/>"[..]));
+        assert_eq!(crate::ebraille::metadata_from_opf(again.ebraille.as_deref().unwrap()).titles, ["New"]);
+        // Metadata removed: only the other entries stay; with none left the section goes and the version is 1.
+        let gone = read(&write(&DxDocument { ebraille: None, ..again.clone() })).unwrap();
+        assert!(gone.ebraille.is_none() && gone.version == 2);
+        let none = write(&DxDocument { ebraille: None, ..back });
+        assert_eq!(u16_at(&none, 8), 1);
+        assert!(read(&none).unwrap().sections.is_empty());
     }
 }

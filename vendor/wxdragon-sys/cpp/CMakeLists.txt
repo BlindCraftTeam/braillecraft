@@ -203,6 +203,7 @@ set(WXDRAGON_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/doc_editor_gtk.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/doc_editor_msw.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/doc_tabs.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/window_tabs.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/progressdialog.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/propertygrid.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/radio_button.cpp
@@ -259,6 +260,9 @@ if(PLATFORM_NAME STREQUAL "macos")
         PROPERTIES COMPILE_FLAGS "-fobjc-arc")
     list(APPEND WXDRAGON_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/doc_editor_osx.mm)
     set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/src/doc_editor_osx.mm
+        PROPERTIES COMPILE_FLAGS "-fobjc-arc")
+    list(APPEND WXDRAGON_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/window_tabs_osx.mm)
+    set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/src/window_tabs_osx.mm
         PROPERTIES COMPILE_FLAGS "-fobjc-arc")
 endif()
 

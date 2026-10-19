@@ -1,12 +1,17 @@
 //! Refreshable braille files (.lbf): a braille document as one running line of braille text and "$" markup for a
 //! refreshable braille display, as the exporter writes it (spec 04d-D).
 //!
-//! The body is walked once. Text is written as it is (UTF-8, no change of case); codes set layout flags, and before
+//! The body is walked once. Text is written a byte of internal text at a time (crate::internal, the bytes a document
+//! file stores): each byte is written as the character of that code point, in UTF-8, so ASCII braille is written as
+//! it is, the hard space (0x1E) as a space, a byte 0x80 to 0xFF as the UTF-8 of U+0080 to U+00FF and a two-byte code
+//! as its two bytes so written (spec A15.3). After the last character one space is always written. Codes set
+//! layout flags, and before
 //! the next text the strongest flag is written as markup: "$h" (centred heading), "$h#a", "$p" (paragraph), "$l"
 //! (new line) or a single space. Styles listed in data/lbf-styles.xml write their own markup; other styles are
 //! walked through their codes. Running heads, footers and some other regions are left out. Every piece of markup
 //! stands with one space on each side, shared with the text's own spaces. There are no line ends, header or trailer.
-//! Rules are from the exporter's code (spec 04d-D); its stated unknowns are kept as noted below.
+//! Rules are from the exporter's code (spec 04d-D, A15.3). Still open: the ":" constant the "meg" rule tests twice,
+//! special styles nested in each other, and a byte check against a file written by the exporter.
 
 use crate::doctext::{CLOSE, OPEN};
 
@@ -368,8 +373,10 @@ fn level_letters(n: i64) -> String {
 }
 
 /// A refreshable braille file from a braille document's running text (codes marked 0x1C ... 0x1F, braille in North
-/// American ASCII braille) and its styles (name, beginning codes, ending codes, in running text). A hard space is
-/// written as a space (spec 04d-D, inferred).
+/// American ASCII braille) and its styles (name, beginning codes, ending codes, in running text). Each character of
+/// text goes through its internal bytes, each byte written as the character of that code point; the hard space
+/// (0x1E) is written as a space; a byte 0 ends the body; one space is written after the last character (spec A15.3,
+/// observed).
 pub fn write(running: &str, styles: &[(String, String, String)]) -> Vec<u8> {
     let table = lbf_styles();
     let mut w = Walk {
@@ -390,7 +397,26 @@ pub fn write(running: &str, styles: &[(String, String, String)]) -> Vec<u8> {
         level: 1,
         offset: 0,
     };
-    let chars: Vec<char> = running.chars().map(|c| if c == '\u{a0}' { ' ' } else { c }).collect();
+    // The text a byte at a time: a code's markers stay themselves; every other character is split into its internal
+    // bytes, each the character of its code point (the hard space 0x1E a space).
+    let mut chars: Vec<char> = Vec::with_capacity(running.len());
+    for c in running.chars() {
+        if c == OPEN || c == CLOSE {
+            chars.push(c);
+            continue;
+        }
+        let mut bytes = Vec::new();
+        match crate::internal::code_of(c) {
+            Some(code) if code >= 0x100 => bytes.extend([(code >> 8) as u8, (code & 0xff) as u8]),
+            Some(code) => bytes.push(code as u8),
+            None => bytes.push(b'?'),
+        }
+        chars.extend(bytes.into_iter().map(|b| if b == 0x1e { ' ' } else { char::from(b) }));
+    }
+    // A byte 0 ends the body there.
+    if let Some(end) = chars.iter().position(|&c| c == '\0') {
+        chars.truncate(end);
+    }
     let mut i = 0;
     while i < chars.len() {
         let c = chars[i];
@@ -406,6 +432,8 @@ pub fn write(running: &str, styles: &[(String, String, String)]) -> Vec<u8> {
         w.text(c);
         i += 1;
     }
+    // The end of the body gives one space after the last character.
+    w.text(' ');
     w.out.into_bytes()
 }
 
@@ -438,16 +466,27 @@ mod tests {
 
     #[test]
     fn paragraphs_and_lines_become_markup_between_the_text() {
-        assert_eq!(write(&r("[p],! cat[l]sat[p]on"), &[]), b" $p ,! cat $l sat $p on".to_vec());
+        assert_eq!(write(&r("[p],! cat[l]sat[p]on"), &[]), b" $p ,! cat $l sat $p on ".to_vec());
         // A running head is left out.
-        assert_eq!(write(&r("a[tls]head[tle] b"), &[]), b"a b".to_vec());
+        assert_eq!(write(&r("a[tls]head[tle] b"), &[]), b"a b ".to_vec());
     }
 
     #[test]
     fn listed_styles_write_their_own_markup() {
-        assert_eq!(write(&r("x[es~Footnote.]note[ee~Footnote.] y"), &[]), b"x $n note $n= y".to_vec());
+        assert_eq!(write(&r("x[es~Footnote.]note[ee~Footnote.] y"), &[]), b"x $n note $n= y ".to_vec());
         // A style not listed is walked through its codes.
         let styles = vec![("mine".to_string(), r("[p]"), String::new())];
-        assert_eq!(write(&r("a[es~mine]b[ee~mine]"), &styles), b"a $p b".to_vec());
+        assert_eq!(write(&r("a[es~mine]b[ee~mine]"), &styles), b"a $p b ".to_vec());
+    }
+
+    #[test]
+    fn lbf_body_ends_with_one_space_and_writes_internal_bytes_as_code_points() {
+        assert_eq!(write("AB", &[]), b"AB ".to_vec());
+        // The hard space is written as a space.
+        let hard = crate::internal::decode(&[b'A', 0x1e, b'B']);
+        assert_eq!(write(&hard, &[]), b"A B ".to_vec());
+        // Internal byte 0x82 (e acute in code page 437) is written as the UTF-8 of U+0082.
+        let acute = crate::internal::decode(&[0x82]);
+        assert_eq!(write(&acute, &[]), vec![0xc2, 0x82, b' ']);
     }
 }

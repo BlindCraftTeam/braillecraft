@@ -9,8 +9,9 @@ words of that list to their English names (tab-separated: word, string number, n
 repository.
 
 How a line is read: anything from "| " on is a comment; blank lines are skipped; a line with the four table names
-("code/A+B/C+D") gives the tables; lines starting "eBrailleLanguage: " or "eBrailleSystem: " are skipped; a line with
-".htm" is the help page (not kept); a line with ":" is a learning step (table before the colon, shown name after it);
+("code/A+B/C+D") gives the tables; lines starting "eBrailleLanguage: " or "eBrailleSystem: " give the eBraille
+language and braille system columns ("language" and "system" when the list sets none); a line with ".htm" is the help
+page (not kept); a line with ":" is a learning step (table before the colon, shown name after it);
 the line after the language is its regions; any other line starts a new language.
 """
 import sys
@@ -40,7 +41,11 @@ def main(list_path, names_path, out_path):
             cur["code"] = parts[0].strip()
             cur["tables"] = [t.strip().lower() for t in (p2b, p2b_scan, b2p, b2p_scan)]
             continue
-        if line.startswith("eBrailleLanguage: ") or line.startswith("eBrailleSystem: "):
+        if line.startswith("eBrailleLanguage: "):
+            cur["ebraille_language"] = line.split(":", 1)[1].strip()
+            continue
+        if line.startswith("eBrailleSystem: "):
+            cur["ebraille_system"] = line.split(":", 1)[1].strip()
             continue
         if ".htm" in line:
             continue
@@ -53,18 +58,19 @@ def main(list_path, names_path, out_path):
             expect_regions = False
             continue
         word = line.replace('"', "").replace("\\", "")
-        cur = {"name": names.get(word, word), "regions": [], "code": "", "tables": [], "steps": []}
+        cur = {"name": names.get(word, word), "regions": [], "code": "", "tables": [], "steps": [], "ebraille_language": "language", "ebraille_system": "system"}
         entries.append(cur)
         expect_regions = True
     with open(out_path, "w", encoding="utf-8", newline="\n") as out:
         out.write("# Translation table sets by language, in list order (the number of a line, from 0, is its entry).\n")
         out.write("# Columns, tab-separated: shown name; regions; language code; print-to-braille rules and scan table;\n")
-        out.write("# braille-to-print rules and scan table; learning steps as TABLE=shown name, separated by \" | \".\n")
+        out.write("# braille-to-print rules and scan table; learning steps as TABLE=shown name, separated by \" | \"; the eBraille\n")
+        out.write("# language and braille system (\"language\" and \"system\" for none).\n")
         for e in entries:
             if len(e["tables"]) != 4:
                 sys.exit("no tables for " + e["name"])
             steps = " | ".join(f"{t}={s}" for t, s in e["steps"])
-            out.write("\t".join([e["name"], ",".join(e["regions"]), e["code"], *e["tables"], steps]) + "\n")
+            out.write("\t".join([e["name"], ",".join(e["regions"]), e["code"], *e["tables"], steps, e["ebraille_language"], e["ebraille_system"]]) + "\n")
     print(f"{len(entries)} languages, {sum(len(e['steps']) for e in entries)} learning steps")
 
 

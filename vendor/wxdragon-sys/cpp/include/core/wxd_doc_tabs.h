@@ -3,13 +3,15 @@
 
 #include "../wxd_types.h"
 
-// Added for BrailleCraft: the tab bar of the main window, one tab per open document (a wxNotebook with the
-// behaviour of a browser's tab bar): a close button on each tab (a real button in the tab on GTK, an image hit-tested
-// on Windows; a middle click closes a tab everywhere), tabs dragged to reorder (GTK's own reorderable tabs, a drag
-// over the tab row elsewhere), and the keys Ctrl+Tab and Ctrl+Shift+Tab (next and previous tab), Ctrl+W (close) and
-// Ctrl+Shift+Page Up and Page Down (move the tab) while the tab bar itself has the focus. The pages are the
-// program's windows; the notebook is read by screen readers as the system's tab control (a page tab list on AT-SPI,
-// a tab control on UI Automation, a tab group on macOS).
+// Added for BrailleCraft: the tab bar of the main window on Windows and Linux, one tab per open document (a
+// wxNotebook with the behaviour of a browser's tab bar): a close button on each tab (a real button in the tab on GTK;
+// on Windows the tabs are drawn by the program with a close sign at the right of the text, which closes the tab when
+// the click is let go on it, and a tab has a context menu: Close Tab, Move Tab Left, Move Tab Right; a middle click
+// closes a tab everywhere), tabs dragged to reorder (GTK's own reorderable tabs, a drag over the tab row elsewhere),
+// and the keys Ctrl+Tab and Ctrl+Shift+Tab (next and previous tab), Ctrl+W (close) and Ctrl+Shift+Page Up and Page
+// Down (move the tab) while the tab bar itself has the focus. The pages are the program's windows; the notebook is
+// read by screen readers as the system's tab control (a page tab list on AT-SPI, a tab control on UI Automation).
+// On macOS the documents are window tabs instead (wxd_window_tabs.h).
 
 #ifdef __cplusplus
 extern "C" {
@@ -57,8 +59,12 @@ WXD_EXPORTED bool wxd_DocTabs_MovePage(wxd_Window_t* tabs, int from, int to);
 // The screen rectangle of tab `index` (its label), for a program that drives the window; false where the system
 // does not tell it.
 WXD_EXPORTED bool wxd_DocTabs_TabRect(wxd_Window_t* tabs, int index, int* x, int* y, int* w, int* h);
-// The screen rectangle of the close button of tab `index`; false on a system whose tabs have none (macOS).
+// The screen rectangle of the close button of tab `index` (on Windows the drawn close sign at the right of the
+// text); false where the tabs have none.
 WXD_EXPORTED bool wxd_DocTabs_CloseButtonRect(wxd_Window_t* tabs, int index, int* x, int* y, int* w, int* h);
+// Puts the keyboard focus on the tab bar with the keyboard cues on (Windows: the focus rectangle shows), for a
+// program that drives the window.
+WXD_EXPORTED void wxd_DocTabs_ShowFocus(wxd_Window_t* tabs);
 
 #ifdef __cplusplus
 }

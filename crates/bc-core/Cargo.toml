@@ -26,6 +26,6 @@ pulldown-cmark = { version = "=0.13.4", default-features = false, features = ["h
 [dev-dependencies]
 serde_json = "1"
 
-# Raw printing to an embosser's printer queue (the spooler's RAW data type).
+# Raw printing to an embosser's printer queue (the spooler's RAW data type) and the serial port's state.
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "=0.61.2", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_Graphics_Printing", "Win32_Security"] }
+windows-sys = { version = "=0.61.2", features = ["Win32_Devices_Communication", "Win32_Foundation", "Win32_Graphics_Gdi", "Win32_Graphics_Printing", "Win32_Security"] }

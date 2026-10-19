@@ -3,7 +3,7 @@
 
 #include "../wxd_types.h"
 
-// Added for BrailleCraft: the document editing window, drawn by the program as the reference program's is (its
+// Added for BrailleCraft: the document editing window, drawn by the program (its
 // formatted view and coded view), with its own text for screen readers on each system.
 //
 // The window keeps no document and no row text. The program tells it how many rows there are and the kind and
@@ -66,6 +66,11 @@ WXD_EXPORTED void wxd_DocEditor_SetLineNumbers(wxd_Window_t* editor, int width);
 WXD_EXPORTED void wxd_DocEditor_SetCaret(wxd_Window_t* editor, int row, int col, int anchor_row, int anchor_col,
                                          int keep_from_top, const char* caret_row_text);
 
+// The physical key of the key pressed or let go that is being handed to the program (six-key entry names keys by
+// their place): on Windows its scan code (bits 16 to 23 of the key message's flags), on Linux the hardware key code
+// less 8 (the evdev key code, the same number as the scan code for the main keys), on macOS the virtual key code.
+WXD_EXPORTED int wxd_DocEditor_GetRawKey(wxd_Window_t* editor);
+
 // The first row shown and the number of whole rows the window shows.
 WXD_EXPORTED int wxd_DocEditor_GetTopRow(wxd_Window_t* editor);
 WXD_EXPORTED int wxd_DocEditor_GetVisibleRows(wxd_Window_t* editor);
@@ -77,6 +82,10 @@ WXD_EXPORTED int wxd_DocEditor_GetCaretScreenRow(wxd_Window_t* editor);
 
 // The caret's rectangle in screen coordinates (x, y, width, height), for the Cursor Locator.
 WXD_EXPORTED void wxd_DocEditor_GetCaretRect(wxd_Window_t* editor, int* x, int* y, int* w, int* h);
+
+// Handles the events waiting (input included), for a window that stays open while the program works, such as the
+// embossing progress window with its Cancel button.
+WXD_EXPORTED void wxd_App_HandlePendingEvents(void);
 
 // Shows the Cursor Locator: a rectangle closing in on the caret, drawn in the window (spec 24 2d.2).
 WXD_EXPORTED void wxd_DocEditor_ShowCursorLocator(wxd_Window_t* editor);

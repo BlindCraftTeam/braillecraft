@@ -1,7 +1,7 @@
-//! Document windows: each open document is a page of the tab bar across the top of the main window (tabs.rs, a
-//! BrailleCraft addition in place of stacked document windows),
-//! holding the editing area (the program-drawn editing window, editor_view),
-//! under it the one-line translated line on yellow, and at the bottom the document's status line.
+//! Document windows: each open document is a page of the tab bar across the top of the main window (Windows, Linux),
+//! or a window of its own that is one of the window tabs (macOS) (tabs.rs, a BrailleCraft addition in place of
+//! stacked document windows), holding the editing area (the program-drawn editing window, editor_view), under it the
+//! one-line translated line on yellow, and at the bottom the document's status line.
 //!
 //! Every key, typed character and click in the editing area comes here and is carried out on the document's editor
 //! model (bc_core::editor; spec 27 section 5, spec 30).
@@ -19,7 +19,7 @@ use crate::speech;
 /// Opens a new document in a tab of its own with `shown` (its text and codes). `name` None makes an untitled one
 /// ("Untitled Print Document 1").
 pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
-    let (tabs, key, name, untitled, view) = app::with(|a| {
+    let (tabs, key, name, untitled, view, into, last_frame) = app::with(|a| {
         a.next_key += 1;
         let untitled = name.is_none();
         let name = name.unwrap_or_else(|| {
@@ -36,10 +36,15 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
             translated: if braille { v.braille_translated } else { v.print_translated },
             six_key: braille && v.six_key,
         };
-        (a.tabs, a.next_key, name, untitled, view)
+        (a.tabs, a.next_key, name, untitled, view, a.doc().and_then(|d| d.window), a.last_frame)
     });
 
-    let page = Panel::builder(&tabs).build();
+    // macOS: the document's own window, one of the window tabs; its page fills it.
+    let window = crate::tabs::WINDOW_TABS.then(|| document_window(key, &name));
+    let page = match window {
+        Some(w) => Panel::builder(&w).build(),
+        None => Panel::builder(&tabs).build(),
+    };
     let area = editor_view::create(&page, key);
     // The status line is made right after the editing area and the translated line after it: screen reader scripts
     // find them as the next window and the one after (spec 17).
@@ -70,9 +75,13 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
     // Laid out once, with the document's own layout, so a book is not laid out again at its first show (L1).
     let (ed_layout, layout, style_table) = app::layout_for(cells, lines, page_numbers, braille, &styles, Hyphen::Dashes);
     let ed = Editor::new(shown.clone(), layout, Some(style_table), view.codes, if braille { 42 } else { 65 });
+    // A new document's print page is the Global, Printer Setup page size.
+    let print_page = app::with(|a| (a.settings.printer.lines, a.settings.printer.chars));
     let doc = Doc {
         key,
         page,
+        window,
+        edited_shown: false,
         area,
         status,
         line,
@@ -80,16 +89,17 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
         kind,
         untitled,
         saved: false,
+        document_file: false,
         dirty: false,
         path: None,
         // A new document is made with the default template: its tables and its styles.
         tables: crate::translation::template_tables(&crate::translation::default_template())
             .unwrap_or_else(|| crate::translation::DEFAULT_TABLES.map(str::to_string)),
-        initial_codes: String::new(),
         template,
         cells,
         lines,
         emb_page: { let (_, c, l) = crate::embosser::default_layout(); (c, l) },
+        print_page,
         page_numbers,
         pages: None,
         ed,
@@ -108,8 +118,10 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
         replace: Default::default(),
         replace_with: String::new(),
         last_line_key: String::new(),
+        line_lead: Default::default(),
         six_down: HashSet::new(),
-        chord: 0,
+        chord: Default::default(),
+        last_applied: String::new(),
         printer: None,
         embosser: crate::embosser::default_setup().unwrap_or_default(),
         layout: crate::embosser::default_layout().0,
@@ -126,8 +138,33 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
         a.set_view_codes(i, view.codes);
     });
     // The document's tab, last in the row and selected (the tab bar does not report the selection an add makes;
-    // the document is made the active one here).
-    tabs.add_page(&page, &title, true);
+    // the document is made the active one here). On macOS the window becomes the last tab of the window in front,
+    // or a window of its own where the last document window was (else 1000 by 720 in the middle of the screen).
+    match window {
+        // A command line that runs without the editor shows no document window (the main window is not shown then
+        // either).
+        Some(w) if !SHOW_WINDOWS.with(|s| s.get()) => w.set_label(&title),
+        Some(w) => {
+            w.set_label(&title);
+            if !into.is_some_and(|into| crate::tabs::add(&into, &w)) {
+                match last_frame {
+                    Some((at, size)) => w.set_size_with_pos(at.x, at.y, size.width, size.height),
+                    None => {
+                        w.set_size(Size::new(1000, 720));
+                        w.centre();
+                    }
+                }
+            }
+            w.show(true);
+            let first = app::with(|a| !std::mem::replace(&mut a.tab_bar_shown, true));
+            if first {
+                crate::tabs::show_tab_bar(&w);
+            }
+        }
+        None => {
+            tabs.add_page(&page, &title, true);
+        }
+    }
     activate_key(key);
     area.set_focus();
     // A dialog that was open (File, Open) gives focus back to the control it came from when it finishes closing;
@@ -141,6 +178,93 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
     // The memory the open freed on the way goes back to the system (plan line L1).
     bc_core::memory::release();
     key
+}
+
+/// macOS: a document's own window (no menu bar of its own: the program frame's is shown while it is active). Its
+/// activation makes the document the active one (a tab chosen, a window brought to the front); its close (the close
+/// button of the window or of its tab, Cmd+W from the Window menu) is File, Close for the document, with the question
+/// about unsaved changes.
+fn document_window(key: u64, title: &str) -> Frame {
+    let window = Frame::builder().with_title(title).with_size(Size::new(1000, 720)).build();
+    crate::tabs::prepare(&window);
+    window.on_activate(move |e| {
+        if let WindowEventData::Activate(a) = &e {
+            if a.is_active() {
+                wxdragon::call_after(Box::new(move || window_activated(key)));
+                run_start_hook();
+            }
+            // wxWidgets puts the menu bar up as the window becomes active.
+            a.event.skip(true);
+        }
+    });
+    window.on_close(move |e| {
+        if let WindowEventData::General(ev) = &e {
+            if ev.can_veto() {
+                ev.veto();
+            }
+        }
+        wxdragon::call_after(Box::new(move || crate::commands::close_document(Some(key))));
+    });
+    window
+}
+
+/// macOS: document `key`'s window became active (its tab chosen, the window clicked, a neighbour's tab closed): the
+/// document list follows the tabs' order, the document becomes the active one and its editing area takes the
+/// keyboard.
+pub fn window_activated(key: u64) {
+    app::try_with(|a| {
+        a.reconcile_tabs();
+    });
+    activate_key(key);
+    if let Some(area) = live_area(key) {
+        area.set_focus();
+    }
+}
+
+thread_local! {
+    /// Whether a new document's window is shown (macOS): not while a command line runs without the editor.
+    static SHOW_WINDOWS: std::cell::Cell<bool> = const { std::cell::Cell::new(true) };
+}
+
+/// Document windows are not shown from here on (macOS; a command line that runs without the editor).
+pub fn hide_new_windows() {
+    SHOW_WINDOWS.with(|s| s.set(false));
+}
+
+thread_local! {
+    /// What runs once at start-up when the program's first window is active (Embosser Setup when none is set up, or
+    /// the command of a picture run), taken by the first to come: the main window's activation (Windows, Linux), a
+    /// document window's (macOS), the start with no document (macOS), or a picture run's timer.
+    static START_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> = const { std::cell::RefCell::new(None) };
+}
+
+pub fn set_start_hook(hook: Box<dyn FnOnce()>) {
+    START_HOOK.with(|h| *h.borrow_mut() = Some(hook));
+}
+
+/// Runs the start-up hook if it has not run.
+pub fn run_start_hook() {
+    let hook = START_HOOK.with(|h| h.borrow_mut().take());
+    if let Some(hook) = hook {
+        hook();
+    }
+}
+
+/// macOS: the Dock icon clicked. With no document open a new untitled print document is opened (the program has no
+/// window without one); else the active document's window comes to the front.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+pub fn reopen() {
+    let (empty, active) = app::with(|a| (a.docs.is_empty(), a.active.unwrap_or(0)));
+    if empty {
+        let key = new_document(DocKind::Print, None, &Shown::default());
+        app::with(|a| {
+            if let Some(i) = a.index_of(key) {
+                a.docs[i].dirty = false;
+            }
+        });
+    } else {
+        bring_to_front(active);
+    }
 }
 
 /// The editing area of the document with this key, while it is open. A call put off until later
@@ -187,10 +311,15 @@ pub fn activate_key(key: u64) {
 /// Brings document `index` to the front (View menu list, the control channel): its tab is selected and its editing
 /// area takes the keyboard.
 pub fn bring_to_front(index: usize) {
-    let target = app::with(|a| a.docs.get(index).map(|d| (a.tabs, d.area, d.key)));
-    if let Some((tabs, area, key)) = target {
-        if tabs.selection() != Some(index) {
-            tabs.set_selection(index);
+    let target = app::with(|a| a.docs.get(index).map(|d| (a.tabs, d.area, d.key, d.window)));
+    if let Some((tabs, area, key, window)) = target {
+        match window {
+            Some(w) => crate::tabs::select(&w),
+            None => {
+                if tabs.selection() != Some(index) {
+                    tabs.set_selection(index);
+                }
+            }
         }
         activate_key(key);
         area.set_focus();
@@ -198,20 +327,29 @@ pub fn bring_to_front(index: usize) {
 }
 
 /// Closes the document with this key without asking (the caller has asked): its tab and its page go, and the
-/// document the tab bar selects in its place becomes the active one.
+/// document the tab bar selects in its place becomes the active one. On macOS the document's window goes (its tab
+/// with it, or the window when it was the last tab); the document whose window the system makes active then becomes
+/// the active one (window_activated), the neighbour in the list until then.
 pub fn destroy(key: u64) {
     let removed = app::with(|a| {
         let i = a.index_of(key)?;
         let d = a.docs.remove(i);
         a.active = None;
-        Some((a.tabs, d.page, i))
+        if let Some(w) = d.window {
+            a.last_frame = Some((w.get_position(), w.get_size()));
+        }
+        Some((a.tabs, d.page, d.window, i))
     });
-    let Some((tabs, page, i)) = removed else { return };
+    let Some((tabs, page, window, i)) = removed else { return };
     tabs.remove_page(i);
     page.destroy();
+    if let Some(w) = window {
+        w.destroy();
+    }
     let next = app::with(|a| {
         let n = a.docs.len();
-        (n > 0).then(|| a.docs[tabs.selection().filter(|s| *s < n).unwrap_or(n - 1)].key)
+        let at = if window.is_some() { i.min(n.saturating_sub(1)) } else { tabs.selection().filter(|s| *s < n).unwrap_or(n.saturating_sub(1)) };
+        (n > 0).then(|| a.docs[at].key)
     });
     match next {
         Some(k) => {
@@ -264,18 +402,42 @@ pub fn tab_moved(from: usize, to: usize) {
     });
 }
 
-/// Ctrl+Tab (forward) and Ctrl+Shift+Tab in the editing area: the next or previous document, wrapping.
-fn switch_tab(forward: bool) {
-    let (tabs, n) = app::with(|a| (a.tabs, a.docs.len()));
+/// Ctrl+Tab (forward) and Ctrl+Shift+Tab in the editing area (Cmd+Shift+] and Cmd+Shift+[ on macOS too): the next
+/// or previous document, wrapping. On macOS the next tab of the window as the tabs stand; for a window with one tab,
+/// the next document in the list (in another window).
+pub fn switch_tab(forward: bool) {
+    let (tabs, n, active, window) = app::with(|a| {
+        a.reconcile_tabs();
+        (a.tabs, a.docs.len(), a.active, a.doc().and_then(|d| d.window))
+    });
     if n < 2 {
         return;
     }
-    let at = tabs.selection().unwrap_or(0);
+    if let Some(w) = window {
+        if crate::tabs::step(&w, forward) {
+            return;
+        }
+    }
+    let at = tabs.selection().or(active).unwrap_or(0);
     bring_to_front(if forward { (at + 1) % n } else { (at + n - 1) % n });
 }
 
-/// Ctrl+Shift+Page Up and Page Down in the editing area: the document's tab one place left or right.
-fn move_tab(key: u64, up: bool) {
+/// Ctrl+Shift+Page Up and Page Down in the editing area: the document's tab one place left or right. On macOS the
+/// tab moves in its window, and the document list follows the tabs.
+pub fn move_tab(key: u64, up: bool) {
+    let window = app::with(|a| a.index_of(key).and_then(|i| a.docs[i].window));
+    if let Some(w) = window {
+        let order = crate::tabs::group_order(&w);
+        let Some(i) = order.iter().position(|p| *p == w.handle_ptr()) else { return };
+        let to = if up { i.checked_sub(1) } else { (i + 1 < order.len()).then_some(i + 1) };
+        if let Some(to) = to {
+            crate::tabs::move_to(&w, to);
+            app::with(|a| {
+                a.reconcile_tabs();
+            });
+        }
+        return;
+    }
     let Some((tabs, i, n)) = app::with(|a| a.index_of(key).map(|i| (a.tabs, i, a.docs.len()))) else { return };
     let to = if up { i.checked_sub(1) } else { (i + 1 < n).then_some(i + 1) };
     if let Some(to) = to {
@@ -292,6 +454,7 @@ thread_local! {
 // wxWidgets key codes and modifier bits.
 const BACK: i32 = 8;
 const TAB: i32 = 9;
+const SPACE: i32 = 32;
 const ENTER: i32 = 13;
 const ESCAPE: i32 = 27;
 const DELETE: i32 = 127;
@@ -315,12 +478,11 @@ const NUMPAD_PAGE_DOWN: i32 = 381;
 const NUMPAD_END: i32 = 382;
 const NUMPAD_INSERT: i32 = 384;
 const NUMPAD_DELETE: i32 = 385;
+const F9: i32 = 348;
 const MOD_ALT: i32 = 1;
 const MOD_CONTROL: i32 = 2;
 const MOD_SHIFT: i32 = 4;
 const MOD_META: i32 = 8;
-/// The Control key itself on macOS, where MOD_CONTROL is the Command key (wxMOD_RAW_CONTROL).
-const MOD_RAW_CONTROL: i32 = 16;
 
 /// A key in the editing area of document `key` (spec 27 5a, spec 30): pressed (`code` above 0) or let go (`code`
 /// negated). True when it was carried out here; the others go on to the menus and the window.
@@ -336,29 +498,29 @@ pub fn area_key(key: u64, code: i32, _unicode: i32, mods: i32) -> bool {
     let mut done = false;
     app::try_with(|a| {
         let Some(i) = a.index_of(key) else { return };
-        // Six-key entry: the six keys make a braille cell, entered when the last of them is let go.
-        let d = &mut a.docs[i];
-        if d.view.six_key && !control && !alt {
-            if let Some(dot) = six_key_dot(&a.settings.six_key_set, code) {
-                let d = &mut a.docs[i];
-                d.six_down.insert(dot);
-                d.chord |= 1 << dot;
-                done = true;
+        // Six-key entry (bc_core::sixkey), with Control and Alt up: the six keys make a braille cell.
+        if !control && !alt {
+            if let Some(taken) = six_key_down(a, i, code, shift) {
+                done = taken;
                 return;
             }
         }
-        // The tab bar's keys (tabs.rs): Ctrl+Tab and Ctrl+Shift+Tab the next and previous document, Ctrl+W (Cmd+W
-        // on macOS) close the document, Ctrl+Shift+Page Up and Page Down move its tab. Each runs once the key has
-        // been dealt with, outside the state.
-        let raw_control = if cfg!(target_os = "macos") { mods & MOD_RAW_CONTROL != 0 } else { control };
-        if raw_control && code == TAB {
-            let forward = !shift;
-            wxdragon::call_after(Box::new(move || switch_tab(forward)));
-            done = true;
-            return;
-        }
-        if control && !shift && code == i32::from(b'W') {
-            wxdragon::call_after(Box::new(move || crate::commands::close_document(Some(key))));
+        // The tab keys (tabs::tab_key): Ctrl+Tab and Ctrl+Shift+Tab (and Cmd+Shift+] and Cmd+Shift+[ on macOS) the
+        // next and previous document, Ctrl+W (Cmd+W on macOS) close the document, Ctrl+Shift+Page Up and Page Down
+        // move its tab. Each runs once the key has been dealt with, outside the state.
+        if let Some(t) = crate::tabs::tab_key(code, mods, cfg!(target_os = "macos")) {
+            use crate::tabs::TabKey;
+            match t {
+                TabKey::Next | TabKey::Previous => {
+                    let forward = t == TabKey::Next;
+                    wxdragon::call_after(Box::new(move || switch_tab(forward)));
+                }
+                TabKey::Close => wxdragon::call_after(Box::new(move || crate::commands::close_document(Some(key)))),
+                TabKey::MoveLeft | TabKey::MoveRight => {
+                    let up = t == TabKey::MoveLeft;
+                    wxdragon::call_after(Box::new(move || move_tab(key, up)));
+                }
+            }
             done = true;
             return;
         }
@@ -368,9 +530,21 @@ pub fn area_key(key: u64, code: i32, _unicode: i32, mods: i32) -> bool {
             done = true;
             return;
         }
-        if raw_control && shift && matches!(code, PAGE_UP | PAGE_DOWN) {
-            let up = code == PAGE_UP;
-            wxdragon::call_after(Box::new(move || move_tab(key, up)));
+        // The one-line prompts (dialog 30070): F9 or Ctrl+[ a code, Ctrl+F9 or Ctrl+< a style, Alt+F9 or Ctrl+] a
+        // character by its number; each runs once the key has been dealt with, outside the state.
+        let prompt = match code {
+            F9 if !control && !alt && !shift => Some(crate::commands::Prompt::Code),
+            F9 if control && !alt => Some(crate::commands::Prompt::Style),
+            F9 if alt && !control => Some(crate::commands::Prompt::Char),
+            _ if crate::tabs::bracket_prompt(code, mods) == Some('[') => Some(crate::commands::Prompt::Code),
+            _ if control && !alt && (code == i32::from(b'<') || (shift && code == i32::from(b','))) => {
+                Some(crate::commands::Prompt::Style)
+            }
+            _ if crate::tabs::bracket_prompt(code, mods) == Some(']') => Some(crate::commands::Prompt::Char),
+            _ => None,
+        };
+        if let Some(p) = prompt {
+            wxdragon::call_after(Box::new(move || crate::commands::prompt(p)));
             done = true;
             return;
         }
@@ -379,7 +553,14 @@ pub fn area_key(key: u64, code: i32, _unicode: i32, mods: i32) -> bool {
         if alt && !control {
             return;
         }
-        let extend = shift || a.docs[i].highlight_anchor.is_some();
+        let highlight = a.docs[i].highlight_anchor.is_some();
+        // In Highlight, Shift with a move starts the selection again from the caret (spec 27 section 9, unknown 7).
+        if shift && highlight {
+            let caret = a.docs[i].ed.caret;
+            a.docs[i].ed.select(caret, caret);
+            a.docs[i].highlight_anchor = Some(caret);
+        }
+        let extend = shift || highlight;
         let moved = |m: Move| Some((m, extend));
         let movement = match code {
             LEFT | NUMPAD_LEFT => moved(if control { Move::WordLeft } else { Move::Left }),
@@ -433,14 +614,12 @@ fn key_up(key: u64, code: i32) {
         let set = a.settings.six_key_set.clone();
         let enc = a.encoding();
         let d = &mut a.docs[i];
-        if d.view.six_key {
-            if let Some(dot) = six_key_dot(&set, code) {
-                d.six_down.remove(&dot);
-                // The cell is entered when the last key of the chord is released.
-                if d.six_down.is_empty() && d.chord != 0 {
-                    cell = Some(enc.cell_char(d.chord));
-                    d.chord = 0;
-                }
+        // Six-key entry: the first chord key let go types the cell (or the space owed).
+        if let Some(place) = d.area.raw_key_place() {
+            d.six_down.remove(&place);
+            let dot = bc_core::sixkey::dot_of(&set, place);
+            if let bc_core::sixkey::KeyResult::Type(t) = d.chord.key_up(dot, six_key_letter(place)) {
+                cell = Some(typed_char(enc, t));
             }
         }
         if let Some(c) = cell {
@@ -487,6 +666,14 @@ pub fn area_mouse(key: u64, kind: i32, row: usize, col: usize, mods: i32) {
 
 /// The editing area got or lost the keyboard focus.
 pub fn area_focus(key: u64, focused: bool) {
+    // Keys let go while the window had no focus are not seen: the six-key keys held start again.
+    if !focused {
+        app::try_with(|a| {
+            if let Some(i) = a.index_of(key) {
+                a.docs[i].six_down.clear();
+            }
+        });
+    }
     if focused {
         app::try_with(|a| {
             if let Some(i) = a.index_of(key) {
@@ -522,6 +709,9 @@ pub fn type_in(a: &mut app::App, i: usize, s: &Shown) {
 /// shows document text). In the coded view, a screen.
 fn page_move(a: &mut app::App, i: usize, down: bool, control: bool, extend: bool) {
     let mode = if control { a.settings.shortcuts.control_page_nav } else { a.settings.shortcuts.page_nav };
+    // A page move (a page, or the top of a page) in the formatted view keeps the caret's screen row when the caret
+    // was on screen (spec 27 section 9, unknown 7).
+    let keep = if mode != 0 && !a.docs[i].ed.coded { a.kept_caret_row(i) } else { None };
     let area = a.docs[i].area;
     let ed = &mut a.docs[i].ed;
     let (row, col) = ed.caret_place();
@@ -558,7 +748,10 @@ fn page_move(a: &mut app::App, i: usize, down: bool, control: bool, extend: bool
             }
         }
     }
-    caret_moved(a, i);
+    a.show_area(i, keep);
+    if a.active == Some(i) {
+        a.update_status();
+    }
 }
 
 /// Edit, Undo, Redo, Cut, Copy, Paste, Clear and Select All, on the document (their keys reach them through the Edit
@@ -600,7 +793,139 @@ pub fn edit_command(a: &mut app::App, i: usize, id: i32) -> bool {
     true
 }
 
-fn six_key_dot(set: &str, code: i32) -> Option<usize> {
-    let c = char::from_u32(code as u32)?.to_ascii_lowercase();
-    set.chars().position(|k| k == c)
+/// A key pressed in document `i` with Control and Alt up, for six-key entry (bc_core::sixkey): Some(true) when it
+/// was taken (typed a cell or did nothing), Some(false) when it goes on as typing, None when six-key entry has
+/// nothing to do with it.
+fn six_key_down(a: &mut app::App, i: usize, code: i32, shift: bool) -> Option<bool> {
+    use bc_core::sixkey::{KeyResult, Mode};
+    let set = a.settings.six_key_set.clone();
+    let enc = a.encoding();
+    let d = &mut a.docs[i];
+    let mode = Mode::of(d.kind == DocKind::Braille, d.view.six_key);
+    if mode == Mode::Off {
+        return None;
+    }
+    let result = if code == SPACE {
+        d.chord.space_down()
+    } else {
+        let place = d.area.raw_key_place()?;
+        let repeat = !d.six_down.insert(place);
+        d.chord.key_down(bc_core::sixkey::dot_of(&set, place), six_key_letter(place), shift, repeat, mode)
+    };
+    match result {
+        KeyResult::Pass => None,
+        KeyResult::Swallow => Some(true),
+        KeyResult::Type(t) => {
+            let c = typed_char(enc, t);
+            type_in(a, i, &Shown::plain(&c.to_string()));
+            Some(true)
+        }
+    }
+}
+
+/// Six-key entry in text field `cid` of dialog `d`: Edit, Find and the Header and Footer dialogs take the keys as
+/// the active document's editing area does (bc_core::sixkey, with the document's mode when the dialog opens); every
+/// other dialog types as usual. INFERENCE: a text field gives no physical key, so a key is named by the character
+/// its key code stands for (its US place on a US layout).
+pub fn six_key_field(d: &crate::dlg::Dlg, cid: i32) {
+    use bc_core::sixkey::{Chord, KeyResult, Mode};
+    use std::cell::RefCell;
+    use std::rc::Rc;
+    let Some(field) = d.win(cid).and_then(|w| w.as_widget::<TextCtrl>()) else { return };
+    let Some((mode, set, enc)) = app::with(|a| {
+        let set = a.settings.six_key_set.clone();
+        let enc = a.encoding();
+        a.doc().map(|doc| (Mode::of(doc.kind == DocKind::Braille, doc.view.six_key), set, enc))
+    }) else {
+        return;
+    };
+    if mode == Mode::Off {
+        return;
+    }
+    let place_of = |code: i32| {
+        char::from_u32(code as u32)
+            .map(|c| c.to_ascii_lowercase())
+            .filter(|c| c.is_ascii_lowercase() || ";,./[\\]'".contains(*c))
+    };
+    let state: Rc<RefCell<(Chord, HashSet<char>)>> = Rc::default();
+    let (down_state, down_set, down_field) = (state.clone(), set.clone(), field.clone());
+    field.on_key_down(move |e| {
+        let WindowEventData::Keyboard(k) = &e else { return };
+        let code = k.get_key_code().unwrap_or(0);
+        if k.control_down() || k.alt_down() || k.meta_down() {
+            k.event.skip(true);
+            return;
+        }
+        let mut st = down_state.borrow_mut();
+        let result = if code == SPACE {
+            st.0.space_down()
+        } else {
+            match place_of(code) {
+                Some(p) => {
+                    let repeat = !st.1.insert(p);
+                    let dot = bc_core::sixkey::dot_of(&down_set, p);
+                    st.0.key_down(dot, six_key_letter(p), k.shift_down(), repeat, mode)
+                }
+                None => KeyResult::Pass,
+            }
+        };
+        drop(st);
+        match result {
+            KeyResult::Pass => k.event.skip(true),
+            KeyResult::Swallow => {}
+            KeyResult::Type(t) => down_field.write_text(&typed_char(enc, t).to_string()),
+        }
+    });
+    let up_field = field.clone();
+    field.on_key_up(move |e| {
+        let WindowEventData::Keyboard(k) = &e else { return };
+        let code = k.get_key_code().unwrap_or(0);
+        let Some(p) = place_of(code) else {
+            k.event.skip(true);
+            return;
+        };
+        let mut st = state.borrow_mut();
+        st.1.remove(&p);
+        let result = st.0.key_up(bc_core::sixkey::dot_of(&set, p), six_key_letter(p));
+        drop(st);
+        match result {
+            KeyResult::Type(t) => up_field.write_text(&typed_char(enc, t).to_string()),
+            KeyResult::Pass => k.event.skip(true),
+            KeyResult::Swallow => {}
+        }
+    });
+}
+
+/// What a chord types: its cell in the shown braille encoding, or a space.
+fn typed_char(enc: &crate::encodings::Encoding, t: bc_core::sixkey::Typed) -> char {
+    match t {
+        bc_core::sixkey::Typed::Cell(dots) => enc.cell_char(usize::from(dots)),
+        bc_core::sixkey::Typed::Space => ' ',
+    }
+}
+
+/// Whether the key at US place `place` is a letter key for six-key entry: A to Z by place, but on a French keyboard
+/// layout the key at the US "M" place types as usual.
+pub(crate) fn six_key_letter(place: char) -> bool {
+    place.is_ascii_lowercase() && !(place == 'm' && french_layout())
+}
+
+/// Whether the keyboard layout in use is French (language 0x40c, 0x80c, 0xc0c, 0x100c, 0x140c or 0x180c). Known
+/// on Windows; INFERENCE: elsewhere the layout is taken as not French, as BrailleCraft cannot read it there.
+fn french_layout() -> bool {
+    #[cfg(windows)]
+    {
+        type GetLayout = unsafe extern "system" fn(u32) -> isize;
+        // SAFETY: user32 is loaded in every windowed program; GetKeyboardLayout takes a thread id (0 for this one).
+        let id = unsafe {
+            let Ok(lib) = libloading::Library::new("user32.dll") else { return false };
+            let Ok(f) = lib.get::<GetLayout>(b"GetKeyboardLayout\0") else { return false };
+            (f(0) as usize & 0xffff) as u32
+        };
+        [0x40c, 0x80c, 0xc0c, 0x100c, 0x140c, 0x180c].contains(&id)
+    }
+    #[cfg(not(windows))]
+    {
+        false
+    }
 }

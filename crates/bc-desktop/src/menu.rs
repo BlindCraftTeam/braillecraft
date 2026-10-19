@@ -49,9 +49,10 @@ pub const DOCUMENT_BASE: i32 = 6100;
 /// The first id of the language items of Document, Translation Tables (entry number added), as the menu ids the
 /// list items have.
 pub const LANGUAGE_BASE: i32 = 9000;
-/// The first id of the learning-course items of Document, Learning Tables (up to ten).
+/// The first id of the learning-course items of Document, Learning Tables: every course of the language gets an
+/// item, one id each from 9500 (the ids up to 9999 are free for them).
 pub const COURSE_BASE: i32 = 9500;
-pub const COURSE_MAX: usize = 10;
+pub const COURSE_MAX: usize = 500;
 /// Separators the program puts in: before the language items; before and after the course items.
 const LANGUAGE_SEPARATOR: i32 = 8999;
 const COURSE_SEPARATORS: [i32; 2] = [9498, 9499];

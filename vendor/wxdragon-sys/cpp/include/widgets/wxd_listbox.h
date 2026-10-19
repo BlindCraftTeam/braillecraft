@@ -23,6 +23,8 @@ WXD_EXPORTED void
 wxd_ListBox_SetSelection(wxd_ListBox_t* listbox, int index, bool select);
 WXD_EXPORTED void
 wxd_ListBox_SetStringSelection(wxd_ListBox_t* listbox, const char* item, bool select);
+WXD_EXPORTED bool
+wxd_ListBox_IsSelected(wxd_ListBox_t* listbox, int index);
 
 WXD_EXPORTED int
 wxd_ListBox_GetString(wxd_ListBox_t* listbox, int index, char* buffer, size_t buffer_len);

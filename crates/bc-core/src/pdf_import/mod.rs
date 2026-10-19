@@ -1,6 +1,8 @@
 //! PDF import: the PDF front end (the import step and table finder, run with the values the Global PDF Options
 //! give, spec 29), followed by the steps the import recipe runs after it (character mapping, letter and accent
-//! composition, and the final text clean-up; the Han step passes text through in this chain).
+//! composition, and the final text clean-up). The Han step is not run: it starts in state 1 unless its text holds a
+//! character U+3400 to U+9FFF (import_chain::han_start_state), and the character mapping before it has made every
+//! such character "*", so it would pass the text through unchanged.
 //!
 //! A tagged PDF (its catalog's MarkInfo says Marked and it has a structure tree) is read through the structure tree:
 //! each element's text is the text drawn inside its marked content, and the element's tag gives the codes around it.

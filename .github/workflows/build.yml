@@ -224,6 +224,41 @@ jobs:
             if [ "$RUNNER_OS" = Windows ]; then taskkill //F //IM braillecraft-desktop.exe > /dev/null 2>&1 || true; else kill $pid 2> /dev/null || true; fi
             sleep 1
           done
+          # The document tabs (BC_LAYOUT_TABS, crates/bc-desktop/src/tabs.rs picture_run): three documents opened,
+          # the program's document list against the tabs written to layout/tabs (on macOS with the tab group's order
+          # and every main menu item), then a picture once the report ends with "done". On every system the three
+          # tabs; on macOS also the active tab closed; on Windows also the pointer on the second tab's close sign,
+          # the keyboard focus on the tab bar, a click at the left end of the first tab and then on its close sign,
+          # and the three tabs in high contrast, with the tab list as UI Automation reads it beside each picture.
+          mkdir -p layout/tabs
+          tabs_run() {
+            BC_LAYOUT_TABS=layout/tabs/$1.txt BC_LAYOUT_TABS_STAGE=$2 $exe 2> layout/logs/tabs-$1.txt & pid=$!
+            shown 4 tabs-$1
+            for i in $(seq 25); do grep -q -x done layout/tabs/$1.txt 2> /dev/null && break; sleep 1; done
+            case "$RUNNER_OS" in
+              macOS) screencapture -x layout/pictures/tabs-$1.png || true ;;
+              Linux) picture layout/pictures/tabs-$1.png ;;
+              Windows)
+                powershell -NoProfile -File tools/ci/screenshot.ps1 layout/pictures/tabs-$1.png || true
+                powershell -NoProfile -File tools/ci/tab-uia.ps1 layout/tabs/$1-uia.txt || true ;;
+            esac
+            if [ "$RUNNER_OS" = Windows ]; then taskkill //F //IM braillecraft-desktop.exe > /dev/null 2>&1 || true; else kill $pid 2> /dev/null || true; fi
+            sleep 1
+          }
+          case "$RUNNER_OS" in
+            macOS) tabs_run mac ""; tabs_run mac-close close ;;
+            Linux) tabs_run linux "" ;;
+            Windows)
+              tabs_run win ""
+              tabs_run win-hover hover
+              tabs_run win-focus focus
+              tabs_run win-click click
+              powershell -NoProfile -File tools/ci/high-contrast.ps1 on || true
+              sleep 5
+              tabs_run win-hc ""
+              powershell -NoProfile -File tools/ci/high-contrast.ps1 off || true
+              sleep 3 ;;
+          esac
           ls layout/pictures | wc -l
           # Every start that opens the main window prints a GTK critical (gtk_distribute_natural_allocation) and
           # notebook warnings (run 38943408956 logs); where it comes from: one start stopped at the first critical,

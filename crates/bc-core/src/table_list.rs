@@ -4,7 +4,8 @@
 //! Each line is one entry; its number (from 0, in file order) is the entry number. Columns, tab-separated: the shown
 //! name; the regions (America, Europe, Asia, Africa, Pacific, Debug, comma-separated); the language code; the
 //! print-to-braille rules and scan table; the braille-to-print rules and scan table; the learning steps as
-//! TABLE=shown name separated by " | ". "#" starts a comment line.
+//! TABLE=shown name separated by " | "; the eBraille language and the eBraille braille system ("language" and
+//! "system" when the entry sets none). "#" starts a comment line.
 
 use std::path::Path;
 
@@ -29,6 +30,22 @@ pub struct TableSetEntry {
     /// Print-to-braille rules and scan table, braille-to-print rules and scan table.
     pub tables: [String; 4],
     pub steps: Vec<Step>,
+    /// The eBraille language code (such as "eng-Brai") and braille system (such as "EBAE grade2") an eBraille save
+    /// writes when the metadata names none; "language" and "system" mean the entry sets none.
+    pub ebraille_language: String,
+    pub ebraille_system: String,
+}
+
+impl TableSetEntry {
+    /// The eBraille language the entry sets, None for "language".
+    pub fn ebraille_language(&self) -> Option<&str> {
+        Some(self.ebraille_language.as_str()).filter(|l| !l.is_empty() && *l != "language")
+    }
+
+    /// The eBraille braille system the entry sets, None for "system".
+    pub fn ebraille_system(&self) -> Option<&str> {
+        Some(self.ebraille_system.as_str()).filter(|s| !s.is_empty() && *s != "system")
+    }
 }
 
 /// A learning course: the steps whose names share a course name, in list order.
@@ -74,6 +91,8 @@ impl TableList {
                 code: f[2].to_string(),
                 tables: [f[3], f[4], f[5], f[6]].map(|t| t.trim().to_lowercase()),
                 steps,
+                ebraille_language: f.get(8).map_or("language", |v| v.trim()).to_string(),
+                ebraille_system: f.get(9).map_or("system", |v| v.trim()).to_string(),
             });
         }
         Ok(TableList { entries })
@@ -187,6 +206,26 @@ mod tests {
     fn regrade_puts_one_grade_code_last() {
         assert_eq!(regrade("[g2][ind2]", "[g1l]"), "[ind2][g1l]");
         assert_eq!(regrade("[g1l]", ""), "");
+        assert_eq!(regrade("[g1l]x", ""), "x");
+    }
+
+    /// A learning step's list holds the steps whose course name starts with the chosen course's name, and the
+    /// course menu items take the ids from 9500 on: no shipped entry has a course name that starts another's, and
+    /// none has more courses than the menu ids give.
+    #[test]
+    fn shipped_courses_are_distinct_and_fit_the_menu() {
+        let list = shipped();
+        for e in 0..list.entries.len() {
+            let courses = list.courses(e);
+            assert!(courses.len() <= 500, "{}", list.entries[e].name);
+            for a in &courses {
+                for b in &courses {
+                    if a.name != b.name {
+                        assert!(!b.name.starts_with(&a.name), "{}: {} / {}", list.entries[e].name, a.name, b.name);
+                    }
+                }
+            }
+        }
     }
 
     fn shipped() -> TableList {
@@ -241,5 +280,17 @@ mod tests {
         let bana = list.entries.iter().position(|e| e.steps.iter().any(|s| s.name.starts_with("TSBVI"))).unwrap();
         let names: Vec<String> = list.courses(bana).into_iter().map(|c| c.name).collect();
         assert!(names.contains(&"TSBVI".to_string()), "{names:?}");
+    }
+
+    #[test]
+    fn languages_tsv_has_the_ebraille_columns() {
+        let list = shipped();
+        let ueb = list.entries.iter().find(|e| e.code == "eng-xueb").unwrap();
+        assert_eq!(ueb.ebraille_language(), Some("eng-Brai"));
+        assert_eq!(list.entries.iter().filter(|e| e.ebraille_language().is_none()).count(), 8);
+        assert_eq!(list.entries.iter().filter(|e| e.ebraille_system().is_none()).count(), 181);
+        let mut systems: Vec<&str> = list.entries.iter().filter_map(|e| e.ebraille_system()).collect();
+        systems.sort();
+        assert_eq!(systems, ["Belarusian grade1", "EBAE grade2", "EBAE grade2", "EBAE grade2", "SEB grade2", "SEB grade2", "ueb grade2"]);
     }
 }

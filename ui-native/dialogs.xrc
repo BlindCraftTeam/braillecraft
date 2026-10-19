@@ -583,7 +583,6 @@
       <size>40,9d</size>
     </object>
     <object class="wxChoice" name="c12">
-      <style>wxCB_SORT</style>
       <pos>50,124d</pos>
       <size>168,59d</size>
     </object>
@@ -650,7 +649,6 @@
       <size>40,9d</size>
     </object>
     <object class="wxChoice" name="c10">
-      <style>wxCB_SORT</style>
       <pos>50,107d</pos>
       <size>168,59d</size>
     </object>
@@ -2605,7 +2603,6 @@
       <size>40,9d</size>
     </object>
     <object class="wxChoice" name="c9">
-      <style>wxCB_SORT</style>
       <pos>50,107d</pos>
       <size>168,59d</size>
     </object>
@@ -2643,7 +2640,6 @@
       <size>40,9d</size>
     </object>
     <object class="wxChoice" name="c9">
-      <style>wxCB_SORT</style>
       <pos>50,107d</pos>
       <size>168,59d</size>
     </object>
@@ -4431,6 +4427,42 @@
     <object class="wxTextCtrl" name="c24">
       <pos>161,132d</pos>
       <size>25,11d</size>
+    </object>
+  </object>
+  <object class="wxDialog" name="dlg10005">
+    <title>New Braille Embosser(s) Found</title>
+    <size>200,137d</size>
+    <style>wxDEFAULT_DIALOG_STYLE</style>
+    <object class="wxButton" name="wxID_OK">
+      <label>OK</label>
+      <default>1</default>
+      <pos>75,120d</pos>
+      <size>50,12d</size>
+    </object>
+    <object class="wxStaticText" name="c5">
+      <label>One or more braille printer drivers have been installed, but the devices are not yet set up for use with BrailleCraft.</label>
+      <pos>5,5d</pos>
+      <size>190,16d</size>
+    </object>
+    <object class="wxStaticText" name="c6">
+      <label>Press OK to set up BrailleCraft for use with the braille printer(s) selected below.</label>
+      <pos>5,21d</pos>
+      <size>190,16d</size>
+    </object>
+    <object class="wxStaticText" name="c7">
+      <label>You may click on any printer name from the list to deselect it.</label>
+      <pos>5,37d</pos>
+      <size>190,16d</size>
+    </object>
+    <object class="wxStaticText" name="c8">
+      <label>Printers that you de-select will not be set up for use with BrailleCraft, and you will not be prompted again.</label>
+      <pos>5,53d</pos>
+      <size>190,16d</size>
+    </object>
+    <object class="wxListBox" name="c9">
+      <style>wxLB_EXTENDED|wxLB_ALWAYS_SB</style>
+      <pos>5,69d</pos>
+      <size>190,48d</size>
     </object>
   </object>
   <object class="wxDialog" name="dlg3116">

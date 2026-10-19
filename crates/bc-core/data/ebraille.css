@@ -2,15 +2,15 @@
 
 @namespace bc url("https://blindcraft.dev/braillecraft");
 
-p + p.left-aligned {
+div + div.left-aligned {
    margin-top: 1rem;
 }
 
-p {
+div {
    text-indent: 2ch;
 }
 
-p.h1-headingcentered {
+div.h1-headingcentered {
    text-align: center;
    margin-left: 3ch;
    margin-right: 3ch;
@@ -18,23 +18,23 @@ p.h1-headingcentered {
    margin-bottom: 1rem;
 }
 
-p.h2-headingcell5 {
+div.h2-headingcell5 {
    margin-left: 4ch;
    margin-right: 4ch;
 }
 
-p.h3-headingcell7 {
+div.h3-headingcell7 {
    margin-left: 6ch;
    margin-right:6ch;
 }
 
-p.centered {
+div.centered {
    text-align: center;
    margin-left: 3ch;
    margin-right: 3ch;
 }
 
-p.b-bodytext {
+div.b-bodytext {
    text-indent: 2ch;
 }
 
@@ -167,189 +167,189 @@ h1 {
 }
 /* */
 
-p._1-1 {
+div._1-1 {
     text-indent: 0ch;
     margin-left: 0ch;
 }
 
-p._1-2 {
+div._1-2 {
     text-indent: -1ch;
     margin-left: 1ch;
 }
 
-p._1-3 {
+div._1-3 {
     text-indent: -2ch;
     margin-left: 2ch;
 }
 
-p._1-5 {
+div._1-5 {
     text-indent: -4ch;
     margin-left: 4ch;
 }
 
-p._1-6 {
+div._1-6 {
     text-indent: -5ch;
     margin-left: 5ch;
 }
 
-p._1-7 {
+div._1-7 {
     text-indent: -6ch;
     margin-left: 6ch;
 }
 
-p._1-9 {
+div._1-9 {
     text-indent: -8ch;
     margin-left: 8ch;
 }
 
-p._3-1 {
+div._3-1 {
     text-indent: 2ch;
     margin-left: 0ch;
 }
 
-p._3-3 {
+div._3-3 {
     text-indent: 0ch;
     margin-left: 2ch;
 }
 
-p._3-5 {
+div._3-5 {
     text-indent: -2ch;
     margin-left: 4ch;
 }
 
-p._3-7 {
+div._3-7 {
     text-indent: -4ch;
     margin-left: 6ch;
 }
 
-p._3-9 {
+div._3-9 {
     text-indent: -6ch;
     margin-left: 8ch;
 }
 
-p._4-6 {
+div._4-6 {
     text-indent: -2ch;
     margin-left: 5ch;
 }
 
-p._5-3 {
+div._5-3 {
     text-indent: 2ch;
     margin-left: 2ch;
 }
 
-p._5-5 {
+div._5-5 {
     text-indent: 0ch;
     margin-left: 4ch;
 }
 
-p._5-7 {
+div._5-7 {
     text-indent: -2ch;
     margin-left: 6ch;
 }
 
-p._5-9 {
+div._5-9 {
     text-indent: -4ch;
     margin-left: 8ch;
 }
 
-p._7-5 {
+div._7-5 {
     text-indent: 2ch;
     margin-left: 4ch;
 }
 
-p._7-7 {
+div._7-7 {
     text-indent: 0ch;
     margin-left: 6ch;
 }
 
-p._7-9 {
+div._7-9 {
     text-indent: -2ch;
     margin-left: 8ch;
 }
 
-p._7-11 {
+div._7-11 {
     text-indent: -4ch;
     margin-left: 10ch;
 }
 
-p._9-7 {
+div._9-7 {
     text-indent: 2ch;
     margin-left: 6ch;
 }
 
-p._9-9 {
+div._9-9 {
     text-indent: 0ch;
     margin-left: 8ch;
 }
 
-p._9-11 {
+div._9-11 {
     text-indent: -2ch;
     margin-left: 10ch;
 }
 
-p._9-13 {
+div._9-13 {
     text-indent: -4ch;
     margin-left: 12ch;
 }
 
-p._11-9 {
+div._11-9 {
     text-indent: 2ch;
     margin-left: 8ch;
 }
 
-p._11-11 {
+div._11-11 {
     text-indent: 0ch;
     margin-left: 10ch;
 }
 
-p._11-13 {
+div._11-13 {
     text-indent: -2ch;
     margin-left: 12ch;
 }
 
-p._11-15 {
+div._11-15 {
     text-indent: -4ch;
     margin-left: 14ch;
 }
 
-p._13-11 {
+div._13-11 {
     text-indent: 2ch;
     margin-left: 10ch;
 }
 
-p._13-13 {
+div._13-13 {
     text-indent: 0ch;
     margin-left: 12ch;
 }
 
-p._13-15 {
+div._13-15 {
     text-indent: -2ch;
     margin-left: 14ch;
 }
 
-p._13-17 {
+div._13-17 {
     text-indent: -4ch;
     margin-left: 16ch;
 }
 
 
 /* */
-p.refpagenumber {
+.refpagenum {
     display: flex;
     grid-template-columns: auto max-content;
     justify-content: flex-end;
 }
 
-p.refpagenumber span.num {
+.refpagenum span.number {
     /* font-variant-numeric: tabular-nums; */
     text-align: right;
 }
 
-p.refpagenumber span.num::before {
+.refpagenum span.number::before {
     content: " ";
 }
 
-p.refpagenumber span.leaders::after {
+.refpagenum span.leaders::after {
     flex: 1;
     content: "\2824\2824\2824\2824\2824\2824\2824\2824\2824\2824"
              "\2824\2824\2824\2824\2824\2824\2824\2824\2824\2824"

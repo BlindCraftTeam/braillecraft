@@ -222,8 +222,12 @@ dialog p.message { margin: 0; max-width: 36rem; white-space: pre-wrap; }
 @media print {
   body > :not(#print-area) { display: none !important; }
   #print-area { display: block; color: #000; background: #fff; font-family: monospace; font-size: 12pt; }
-  .printed-page { break-after: page; line-height: 1.35; }
+  /* A line steps by its font's own height (ascent, descent and leading); the interline print stands above it. */
+  .printed-page { break-after: page; line-height: normal; }
   .printed-line, .printed-ink { white-space: pre; }
+  .printed-line { display: flex; align-items: baseline; }
+  .printed-text, .printed-number { flex: none; white-space: pre; }
+  .printed-number { text-align: right; }
 }
 
 /* The reading toolbar: the functions of the screen reader scripts as buttons, each 24 px or more to touch. */

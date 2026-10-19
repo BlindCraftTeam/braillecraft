@@ -378,21 +378,42 @@ fn remember(t: &mut Tracker, s: Shown) {
 
 /// The style commands on the editor's text (bc_core style_apply, spec 31), with the selection's anchor and
 /// the caret as UTF-16 places: `what` is "apply" (style `name`), "join-lines", "join-styles" or "new-paragraph".
-/// Answers JSON {"text": the editor's new text, "caret": UTF-16 place}, or an empty string when nothing changes.
+/// The document is laid out `cells` by `lines` for the open style search, which keeps to the page of the place
+/// searched from. Answers JSON {"text": the editor's new text, "caret": UTF-16 place}, or an empty string when
+/// nothing changes.
 #[wasm_bindgen]
-pub fn editor_style_command(what: &str, name: &str, anchor: u32, caret: u32) -> String {
+#[allow(clippy::too_many_arguments)]
+pub fn editor_style_command(
+    what: &str,
+    name: &str,
+    anchor: u32,
+    caret: u32,
+    cells: u32,
+    lines: u32,
+    braille: bool,
+) -> String {
     use bc_core::style_apply as sa;
+    let text = EDITOR.with(|e| e.borrow().shown.text.clone());
+    let pages = laid_out(&text, cells, lines, braille);
     EDITOR.with(|e| {
         let mut e = e.borrow_mut();
         let t = e.shown.text.clone();
         let to_running = |u: u32| e.shown.slice(0, char_pos(&t, u)).to_running().chars().count();
         let (a, c) = (to_running(anchor), to_running(caret));
         let running = e.shown.to_running();
+        // The first running place of the formatted page a running place is on (0 on the first page).
+        let page_start = |p: usize| -> usize {
+            let page = bc_core::format::locate(&pages, Shown::shown_place(&running, p)).0;
+            match pages.get(page.saturating_sub(1)) {
+                Some(pg) if page > 1 => e.shown.running_place(pg.start),
+                _ => 0,
+            }
+        };
         let out = match what {
             "apply" => Some(sa::apply_style(&running, a, c, c, name)),
-            "join-lines" => sa::join_lines(&running, a, c),
-            "join-styles" => sa::join_styles(&running, a, c),
-            "new-paragraph" => Some(sa::new_paragraph(&running, a, c)),
+            "join-lines" => sa::join_lines(&running, a, c, &page_start),
+            "join-styles" => sa::join_styles(&running, a, c, &page_start),
+            "new-paragraph" => Some(sa::new_paragraph(&running, a, c, &page_start)),
             _ => None,
         };
         let Some((new, caret_r)) = out else { return String::new() };
@@ -941,14 +962,35 @@ impl LanguageList {
         self.1.borrow_mut().take_missing()
     }
 
+    /// The eBraille language and braille system of the entry a document with `tables` belongs to, as JSON
+    /// ["eng-Brai", "EBAE grade2"], each null when the entry sets none.
+    pub fn ebraille_defaults(&self, tables: Vec<String>) -> String {
+        let l = &self.0;
+        let entry = <[String; 4]>::try_from(tables).ok().and_then(|t| l.entry_for(&t)).map(|(e, _)| &l.entries[e]);
+        serde_json::json!([entry.and_then(|e| e.ebraille_language()), entry.and_then(|e| e.ebraille_system())]).to_string()
+    }
+
+    /// The eBraille language codes the metadata form offers: each entry's eBraille language, once, in list order.
+    pub fn ebraille_languages(&self) -> Vec<String> {
+        let mut out: Vec<String> = Vec::new();
+        for e in &self.0.entries {
+            if let Some(code) = e.ebraille_language() {
+                if !out.iter().any(|c| c == code) {
+                    out.push(code.to_string());
+                }
+            }
+        }
+        out
+    }
+
     /// The four tables of entry `entry`.
     pub fn tables(&self, entry: usize) -> Vec<String> {
         self.0.entries.get(entry).map(|e| e.tables.to_vec()).unwrap_or_default()
     }
 
-    /// The learning steps of course `course` of the language of a document with `tables`, as JSON: "title"
-    /// ("course - Learning Tables"), "names", "tables" (each step's print-to-braille rules table) and "selected" (the
-    /// step the document uses, else the first); empty when there is no such course.
+    /// The learning steps of course `course` of the language of a document with `tables`, as JSON: "names",
+    /// "tables" (each step's print-to-braille rules table) and "selected" (the step the document uses, else the
+    /// first), for dialog 1052; empty when there is no such course.
     pub fn steps(&self, tables: Vec<String>, course: usize) -> String {
         let l = &self.0;
         let Some((entry, step)) = <[String; 4]>::try_from(tables).ok().and_then(|t| l.entry_for(&t)) else { return String::new() };
@@ -958,8 +1000,7 @@ impl LanguageList {
         let names: Vec<&str> = c.steps.iter().map(|&s| e.steps[s].name.as_str()).collect();
         let step_tables: Vec<&str> = c.steps.iter().map(|&s| e.steps[s].table.as_str()).collect();
         let selected = step.and_then(|s| c.steps.iter().position(|&x| x == s)).unwrap_or(0);
-        serde_json::json!({"title": format!("{} - Learning Tables", c.name), "names": names, "tables": step_tables, "selected": selected, "language": e.tables})
-            .to_string()
+        serde_json::json!({"names": names, "tables": step_tables, "selected": selected, "language": e.tables}).to_string()
     }
 }
 
@@ -1005,6 +1046,84 @@ impl Document {
         self.0.translated_line
     }
 
+    /// The view font the file was saved in (+30), as the file keeps it.
+    #[wasm_bindgen(getter)]
+    pub fn view_font(&self) -> u16 {
+        self.0.view_font
+    }
+
+    /// Whether six-key entry was on when the document was saved, for either kind of document, as the file keeps it.
+    #[wasm_bindgen(getter)]
+    pub fn six_key(&self) -> bool {
+        self.0.six_key
+    }
+
+    /// The view the document is saved with: its translated line and six-key entry.
+    pub fn set_view(&mut self, translated_line: bool, six_key: bool) {
+        self.0.translated_line = translated_line;
+        self.0.six_key = six_key;
+    }
+
+    /// The document's eBraille metadata as the file keeps it (its version 2 section's ebraille/package.opf), as
+    /// JSON of bc_core::ebraille::Metadata; empty when the file holds none.
+    #[wasm_bindgen(getter)]
+    pub fn ebraille_metadata(&self) -> String {
+        self.0.ebraille.as_deref().map(|t| serde_json::to_string(&bc_core::ebraille::metadata_from_opf(t)).unwrap_or_default()).unwrap_or_default()
+    }
+
+    /// The eBraille metadata the document is saved with (JSON of bc_core::ebraille::Metadata; empty or empty
+    /// metadata for none), kept in the file's version 2 section.
+    pub fn set_ebraille(&mut self, meta: &str) -> Result<(), JsError> {
+        let meta: bc_core::ebraille::Metadata = if meta.trim().is_empty() { Default::default() } else { serde_json::from_str(meta).map_err(error)? };
+        self.0.ebraille = (meta != bc_core::ebraille::Metadata::default()).then(|| bc_core::ebraille::opf_text(&meta));
+        Ok(())
+    }
+
+    /// A style dialog's list for Show choice `show` (bc_core::doctext::style_list): the style names in list order,
+    /// those the choice lets through; a style is in use when the editor's text has a start or end code of it.
+    pub fn style_list(&self, show: u32) -> Vec<String> {
+        let styles: Vec<(String, String)> = self.0.styles.iter().map(|s| (s.0.clone(), s.1.clone())).collect();
+        let running = EDITOR.with(|e| e.borrow().shown.to_running());
+        let in_use = bc_core::doctext::styles_in_use(&running);
+        bc_core::doctext::style_list(&styles, show as usize, &in_use)
+    }
+
+    /// Add Style's basis item `k` (0 "(No Style)") with Show choice `show`: the name of the style whose codes it puts
+    /// in the code fields (bc_core::doctext::basis_style), empty for none.
+    pub fn basis_style(&self, k: u32, show: u32) -> String {
+        let names = self.style_names();
+        bc_core::doctext::basis_style(&names, &self.style_list(show), k as usize).unwrap_or_default()
+    }
+
+    /// Whether the document has a style named `name`, case ignored (Add Style then asks to replace it).
+    pub fn has_style(&self, name: &str) -> bool {
+        bc_core::doctext::style_index_ignoring_case(&self.style_names(), name).is_some()
+    }
+
+    /// The codes in force from the start of the document, in brackets: the beginning codes of its style named
+    /// "initial" (case ignored), as a template gives them and Document, Learning Tables changes them (spec 05
+    /// section A10); empty when the document has no such style.
+    #[wasm_bindgen(getter)]
+    pub fn initial_codes(&self) -> String {
+        self.0.styles.iter().find(|s| s.0.eq_ignore_ascii_case("initial")).map(|s| Shown::from_running(&s.1).text).unwrap_or_default()
+    }
+
+    /// Puts `codes` (in brackets) as the beginning codes of the document's "initial" style, adding the style at the
+    /// end of its list when it has none.
+    pub fn set_initial_codes(&mut self, codes: &str) {
+        let begin = Shown::marked(codes).to_running();
+        match self.0.styles.iter_mut().find(|s| s.0.eq_ignore_ascii_case("initial")) {
+            Some(s) => s.1 = begin,
+            None => self.0.styles.push(("initial".to_string(), begin, String::new())),
+        }
+    }
+
+    /// The editor place of the caret where the document was saved (settings +22, spec 05 section A10).
+    #[wasm_bindgen(getter)]
+    pub fn caret(&self) -> u32 {
+        Shown::shown_place(&self.0.text, self.0.caret as usize) as u32
+    }
+
     /// The name of the document's embosser setup, empty for none.
     #[wasm_bindgen(getter)]
     pub fn embosser(&self) -> String {
@@ -1018,8 +1137,9 @@ impl Document {
     }
 
     /// The document's embosser page layout as the file keeps it (spec 25 section 10), as JSON
-    /// {"layout": {form, top_margin, binding, interpoint, banner, interline}, "cells", "lines"}; empty when the file
-    /// holds none.
+    /// {"layout": {form, top_margin, binding, interpoint, banner, interline, double_size}, "cells", "lines",
+    /// "double_size"} (the last the DoubleSizePrint byte, +11, which the layout carries as a flag for the form
+    /// check); empty when the file holds none.
     #[wasm_bindgen(getter)]
     pub fn embosser_layout(&self) -> String {
         let Some(l) = &self.0.layout else { return String::new() };
@@ -1030,38 +1150,61 @@ impl Document {
             interpoint: l.interpoint,
             banner: l.banner != 0,
             interline: u32::from(l.interline),
+            double_size: l.double_size != 0,
         };
-        serde_json::json!({"layout": layout, "cells": l.cells, "lines": l.lines}).to_string()
+        let (cells, lines, double_size) = (l.cells, l.lines, l.double_size);
+        serde_json::json!({"layout": layout, "cells": cells, "lines": lines, "double_size": double_size}).to_string()
     }
 
-    /// A print document's page size as the file keeps it, [lines per page, characters per line]; 54 and 65 when the
-    /// file holds none (spec 05 section A10).
-    #[wasm_bindgen(getter)]
-    pub fn print_page(&self) -> Vec<u32> {
-        let (l, c) = if self.0.print_page.0 == 0 { dxfile::PRINT_PAGE_DEFAULT } else { self.0.print_page };
-        vec![u32::from(l), u32::from(c)]
+    /// The document's Printer Setup page size as the file keeps it, [lines per page, characters per line], for
+    /// either kind of document; the Global, Printer Setup page size (`lines`, `chars`) when the file holds none
+    /// (spec A16.2, A16.4 unknown 6).
+    pub fn print_page(&self, lines: u32, chars: u32) -> Vec<u32> {
+        let (l, c) = dxfile::print_page_or(self.0.print_page, (lines, chars));
+        vec![l, c]
     }
 
     /// As `save`, with the document's embosser setup name and page layout (JSON as `embosser_layout` gives it, the
     /// layout written only when it names a form), as the desktop program saves them.
     pub fn save_with(&self, text: &str, embosser: &str, layout: &str, cells: u32, lines: u32) -> Result<Vec<u8>, JsError> {
-        self.save_version(text, embosser, layout, cells, lines, 1, cells, lines)
+        let (print_lines, print_chars) = (u32::from(self.0.print_page.0), u32::from(self.0.print_page.1));
+        self.save_version(text, embosser, layout, cells, lines, 1, cells, lines, 0, print_lines, print_chars)
     }
 
     /// As `save_with`, in file format `version`: 1, or 0 for the older format, which names the print-to-braille
-    /// tables by their older names where they have them (spec 04d-C; a web document has no initial codes in force).
-    /// `cells` and `lines` are the document's page; `emb_cells` and `emb_lines` a print document's embosser page.
+    /// tables by their older names where they have them and their code is in the document's initial codes
+    /// (spec 04d-C, A15.1). `cells` and `lines` are the document's page; `emb_cells` and `emb_lines` a print
+    /// document's embosser page; `caret` the editor's caret, kept in the file (settings +22); `print_lines` and
+    /// `print_chars` a braille document's own Printer Setup page (settings +129 and +131, spec A16.2).
     #[allow(clippy::too_many_arguments)]
-    pub fn save_version(&self, text: &str, embosser: &str, layout: &str, cells: u32, lines: u32, version: u16, emb_cells: u32, emb_lines: u32) -> Result<Vec<u8>, JsError> {
-        let tables = if version == 0 { dxfile::older_table_names(&self.0.tables, |_| false) } else { self.0.tables.clone() };
-        let mut doc = DxDocument { text: shown_of(text).to_running(), embosser: embosser.to_string(), version, tables, ..self.0.clone() };
+    pub fn save_version(
+        &self,
+        text: &str,
+        embosser: &str,
+        layout: &str,
+        cells: u32,
+        lines: u32,
+        version: u16,
+        emb_cells: u32,
+        emb_lines: u32,
+        caret: u32,
+        print_lines: u32,
+        print_chars: u32,
+    ) -> Result<Vec<u8>, JsError> {
+        let tables = if version == 0 {
+            let initial = self.initial_codes();
+            dxfile::older_table_names(&self.0.tables, |code| dxfile::codes_hold(&initial, code))
+        } else {
+            self.0.tables.clone()
+        };
+        let shown = shown_of(text);
+        let place = shown.running_place(caret as usize).min(u32::MAX as usize) as u32;
+        let mut doc = DxDocument { text: shown.to_running(), embosser: embosser.to_string(), version, tables, caret: place, ..self.0.clone() };
         let short = |n: u32| n.min(u32::from(u16::MAX)) as u16;
-        // A braille document's cells and lines are its embosser page; a print document's are its Printer Setup page
-        // (settings +129 and +131), and its embosser page is the one given apart.
+        // A braille document's cells and lines are its embosser page, and its Printer Setup page is given apart; a
+        // print document's are its Printer Setup page (settings +129 and +131), and its embosser page is given apart.
         let braille = self.0.kind == DocumentKind::Braille;
-        if !braille {
-            doc.print_page = (short(lines), short(cells));
-        }
+        doc.print_page = if braille { (short(print_lines), short(print_chars)) } else { (short(lines), short(cells)) };
         let (emb_lines, emb_cells) = if braille { (short(lines), short(cells)) } else { (short(emb_lines), short(emb_cells)) };
         if !layout.is_empty() {
             let l: Layout = serde_json::from_str(layout).map_err(error)?;
@@ -1084,23 +1227,35 @@ impl Document {
 
     /// Save As refreshable braille (.lbf): `text` (editor form) with the document's styles (bc_core::lbf).
     /// Save As eBraille (a braille document) or EPUB 3 (a print one), spec 23: the package from the editor text,
-    /// this document's styles (bc_core::ebraille::kind_of), the metadata (JSON of bc_core::ebraille::Metadata) and
-    /// the braille encoding's 64 cell characters (a JSON list, cell by position).
-    pub fn ebraille(&self, text: &str, braille: bool, meta: &str, cells: &str) -> Result<Vec<u8>, JsError> {
+    /// this document's styles (bc_core::ebraille::kind_of), the metadata (JSON of bc_core::ebraille::Metadata),
+    /// the braille encoding's 64 cell characters (a JSON list, cell by position), and the document's translation
+    /// table's eBraille language and braille system (empty for none; LanguageList::ebraille_defaults), and the
+    /// document's file name (the package's title when the metadata has none and the document has no heading).
+    pub fn ebraille(&self, text: &str, braille: bool, meta: &str, cells: &str, language: &str, system: &str, name: Option<String>) -> Result<Vec<u8>, JsError> {
         let meta: bc_core::ebraille::Metadata = serde_json::from_str(meta).map_err(error)?;
         let cells: Vec<String> = serde_json::from_str(cells).map_err(error)?;
         let running = shown_of(text).to_running();
         let styles = &self.0.styles;
-        let kinds = |name: &str| -> bc_core::ebraille::StyleKind {
-            styles.iter().find(|s| s.0 == name).map_or(bc_core::ebraille::StyleKind::Block, |s| bc_core::ebraille::kind_of(&s.0, &s.1))
-        };
+        // A style the document does not define is known by its name alone.
+        let kinds = |name: &str| bc_core::ebraille::kind_of(name, styles.iter().find(|s| s.0 == name).map_or("", |s| s.1.as_str()));
         let cell = |c: char| -> u8 {
             match c as u32 {
                 n @ 0x2800..=0x283F => (n - 0x2800) as u8,
                 _ => cells.iter().position(|s| s.chars().any(|x| x == c)).map_or(0, |p| p as u8),
             }
         };
-        Ok(bc_core::ebraille::package(&bc_core::ebraille::Input { running: &running, braille, kinds: &kinds, cell: &cell, meta: &meta }))
+        let some = |v: &str| Some(v.trim()).filter(|v| !v.is_empty()).map(str::to_string);
+        let (language, system) = (some(language), some(system));
+        Ok(bc_core::ebraille::package(&bc_core::ebraille::Input {
+            running: &running,
+            braille,
+            kinds: &kinds,
+            cell: &cell,
+            meta: &meta,
+            default_language: language.as_deref(),
+            default_system: system.as_deref(),
+            name: name.as_deref().unwrap_or(""),
+        }))
     }
 
     pub fn refreshable(&self, text: &str) -> Vec<u8> {
@@ -1116,14 +1271,14 @@ impl Document {
         }
     }
 
-    /// Document, Add Style (dialog 1025): a style named `name`, its codes typed in the dialog, or those of the style
-    /// `base` it is based on where a field is left empty. The message shown when the name cannot be used, else
-    /// an empty string.
+    /// Document, Add Style (dialog 1025): a style named `name` (checked in the dialog), its codes typed in the
+    /// dialog, or those of the style `base` it is based on where a field is left empty. A style of the same name
+    /// (case ignored) is replaced; the page asks first. Answers an empty string.
     pub fn add_style(&mut self, name: &str, base: &str, begin: &str, end: &str) -> String {
-        if let Err(m) = check_style_name(name, &self.style_names()) {
-            return m;
-        }
         let based = self.0.styles.iter().find(|s| s.0 == base).cloned();
+        if let Some(at) = bc_core::doctext::style_index_ignoring_case(&self.style_names(), name) {
+            self.0.styles.remove(at);
+        }
         let take = |typed: &str, kept: Option<&String>| if typed.is_empty() { kept.cloned().unwrap_or_default() } else { Shown::marked(typed).to_running() };
         let style = (name.to_string(), take(begin, based.as_ref().map(|s| &s.1)), take(end, based.as_ref().map(|s| &s.2)));
         self.0.styles.push(style);
@@ -1201,22 +1356,148 @@ fn codes_for_dialog(running: &str) -> String {
         .collect()
 }
 
-/// The checks Add Style makes on a new style's name, with the messages shown.
-fn check_style_name(name: &str, names: &[String]) -> Result<(), String> {
-    if let Some(p) = bc_core::doctext::style_name_problem(name) {
-        return Err(p);
-    }
-    // The list refuses a second style of the same name.
-    if names.iter().any(|n| n == name) {
-        return Err("Unable to add style to style list.".into());
-    }
-    Ok(())
+/// Document, Add Style: the message shown about the name typed (empty when it is accepted); with `bypass`
+/// (BypassStyleNameValidityCheck) the characters are not checked.
+#[wasm_bindgen]
+pub fn style_name_problem(name: &str, bypass: bool) -> String {
+    bc_core::doctext::style_name_problem_with(name, bypass).unwrap_or_default()
 }
 
-/// Document, Add Style: the message shown about the name typed (empty when it is accepted).
+/// Add Style: whether the name, with the period added, runs into the beginning codes (they are then empty).
 #[wasm_bindgen]
-pub fn style_name_problem(name: &str) -> String {
-    bc_core::doctext::style_name_problem(name).unwrap_or_default()
+pub fn style_name_overruns_codes(name: &str) -> bool {
+    bc_core::doctext::style_name_overruns_codes(name)
+}
+
+/// The Show choices of the style dialogs, in their order, and the one a dialog opens with (its place).
+#[wasm_bindgen]
+pub fn style_show_choices() -> Vec<String> {
+    bc_core::doctext::STYLE_SHOW.iter().map(|s| s.to_string()).collect()
+}
+
+#[wasm_bindgen]
+pub fn style_show_default() -> u32 {
+    bc_core::doctext::STYLE_SHOW_DEFAULT as u32
+}
+
+/// Global, View Preferences: message 2768 for a six-key set refused, empty when it is taken.
+#[wasm_bindgen]
+pub fn six_key_set_problem(keys: &str) -> String {
+    bc_core::sixkey::six_key_set_problem(keys).unwrap_or_default().to_string()
+}
+
+/// View, Translated Line turned on (`on_now` false) or off: whether the editing area of height `area_h`, less the
+/// line's height `line_h`, keeps a row `row_h` high (turning the line off is never refused); the same rule keeps a
+/// row for a view or font change (`line_h` 0).
+#[wasm_bindgen]
+pub fn translated_line_allowed(on_now: bool, area_h: i32, row_h: i32, line_h: i32) -> bool {
+    bc_core::fview::translated_line_allowed(on_now, area_h, row_h, line_h)
+}
+
+/// Six-key entry (bc_core::sixkey) for the page's keys: the chord held and the keys down.
+#[wasm_bindgen]
+#[derive(Default)]
+pub struct SixKey {
+    chord: bc_core::sixkey::Chord,
+}
+
+#[wasm_bindgen]
+impl SixKey {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> SixKey {
+        SixKey::default()
+    }
+
+    /// A key pressed with Control, Alt and Meta up, named by its KeyboardEvent.code; `set` the six keys, `braille`
+    /// and `six_key` the document's kind and View, Six-Key Entry. Answers -1 when the key goes on as usual, -2 when
+    /// it does nothing, 64 for a space typed, else the dots (bit 0 dot 1) of the cell typed. INFERENCE: the page
+    /// cannot read the keyboard layout, so the key at the US "M" place is a letter key on every layout.
+    pub fn key_down(&mut self, code: &str, set: &str, braille: bool, six_key: bool, shift: bool, repeat: bool) -> i32 {
+        use bc_core::sixkey::{dot_of, key_of_browser_code, Mode};
+        let mode = Mode::of(braille, six_key);
+        if mode == Mode::Off {
+            return -1;
+        }
+        let result = if code == "Space" {
+            self.chord.space_down()
+        } else {
+            let Some(p) = key_of_browser_code(code) else { return -1 };
+            self.chord.key_down(dot_of(set, p), p.is_ascii_lowercase(), shift, repeat, mode)
+        };
+        six_key_answer(result)
+    }
+
+    /// A key let go, named by its KeyboardEvent.code; answered as key_down.
+    pub fn key_up(&mut self, code: &str, set: &str) -> i32 {
+        use bc_core::sixkey::{dot_of, key_of_browser_code};
+        let Some(p) = key_of_browser_code(code) else { return -1 };
+        six_key_answer(self.chord.key_up(dot_of(set, p), p.is_ascii_lowercase()))
+    }
+}
+
+fn six_key_answer(r: bc_core::sixkey::KeyResult) -> i32 {
+    use bc_core::sixkey::{KeyResult, Typed};
+    match r {
+        KeyResult::Pass => -1,
+        KeyResult::Swallow => -2,
+        KeyResult::Type(Typed::Space) => 64,
+        KeyResult::Type(Typed::Cell(d)) => i32::from(d),
+    }
+}
+
+thread_local! {
+    /// The coded view of the editor's text last made for the translated line, with the text it was made from.
+    static CODED_VIEW: std::cell::RefCell<Option<(String, std::rc::Rc<bc_core::fview::View>)>> = Default::default();
+}
+
+/// View, Translated Line (bc_core::translated_line): what the line translates with the caret at UTF-16 place
+/// `position` of the editor's text: in the formatted view the laid-out page line (the document laid out `cells` by
+/// `lines`), in the coded view (`codes`) the coded row (`coded_width` wide). Answers JSON {"carried": the codes
+/// before the line, "line": the line with its leading spaces skipped, "whole": the two together}, each in editor form
+/// with its codes kept for the calls given it.
+#[wasm_bindgen]
+pub fn translated_line_parts(
+    position: u32,
+    cells: u32,
+    lines: u32,
+    braille: bool,
+    codes: bool,
+    coded_width: u32,
+) -> String {
+    use bc_core::translated_line::{coded_row_span, line_parts, page_line_span};
+    let shown = EDITOR.with(|e| e.borrow().shown.clone());
+    let at = char_pos(&shown.text, position);
+    let (from, to) = if codes {
+        let view = CODED_VIEW.with(|c| {
+            let mut c = c.borrow_mut();
+            match c.as_ref() {
+                Some((t, v)) if *t == shown.text => v.clone(),
+                _ => {
+                    let v = std::rc::Rc::new(bc_core::fview::View::coded(&shown, coded_width.max(1) as usize));
+                    *c = Some((shown.text.clone(), v.clone()));
+                    v
+                }
+            }
+        });
+        coded_row_span(&view, shown.text.chars().count(), at)
+    } else {
+        page_line_span(&laid_out(&shown.text, cells, lines, braille), at)
+    };
+    let (carried, line) = line_parts(&shown, from, to);
+    let mut whole = carried.clone();
+    whole.push(&line);
+    let json = serde_json::json!({ "carried": carried.text, "line": line.text, "whole": whole.text }).to_string();
+    derive(carried);
+    derive(line);
+    derive(whole);
+    json
+}
+
+/// The translation of a line translated after the codes carried in (`whole`, running text) with what those codes
+/// alone translate to (`lead`) left off (bc_core::translated_line::leave_off_lead).
+#[wasm_bindgen]
+pub fn leave_off_lead(lead: &str, whole: &str) -> String {
+    bc_core::translated_line::leave_off_lead(lead, whole)
 }
 
 /// Edit Style Codes: the message shown about a codes field (empty when it is accepted).
@@ -1253,6 +1534,8 @@ pub fn new_document(braille: bool, text: &str, template: &str) -> Document {
         sections: Vec::new(),
         layout: None,
         print_page: (0, 0),
+        caret: 0,
+        ebraille: None,
     })
 }
 
@@ -1333,25 +1616,31 @@ pub fn coded(text: &str, script: &[u8], wrap: &[u8]) -> Result<Vec<u8>, JsError>
 }
 
 /// Save As LaTeX (.tex) for a print document (spec 22): the text through the text export table (`table`, the
-/// source of table-txxtxa-binary-forward.bmt; when it cannot be used, the body as the document file stores it goes
-/// on unchanged), then the LaTeX rule script (`script`, latex.rules).
+/// source of table-txxtxa-binary-forward.bmt) in the table's own output mode, with the document's styles and the
+/// language switches of the table list (the tables it has loaded; spec A15.9); when the table cannot be used, the
+/// body as the document file stores it goes on unchanged; then the LaTeX rule script (`script`, latex.rules).
 #[wasm_bindgen]
-pub fn latex(text: &str, table: &str, script: &[u8]) -> Result<Vec<u8>, JsError> {
+pub fn latex(text: &str, table: &str, script: &[u8], doc: &Document, list: &LanguageList) -> Result<Vec<u8>, JsError> {
     let running = shown_of(text).to_running();
-    let translated = Translator::from_source(table).ok().and_then(|t| t.translate_marked(&running, None, None).ok());
-    // The engine writes bytes; its text holds one character per byte.
-    let middle: Vec<u8> = match translated {
-        Some(s) => s.chars().map(|c| c as u32 as u8).collect(),
-        None => dxfile::body_bytes(&running),
-    };
+    let languages = Languages::from_list(&list.0, LanguageSource::Loaded(list.1.clone()));
+    let styles = style_table(&doc.0);
+    let tr = Translator::from_source(table).ok();
+    let translated = tr.and_then(|t| t.text_export(&running, Some(&styles), Some(&languages)).ok());
+    let middle = translated.unwrap_or_else(|| dxfile::body_bytes(&running));
     bc_core::rule_script::RuleScript::from_bytes(script, None).map_err(error)?.run(&middle).map_err(error)
 }
 
 /// Save As HTML with MathJax (.htm) for a print document (spec 21): as `latex` with the MathJax rule script
 /// (mathjax.rules), between a fixed head and foot.
 #[wasm_bindgen]
-pub fn mathjax(text: &str, table: &str, script: &[u8]) -> Result<Vec<u8>, JsError> {
-    let body = latex(text, table, script)?;
+pub fn mathjax(
+    text: &str,
+    table: &str,
+    script: &[u8],
+    doc: &Document,
+    list: &LanguageList,
+) -> Result<Vec<u8>, JsError> {
+    let body = latex(text, table, script, doc, list)?;
     Ok(bc_core::html_export::with_mathjax(&body))
 }
 
@@ -1432,6 +1721,48 @@ pub fn position_of(text: &str, cells: u32, lines: u32, braille: bool, page: usiz
     bc_core::format::position_of(&laid_out(text, cells, lines, braille), page, line, column).map_or(-1, |p| p as i64)
 }
 
+/// Edit, Goto: the page, line and column (from 1) of a character position on a document's laid-out pages, as
+/// [page, line, column]; the dialog's fields start there.
+#[wasm_bindgen]
+pub fn locate(text: &str, cells: u32, lines: u32, braille: bool, position: usize) -> Vec<u32> {
+    let (p, l, c) = bc_core::format::locate(&laid_out(text, cells, lines, braille), position);
+    vec![p as u32, l as u32, c as u32]
+}
+
+/// Edit, Goto: the place of the cell at page, line and column (from 1), only when that cell is there and came from
+/// a place in the document; -1 otherwise (the dialog then asks to go to the closest location).
+#[wasm_bindgen]
+pub fn exact_position(text: &str, cells: u32, lines: u32, braille: bool, page: usize, line: usize, column: usize) -> i64 {
+    bc_core::format::exact_position(&laid_out(text, cells, lines, braille), page, line, column).map_or(-1, |p| p as i64)
+}
+
+/// Edit, Goto, "go to the closest location" (bc_core::format::closest_position); -1 when there is none.
+#[wasm_bindgen]
+pub fn closest_position(text: &str, cells: u32, lines: u32, braille: bool, page: usize, line: usize, column: usize) -> i64 {
+    bc_core::format::closest_position(&laid_out(text, cells, lines, braille), page, line, column, lines.max(1) as usize)
+        .map_or(-1, |(p, _)| p as i64)
+}
+
+/// Edit, Goto with "Use reference page number": the place of that print page number; -1 when it is not there.
+#[wasm_bindgen]
+pub fn reference_page_position(text: &str, cells: u32, lines: u32, braille: bool, number: u32) -> i64 {
+    bc_core::format::reference_page_position(&laid_out(text, cells, lines, braille), number, braille).map_or(-1, |p| p as i64)
+}
+
+/// The message for a file the import refuses (bc_core::filekind::refusal), by its kind as detect_file names it and
+/// its bytes; empty when the kind is not refused.
+#[wasm_bindgen]
+pub fn import_refusal(kind: &str, bytes: &[u8]) -> String {
+    use bc_core::filekind::FileKind;
+    let kind = match kind {
+        "Unsupported" => FileKind::Unsupported,
+        "Music" => FileKind::Music,
+        "Rtf" => FileKind::Rtf,
+        _ => return String::new(),
+    };
+    bc_core::filekind::refusal(kind, bytes).unwrap_or_default()
+}
+
 /// What a Layout menu code item inserts (bc_core::menu_codes), as JSON: {"text": codes}, {"pair": [before, after]}
 /// around the selection, or {"setting": name} for one taken from Shortcut Preferences or the document (grade0, cbc,
 /// flush_right_leader, new_page, new_ref_page, termination_sign, hard_space); empty for no code item.
@@ -1441,6 +1772,7 @@ pub fn menu_code(id: i32) -> String {
     match insert(id) {
         Some(Insert::Text(s)) => serde_json::json!({ "text": s }).to_string(),
         Some(Insert::Pair(a, b)) => serde_json::json!({ "pair": [a, b] }).to_string(),
+        Some(Insert::EachLine(s)) => serde_json::json!({ "each_line": s }).to_string(),
         Some(Insert::Setting(d)) => {
             let name = match d {
                 Dynamic::Grade0 => "grade0",
@@ -1457,10 +1789,118 @@ pub fn menu_code(id: i32) -> String {
     }
 }
 
+/// Asked before a code item replaces the selection.
+#[wasm_bindgen]
+pub fn replace_question() -> String {
+    bc_core::menu_codes::REPLACE_QUESTION.to_string()
+}
+
 /// The codes of Layout, Code List, as JSON [[code, category bit, label], ...].
 #[wasm_bindgen]
 pub fn code_list() -> String {
     serde_json::to_string(bc_core::menu_codes::CODE_LIST).unwrap_or_default()
+}
+
+/// The places in the code list of the codes Code List shows with All `all` and the category boxes `mask`.
+#[wasm_bindgen]
+pub fn code_list_shown(all: bool, mask: u32) -> Vec<u32> {
+    bc_core::menu_codes::code_list_shown(all, mask).into_iter().map(|i| i as u32).collect()
+}
+
+/// OK (or a double-click) in Code List with the chosen code's name (empty for none) and the parameters typed, as
+/// JSON {"close": bool, "message": text or null, "insert": [text, is a code] or null}.
+#[wasm_bindgen]
+pub fn code_list_ok(chosen: &str, params: &str) -> String {
+    let o = bc_core::menu_codes::code_list_ok((!chosen.is_empty()).then_some(chosen), params);
+    serde_json::json!({ "close": o.close, "message": o.message, "insert": o.insert }).to_string()
+}
+
+/// Document, Page Numbering: the corners greyed in each group for the chosen corners (four groups in order), as
+/// JSON [[bool; 5]; 4].
+#[wasm_bindgen]
+pub fn page_number_disabled(chosen: Vec<u32>) -> String {
+    let c: [u32; 4] = std::array::from_fn(|g| chosen.get(g).copied().unwrap_or(0));
+    serde_json::to_string(&bc_core::page_numbering::disabled_corners(c)).unwrap_or_default()
+}
+
+/// A dialog number field read by the whole-number rule after its first `width` characters (0 for no cut); None
+/// when it is not a number.
+#[wasm_bindgen]
+pub fn number_field(text: &str, width: usize) -> Option<f64> {
+    use bc_core::number_field::{read_number, whole_number};
+    let n = if width == 0 { whole_number(text) } else { read_number(text, width) };
+    n.map(|n| n as f64)
+}
+
+/// Whether the editor's caret (a UTF-16 place) counts as in a table for the Table menu: Create is enabled when it
+/// does not, Table Properties when it does.
+#[wasm_bindgen]
+pub fn editor_in_table(caret: u32) -> bool {
+    EDITOR.with(|e| {
+        let e = e.borrow();
+        let at = e.shown.slice(0, char_pos(&e.shown.text, caret)).to_running().chars().count();
+        bc_core::table_cmd::in_table_for_menu(&e.shown.to_running(), at)
+    })
+}
+
+/// The insert-code prompt's default for the editor's caret (a UTF-16 place) in the coded view or not, as JSON
+/// {"text", "from", "to"} (UTF-16 places of the code the answer replaces; null for none).
+#[wasm_bindgen]
+pub fn editor_prompt_default(style: bool, caret: u32, coded_view: bool) -> String {
+    EDITOR.with(|e| {
+        let e = e.borrow();
+        let t = &e.shown.text;
+        let pos = char_pos(t, caret);
+        let (text, range) = if style {
+            bc_core::doctext::style_prompt_default(&e.shown, pos)
+        } else {
+            bc_core::doctext::code_prompt_default(&e.shown, pos, coded_view)
+        };
+        let units = |p: usize| t.chars().take(p).map(char::len_utf16).sum::<usize>();
+        let (from, to) = (range.map(|r| units(r.0)), range.map(|r| units(r.1)));
+        serde_json::json!({ "text": text, "from": from, "to": to }).to_string()
+    })
+}
+
+/// A prompt's answer ("code", "style" or "char"), as JSON {"put": the codes to put in (bracketed) or the character,
+/// or null for nothing; "code": whether it is codes; "message": the refusal or null}.
+#[wasm_bindgen]
+pub fn prompt_answer(which: &str, answer: &str) -> String {
+    use bc_core::doctext as t;
+    let (put, code) = match which {
+        "code" => (t::code_from_answer(answer), true),
+        "style" => (t::style_code_from_answer(answer), true),
+        _ => (t::char_from_hex_answer(answer).map(|c| c.map(String::from)), false),
+    };
+    match put {
+        Ok(p) => serde_json::json!({ "put": p, "code": code, "message": null }).to_string(),
+        Err(m) => serde_json::json!({ "put": null, "code": code, "message": m }).to_string(),
+    }
+}
+
+/// The prompts' texts and longest answers, as JSON {"code": [prompt, max], "style": ..., "char": ...}.
+#[wasm_bindgen]
+pub fn prompt_texts() -> String {
+    use bc_core::doctext as t;
+    serde_json::json!({
+        "code": [t::PROMPT_CODE, t::PROMPT_CODE_MAX],
+        "style": [t::PROMPT_STYLE, t::PROMPT_STYLE_MAX],
+        "char": [t::PROMPT_CHAR, t::PROMPT_CHAR_MAX],
+    })
+    .to_string()
+}
+
+/// The embossing progress window's status for message `msgid` and page `page`.
+#[wasm_bindgen]
+pub fn progress_text(msgid: u32, page: usize) -> String {
+    bc_core::emboss::progress_text(msgid, page, None)
+}
+
+/// Whether an opened file's saved view and caret are used: only for a file reopened from the recent documents list
+/// with a valid view font.
+#[wasm_bindgen]
+pub fn restores_view(in_recent: bool, view_font: u16) -> bool {
+    bc_core::dxfile::restores_view(in_recent, view_font)
 }
 
 /// The page (from 1) on which a character position of a document laid out `cells` by `lines` falls.
@@ -1655,10 +2095,19 @@ pub fn editor_style_level(step: i32, anchor: u32, caret: u32, cells: u32, lines:
             };
         }
         let pages = bc_core::format::format(&e.shown, &page_layout(cells, lines, braille), None);
-        let page = bc_core::format::locate(&pages, char_pos(&t, caret)).0;
+        let at = char_pos(&t, caret);
+        let (page, line, _) = bc_core::format::locate(&pages, at);
         let page_start = pages.get(page.saturating_sub(1)).map_or(0, |p| p.start);
         let start_r = e.shown.slice(0, page_start).to_running().chars().count();
-        let out = sl::change(&running, a, c, anchor != caret, step, start_r, sl::page_style(&running, start_r), sl::max_level(&running, c));
+        // The [hi] limit in force is read at the first place of the caret's formatted line (spec 34 8.1).
+        let line_start = pages
+            .get(page.saturating_sub(1))
+            .and_then(|p| p.lines.get(line.saturating_sub(1)))
+            .and_then(|l| l.sources.first())
+            .map_or(at, |s| s.min(at));
+        let line_r = e.shown.slice(0, line_start).to_running().chars().count();
+        let (page_style, max) = (sl::page_style(&running, start_r), sl::max_level(&running, line_r));
+        let out = sl::change(&running, a, c, anchor != caret, step, start_r, page_style, max);
         if out.changed {
             e.shown = Shown::from_running(&out.running);
         }
@@ -1762,6 +2211,12 @@ impl Embossers {
         find_model(&self.0, label).map(|m| m.driver().to_string()).unwrap_or_default()
     }
 
+    /// The driver a setup of a model uses with Legacy Mode `tiger_legacy` (bc_core::emboss_setup::driver_for).
+    pub fn setup_driver(&self, label: &str, tiger_legacy: bool) -> String {
+        let model = find_model(&self.0, label);
+        model.map(|m| bc_core::emboss_setup::driver_for(m, tiger_legacy).to_string()).unwrap_or_default()
+    }
+
     /// Whether a model has a flag (CanDoInterpoint, TranSend and the like).
     pub fn flag(&self, label: &str, key: &str) -> bool {
         find_model(&self.0, label).is_some_and(|m| m.flag(key))
@@ -1815,6 +2270,60 @@ impl Embossers {
     /// the braille pass's sides (spec 25 19.2): 0 every side, 1 the fronts, 2 the backs.
     #[allow(clippy::too_many_arguments)]
     pub fn job(&self, setup: &str, layout: &str, text: &str, braille: bool, cells: u32, lines: u32, copies: u32, pages: Vec<i32>, encoding: Vec<u8>, pass_sides: u8) -> Result<Vec<u8>, JsError> {
+        let (options, sides, which) =
+            self.job_input(setup, layout, text, braille, (cells, lines, copies), pages, encoding, pass_sides)?;
+        // The Typewriter driver's messages go as their bytes, without the status and answer: a browser has no FTDI
+        // library to answer them (spec 25 21), which is BrailleCraft's own choice (spec A17.9).
+        if options.typewriter {
+            return Ok(bc_core::emboss::typewriter_job(&options, &sides, copies, which).concat());
+        }
+        Ok(bc_core::emboss::job_sides(&options, &sides, copies, which))
+    }
+
+    /// The same job as `job`, in the pieces it is sent in a page at a time (the progress window shows each page and
+    /// Cancel stops the job between pages): JSON {"pages": the page number of each page piece, "pieces": the start
+    /// codes, each page, the end codes, as byte arrays}. A Typewriter job is one piece with no page.
+    #[allow(clippy::too_many_arguments)]
+    pub fn job_pieces(
+        &self,
+        setup: &str,
+        layout: &str,
+        text: &str,
+        braille: bool,
+        cells: u32,
+        lines: u32,
+        copies: u32,
+        pages: Vec<i32>,
+        encoding: Vec<u8>,
+        pass_sides: u8,
+    ) -> Result<String, JsError> {
+        let (options, sides, which) =
+            self.job_input(setup, layout, text, braille, (cells, lines, copies), pages, encoding, pass_sides)?;
+        if options.typewriter {
+            let all = bc_core::emboss::typewriter_job(&options, &sides, copies, which).concat();
+            return Ok(serde_json::json!({ "pages": [], "pieces": [all] }).to_string());
+        }
+        let p = bc_core::emboss::job_pieces(&options, &sides, copies, which);
+        let numbers: Vec<usize> = p.sides.iter().map(|s| s.0).collect();
+        let mut pieces = vec![p.start];
+        pieces.extend(p.sides.into_iter().map(|s| s.1));
+        pieces.push(p.end);
+        Ok(serde_json::json!({ "pages": numbers, "pieces": pieces }).to_string())
+    }
+
+    /// What a job is made from: its options, its sides and the sides the pass sends.
+    #[allow(clippy::too_many_arguments, clippy::type_complexity)]
+    fn job_input(
+        &self,
+        setup: &str,
+        layout: &str,
+        text: &str,
+        braille: bool,
+        (cells, lines, copies): (u32, u32, u32),
+        pages: Vec<i32>,
+        encoding: Vec<u8>,
+        pass_sides: u8,
+    ) -> Result<(bc_core::emboss::Options, Vec<Option<Vec<String>>>, bc_core::emboss::Sides), JsError> {
         let (s, l) = parse(setup, layout)?;
         let model = find_model(&self.0, &s.model).ok_or_else(|| JsError::new("Embosser not found."))?;
         let laid = laid_out(text, cells, lines, braille);
@@ -1831,11 +2340,7 @@ impl Embossers {
             2 => bc_core::emboss::Sides::Backs,
             _ => bc_core::emboss::Sides::All,
         };
-        // The Typewriter driver's messages go as their bytes: a browser has no FTDI library (spec 25 21).
-        if options.typewriter {
-            return Ok(bc_core::emboss::typewriter_job(&options, &sides, copies, which).concat());
-        }
-        Ok(bc_core::emboss::job_sides(&options, &sides, copies, which))
+        Ok((options, sides, which))
     }
 
     /// Whether a job through this setup and layout is embossed in two passes, fronts then backs (spec 25 19.1): a
@@ -1950,6 +2455,7 @@ fn read_printer_setup(setup: &str, paper: &str, landscape: bool, margins: &[Stri
         Some(m) if m.len() == 4 => {
             s.margins = [m[0], m[1], m[2], m[3]];
             s.metric = margins[0].to_lowercase().contains("mm");
+            s.margins_stored = true;
             Ok(s.to_text())
         }
         _ => Err("Each margin must be a number of 0 or more, in inches (for example 1\") or in millimetres (for example 25 mm)."),
@@ -1984,6 +2490,56 @@ mod tests {
     use super::*;
 
     #[test]
+    fn learning_steps_select_the_step_in_use() {
+        let text = String::from_utf8(shipped("tables/languages.tsv")).unwrap();
+        let list = LanguageList::new(&text).ok().unwrap();
+        let with_steps = |i: &usize| list.0.courses(*i).iter().any(|c| c.steps.len() > 1);
+        let (entry, e) = list.0.entries.iter().enumerate().find(|(i, _)| with_steps(i)).unwrap();
+        let courses = list.0.courses(entry);
+        let (c, course) = courses.iter().enumerate().find(|(_, c)| c.steps.len() > 1).unwrap();
+        let mut tables = e.tables.to_vec();
+        tables[0] = e.steps[course.steps[1]].table.clone();
+        let s: serde_json::Value = serde_json::from_str(&list.steps(tables, c)).unwrap();
+        assert_eq!(s["selected"], 1);
+        assert!(s.get("title").is_none());
+        let s: serde_json::Value = serde_json::from_str(&list.steps(e.tables.to_vec(), c)).unwrap();
+        assert_eq!(s["selected"], 0);
+    }
+
+    #[test]
+    fn goto_exact_and_closest() {
+        // Two pages of 3 lines of 10 cells: "ab" then an empty line and "cd" on the first page.
+        let text = "ab\n\ncd\nef\ngh";
+        let at = |p, l, c| exact_position(text, 10, 3, false, p, l, c);
+        assert_eq!(at(1, 1, 1), 0);
+        assert_eq!(at(1, 1, 5), -1);
+        let closest = closest_position(text, 10, 3, false, 1, 1, 5);
+        assert_eq!(closest, 1);
+        assert_eq!(locate(text, 10, 3, false, 0), vec![1, 1, 1]);
+        assert_eq!(import_refusal("Docx", b""), "");
+        assert_eq!(import_refusal("Unsupported", b"x"), bc_core::filekind::UNSUPPORTED);
+    }
+
+    #[test]
+    fn dialog_rule_exports() {
+        assert_eq!(code_list_shown(false, 0).len(), 0);
+        let o: serde_json::Value = serde_json::from_str(&code_list_ok("", "abc")).unwrap();
+        assert_eq!(o["insert"], serde_json::json!(["abc", false]));
+        let d: serde_json::Value = serde_json::from_str(&page_number_disabled(vec![2, 0, 0, 0])).unwrap();
+        assert_eq!(d[2][2], true);
+        assert_eq!(number_field("123456", 5), Some(12345.0));
+        assert_eq!(number_field(" 5", 0), None);
+        let p: serde_json::Value = serde_json::from_str(&prompt_answer("style", "/h1.")).unwrap();
+        assert_eq!(p["put"], "[ee~h1.]");
+        let p: serde_json::Value = serde_json::from_str(&prompt_answer("code", "ff x")).unwrap();
+        assert_eq!(p["message"], bc_core::doctext::NO_SPACES);
+        let p: serde_json::Value = serde_json::from_str(&prompt_answer("char", "U+0041")).unwrap();
+        assert_eq!(p["put"], "A");
+        assert_eq!(progress_text(28002, 3), "Embossing Page 3");
+        assert!(!restores_view(false, 1202));
+    }
+
+    #[test]
     fn layout_and_emboss_on_two_pages() {
         // Three lines on pages of two lines: two pages, each ended by a form feed.
         let text = "ab[l]cd[l]ef";
@@ -2014,6 +2570,8 @@ mod tests {
             sections: Vec::new(),
             layout: None,
             print_page: (0, 0),
+            caret: 0,
+            ebraille: None,
         };
         let read = read_document(&dxfile::write(&doc)).ok().unwrap();
         assert!(read.braille());
@@ -2024,6 +2582,55 @@ mod tests {
 
     fn shipped(path: &str) -> Vec<u8> {
         std::fs::read(format!("{}/../../{path}", env!("CARGO_MANIFEST_DIR"))).unwrap()
+    }
+
+    /// A print document with the tables NLAACP, its "initial" style holding [g1l].
+    fn print_document_for_test() -> Document {
+        Document(DxDocument {
+            kind: DocumentKind::Print,
+            version: 1,
+            page_numbering: [0; 5],
+            translated_line: false,
+            six_key: false,
+            tables: ["NLAACP".into(), "".into(), "".into(), "".into()],
+            text: "Tekst".into(),
+            styles: vec![("initial".into(), Shown::marked("[g1l]").to_running(), String::new())],
+            style_index: Vec::new(),
+            coded_view: false,
+            hyphenation: 2,
+            view_font: 1201,
+            settings: Vec::new(),
+            embosser: String::new(),
+            sections: Vec::new(),
+            layout: None,
+            print_page: (0, 0),
+            caret: 0,
+            ebraille: None,
+        })
+    }
+
+    #[test]
+    fn web_older_format_save_uses_the_initial_codes() {
+        let file = print_document_for_test();
+        let older = |d: &Document| {
+            let bytes = d.save_version("Tekst", "", "", 65, 54, 0, 40, 25, 0, 0, 0).ok().unwrap();
+            read_document(&bytes).ok().unwrap()
+        };
+        assert_eq!(older(&file).0.tables[0], "NLAAUP");
+        let mut plain = print_document_for_test();
+        plain.0.styles.clear();
+        assert_eq!(older(&plain).0.tables[0], "NLAACP");
+    }
+
+    #[test]
+    fn web_braille_document_saves_its_own_print_page() {
+        let mut file = print_document_for_test();
+        file.0.kind = DocumentKind::Braille;
+        let bytes = file.save_version("abc", "", "", 40, 25, 1, 40, 25, 0, 30, 60).ok().unwrap();
+        let saved = read_document(&bytes).ok().unwrap();
+        assert_eq!(saved.print_page(54, 65), vec![30, 60]);
+        // A file with no print page takes the Global, Printer Setup page size.
+        assert_eq!(file.print_page(50, 70), vec![50, 70]);
     }
 
     #[test]
@@ -2039,10 +2646,14 @@ mod tests {
             assert!(!web.is_empty());
         }
         let table = String::from_utf8(shipped("tables/table-txxtxa-binary-forward.bmt")).unwrap();
-        let web = latex(text, &table, &shipped("tables/rule-scripts/latex.rules")).ok().unwrap();
+        let file = print_document_for_test();
+        let list = LanguageList::new(&String::from_utf8(shipped("tables/languages.tsv")).unwrap()).ok().unwrap();
+        let web = latex(text, &table, &shipped("tables/rule-scripts/latex.rules"), &file, &list).ok().unwrap();
         let set = bc_core::engine::TableSet::open(&folder).unwrap();
         let running = Shown::marked(text).to_running();
-        let middle: Vec<u8> = set.translator_with_scan("txxtxa", "binary").unwrap().translate_marked(&running, None, None).unwrap().chars().map(|c| c as u32 as u8).collect();
+        let styles = style_table(&file.0);
+        let tr = set.translator_with_scan("txxtxa", "binary").unwrap();
+        let middle: Vec<u8> = tr.text_export(&running, Some(&styles), None).unwrap();
         let desktop = RuleScript::open(&folder.join("rule-scripts/latex.rules")).unwrap().run(&middle).unwrap();
         assert_eq!(web, desktop);
         assert!(String::from_utf8_lossy(&web).contains("cat"), "{}", String::from_utf8_lossy(&web));
@@ -2066,7 +2677,7 @@ mod tests {
         let template = String::from_utf8(shipped("templates/english-ueb-basic.template")).unwrap_or_default();
         let doc = new_document(false, "The cat.", &template);
         for version in [1, 0] {
-            let bytes = doc.save_version("The dog.", "Everest", "", 40, 25, version, 40, 25).ok().unwrap();
+            let bytes = doc.save_version("The dog.", "Everest", "", 40, 25, version, 40, 25, 0, 0, 0).ok().unwrap();
             let back = read_document(&bytes).ok().unwrap();
             assert_eq!((back.text(), back.embosser(), back.braille()), ("The dog.".to_string(), "Everest".to_string(), false));
         }
@@ -2146,6 +2757,24 @@ mod tests {
         assert_eq!(list.tables(active).len(), 4);
     }
 
+    /// The codes in force from the start are the beginning codes of the template's "initial" style; Learning Tables
+    /// changes them in that style, and a document without one gets it added, so the file keeps them.
+    #[test]
+    fn the_initial_codes_are_the_initial_style() {
+        let template = "TranslationTables: AFRUCP+ENUDXP/AFRUCB+GENDXB\nStyles: \ninitial\n  [g2u][caplv3]\n  \npara.\n  [p]\n  \n";
+        let mut doc = new_document(false, "", template);
+        assert_eq!(doc.initial_codes(), "[g2u][caplv3]");
+        doc.set_initial_codes("[g1l][caplv3]");
+        assert_eq!(doc.initial_codes(), "[g1l][caplv3]");
+        assert_eq!(doc.0.styles.iter().filter(|s| s.0 == "initial").count(), 1);
+        let mut plain = new_document(false, "", "");
+        assert_eq!(plain.initial_codes(), "");
+        plain.set_initial_codes("[g1l]");
+        assert_eq!(plain.initial_codes(), "[g1l]");
+        let back = read_document(&dxfile::write(&plain.0)).ok().unwrap();
+        assert_eq!(back.initial_codes(), "[g1l]");
+    }
+
     #[test]
     fn the_editor_keeps_codes_apart_from_brackets_in_the_text() {
         use bc_core::doctext::{CLOSE, OPEN};
@@ -2220,10 +2849,14 @@ mod tests {
     fn styles_are_added_changed_renamed_and_removed() {
         let mut doc = new_document(false, "", "");
         let n = doc.style_names().len();
-        assert_eq!(doc.add_style("New Style Name", "", "", ""), "You must give the style a name other than \"New Style Name\".");
-        assert!(doc.add_style("bad name", "", "", "").starts_with("The style name contains invalid characters."));
+        assert!(style_name_problem("New Style Name", false).starts_with("You must give the style a name other than"));
+        assert!(style_name_problem("bad name", false).starts_with("The style name contains invalid characters."));
+        assert_eq!(style_name_problem("bad name", true), "");
+        assert_eq!(doc.add_style("Quote", "", "[ind2]", ""), "");
+        // A style of the same name in another case is replaced.
+        assert!(doc.has_style("quote"));
         assert_eq!(doc.add_style("quote", "", "[ind4][rm4]", "[p]"), "");
-        assert_eq!(doc.add_style("quote", "", "", ""), "Unable to add style to style list.");
+        assert_eq!(doc.style_codes("Quote"), "");
         assert_eq!(doc.add_style("quote2", "quote", "", "[l]"), "");
         assert_eq!(doc.style_codes("quote2"), r#"["[ind4][rm4]","[l]"]"#);
         doc.set_style_codes("quote2", "[ind4][rm4]", "[p]");
@@ -2234,6 +2867,16 @@ mod tests {
         assert!(doc.style_names().contains(&"block".to_string()) && doc.style_codes("quote").is_empty());
         doc.set_page_numbers(vec![0, 2, 0, 4, 7]);
         assert_eq!(doc.page_numbers(), vec![0, 2, 0, 4, 7]);
+    }
+
+    #[test]
+    fn add_style_long_non_nested_name_is_kept() {
+        let mut doc = new_document(false, "", "");
+        let name = format!("{}.", "a".repeat(31));
+        assert!(style_name_overruns_codes(&name));
+        assert_eq!(doc.add_style(&name, "", "[ind2]", "[p]"), "");
+        assert!(doc.style_names().contains(&name));
+        assert_eq!(doc.style_codes(&name), r#"["[ind2]","[p]"]"#);
     }
 
     #[test]

@@ -297,8 +297,9 @@ pub fn load(s: &mut Settings) {
     if let Some(v) = get_text(ROOT, "BrailleEncoding") {
         s.encoding = v;
     }
-    if let Some(v) = get_text(ROOT, "ChordKeys").filter(|v| v.chars().count() == 6) {
-        s.six_key_set = v;
+    // A kept six-key set that is not one the set check takes leaves the default "fdsjkl".
+    if let Some(v) = get_text(ROOT, "ChordKeys").filter(|v| bc_core::sixkey::six_key_set_problem(v).is_none()) {
+        s.six_key_set = v.to_lowercase();
     }
     let d = &mut s.default_views;
     if let Some(n) = get_number("Display", "dftrans").and_then(|n| VIEW_FONTS.get(n as usize)) {
@@ -416,6 +417,13 @@ pub fn save_region(region: u32) {
     set(ROOT, "TranslationRegion", &region.to_string());
 }
 
+/// BypassStyleNameValidityCheck (no section, default 0, spec 18): when on, Document, Add Style takes a style name
+/// whatever characters it holds.
+pub fn load_bypass_style_name_check() -> bool {
+    const KEY: &str = "BypassStyleNameValidityCheck";
+    get_number(ROOT, KEY).map(|v| v != 0).or_else(|| get_bool(ROOT, KEY)).unwrap_or(false)
+}
+
 /// The template File, New selects (Mark template as default); none when no default has been chosen.
 pub fn load_default_template() -> Option<String> {
     get_text(ROOT, "DefaultTemplate")
@@ -490,7 +498,7 @@ pub fn save_printer(p: &crate::print::PrinterSetup) {
     set(crate::print::PrinterSetup::SECTION, "Setup", &p.to_text());
 }
 
-/// Global, Shortcut Preferences.
+/// Global, Shortcut Preferences, OK: the six shortcut codes.
 pub fn save_shortcuts(k: &Shortcuts) {
     let s = Shortcuts::SECTION;
     set(s, "Grade0Code", &k.grade0);
@@ -499,8 +507,14 @@ pub fn save_shortcuts(k: &Shortcuts) {
     set(s, "NewLineCode", &k.new_line);
     set(s, "NewPageCode", &k.new_page);
     set(s, "NewRefPageCode", &k.new_ref_page);
-    set(s, "PageNav", Shortcuts::PAGE_NAV[k.page_nav.min(2)]);
-    set(s, "ControlPageNav", Shortcuts::PAGE_NAV[k.control_page_nav.min(2)]);
+}
+
+/// Global, Shortcut Preferences, a page-navigation radio button: Page Up and Page Down (PageNav) and with Control
+/// (ControlPageNav), written as soon as a button is clicked, whether or not OK follows.
+pub fn save_page_nav(page_nav: usize, control_page_nav: usize) {
+    let s = Shortcuts::SECTION;
+    set(s, "PageNav", Shortcuts::PAGE_NAV[page_nav.min(2)]);
+    set(s, "ControlPageNav", Shortcuts::PAGE_NAV[control_page_nav.min(2)]);
 }
 
 /// The code page text files are imported in, as the import dialog last chose it.
@@ -626,6 +640,13 @@ mod tests {
         assert_eq!(s.get(ROOT, "ChordKeys"), Some("asdjkl"));
         assert_eq!(s.get("Fonts", "PrintFont"), Some("Courier New"));
         assert_eq!(s.sections.values().map(|v| v.len()).sum::<usize>(), 2);
+    }
+
+    #[test]
+    fn page_nav_values_are_kept_words() {
+        assert_eq!(Shortcuts::PAGE_NAV, ["screen", "page", "pageTop"]);
+        let d = crate::app::Settings::default().shortcuts;
+        assert_eq!((Shortcuts::PAGE_NAV[d.page_nav], Shortcuts::PAGE_NAV[d.control_page_nav]), ("screen", "page"));
     }
 
     #[test]

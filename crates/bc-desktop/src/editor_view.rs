@@ -248,6 +248,18 @@ impl Area {
         };
     }
 
+    /// The place on the keyboard of the key being handled, named by what it gives on the US layout (six-key entry,
+    /// bc_core::sixkey); None for a key that is no letter and none of the keys a six-key set may hold.
+    pub fn raw_key_place(&self) -> Option<char> {
+        let raw = unsafe { ffi::wxd_DocEditor_GetRawKey(self.0) };
+        let raw = u32::try_from(raw).ok()?;
+        if cfg!(target_os = "macos") {
+            bc_core::sixkey::key_of_mac_code(raw)
+        } else {
+            bc_core::sixkey::key_of_scan_code(raw)
+        }
+    }
+
     /// The first row shown and the number of whole rows shown.
     pub fn top_row(&self) -> usize {
         unsafe { ffi::wxd_DocEditor_GetTopRow(self.0).max(0) as usize }
@@ -296,5 +308,17 @@ mod tests {
         let ed = Editor::new(Shown::marked("a\u{a0}[es~h1.]b"), bc_core::format::Layout::braille(40, 25), None, true, 42);
         assert_eq!(row_form(&ed, 0, &ed.row_text(0), None, true), "a\u{e000}[']\u{e001}");
         assert_eq!(row_form(&ed, 1, &ed.row_text(1), None, true), "\u{e000}<h1.>\u{e001}b");
+    }
+
+    /// A braille document shown in the print font gets no encoding for its cells (show_area gives none), so its
+    /// cells are never turned into patterns; the text inside a code is never converted.
+    #[test]
+    fn print_font_cells_stay_and_code_text_is_not_converted() {
+        let enc = crate::encodings::find(crate::encodings::DEFAULT);
+        let ed = Editor::new(Shown::marked("ab[g1]c"), bc_core::format::Layout::braille(40, 25), None, true, 42);
+        let text = ed.row_text(0);
+        assert_eq!(row_form(&ed, 0, &text, None, false), "ab[g1]c");
+        let patterns = row_form(&ed, 0, &text, Some(enc), false);
+        assert!(patterns.contains("[g1]"));
     }
 }

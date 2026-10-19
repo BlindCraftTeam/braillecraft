@@ -32,13 +32,19 @@ pub const NEW_STYLE_NAME: &str = "New Style Name";
 /// What BrailleCraft says about a new style's name in Document, Add Style, or None when it is accepted: empty,
 /// longer than 31, still the starting name, or a character other than a letter, a digit, period, hyphen or underscore.
 pub fn style_name_problem(name: &str) -> Option<String> {
+    style_name_problem_with(name, false)
+}
+
+/// As style_name_problem; with `bypass` (the setting BypassStyleNameValidityCheck, spec 18) the check of the
+/// characters is left out.
+pub fn style_name_problem_with(name: &str, bypass: bool) -> Option<String> {
     if name.is_empty() {
         Some("The style name is empty.".into())
     } else if name.chars().count() > 31 {
         Some("The style name is too long.  It must not be greater than 31 characters.".into())
     } else if name.eq_ignore_ascii_case(NEW_STYLE_NAME) {
         Some(format!("You must give the style a name other than \"{NEW_STYLE_NAME}\"."))
-    } else if !name.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-')) {
+    } else if !bypass && !name.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-')) {
         Some("The style name contains invalid characters.  Style names may only contain letters (uppercase and lowercase), numbers, the period, the hyphen, and the underscore.".into())
     } else {
         None
@@ -232,6 +238,28 @@ impl Shown {
             }
         }
         out
+    }
+
+    /// The place in running text (one character for each byte of a document file's body) of the editor's place
+    /// `pos`: the editor's own line break after a [p] or [l] code takes no place, a line break shown for the
+    /// new-line code takes the code's three (spec 05 section A10, the caret kept in a document file).
+    pub fn running_place(&self, pos: usize) -> usize {
+        self.slice(0, pos.min(self.text.chars().count())).to_running().chars().count()
+    }
+
+    /// The editor's place for the place `place` in `running` (the reverse of running_place; a place inside a code
+    /// goes to the code's end).
+    pub fn shown_place(running: &str, place: usize) -> usize {
+        let prefix: String = running.chars().take(place).collect();
+        // A code cut short is ended so it counts whole.
+        let open = prefix.chars().filter(|&c| c == OPEN).count();
+        let close = prefix.chars().filter(|&c| c == CLOSE).count();
+        let mut whole = prefix;
+        if open > close {
+            whole.extend(running.chars().skip(place).take_while(|&c| c != CLOSE));
+            whole.push(CLOSE);
+        }
+        Shown::from_running(&whole).text.chars().count()
     }
 
     /// The part from character `from` to character `to`, with the codes wholly inside it.
@@ -556,8 +584,325 @@ fn matching(chars: &[char], i: usize) -> Option<usize> {
     None
 }
 
+// ------------------------------------------------------------------ the one-line prompts (dialog 30070)
+
+/// Message 3777, the prompt of the insert-code key (F9, Ctrl+[).
+pub const PROMPT_CODE: &str = "Enter code and parameters";
+/// Message 3803, the prompt of the insert-style key (Ctrl+F9, Ctrl+<).
+pub const PROMPT_STYLE: &str = "Enter style name";
+/// Message 3805, the prompt of the insert-character key (Alt+F9, Ctrl+]).
+pub const PROMPT_CHAR: &str = "Enter Unicode code number";
+/// The longest answer each prompt takes: one less than its buffer (2001, 2000 and 49 characters).
+pub const PROMPT_CODE_MAX: usize = 2000;
+pub const PROMPT_STYLE_MAX: usize = 1999;
+pub const PROMPT_CHAR_MAX: usize = 48;
+/// Message 2678, for an answer holding a space.
+pub const NO_SPACES: &str = "The parameters to a code must not contain spaces.";
+/// The message for a character number that is not two or four hexadecimal digits.
+pub const HEX_DIGITS: &str = "Value must be either 2 or four hexadecimal digits";
+
+/// The code range holding `pos` and its name. INFERENCE: "the caret is on a code" is taken as the caret at the
+/// code's opening bracket or inside it; the exact test is not known.
+fn code_holding(doc: &Shown, pos: usize) -> Option<((usize, usize), String)> {
+    let span = *doc.codes.iter().find(|c| c.0 <= pos && pos < c.1)?;
+    Some((span, doc.code_at(span.0)?))
+}
+
+/// The insert-code prompt's default text and, when the caret is on a code, that code's range, which the answer
+/// replaces: the code without its brackets. Elsewhere, and in the formatted view (`coded_view` false), the default
+/// is empty and the answer is put in at the caret. INFERENCE: the view flag that empties the default is taken to
+/// be the coded view off.
+pub fn code_prompt_default(doc: &Shown, pos: usize, coded_view: bool) -> (String, Option<(usize, usize)>) {
+    match code_holding(doc, pos).filter(|_| coded_view) {
+        Some((span, name)) => (name, Some(span)),
+        None => (String::new(), None),
+    }
+}
+
+/// The code the insert-code prompt's answer puts in: the answer closed as a code ("[answer]"); None for an empty
+/// answer (nothing is put in); NO_SPACES when it holds a space.
+pub fn code_from_answer(answer: &str) -> Result<Option<String>, &'static str> {
+    if answer.is_empty() {
+        Ok(None)
+    } else if answer.contains(' ') {
+        Err(NO_SPACES)
+    } else {
+        Ok(Some(format!("[{answer}]")))
+    }
+}
+
+/// The insert-style prompt's default text and the range it replaces: a style start [es~NAME] at the caret gives
+/// "NAME", a style end [ee~NAME] gives "/NAME"; elsewhere empty, put in at the caret.
+pub fn style_prompt_default(doc: &Shown, pos: usize) -> (String, Option<(usize, usize)>) {
+    if let Some((span, name)) = code_holding(doc, pos) {
+        if let Some(n) = name.strip_prefix("es~") {
+            return (n.to_string(), Some(span));
+        }
+        if let Some(n) = name.strip_prefix("ee~") {
+            return (format!("/{n}"), Some(span));
+        }
+    }
+    (String::new(), None)
+}
+
+/// The style code the insert-style prompt's answer puts in: "/NAME" ends the style ([ee~NAME]), "NAME" starts it
+/// ([es~NAME]); None for an empty answer; NO_SPACES when it holds a space.
+pub fn style_code_from_answer(answer: &str) -> Result<Option<String>, &'static str> {
+    if answer.is_empty() {
+        Ok(None)
+    } else if answer.contains(' ') {
+        Err(NO_SPACES)
+    } else if let Some(name) = answer.strip_prefix('/') {
+        Ok(Some(format!("[ee~{name}]")))
+    } else {
+        Ok(Some(format!("[es~{answer}]")))
+    }
+}
+
+/// The character the insert-character prompt's answer names: "U+" or "u+" and then, or with no prefix, exactly 2
+/// or exactly 4 hexadecimal digits, a Unicode code number. None for an empty answer; HEX_DIGITS for anything
+/// else. INFERENCE: a "D+" or "d+" answer (a DUSCI number) is refused with the same message, as the DUSCI rules
+/// are not known.
+pub fn char_from_hex_answer(answer: &str) -> Result<Option<char>, &'static str> {
+    if answer.is_empty() {
+        return Ok(None);
+    }
+    let digits = answer.strip_prefix("U+").or_else(|| answer.strip_prefix("u+")).unwrap_or(answer);
+    if !matches!(digits.len(), 2 | 4) || !digits.bytes().all(|b| b.is_ascii_hexdigit()) {
+        return Err(HEX_DIGITS);
+    }
+    u32::from_str_radix(digits, 16).ok().and_then(char::from_u32).map(Some).ok_or(HEX_DIGITS)
+}
+
+// ------------------------------------------------------------------ the style lists of the style dialogs
+
+/// The Show choices of Apply Style, Delete Style, Modify Style and Add Style, in their order (strings 3823, 3821,
+/// 3819, 3817).
+pub const STYLE_SHOW: [&str; 4] =
+    ["Only Recommended Styles", "Styles In-Use", "Recommended and In-Use Styles", "All Styles"];
+/// The Show choice a style dialog opens with: "Recommended and In-Use Styles".
+pub const STYLE_SHOW_DEFAULT: usize = 2;
+
+/// Whether a style is recommended (the Show filter): its beginning codes (running text) hold no [ypr0] code, the
+/// code compared with case ignored.
+pub fn style_recommended(begin_running: &str) -> bool {
+    !begin_running.to_ascii_lowercase().contains(&format!("{OPEN}ypr0{CLOSE}"))
+}
+
+/// The names of the styles in use in a document (running text): every style start or end code [es~NAME] or
+/// [ee~NAME] in it, the names in small letters. INFERENCE: the names are matched with case ignored, as every other
+/// style name lookup is.
+pub fn styles_in_use(running: &str) -> Vec<String> {
+    let mut names: Vec<String> = Vec::new();
+    let chars: Vec<char> = running.chars().collect();
+    let mut p = 0;
+    while p + 4 <= chars.len() {
+        let kind = (chars[p + 1].to_ascii_lowercase(), chars[p + 2].to_ascii_lowercase());
+        if chars[p] == OPEN && chars[p + 3] == '~' && matches!(kind, ('e', 's') | ('e', 'e')) {
+            let name: String = chars[p + 4..].iter().take_while(|&&c| c != CLOSE && c != OPEN).collect();
+            let name = name.to_lowercase();
+            if !names.contains(&name) {
+                names.push(name);
+            }
+            p += 4;
+        } else {
+            p += 1;
+        }
+    }
+    names
+}
+
+/// The order of the style dialogs' lists: by name, byte by byte with A to Z taken as a to z, a name that begins
+/// another first; names equal but for case keep their order. Names holding ":" are never listed.
+pub fn style_list_order(names: &[String]) -> Vec<String> {
+    let mut listed: Vec<String> = names.iter().filter(|n| !n.contains(':')).cloned().collect();
+    listed.sort_by_key(|n| n.to_ascii_lowercase().into_bytes());
+    listed
+}
+
+/// A style dialog's list: the styles (name, beginning codes in running text) in list order, filtered by the Show
+/// choice `show` (STYLE_SHOW: recommended; in use; recommended or in use; all), `in_use` as styles_in_use gives it.
+pub fn style_list(styles: &[(String, String)], show: usize, in_use: &[String]) -> Vec<String> {
+    let used = |n: &str| in_use.iter().any(|u| u.eq_ignore_ascii_case(n));
+    let recommended = |n: &str| styles.iter().find(|s| s.0 == n).is_some_and(|s| style_recommended(&s.1));
+    let names: Vec<String> = styles.iter().map(|s| s.0.clone()).collect();
+    style_list_order(&names)
+        .into_iter()
+        .filter(|n| match show {
+            0 => recommended(n),
+            1 => used(n),
+            2 => recommended(n) || used(n),
+            _ => true,
+        })
+        .collect()
+}
+
+/// The place of the style named `name` (case ignored) among `names`.
+pub fn style_index_ignoring_case(names: &[String], name: &str) -> Option<usize> {
+    names.iter().position(|n| n.eq_ignore_ascii_case(name))
+}
+
+/// Add Style's basis list: the style whose codes item `k` (1 or more; 0 is "(No Style)") puts in the code fields.
+/// The item's style is looked up as the place in the whole sorted list (`names` sorted, names with ":" included) of
+/// the style listed at `k` (`listed`, without "(No Style)"), less one: so the style before it in the whole list,
+/// which is the item's own style when every style is listed; past the last listed style the first style.
+pub fn basis_style(names: &[String], listed: &[String], k: usize) -> Option<String> {
+    if k == 0 {
+        return None;
+    }
+    let mut all = names.to_vec();
+    all.sort_by_key(|n| n.to_ascii_lowercase().into_bytes());
+    let place = listed.get(k).and_then(|n| all.iter().position(|a| a == n)).map_or(-1, |p| p as i64);
+    let at = place - 1;
+    all.get(at.max(0) as usize).cloned()
+}
+
+/// Add Style: a name that, with the period added, is 32 characters long runs into the beginning codes typed, which
+/// are then empty when Edit Style Codes opens.
+pub fn style_name_overruns_codes(name: &str) -> bool {
+    name.len() >= 32
+}
+
+#[cfg(test)]
+mod style_list_tests {
+    use super::*;
+
+    fn v(names: &[&str]) -> Vec<String> {
+        names.iter().map(|n| n.to_string()).collect()
+    }
+
+    #[test]
+    fn style_list_order_ignores_case_and_drops_colons() {
+        let names = v(&["b", "A.", "_x", "a-b", "Z", "2a", "has:colon"]);
+        assert_eq!(style_list_order(&names), v(&["2a", "_x", "a-b", "A.", "b", "Z"]));
+    }
+
+    #[test]
+    fn style_list_order_is_stable_for_case_twins() {
+        assert_eq!(style_list_order(&v(&["B", "b"])), v(&["B", "b"]));
+    }
+
+    #[test]
+    fn recommended_unless_ypr0() {
+        assert!(!style_recommended("\u{1c}ypr0\u{1f}"));
+        assert!(!style_recommended("\u{1c}g1\u{1f}\u{1c}YPR0\u{1f}"));
+        assert!(style_recommended("\u{1c}ypr1\u{1f}"));
+        assert!(style_recommended(""));
+    }
+
+    #[test]
+    fn in_use_reads_start_and_end_codes() {
+        let running = "a\u{1c}es~Quote.\u{1f}b\u{1c}ee~Quote.\u{1f}\u{1c}EE~bold\u{1f}\u{1c}p\u{1f}";
+        assert_eq!(styles_in_use(running), v(&["quote.", "bold"]));
+    }
+
+    #[test]
+    fn style_list_filters() {
+        let ypr = "\u{1c}ypr0\u{1f}".to_string();
+        let styles = vec![
+            ("b".to_string(), String::new()),
+            ("a".to_string(), ypr.clone()),
+            ("c".to_string(), ypr),
+            ("x:y".to_string(), String::new()),
+        ];
+        let used = v(&["a"]);
+        assert_eq!(style_list(&styles, 0, &used), v(&["b"]));
+        assert_eq!(style_list(&styles, 1, &used), v(&["a"]));
+        assert_eq!(style_list(&styles, 2, &used), v(&["a", "b"]));
+        assert_eq!(style_list(&styles, 3, &used), v(&["a", "b", "c"]));
+    }
+
+    #[test]
+    fn style_index_ignoring_case_finds_any_case() {
+        assert_eq!(style_index_ignoring_case(&v(&["Para.", "x"]), "para."), Some(0));
+        assert_eq!(style_index_ignoring_case(&v(&["Para.", "x"]), "y"), None);
+    }
+
+    #[test]
+    fn basis_item_takes_the_style_before_it_in_the_whole_list() {
+        let names = v(&["c", "a", "b"]);
+        let all = v(&["a", "b", "c"]);
+        assert_eq!(basis_style(&names, &all, 0), None);
+        assert_eq!(basis_style(&names, &all, 1).as_deref(), Some("a"));
+        assert_eq!(basis_style(&names, &all, 2).as_deref(), Some("b"));
+        // The last item: past the listed styles, the first style.
+        assert_eq!(basis_style(&names, &all, 3).as_deref(), Some("a"));
+        // With a filter hiding "a" the list is "b", "c": item 1 looks up "c" and takes the style before it, "b";
+        // item 2 is past the listed styles and takes "a", another style's codes.
+        let listed = v(&["b", "c"]);
+        assert_eq!(basis_style(&names, &listed, 1).as_deref(), Some("b"));
+        assert_eq!(basis_style(&names, &listed, 2).as_deref(), Some("a"));
+    }
+
+    #[test]
+    fn style_name_problem_with_bypass() {
+        assert!(style_name_problem_with("a b", true).is_none());
+        assert!(style_name_problem_with("a b", false).is_some());
+        assert!(style_name_problem_with("", true).is_some());
+        assert!(style_name_problem_with(&"x".repeat(32), true).is_some());
+    }
+}
+
+#[cfg(test)]
+mod prompt_tests {
+    use super::*;
+
+    #[test]
+    fn code_answers() {
+        assert_eq!(code_from_answer("ff"), Ok(Some("[ff]".to_string())));
+        assert_eq!(code_from_answer("ff x"), Err(NO_SPACES));
+        assert_eq!(code_from_answer(""), Ok(None));
+    }
+
+    #[test]
+    fn style_answers() {
+        assert_eq!(style_code_from_answer("/h1."), Ok(Some("[ee~h1.]".to_string())));
+        assert_eq!(style_code_from_answer("h1."), Ok(Some("[es~h1.]".to_string())));
+        assert_eq!(style_code_from_answer("h 1."), Err(NO_SPACES));
+    }
+
+    #[test]
+    fn prompt_defaults() {
+        let doc = Shown::marked("[pg]abc");
+        assert_eq!(code_prompt_default(&doc, 0, true), ("pg".to_string(), Some((0, 4))));
+        assert_eq!(code_prompt_default(&doc, 0, false), (String::new(), None));
+        assert_eq!(code_prompt_default(&doc, 5, true), (String::new(), None));
+        let doc = Shown::marked("x[ee~x]");
+        assert_eq!(style_prompt_default(&doc, 1), ("/x".to_string(), Some((1, 7))));
+        let doc = Shown::marked("[es~h1.]");
+        assert_eq!(style_prompt_default(&doc, 0).0, "h1.");
+        assert_eq!(style_prompt_default(&Shown::plain("abc"), 1), (String::new(), None));
+    }
+
+    #[test]
+    fn char_answers() {
+        assert_eq!(char_from_hex_answer("41"), Ok(Some('A')));
+        assert_eq!(char_from_hex_answer("U+0041"), Ok(Some('A')));
+        assert_eq!(char_from_hex_answer("u+00e9"), Ok(Some('é')));
+        assert_eq!(char_from_hex_answer("123"), Err(HEX_DIGITS));
+        assert_eq!(char_from_hex_answer("zz"), Err(HEX_DIGITS));
+        assert_eq!(char_from_hex_answer(""), Ok(None));
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    /// An editor place and a place in the file body convert both ways, the editor's own line break after [p] taking
+    /// no place and a shown new-line code taking three.
+    #[test]
+    fn editor_places_map_to_body_places_and_back() {
+        use super::*;
+        let running = format!("ab{OPEN}p{CLOSE}cd{OPEN}<{CLOSE}ef");
+        let shown = Shown::from_running(&running);
+        assert_eq!(shown.text, "ab[p]\ncd\nef");
+        for (pos, place) in [(0, 0), (2, 2), (5, 5), (6, 5), (8, 7), (9, 10), (11, 12)] {
+            assert_eq!(shown.running_place(pos), place, "pos {pos}");
+        }
+        for (place, pos) in [(0, 0), (2, 2), (3, 6), (5, 6), (7, 8), (10, 9), (12, 11)] {
+            assert_eq!(Shown::shown_place(&running, place), pos, "place {place}");
+        }
+    }
+
     use super::*;
 
     /// The one-pass code names are the names code_at reads one by one, codes inside codes included, with text

@@ -1,9 +1,22 @@
 //! What the Layout menu's code items insert, by command id, and the code vocabulary for Layout, Code List (shared by
-//! the desktop program and the web build). A pair wraps the selection: the first part before it, the second after it.
+//! the desktop program and the web build). With a selection:
+//! - a text item (a code, a sign, the hard space) first asks REPLACE_QUESTION (No and Yes); No leaves the text as it
+//!   is, Yes deletes the selection and puts the item in its place;
+//! - a pair puts its first part at the start of the selection and its second at its end, and the same text stays
+//!   selected between them (`pair_selection`);
+//! - an each-line item goes before every line start inside the selection and at its start (`each_line_places`).
+//!
+//! Without a selection an item goes in at the caret with the caret after it; a pair leaves the caret between its
+//! two parts.
+
+/// Asked before a text item replaces the selection.
+pub const REPLACE_QUESTION: &str = "Are you sure you want to delete the selected text and replace it with the code you've just chosen?";
 
 pub enum Insert {
     Text(&'static str),
     Pair(&'static str, &'static str),
+    /// Put before every line start inside the selection and at its start (Grade 1 in math, Grade 1 with letter sign).
+    EachLine(&'static str),
     /// Taken from the Global, Shortcut Preferences settings or from the document.
     Setting(Dynamic),
 }
@@ -81,8 +94,8 @@ pub fn insert(id: i32) -> Option<Insert> {
         2310 => Pair("[fs]", "[fl][fe]"),
         2311 => Pair("[sqrts]", "[sqrte]"),
         2312 => Pair("[ixrts]", "[ixrtd][ixrte]"),
-        2314 => Text("[i]"),
-        2315 => Text("[ii]"),
+        2314 => EachLine("[i]"),
+        2315 => EachLine("[ii]"),
         2316 => Pair("[fts~b]", "[fte~b]"),
         2317 => Pair("[fts~i]", "[fte~i]"),
         2318 => Text("[eqvn]"),
@@ -101,6 +114,22 @@ pub fn insert(id: i32) -> Option<Insert> {
         2404 => Pair("[vcs]", "[vce]"),
         _ => return None,
     })
+}
+
+/// The places an each-line item goes, in `text` (the editor's text, a place per character) with the selection
+/// `from` to `to`: every line start inside the selection (a place after a line break, before `to`), then `from`,
+/// from the last back to the first so that each insert leaves the places still to come where they were.
+pub fn each_line_places(text: &str, from: usize, to: usize) -> Vec<usize> {
+    let mut places: Vec<usize> = text.chars().enumerate().filter(|&(i, c)| c == '\n' && i + 1 > from && i + 1 < to).map(|(i, _)| i + 1).collect();
+    places.reverse();
+    places.push(from);
+    places
+}
+
+/// The selection after a pair (`before` and `after` being the lengths of its parts, in places) wrapped the
+/// selection `from` to `to`: the same text, between the two parts.
+pub fn pair_selection(from: usize, to: usize, before: usize) -> (usize, usize) {
+    (from + before, to + before)
 }
 
 /// The code list (Layout, Code List): code name, category bit (1 page, 2 line, 4 tab,
@@ -407,3 +436,132 @@ pub const CODE_LIST: &[(&str, u32, &str)] = &[
     ("âx", 0x10, "Greek Small Psi"),
     ("ây", 0x10, "Greek Small Omega"),
 ];
+
+/// The places in CODE_LIST of the codes Layout, Code List shows: every code when All is checked, whatever the
+/// category boxes say; else the codes whose category bit is in `mask` (the checked boxes, Page = bit 0x01 ...
+/// Miscellaneous = 0x80). INFERENCE: the list keeps CODE_LIST's order; whether the list sorts its entries by label
+/// is not known.
+pub fn code_list_shown(all: bool, mask: u32) -> Vec<usize> {
+    let mask = if all { u32::MAX } else { mask };
+    (0..CODE_LIST.len()).filter(|&i| CODE_LIST[i].1 & mask != 0).collect()
+}
+
+/// Message 2678, given for code parameters holding a space.
+pub const PARAMS_WITH_SPACE: &str = "The parameters to a code must not contain spaces.";
+
+/// The problem with the parameters typed in Code List: a space in them.
+pub fn code_params_problem(params: &str) -> Option<&'static str> {
+    params.contains(' ').then_some(PARAMS_WITH_SPACE)
+}
+
+/// What a Code List dialog event does to the category boxes kept for the session.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum CodeListAction {
+    /// OK accepted.
+    Ok,
+    /// OK refused by the parameter check (the dialog stays open).
+    OkRefused,
+    /// A double-click on a code, which is OK.
+    DoubleClick,
+    /// Cancel or the close box.
+    Cancel,
+}
+
+/// The kept boxes (All, category bits) after `action` with the dialog's boxes `boxes`: OK, a refused OK and a
+/// double-click store the boxes before the parameters are checked; Cancel and the close box keep the old ones.
+pub fn code_list_kept_after(action: CodeListAction, current: (bool, u32), boxes: (bool, u32)) -> (bool, u32) {
+    match action {
+        CodeListAction::Cancel => current,
+        _ => boxes,
+    }
+}
+
+/// What OK (or a double-click) in Code List does with the chosen code (its name) and the parameters typed.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct CodeListOutcome {
+    /// The dialog closes.
+    pub close: bool,
+    /// Message 2678 is shown.
+    pub message: Option<&'static str>,
+    /// What is put in the document: the text and whether it is a code ("[name params]") or plain text.
+    pub insert: Option<(String, bool)>,
+}
+
+/// OK in Code List: with a code chosen, parameters with a space give 2678 and the dialog stays open, else the code
+/// with its parameters goes in. With no code chosen the dialog closes first; parameters with a space then give 2678
+/// and nothing goes in, and other parameters go in as plain text by themselves (none when they are empty).
+pub fn code_list_ok(chosen: Option<&str>, params: &str) -> CodeListOutcome {
+    let problem = code_params_problem(params);
+    match chosen {
+        Some(code) => match problem {
+            Some(m) => CodeListOutcome { close: false, message: Some(m), insert: None },
+            None => CodeListOutcome { close: true, message: None, insert: Some((format!("[{code}{params}]"), true)) },
+        },
+        None => CodeListOutcome {
+            close: true,
+            message: problem,
+            insert: (problem.is_none() && !params.is_empty()).then(|| (params.to_string(), false)),
+        },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn math_grade1_inserts_at_each_line() {
+        assert!(matches!(insert(2314), Some(Insert::EachLine("[i]"))));
+        assert!(matches!(insert(2315), Some(Insert::EachLine("[ii]"))));
+        // Two lines selected: before the second line's start, then at the selection's start.
+        assert_eq!(each_line_places("ab\ncd\nef", 1, 5), vec![3, 1]);
+        // A line break at the end of the selection starts no line inside it.
+        assert_eq!(each_line_places("ab\ncd", 0, 3), vec![0]);
+        assert_eq!(pair_selection(4, 9, 5), (9, 14));
+        assert!(REPLACE_QUESTION.starts_with("Are you sure"));
+    }
+
+    #[test]
+    fn code_list_mask_all_overrides_categories() {
+        let every: Vec<usize> = (0..CODE_LIST.len()).collect();
+        assert_eq!(code_list_shown(true, 0), every);
+        assert_eq!(code_list_shown(true, 0x04), every);
+        assert!(code_list_shown(false, 0).is_empty());
+        let tabs = code_list_shown(false, 0x04);
+        assert!(!tabs.is_empty());
+        assert!(tabs.iter().all(|&i| CODE_LIST[i].1 & 0x04 != 0));
+        let names: Vec<&str> = tabs.iter().map(|&i| CODE_LIST[i].0).collect();
+        assert!(names.contains(&"#") && names.contains(&">"));
+        assert_eq!(tabs.len(), CODE_LIST.iter().filter(|c| c.1 & 0x04 != 0).count());
+    }
+
+    #[test]
+    fn code_params_with_space_refused() {
+        assert_eq!(code_params_problem(""), None);
+        assert_eq!(code_params_problem("3"), None);
+        assert_eq!(code_params_problem("a b"), Some("The parameters to a code must not contain spaces."));
+    }
+
+    #[test]
+    fn code_list_boxes_kept_on_refused_ok() {
+        let old = (true, 7);
+        let new = (false, 0x40);
+        assert_eq!(code_list_kept_after(CodeListAction::Cancel, old, new), old);
+        assert_eq!(code_list_kept_after(CodeListAction::OkRefused, old, new), new);
+        assert_eq!(code_list_kept_after(CodeListAction::DoubleClick, old, new), new);
+        assert_eq!(code_list_kept_after(CodeListAction::Ok, old, new), new);
+    }
+
+    #[test]
+    fn code_list_ok_without_code_inserts_parameters_as_text() {
+        let o = code_list_ok(Some("pg"), "3");
+        assert_eq!(o, CodeListOutcome { close: true, message: None, insert: Some(("[pg3]".into(), true)) });
+        let o = code_list_ok(Some("pg"), "3 4");
+        assert_eq!(o, CodeListOutcome { close: false, message: Some(PARAMS_WITH_SPACE), insert: None });
+        let o = code_list_ok(None, "abc");
+        assert_eq!(o, CodeListOutcome { close: true, message: None, insert: Some(("abc".into(), false)) });
+        let o = code_list_ok(None, "a b");
+        assert_eq!(o, CodeListOutcome { close: true, message: Some(PARAMS_WITH_SPACE), insert: None });
+        assert_eq!(code_list_ok(None, "").insert, None);
+    }
+}

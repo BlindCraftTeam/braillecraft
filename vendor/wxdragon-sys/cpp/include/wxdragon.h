@@ -145,6 +145,8 @@ extern "C" {
 #include "core/wxd_doc_editor.h"
 // Added for BrailleCraft: the tab bar of the main window, one tab per open document
 #include "core/wxd_doc_tabs.h"
+// Added for BrailleCraft: the open documents as the system's window tabs on macOS
+#include "core/wxd_window_tabs.h"
 
 // Sound support
 #include "core/wxd_sound.h"

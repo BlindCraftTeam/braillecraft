@@ -59,13 +59,20 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
 
 ## What it does
 
-- **Documents.** Print documents and braille documents, each in a tab of its own across the top of the window (as
-  a browser shows its pages), with formatting codes and styles kept apart from the text. The tab carries the
-  document's name; Ctrl+Tab and Ctrl+Shift+Tab move to the next and previous document, Ctrl+W (Cmd+W on macOS)
-  closes one, as does the close button on its tab (Linux and Windows) or a middle click on the tab; tabs are
-  dragged to reorder, or moved with Ctrl+Shift+Page Up and Page Down; the list at the end of the View menu names
-  the open documents in the same order. Screen readers read the tab bar as a tab list with the active document's
-  name as the selected tab. Opens and saves .dxp (print) and .dxb (braille) documents, and opens text and braille
+- **Documents.** The desktop program starts with no document open (File, New, Ctrl+N, makes one; the web build
+  always holds one). Print documents and braille documents, each in a tab of its own (as a browser shows its
+  pages), with formatting codes and styles kept apart from the text. The tab carries the document's name;
+  Ctrl+Tab and Ctrl+Shift+Tab move to the next and previous document, Ctrl+W (Cmd+W on macOS) closes one, as does
+  the close button on its tab; tabs are dragged to reorder, or moved with Ctrl+Shift+Page Up and Page Down; the list
+  at the end of the View menu names the open documents in the same order. On Windows and Linux the tabs run across
+  the top of the window: on Windows the close sign sits at the right of the tab's name and a tab's context menu
+  (right button, Shift+F10 or the Applications key) has Close Tab, Move Tab Left and Move Tab Right; a middle click
+  closes a tab. On macOS each document is a window of its own and the documents are the system's window tabs, as in
+  the system's own programs: the tab bar under the title bar with a close button on each tab and the plus button
+  (File, New), Cmd+Shift+] and Cmd+Shift+[ as well as Ctrl+Tab, the edited mark on a tab with unsaved changes, and
+  the Window menu's Move Tab to New Window and Merge All Windows; closing the last tab closes the window and the
+  program stays open with its menu bar. Screen readers read the tabs as a tab list (a tab group to VoiceOver) with
+  each tab named by its document and the active one selected. Opens and saves .dxp (print) and .dxb (braille) documents, and opens text and braille
   files (.txt, .brf, .brl), PEF (.pef) files and PDF files. A PDF becomes a print document: a tagged PDF through
   its structure (headings, paragraphs, lists, tables as styles and codes), any other PDF from its page layout
   (paragraphs, line breaks, and ledger tables of dates, text and amounts).
@@ -115,7 +122,10 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   import steps, so headings become heading styles, paragraphs and lists their styles, emphasis and strong the
   emphasis codes, inline code the computer-notation style, and links their text with the URL as the Import Options
   hyperlink setting says. The Han script readings of the Word import (Japanese, Korean, pinyin, Cantonese and
-  zhuyin) ship as rule scripts, a file that holds a "(this_is_a_braille_document)" or "(this_is_a_print_document)"
+  zhuyin) ship as rule scripts; text with Chinese characters is read in the language the new document's
+  print-to-braille table names (Import Options, "automatic") or the one chosen in Import Options (Mandarin,
+  Cantonese, Japanese or Korean; zhuyin through the zhtwcp table). A file that holds a
+  "(this_is_a_braille_document)" or "(this_is_a_print_document)"
   paragraph opens as that kind of document, and tables/file-kinds.txt names the file extensions read as a given
   kind before the file's bytes are looked at. The Global, Import Options, Word Importer, WordPerfect Importer and File Locations
   dialogs keep their answers between runs, under fixed setting names, and open with the
@@ -137,7 +147,9 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
 - **Layout commands.** Header and Footer place their text on all, odd or even pages (or end it), Set
   Page Number and Document, Page Numbering check the number in the dialog, and Apply Last Style applies the paragraph
   style last ended before the caret. A value a dialog refuses gets its message there, with what was typed kept.
-  Delete Style and changing a style's codes ask first, and the last style cannot be deleted; Clear (Del) with nothing
+  Delete Style and changing a style's codes ask first, and the last style cannot be deleted; a Layout menu code item
+  with text selected asks before it replaces the selection, a pair (such as Centering) keeps the text selected
+  between its codes, and Grade 1 in Math and Grade 1 with Letter Sign go at the start of every line of the selection; Clear (Del) with nothing
   selected deletes the character at the caret, Cut ends Highlight, Ctrl+U makes the character at the caret its capital
   form, and a double click selects the word alone, up to a space or a code on either side. Shortcut Preferences checks its codes in the
   dialog, Notification Settings brings back every message hidden with "do not show again", and a new hyphen table
@@ -179,8 +191,9 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   listed, then linear), in the BANA or the RNIB style, with the swapped orientation when allowed; a table the
   layout cannot fit is shown as its text with the reason in the status line (Failsafe), and inside a table the
   status line names the table's layout, row and column.
-- **Global, Fonts and File, New.** Fonts lists the fonts installed on the computer (typewriter fonts first for the
-  print font) and checks each point size, 5 to 180, in the dialog; the printed-output sizes are greyed while their
+- **Global, Fonts and File, New.** Fonts lists the fonts installed on the computer (typewriter fonts, a name holding
+  Courier New or named Courier or Consolas, first for the print font; symbol, dingbat, braille and vertical fonts
+  left out, case ignored; a name differing only in case listed once) and checks each point size, 5 to 180, in the dialog; the printed-output sizes are greyed while their
   size is set automatically. File, New remembers Show Hidden Templates. Global, Internationalization keeps its two
   Unicode choices: braille shown in a braille font can be written as Unicode braille patterns, and on Windows a
   braille document's text can be given to screen readers (UI Automation) as Unicode braille patterns. The web
@@ -188,20 +201,33 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   there the text screen readers read is the text shown.
 - **Save As.** Formatted braille (BRF in a choice of braille encodings), PEF (Portable Embosser Format), formatted
   text in a choice of code pages (the encoding or code page chosen in the Save As dialog's own Encoding box; each
-  Windows code page written and read by Windows' own table, on every system), coded braille, refreshable braille (.lbf), eBraille (.ebrl, braille documents) and EPUB 3 (.epub, print documents), HTML, LaTeX, HTML with MathJax (both HTML forms written with no head, title or language on the plain HTML, and a fixed head on the MathJax page), Markdown (.md, a BrailleCraft addition: a print document's headings, paragraphs, emphasis, links, lists and tables as Markdown; a braille document's pages as Unicode braille in fenced code blocks), and the older document format. File, Save eBraille saves the same package; Document, eBraille Metadata holds the package's metadata (required, recommended and additional properties, with the language, braille system and attribute dialogs, and an XML preview that can be edited); the quality notice shows before each save until its box is checked. Where a choice had to be made (the element of a paragraph style, which styles are headings and lists, the metadata property names of the recommended page, the list contents of the dialogs), it is marked in the code.
+  Windows code page written and read by Windows' own table, on every system; a character above U+FFFF is written
+  "##" except in UTF-16), coded braille, refreshable braille (.lbf: each byte of the document's text written as the
+  character of that number in UTF-8, so ASCII braille is written as it is, with a space at the end), eBraille (.ebrl, braille documents) and EPUB 3 (.epub, print documents), HTML, LaTeX, HTML with MathJax (both HTML forms written with no head, title or language on the plain HTML, and a fixed head on the MathJax page), Markdown (.md, a BrailleCraft addition: a print document's headings, paragraphs, emphasis, links, lists and tables as Markdown; a braille document's pages as Unicode braille in fenced code blocks), and the older document format. Saving as eBraille or EPUB 3 shows the quality notice (until its box is checked) and then Document, eBraille Metadata, every time; Cancel in either stops the save. The metadata (required, recommended and additional properties, with the language, braille system and attribute dialogs, and an XML preview that can be edited) is kept in the .dxp or .dxb file (format version 2) and comes back when the document is opened again; where the metadata names no language or braille system, the document's translation table gives them (such as eng-Brai). In the package a paragraph style (a name ending in a period) is a div with the style's class; a style holding an [rps] code is a table of contents entry, one holding [lea] a print page break in the page list (page001, page002 ...), one holding [mfcs] a list, and a paragraph style whose items start with level codes ([hl1], as an imported Markdown or HTML list) a list with each item its own li. The package follows EPUB 3 so reading apps open it (a BrailleCraft rule): package.opf's unique-identifier names the dc:identifier's id; dc:title (the metadata's title, else the first heading, else the file name), dc:language (the metadata's, else the translation table's, else en) and dcterms:modified (the save time in UTC) are always written, empty metadata elements are left out, the manifest lists the content page, index.html (the nav) and the style sheet, and the spine names the content page; both pages carry the document's title, every nav entry points at an id on the content page, and the zip entries carry the save time as a valid date. The metadata keeps the format eBraille 1.0. The MCP server's export_file writes the same packages (type epub for a print document, ebrl for a braille one). File, Save eBraille is a developer build's test save (test.ebrl or test.epub in the folder the setting EBrailleTestOutputPath or EPUBTestOutputPath names) and does nothing in a release build or on the web. Saved eBraille and EPUB files are not opened again (they are an unsupported file type). With `/ebrl=<file>` on the command line a document is saved as eBraille with its metadata and no questions. What is not known yet (the element of a style with its own entry in the style map, page list labels, the dialogs' list contents) is marked in the code. LaTeX and HTML with MathJax use the document's own
+  styles. File, Save writes a document read from or saved as a document file to that file again, whatever its
+  extension; an imported document asks for a name and type in a dialog titled "Save:" (File, Save As's is
+  "Save as:"). Saving in the older document format writes a copy: the document keeps its own file.
 - **Printing.** Print documents and braille (with interline print) through the system printer. In File, Print and
   File, Emboss, Selection lays the selected text out as a document of its own and prints or embosses all of its pages;
   a page-number range (p5, iv, 3-, -5) is matched against the pages' own numbers, nearest first with a question when
   a number had to be adjusted, and is not offered when two pages carry the same number. Bold, italic and underlined
-  passages ([fts~b], [fts~i], [fts~u]) print in those styles; Interline Print starts from the document's embosser
-  layout; a document whose printer the computer no longer has prints with the global printer after saying so.
+  passages ([fts~b], [fts~i], [fts~u]) print in those styles in the Print font (braille fonts print plain). Pages
+  print in the view font's printing face: the Print font, "Braille" or "SimBraille", or "RNIB Moon" for a braille
+  view font when the document's table is a Moon table (ENMOCP) and that font is installed (it is shown in it too).
+  Interline print stands above each braille line, in 9-point Times New Roman; line numbers print in the document
+  window's font, in the coded view too (the web build prints them as well); Interline Print starts checked when the
+  document's embosser layout has interline or double-size print; a document whose printer the computer no longer
+  has prints with the global printer after saying so.
   Printer Setup corrects a page size outside 7 to 160 characters and 1 to 100 lines and asks before taking it (Cancel
-  returns to the field); a print document keeps that page size in its .dxp file (one without it is laid out at 54
-  lines of 65 characters), apart from the page of its embosser setup; Global, Printer Setup and Global, Embosser Setup first say, once unless asked to repeat, that
+  returns to the field); every document keeps that page size in its .dxp or .dxb file (a print document is laid out
+  on it, a braille document on its embosser page; one without it takes the Global, Printer Setup page size), apart
+  from the page of its embosser setup; Global, Printer Setup and Global, Embosser Setup first say, once unless asked to repeat, that
   they do not change the open document. The embosser setup sheet's General page offers the configuration location
   (current user or all users; kept with the setup) and its Device Settings page lists only the model's own firmware
   versions and shows the Braillo rows by the model's sub-model. A Tiger model is sent to its
-  printer only. File, Emboss asks for the output file first (an Embossed Braille File, .ebf, asked again while it
+  printer only, unless its Legacy Mode is checked. On Windows, BrailleCraft looks at start-up for printers whose
+  driver is an embosser's and offers to set each one up (New Braille Embosser(s) Found); a printer you deselect
+  there is not offered again. File, Emboss asks for the output file first (an Embossed Braille File, .ebf, asked again while it
   cannot be made), shows the TranSend SE dialog only when the setup names an ink printer, shows a progress window
   with Cancel while the job goes out, and ends a failed job with "Printing failed." after its own message. A document
   opened with an embosser setup that is no longer kept says so and takes none.
@@ -210,8 +236,10 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   listed and embossed to through FTDI's own driver library where it is installed. TranSend SE printers get their ink
   pass, and manual interpoint embossers a second pass for the backs. Each embosser gets the job start, margins and
   line padding its driver calls for: the Index parameter string for its firmware version, the Enabling
-  codes when escape codes are allowed, and the embosser's own left, right and top margin settings. The web build
-  embosses through Web Serial where the browser has it, or to a downloaded file. Embosser Setup fits the page to the
+  codes when escape codes are allowed, and the embosser's own left, right and top margin settings. A serial port
+  gets the handshaking the setup chooses with the model's own serial settings. The web build
+  embosses through Web Serial where the browser has it (with XON/XOFF handshaking done by the page), or to a
+  downloaded file. Embosser Setup fits the page to the
   embosser: lines and cells within range and lowered before the margins, a table of the old and
   new values when OK had to change them, and a question before a document is reformatted to new cells or lines.
 - **Screen readers.** The editing area gives screen readers its text (the formatted lines or the coded rows, one
@@ -233,7 +261,9 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   AppleScript in VoiceOver Utility, General, then import the file with File, Import Preferences (it is a Command
   Assignments file, so it replaces your Keyboard Commander key assignments; export yours first). With the Keyboard
   Commander on, the Option key with 7, 8, 9, 0, Comma, Period, Semicolon and C do what the JAWS keys do; L is the last
-  word on the line and T the table entry (End and the arrows are not commander keys), and H lists the keys. VoiceOver
+  word on the line and T the table entry (End and the arrows are not commander keys), and H lists the keys; Option+0
+  also says which tab of the window the document is ("tab 2 of 3") when it has several. The document tabs need no
+  VoiceOver assignment: their keys are the program's, and VoiceOver reads the tab bar as a tab group. VoiceOver
   has no hook for caret moves, typing or the program's own keys, so the braille-cell reading of lines and characters,
   the Alt+U, I, P and W choices and the state announcements after F2, Alt+F3, Control+F8 and Control+H have no
   VoiceOver counterpart. On Linux an Orca script comes in the `orca` folder of the program (`/opt/braillecraft/orca`
@@ -264,10 +294,21 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   PDF Importer dialog, whose settings its PDF import takes.
 - **PDF import settings.** Global, PDF Importer: whether the dialog shows for each import, PDF/A markup, ledger
   tables, leader dots, a custom script, header and footer heights, font hints and the layout analysis values.
-- **Command line.** `braillecraft-desktop file.dxp` opens a file. Options before a file act on the files after
-  them: `/print`, `/braille[:setup]`, `/simulate`, `/brf:<file>`, `/prf:<file>`, `/lbf:<file>`, with the settings
-  `/copies:<n>`, `/pagesize:<lines>x<cells>` and `/template:<name>`. When every file has an option, BrailleCraft does
-  the work and ends without opening the editor.
+- **Command line.** `braillecraft-desktop file.dxp` opens a file (a file that is not a document file through the
+  import dialog, as File, Open does). Options before a file act on the files after them: `/print`,
+  `/braille[:setup]`, `/simulate`, `/brf:<file>`, `/prf:<file>`, `/lbf:<file>`, `/ebrl=<file>`; `/dumpstyles:<file>`
+  writes the document's styles as plain text and `/dumptemplate:<file>` writes them as an XML style dump (not a
+  template); `/RemoveEmbosserInfo`, `/RemovePrinterInfo` and `/RemovePageInfo` write a .dxp or .dxb file again in its
+  place without its embosser setup and layout, its printer page size and printer data, or both. The settings are
+  `/copies:<n>`, `/pagesize:<lines>x<cells>`, `/template:<name>` and `/prompt:prompt|continue|stop`: with `prompt`
+  (the default) the run's messages are message boxes, with `continue` or `stop` they go to the error output; a failed
+  translation never stops the run, and only `continue` closes the document it was made from.
+  `/resetfilesavefolder` and `/resetfileopenfolder` show the Save and Open dialogs once, started in the Documents
+  folder. Any other argument is a file argument ("Cannot open file ..." when it names none), also an unknown option
+  or a `/copies` or `/pagesize` value that is not a number. Files imported for an option, and their translations,
+  have the translated line off. `/help`, `?` or `/?` (also `--help`) as the first argument shows the usage and ends.
+  When every file argument has an option (a file that is not found counts too), BrailleCraft does the work and ends
+  without opening the editor.
 
 ## Using BrailleCraft from an AI agent (MCP)
 

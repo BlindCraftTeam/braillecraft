@@ -77,6 +77,15 @@ wxd_ListBox_SetSelection(wxd_ListBox_t* listbox, int index, bool select)
     }
 }
 
+WXD_EXPORTED bool
+wxd_ListBox_IsSelected(wxd_ListBox_t* listbox, int index)
+{
+    wxListBox* lb = (wxListBox*)listbox;
+    if (!lb || index < 0 || (unsigned int)index >= lb->GetCount())
+        return false;
+    return lb->IsSelected(index);
+}
+
 WXD_EXPORTED void
 wxd_ListBox_SetStringSelection(wxd_ListBox_t* listbox, const char* item, bool select)
 {

@@ -25,6 +25,9 @@ pub struct PrinterSetup {
     pub margins: [i32; 4],
     /// The margins are shown and typed in millimetres (else inches); the unit is kept with them.
     pub metric: bool,
+    /// The margins were stored (a Printer Setup was confirmed or read with them); a setup without them prints with
+    /// the margins of print_geometry::margin_area's unset case.
+    pub margins_stored: bool,
     /// The formatted page size Global, Printer Setup keeps (lines per page, characters per line).
     pub lines: u32,
     pub chars: u32,
@@ -40,8 +43,9 @@ impl Default for PrinterSetup {
             landscape: false,
             margins: [1000; 4],
             metric: false,
-            lines: 54,
-            chars: 65,
+            margins_stored: false,
+            lines: u32::from(crate::dxfile::PRINT_PAGE_DEFAULT.0),
+            chars: u32::from(crate::dxfile::PRINT_PAGE_DEFAULT.1),
         }
     }
 }
@@ -50,7 +54,8 @@ impl PrinterSetup {
     /// The settings section Global, Printer Setup is kept in.
     pub const SECTION: &'static str = "Printer";
 
-    /// The setup as one settings value: paper, orientation, margins, unit, page size, then the printer's name.
+    /// The setup as one settings value: paper, orientation, margins, unit (empty when the margins were never
+    /// stored), page size, then the printer's name.
     pub fn to_text(&self) -> String {
         let m = self.margins;
         format!(
@@ -62,7 +67,13 @@ impl PrinterSetup {
             m[1],
             m[2],
             m[3],
-            if self.metric { "mm" } else { "in" },
+            if !self.margins_stored {
+                ""
+            } else if self.metric {
+                "mm"
+            } else {
+                "in"
+            },
             self.lines,
             self.chars,
             self.printer
@@ -84,6 +95,7 @@ impl PrinterSetup {
             landscape: f[1] == "landscape",
             margins: [m[0], m[1], m[2], m[3]],
             metric: f[3] == "mm",
+            margins_stored: !f[3].is_empty(),
             lines: f[4].parse().ok()?,
             chars: f[5].parse().ok()?,
             printer: f[6].to_string(),
@@ -185,8 +197,25 @@ mod tests {
 
     #[test]
     fn setup_text_round_trip() {
-        let s = PrinterSetup { printer: "Office Laser".into(), paper: (2100, 2970), landscape: true, margins: [500, 750, 1000, 1250], metric: true, lines: 50, chars: 70 };
+        let s = PrinterSetup {
+            printer: "Office Laser".into(),
+            paper: (2100, 2970),
+            landscape: true,
+            margins: [500, 750, 1000, 1250],
+            metric: true,
+            margins_stored: true,
+            lines: 50,
+            chars: 70,
+        };
         assert_eq!(PrinterSetup::from_text(&s.to_text()), Some(s));
+    }
+
+    #[test]
+    fn printer_setup_without_stored_margins_round_trips() {
+        let s = PrinterSetup::default();
+        assert_eq!(PrinterSetup::from_text(&s.to_text()), Some(s.clone()));
+        let stored = PrinterSetup { margins_stored: true, ..s };
+        assert_eq!(PrinterSetup::from_text(&stored.to_text()).map(|t| t.margins_stored), Some(true));
     }
 
     #[test]

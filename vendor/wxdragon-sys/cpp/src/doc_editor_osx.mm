@@ -2,7 +2,7 @@
 //
 // wxWidgets has no accessibility layer on macOS (wxUSE_ACCESSIBILITY is Windows only). The window's own view becomes
 // an accessibility text area over the window's text for screen readers (each text row followed by a line feed, page
-// break rows not in it, as the reference gives its editing window, spec 27 section 6): its value, the selected range
+// break rows not in it, spec 27 section 6): its value, the selected range
 // (the caret), lines, the string and screen frame of a range; it posts the value changed notification when the text
 // changes and the selected text changed notification when the caret moves. VoiceOver moving the caret or selecting
 // does it as a click would.

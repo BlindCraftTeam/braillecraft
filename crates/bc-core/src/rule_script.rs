@@ -297,8 +297,14 @@ impl RuleScript {
         Ok(())
     }
 
-    /// Runs the script over `input` (spec 20, "Run").
+    /// Runs the script over `input` (spec 20, "Run"), starting in state 1.
     pub fn run(&mut self, input: &[u8]) -> Result<Vec<u8>, ScriptError> {
+        self.run_from(input, 1)
+    }
+
+    /// Runs the script over `input` starting in `start` (a recipe step's start state, as an import job asks for
+    /// one: spec A15.11).
+    pub fn run_from(&mut self, input: &[u8], start: i32) -> Result<Vec<u8>, ScriptError> {
         const RING: usize = 4096;
         let mut reader = Reader { data: input, at: 0, held: None };
         let mut out = Vec::with_capacity(input.len() + input.len() / 4);
@@ -309,7 +315,7 @@ impl RuleScript {
                 break;
             }
         }
-        let (mut pos, mut state) = (0usize, 1i32);
+        let (mut pos, mut state) = (0usize, start);
         let mut kept: Vec<i32> = Vec::new();
         self.enter(state)?;
         if let Some(start) = self.lists[256].first().cloned() {
@@ -455,6 +461,21 @@ mod tests {
     fn start_end_and_line_end_escapes() {
         let script = "| a comment\r\n|256~[~\r\n|257~]~ | the end\r\n|258~/|258~\r\n||~|$~\r\n";
         assert_eq!(run(script, b"x\r\ny|z"), b"[x/\r\ny$z]");
+    }
+
+    #[test]
+    fn copied_line_feed_gets_cr_only_with_258_in_a_replacement() {
+        // No |258 anywhere: a copied LF is written as it is.
+        assert_eq!(run("a~A~\r\n", b"a\nb"), b"A\nb");
+        // |258 in a replacement: every LF written, a copied one too, is CR LF.
+        assert_eq!(run("a~A|258~\r\n", b"a\nb"), b"A\r\n\r\nb");
+    }
+
+    #[test]
+    fn a_run_can_start_in_a_given_state() {
+        let script = "a~1~1~\r\na~3~3~\r\n";
+        assert_eq!(RuleScript::from_bytes(script.as_bytes(), None).unwrap().run(b"a").unwrap(), b"1");
+        assert_eq!(RuleScript::from_bytes(script.as_bytes(), None).unwrap().run_from(b"a", 3).unwrap(), b"3");
     }
 
     #[test]

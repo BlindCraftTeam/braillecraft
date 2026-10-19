@@ -46,8 +46,8 @@ thread_local! {
 /// the text through the text export table (txxtxa with the binary scan table; when that table cannot be
 /// used, the body as the document file stores it goes on unchanged), then the LaTeX rule script, with nothing written
 /// before or after what the script writes.
-pub fn latex(running: &str) -> Result<Vec<u8>, String> {
-    let middle = text_export(running);
+pub fn latex(running: &str, styles: &StyleTable) -> Result<Vec<u8>, String> {
+    let middle = text_export(running, styles);
     let mut script = rule_script("latex.rules")?;
     script.run(&middle).map_err(|e| e.to_string())
 }
@@ -55,16 +55,16 @@ pub fn latex(running: &str) -> Result<Vec<u8>, String> {
 /// An HTML with MathJax file from a print document's running text (spec 21):
 /// the text through the text export table as for LaTeX, then the MathJax rule script, between a fixed head and
 /// foot.
-pub fn mathjax(running: &str) -> Result<Vec<u8>, String> {
-    let middle = text_export(running);
+pub fn mathjax(running: &str, styles: &StyleTable) -> Result<Vec<u8>, String> {
+    let middle = text_export(running, styles);
     let mut script = rule_script("mathjax.rules")?;
     let body = script.run(&middle).map_err(|e| e.to_string())?;
     Ok(bc_core::html_export::with_mathjax(&body))
 }
 
 /// An HTML file from a print document's running text (spec 21): the body as the document file stores it through the
-/// HTML recipe (bc_core::html_export).
-pub fn html(running: &str) -> Result<Vec<u8>, String> {
+/// HTML recipe (bc_core::html_export); the styles are not used.
+pub fn html(running: &str, _styles: &StyleTable) -> Result<Vec<u8>, String> {
     let body = bc_core::dxfile::body_bytes(running);
     let names = bc_core::html_export::SCRIPTS;
     let mut scripts = [rule_script(names[0])?, rule_script(names[1])?, rule_script(names[2])?, rule_script(names[3])?];
@@ -73,24 +73,21 @@ pub fn html(running: &str) -> Result<Vec<u8>, String> {
 
 /// A Markdown file from a print document's running text (BrailleCraft's own addition): the HTML the HTML export
 /// writes, turned into Markdown (headings, paragraphs, emphasis, links, lists, tables, code).
-pub fn markdown(running: &str) -> Result<Vec<u8>, String> {
-    let html = html(running)?;
+pub fn markdown(running: &str, styles: &StyleTable) -> Result<Vec<u8>, String> {
+    let html = html(running, styles)?;
     Ok(bc_core::markdown::from_html(&html).into_bytes())
 }
 
-/// The running text through the text export table (txxtxa with the binary scan table); when that table cannot be
-/// used, the body as the document file stores it, unchanged.
-fn text_export(running: &str) -> Vec<u8> {
+/// The running text through the text export table (txxtxa with the binary scan table) in the table's own output
+/// mode, with the document's styles and the language table switches of a print document (spec A15.9); when that
+/// table cannot be used, the body as the document file stores it, unchanged.
+fn text_export(running: &str, styles: &StyleTable) -> Vec<u8> {
     let translated = TABLES.with(|t| {
         let t = t.borrow();
         let tr = t.as_ref()?.translator_with_scan("txxtxa", "binary").ok()?;
-        tr.translate_marked(running, None, None).ok()
+        LANGUAGES.with(|l| tr.text_export(running, Some(styles), l.borrow().as_ref().map(|(print, _)| print)).ok())
     });
-    // The engine writes bytes; its text holds one character per byte.
-    match translated {
-        Some(s) => s.chars().map(|c| c as u32 as u8).collect(),
-        None => bc_core::dxfile::body_bytes(running),
-    }
+    translated.unwrap_or_else(|| bc_core::dxfile::body_bytes(running))
 }
 
 /// A rule script from the shipped folder (tables/rule-scripts).
@@ -427,7 +424,8 @@ mod tests {
     #[test]
     fn latex_is_a_whole_document_from_the_text_export_table_and_script() {
         loaded();
-        let out = String::from_utf8_lossy(&latex(&Shown::marked("Cost 5% & up[p]Next").to_running()).unwrap()).into_owned();
+        let running = Shown::marked("Cost 5% & up[p]Next").to_running();
+        let out = String::from_utf8_lossy(&latex(&running, &english()).unwrap()).into_owned();
         assert!(out.starts_with("\\documentclass{article}"), "{out}");
         assert!(out.contains("\\begin{document}"), "{out}");
         assert!(out.contains("5\\%") && out.contains("\\&"), "{out}");

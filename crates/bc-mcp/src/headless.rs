@@ -132,13 +132,19 @@ pub struct Doc {
     pub style_list: Vec<(String, String, String)>,
     pub numbering: [u32; 5],
     pub hyphenation: u16,
-    pub initial: String,
     pub cells: u32,
     pub lines: u32,
+    /// A braille document's own Printer Setup page (lines, characters; settings +129 and +131), kept and saved
+    /// (spec A16.2); a print document's is its `lines` and `cells`.
+    pub print_page: (u32, u32),
     pub caret: usize,
     pub anchor: usize,
     pub dirty: bool,
 }
+
+/// The Global, Printer Setup page size of a session: this server keeps no Global, Printer Setup of its own, so it is
+/// the setting's default (lines, characters).
+const GLOBAL_PRINT_PAGE: (u32, u32) = (dxfile::PRINT_PAGE_DEFAULT.0 as u32, dxfile::PRINT_PAGE_DEFAULT.1 as u32);
 
 /// An in-process session.
 pub struct Headless {
@@ -267,7 +273,7 @@ impl Headless {
     fn forward(&self, text: &Shown, language: Option<&str>) -> Result<Shown, String> {
         let tables = self.tables_for(language)?;
         let tr = self.translator(&tables[0])?;
-        let lead = Shown::marked(&self.doc.initial).to_running();
+        let lead = self.doc.initial_codes();
         let running = format!("{lead}{}", text.to_running());
         let out = tr.translate_marked(&running, Some(&self.doc.styles), Some(&self.languages(true))).map_err(|e| format!("Translation failed: {e:?}"))?;
         Ok(Shown::from_running(out.strip_prefix(lead.as_str()).unwrap_or(&out)))
@@ -276,7 +282,7 @@ impl Headless {
     fn backward(&self, text: &Shown, language: Option<&str>) -> Result<Shown, String> {
         let tables = self.tables_for(language)?;
         let tr = self.translator(&tables[2])?;
-        let lead = Shown::marked(&self.doc.initial).to_running();
+        let lead = self.doc.initial_codes();
         let running = format!("{lead}{}", text.to_running());
         let out = tr.translate_marked(&running, Some(&self.doc.styles), Some(&self.languages(false))).map_err(|e| format!("Translation failed: {e:?}"))?;
         Ok(Shown::from_running(out.strip_prefix(lead.as_str()).unwrap_or(&out)))
@@ -300,6 +306,9 @@ impl Headless {
             None => None,
         };
         let map = template_text.as_deref().map(|t| bc_core::word::map_file_name(&templates::styles(t).lookup(b"word:mws", 0).map(|b| String::from_utf8_lossy(&b).into_owned()).unwrap_or_default())).unwrap_or_else(|| "default".into());
+        // The Word importer's defaults, with the template's print-to-braille table for the Han script's language.
+        let forward = template_text.as_deref().and_then(templates::tables).map(|t| t[0].clone()).unwrap_or_default();
+        let word = bc_core::word::Options { forward_table: forward, ..bc_core::word::Options::default() };
         let chain = |recipe: Recipe, braille: bool| -> Result<(bool, Shown, Option<DxDocument>), String> {
             let got = import_chain::run(&bytes, &recipe, &files);
             if !got.errors.is_empty() {
@@ -324,9 +333,9 @@ impl Headless {
                 let running = bc_core::pdf_import::import(&bytes, &Default::default(), &styles)?;
                 Ok((false, Shown::from_running(&running), None))
             }
-            FileKind::Docx => chain(Recipe::Docx(bc_core::word::Options::default(), map, unknown), false),
-            FileKind::Markdown => chain(Recipe::Markdown(bc_core::word::Options::default(), unknown), false),
-            FileKind::Sgml => chain(Recipe::Html(bc_core::word::Options::default(), unknown), false),
+            FileKind::Docx => chain(Recipe::Docx(word, map, unknown), false),
+            FileKind::Markdown => chain(Recipe::Markdown(word, unknown), false),
+            FileKind::Sgml => chain(Recipe::Html(word, unknown), false),
             FileKind::CodedText => chain(Recipe::CodedText(page, unknown), false),
             FileKind::FormattedText => chain(Recipe::FormattedText(unknown), false),
             FileKind::CodedBraille => chain(Recipe::CodedBraille, true),
@@ -350,17 +359,24 @@ impl Headless {
             doc.tables = f.tables.clone();
             doc.numbering = f.page_numbering;
             doc.hyphenation = f.hyphenation;
-            // A print document is laid out on its own Printer Setup page, 54 lines of 65 characters when the file
-            // holds none (spec 05 section A10).
-            if !braille {
-                let (l, c) = if f.print_page.0 == 0 { dxfile::PRINT_PAGE_DEFAULT } else { f.print_page };
-                doc.lines = u32::from(l);
-                doc.cells = u32::from(c);
+            // The document's own Printer Setup page, the Global, Printer Setup page size when the file holds none
+            // (spec A16.4 unknown 6); a print document is laid out on it, a braille document keeps it.
+            let (l, c) = dxfile::print_page_or(f.print_page, GLOBAL_PRINT_PAGE);
+            if braille {
+                doc.print_page = (l, c);
+            } else {
+                doc.lines = l;
+                doc.cells = c;
             }
             if !f.styles.is_empty() {
                 doc.style_list = f.styles.clone();
                 doc.styles = style_table(&f.styles);
             }
+        }
+        // The caret where the document was saved (settings +22).
+        if let Some(f) = &file {
+            doc.caret = Shown::shown_place(&f.text, f.caret as usize).min(shown.text.chars().count());
+            doc.anchor = doc.caret;
         }
         doc.shown = shown;
         doc.path = Some(path.clone());
@@ -400,7 +416,13 @@ impl Headless {
 
     fn dx_document(&self, version: u16) -> DxDocument {
         let d = &self.doc;
-        let tables = if version == 0 { dxfile::older_table_names(&d.tables, |_| false) } else { d.tables.clone() };
+        // The older format names tables by their older names where their code is in the initial codes (spec A15.1).
+        let tables = if version == 0 {
+            let initial = d.initial_codes();
+            dxfile::older_table_names(&d.tables, |code| dxfile::codes_hold(&initial, code))
+        } else {
+            d.tables.clone()
+        };
         DxDocument {
             kind: if d.braille { DocumentKind::Braille } else { DocumentKind::Print },
             version,
@@ -418,7 +440,13 @@ impl Headless {
             embosser: String::new(),
             sections: Vec::new(),
             layout: None,
-            print_page: if d.braille { (0, 0) } else { (d.lines.min(u32::from(u16::MAX)) as u16, d.cells.min(u32::from(u16::MAX)) as u16) },
+            // The MCP server keeps no optional sections, eBraille metadata among them.
+            ebraille: None,
+            caret: d.shown.running_place(d.caret).min(u32::MAX as usize) as u32,
+            print_page: {
+                let (l, c) = if d.braille { d.print_page } else { (d.lines, d.cells) };
+                (l.min(u32::from(u16::MAX)) as u16, c.min(u32::from(u16::MAX)) as u16)
+            },
         }
     }
 
@@ -441,13 +469,15 @@ impl Headless {
         self.files().rule_script(name)
     }
 
-    /// The text through the text export table (the LaTeX and MathJax exports), or the body as the file stores it.
+    /// The text through the text export table (the LaTeX and MathJax exports) in the table's own output mode, with
+    /// the document's styles and the language switches of a print document (spec A15.9), or the body as the file
+    /// stores it.
     fn text_export(&self) -> Vec<u8> {
         let running = self.doc.shown.to_running();
-        match self.tables.translator_with_scan("txxtxa", "binary").ok().and_then(|t| t.translate_marked(&running, None, None).ok()) {
-            Some(s) => s.chars().map(|c| c as u32 as u8).collect(),
-            None => dxfile::body_bytes(&running),
-        }
+        let languages = self.languages(true);
+        let tr = self.tables.translator_with_scan("txxtxa", "binary").ok();
+        let out = tr.and_then(|t| t.text_export(&running, Some(&self.doc.styles), Some(&languages)).ok());
+        out.unwrap_or_else(|| dxfile::body_bytes(&running))
     }
 
     fn export(&mut self, params: &Value) -> Result<Value, String> {
@@ -519,7 +549,35 @@ impl Headless {
                     bc_core::markdown::from_html(&page).into_bytes()
                 }
             }
-            other => return Err(format!("unknown export type {other}; types: dxp, dxb, older, brf, pef, prf, txt, bru, lbf, htm, mathjax, tex, md")),
+            "epub" | "ebrl" | "ebraille" => {
+                let ebrl = kind != "epub";
+                if ebrl && !braille {
+                    return Err("eBraille is written from a braille document: translate first".into());
+                }
+                if !ebrl && braille {
+                    return Err("EPUB 3 is written from a print document; a braille document is written as ebrl".into());
+                }
+                // The same writer as the desktop's and the web's Save As eBraille / EPUB 3 (bc_core::ebraille); this
+                // server keeps no eBraille metadata, so the package takes the translation table's language and
+                // braille system, the first heading or the file name as its title, and a new identifier.
+                let styles = &self.doc.style_list;
+                let kinds = |name: &str| bc_core::ebraille::kind_of(name, styles.iter().find(|s| s.0 == name).map_or("", |s| s.1.as_str()));
+                let cell = |c: char| dots_of(c);
+                let entry = self.list.entry_for(&self.doc.tables).map(|(i, _)| &self.list.entries[i]);
+                let meta = bc_core::ebraille::Metadata::default();
+                let name = path.to_string_lossy();
+                bc_core::ebraille::package(&bc_core::ebraille::Input {
+                    running: &running,
+                    braille,
+                    kinds: &kinds,
+                    cell: &cell,
+                    meta: &meta,
+                    default_language: entry.and_then(|e| e.ebraille_language()),
+                    default_system: entry.and_then(|e| e.ebraille_system()),
+                    name: &name,
+                })
+            }
+            other => return Err(format!("unknown export type {other}; types: dxp, dxb, older, brf, pef, prf, txt, bru, lbf, htm, mathjax, tex, md, epub, ebrl")),
         };
         std::fs::write(&path, &bytes).map_err(|e| format!("{}: {e}", path.display()))?;
         Ok(json!({"path": path.display().to_string(), "type": kind, "bytes": bytes.len()}))
@@ -620,6 +678,26 @@ impl Headless {
                 let Some(what) = bc_core::menu_codes::insert(id) else { return Err(format!("command {id} inserts nothing")) };
                 let put = match what {
                     Insert::Text(t) => Shown::marked(t),
+                    // Before each line start of the selection and at its start.
+                    Insert::EachLine(t) => {
+                        let (from, to) = (self.doc.caret.min(self.doc.anchor), self.doc.caret.max(self.doc.anchor));
+                        if from != to {
+                            self.remember();
+                            let code = Shown::marked(t);
+                            for p in bc_core::menu_codes::each_line_places(&self.doc.shown.text, from, to) {
+                                let len = self.doc.shown.text.chars().count();
+                                let mut out = self.doc.shown.slice(0, p);
+                                out.push(&code);
+                                out.push(&self.doc.shown.slice(p, len));
+                                self.doc.shown = out;
+                            }
+                            let shift = code.text.chars().count();
+                            self.doc.anchor = from;
+                            self.doc.caret = from + shift;
+                            return self.inspect();
+                        }
+                        Shown::marked(t)
+                    }
                     Insert::Pair(a, b) => {
                         let (from, to) = (self.doc.caret.min(self.doc.anchor), self.doc.caret.max(self.doc.anchor));
                         let middle = self.doc.shown.slice(from, to);
@@ -811,6 +889,12 @@ fn style_table(styles: &[(String, String, String)]) -> StyleTable {
 }
 
 impl Doc {
+    /// The codes in force from the start of the document, in running text: the beginning codes of its style named
+    /// "initial" (case ignored), as its template gives them (spec 05 section A10); empty when it has none.
+    fn initial_codes(&self) -> String {
+        self.style_list.iter().find(|s| s.0.eq_ignore_ascii_case("initial")).map(|s| s.1.clone()).unwrap_or_default()
+    }
+
     fn empty(braille: bool) -> Doc {
         Doc {
             braille,
@@ -823,9 +907,9 @@ impl Doc {
             style_list: Vec::new(),
             numbering: [0; 5],
             hyphenation: 2,
-            initial: String::new(),
             cells: if braille { 40 } else { 80 },
             lines: if braille { 25 } else { 50 },
+            print_page: GLOBAL_PRINT_PAGE,
             caret: 0,
             anchor: 0,
             dirty: false,
@@ -838,7 +922,12 @@ impl Doc {
             self.tables = t;
         }
         self.styles = templates::styles(text);
-        self.style_list = self.styles.entries().map(|(n, b, e)| (n.to_string(), b, e)).collect();
+        // As a document file keeps them: codes marked in running text.
+        self.style_list = self
+            .styles
+            .entries()
+            .map(|(n, b, e)| (n.to_string(), Shown::marked(&b).to_running(), Shown::marked(&e).to_running()))
+            .collect();
         self.numbering = templates::page_numbers(text);
         self.hyphenation = templates::hyphenation(text);
     }

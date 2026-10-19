@@ -107,18 +107,24 @@ impl Text {
     }
 }
 
-/// A paragraph style code (es~NAME or ee~NAME with NAME ending in a period): its start or end, and NAME.
+/// A paragraph style code (es~NAME or ee~NAME with NAME ending in a period): its start or end, and NAME. "es~"
+/// and "ee~" are compared exactly, so [ES~X.] is no paragraph style code here (the widening kinds take it in any
+/// case).
 fn paragraph_style(code: &str) -> Option<(bool, &str)> {
-    let lower = code.get(..3).map(str::to_ascii_lowercase)?;
     let name = code.get(3..)?;
     if !name.ends_with('.') {
         return None;
     }
-    match lower.as_str() {
+    match code.get(..3)? {
         "es~" => Some((true, name)),
         "ee~" => Some((false, name)),
         _ => None,
     }
+}
+
+/// Whether the characters at `p` are `pat`, case ignored.
+fn matches_at(t: &Text, p: usize, pat: &[char]) -> bool {
+    p + pat.len() <= t.c.len() && pat.iter().zip(&t.c[p..]).all(|(a, b)| a.eq_ignore_ascii_case(b))
 }
 
 /// The code kinds for widening a paragraph style's range (spec 31 1.3): 1 ind, 4 paragraph openers, 5 l,
@@ -314,7 +320,15 @@ fn apply_in(t: &mut Text, from: usize, to: usize, m0: usize, name: &str) -> usiz
     if widen {
         clean_up(t, s, after_end);
         let c = t.marks[m0];
-        return if c == s { c + start_len } else { c };
+        if c != s {
+            return c;
+        }
+        // The caret at the widened start goes just after the new start code, found forward from it with case
+        // ignored (the cleanup may have closed an enclosing style before it).
+        let mut whole = vec![OPEN];
+        whole.extend(start_code.chars());
+        whole.push(CLOSE);
+        return (c..t.c.len()).find(|&q| matches_at(t, q, &whole)).map_or(c, |q| q + whole.len());
     }
     if selection {
         after_end
@@ -323,38 +337,62 @@ fn apply_in(t: &mut Text, from: usize, to: usize, m0: usize, name: &str) -> usiz
     }
 }
 
-/// The paragraph style open at `pos` (spec 31 5.2): the nearest paragraph style start before
-/// it, unless that style is ended before `pos`.
-pub fn open_paragraph_style(running: &str, pos: usize) -> Option<String> {
-    let t = Text::new(running);
-    let mut p = pos.min(t.c.len());
-    while p > 0 {
+/// The paragraph style open at `pos` (spec 31 5.2, A12.7 1 and 2): the nearest paragraph style start found back
+/// from `pos` to `page_start` (the first place of the formatted page `pos` is on), unless an end of that style lies
+/// between it and `pos`. With none on the page: none on the first page (`page_start` 0); else the paragraph style
+/// open at the page's start (style_level::page_style, which any paragraph style end closes), unless its end lies
+/// between the page start and the place before `pos`. The searches take "es~" and "ee~" in any case.
+pub fn open_paragraph_style(running: &str, pos: usize, page_start: usize) -> Option<String> {
+    open_style_in(&Text::new(running), pos, page_start)
+}
+
+fn open_style_in(t: &Text, pos: usize, page_start: usize) -> Option<String> {
+    let pos = pos.min(t.c.len());
+    let start: Vec<char> = format!("{OPEN}es~").chars().collect();
+    let ended = |name: &str, from: usize, to: usize| {
+        let end: Vec<char> = format!("{OPEN}ee~{name}{CLOSE}").chars().collect();
+        (from..to).any(|q| matches_at(t, q, &end))
+    };
+    let mut p = pos;
+    while p > page_start {
         p -= 1;
+        if !matches_at(t, p, &start) {
+            continue;
+        }
         let Some((code, _)) = t.code_at(p) else { continue };
         let Some((true, name)) = paragraph_style(&code) else { continue };
-        let closed = (p + 1..pos).any(|q| {
-            t.code_at(q).is_some_and(|(c, _)| paragraph_style(&c).is_some_and(|(st, n)| !st && n.eq_ignore_ascii_case(name)))
-        });
-        return (!closed).then(|| name.to_string());
+        return (!ended(name, p + 1, pos)).then(|| name.to_string());
     }
-    None
+    if page_start == 0 {
+        return None;
+    }
+    let running: String = t.c.iter().collect();
+    let (name, _) = crate::style_level::page_style(&running, page_start)?;
+    (!ended(&name, page_start, pos.saturating_sub(1))).then_some(name)
 }
 
 /// Layout, Join Styles (spec 31 5.3): the paragraph style open at the selection's anchor, else at the caret, applied
-/// again over the selection. None when there is no selection or no such style.
-pub fn join_styles(running: &str, anchor: usize, caret: usize) -> Option<(String, usize)> {
+/// again over the selection. None when there is no selection or no such style. `page_start` gives the first place
+/// of the formatted page a place is on (open_paragraph_style). INFERENCE: the page searched for each place is the
+/// page that place is on.
+pub fn join_styles(
+    running: &str,
+    anchor: usize,
+    caret: usize,
+    page_start: &dyn Fn(usize) -> usize,
+) -> Option<(String, usize)> {
     if anchor == caret {
         return None;
     }
     let mut t = Text::new(running);
     let mc = t.mark(caret);
-    join_styles_in(&mut t, anchor, caret).then(|| (t.c.iter().collect(), t.marks[mc]))
+    join_styles_in(&mut t, anchor, caret, page_start).then(|| (t.c.iter().collect(), t.marks[mc]))
 }
 
 /// Join Styles on text whose places are kept; false when no paragraph style is open at the anchor or the caret.
-fn join_styles_in(t: &mut Text, anchor: usize, caret: usize) -> bool {
-    let current: String = t.c.iter().collect();
-    let Some(name) = open_paragraph_style(&current, anchor).or_else(|| open_paragraph_style(&current, caret)) else {
+fn join_styles_in(t: &mut Text, anchor: usize, caret: usize, page_start: &dyn Fn(usize) -> usize) -> bool {
+    let found = open_style_in(t, anchor, page_start(anchor)).or_else(|| open_style_in(t, caret, page_start(caret)));
+    let Some(name) = found else {
         return false;
     };
     let m0 = t.mark(caret);
@@ -363,9 +401,15 @@ fn join_styles_in(t: &mut Text, anchor: usize, caret: usize) -> bool {
 }
 
 /// Layout, Join Lines (spec 31 5.4): Join Styles, then every line code and style code inside the selection taken out
-/// (a paragraph style code ending at the selection's end is kept), with a space where neither side has one. None
-/// when there is no selection.
-pub fn join_lines(running: &str, anchor: usize, caret: usize) -> Option<(String, usize)> {
+/// (a paragraph style code ending at the selection's end is kept), with a space where neither side has one (the
+/// end of the text counts as no space). A code is read from its start mark to the first end mark after it, so a
+/// code inside a code ends the outer one there. None when there is no selection.
+pub fn join_lines(
+    running: &str,
+    anchor: usize,
+    caret: usize,
+    page_start: &dyn Fn(usize) -> usize,
+) -> Option<(String, usize)> {
     if anchor == caret {
         return None;
     }
@@ -375,43 +419,54 @@ pub fn join_lines(running: &str, anchor: usize, caret: usize) -> Option<(String,
     let ms = t.mark(s0);
     let me = t.mark(e0);
     // Join Styles first, with the selection ends carried through it.
-    join_styles_in(&mut t, anchor, caret);
+    join_styles_in(&mut t, anchor, caret, page_start);
     let mut p = t.marks[me];
     while p > t.marks[ms] + 1 {
         p -= 1;
-        let Some(start) = t.code_ending_at(p + 1) else { continue };
-        let (code, len) = t.code_at(start).unwrap_or_default();
-        p = start;
-        if start <= t.marks[ms] {
-            break;
+        if t.c[p] != OPEN {
+            continue;
         }
-        let end = start + len;
+        let Some(close) = t.c[p + 1..].iter().position(|&c| c == CLOSE).map(|k| p + 1 + k) else { continue };
+        let code: String = t.c[p + 1..close].iter().collect();
+        let end = close + 1;
         let deletable = line_code(&code).is_some() && (end < t.marks[me] || paragraph_style(&code).is_none());
         if deletable {
-            let before = if start > 0 { t.c[start - 1] } else { ' ' };
-            let after = t.c.get(end).copied().unwrap_or(' ');
-            t.delete(start, end);
-            if before != ' ' && after != ' ' {
-                t.insert(start, &[' ']);
+            let before = if p > 0 { Some(t.c[p - 1]) } else { None };
+            let after = t.c.get(end).copied();
+            t.delete(p, end);
+            if before != Some(' ') && after != Some(' ') {
+                t.insert(p, &[' ']);
             }
         }
     }
     Some((t.c.iter().collect(), t.marks[mc]))
 }
 
-/// Layout, New Paragraph (spec 31, FUN_0082a150): inside an open paragraph style it ends the style and starts it
-/// again; elsewhere it puts in the paragraph code; with a selection it does so at its end and then at its start.
-/// Answers the running text and the caret.
-pub fn new_paragraph(running: &str, from: usize, to: usize) -> (String, usize) {
-    let (s, e) = (from.min(to), from.max(to));
+/// Layout, New Paragraph (spec 31, A12.4): inside an open paragraph style it ends the style and starts it again;
+/// elsewhere it puts in the paragraph code; with a selection it does so at its end, then at the lesser of the
+/// anchor and the caret as they stand then. The anchor does not move with what is put in, but the caret does: with
+/// the anchor before the caret the second codes go at the selection's start; with the caret before the anchor the
+/// caret stands after the first codes, so the anchor is the lesser and both go at the selection's end, the second
+/// before the first. The caret ends just after the codes put in last. Answers the running text and the caret.
+pub fn new_paragraph(
+    running: &str,
+    anchor: usize,
+    caret: usize,
+    page_start: &dyn Fn(usize) -> usize,
+) -> (String, usize) {
+    let (s, e) = (anchor.min(caret), anchor.max(caret));
+    let points = if s == e {
+        vec![e]
+    } else if anchor < caret {
+        vec![e, s]
+    } else {
+        vec![e, e]
+    };
     let mut t = Text::new(running);
-    let ms = t.mark(s);
     let mut caret = 0;
-    let points = if s == e { vec![e] } else { vec![e, s] };
-    for (k, at) in points.into_iter().enumerate() {
-        let at = if k == 0 { at } else { t.marks[ms] };
-        let current: String = t.c.iter().collect();
-        let codes = match open_paragraph_style(&current, at) {
+    // Each place is before the codes put in earlier (the second one is at or before the first).
+    for at in points {
+        let codes = match open_style_in(&t, at, page_start(at)) {
             Some(name) => vec![format!("ee~{name}"), format!("es~{name}")],
             None => vec!["p".to_string()],
         };
@@ -451,25 +506,116 @@ mod tests {
     #[test]
     fn open_style_is_found_back_from_the_place() {
         let text = run("[es~quote.]a b[ee~quote.] c");
-        assert_eq!(open_paragraph_style(&text, 12).as_deref(), Some("quote."));
-        assert_eq!(open_paragraph_style(&text, text.chars().count()), None);
+        assert_eq!(open_paragraph_style(&text, 12, 0).as_deref(), Some("quote."));
+        assert_eq!(open_paragraph_style(&text, text.chars().count(), 0), None);
     }
 
     #[test]
     fn join_lines_takes_out_line_codes_with_a_space() {
         let text = run("one[l]two[l]three");
-        let (out, _) = join_lines(&text, 0, text.chars().count()).unwrap();
+        let (out, _) = join_lines(&text, 0, text.chars().count(), &|_| 0).unwrap();
         assert_eq!(shown(&out), "one two three");
-        assert!(join_lines(&text, 2, 2).is_none());
+        assert!(join_lines(&text, 2, 2, &|_| 0).is_none());
     }
 
     #[test]
     fn new_paragraph_inside_a_style_ends_and_starts_it() {
         let text = run("[es~quote.]ab[ee~quote.]");
-        let (out, caret) = new_paragraph(&text, 12, 12);
+        let (out, caret) = new_paragraph(&text, 12, 12, &|_| 0);
         assert_eq!(shown(&out), "[es~quote.]a[ee~quote.][es~quote.]b[ee~quote.]");
         assert_eq!(caret, 12 + 22);
-        let (out, _) = new_paragraph(&run("ab"), 1, 1);
+        let (out, _) = new_paragraph(&run("ab"), 1, 1, &|_| 0);
         assert_eq!(shown(&out), "a[p]b");
+    }
+
+    #[test]
+    fn caret_follows_the_new_start_code_when_a_style_is_closed_before_it() {
+        let text = run("[es~a.]one[<]two[ee~a.]");
+        let at = "[es~a.]one[<]".chars().count();
+        let (out, caret) = apply_style(&text, at, at, at, "b.");
+        assert_eq!(shown(&out), "[es~a.]one[<][ee~a.][es~b.]two[ee~b.]");
+        assert_eq!(caret, "[es~a.]one[<][ee~a.][es~b.]".chars().count());
+    }
+
+    #[test]
+    fn joining_two_paragraphs_of_a_style_leaves_one_new_line_code() {
+        let text = run("[es~X.]A[ee~X.][es~X.]B[ee~X.]");
+        let (anchor, caret) = (7, text.chars().count() - 8);
+        let (out, _) = join_styles(&text, anchor, caret, &|_| 0).unwrap();
+        assert_eq!(shown(&out), "[es~X.]A[<]B[ee~X.]");
+    }
+
+    #[test]
+    fn upper_case_style_codes_are_not_paragraph_codes() {
+        assert_eq!(open_paragraph_style(&run("[ES~q.]ab"), 9, 0), None);
+        assert_eq!(open_paragraph_style(&run("[es~q.]ab"), 9, 0).as_deref(), Some("q."));
+    }
+
+    #[test]
+    fn join_styles_without_a_selection_does_nothing() {
+        let text = run("[es~a.]one two[ee~a.]");
+        assert!(join_styles(&text, 9, 9, &|_| 0).is_none());
+    }
+
+    #[test]
+    fn join_styles_takes_the_style_at_the_anchor_first() {
+        let text = run("[es~a.]one[ee~a.][es~b.]two[ee~b.]");
+        let (anchor, caret) = (8, "[es~a.]one[ee~a.][es~b.]t".chars().count());
+        let (out, _) = join_styles(&text, anchor, caret, &|_| 0).unwrap();
+        assert_eq!(shown(&out), "[es~a.]one[<]two[ee~a.]");
+    }
+
+    #[test]
+    fn the_open_style_search_stays_on_the_page_then_takes_the_page_start_style() {
+        // The style started before the page start is still open there: found through the page-start style.
+        let text = run("[es~a.]one two three");
+        let page = "[es~a.]one ".chars().count();
+        assert_eq!(open_paragraph_style(&text, page + 3, page).as_deref(), Some("a."));
+        // An end of another paragraph style before the page start closes the page-start style.
+        let text = run("[es~a.]one[ee~b.] two three");
+        let page = "[es~a.]one[ee~b.] ".chars().count();
+        assert_eq!(open_paragraph_style(&text, page + 3, page), None);
+        // On the first page the same text still finds "a.", as no end of "a." follows it.
+        assert_eq!(open_paragraph_style(&text, page + 3, 0).as_deref(), Some("a."));
+    }
+
+    #[test]
+    fn join_lines_keeps_a_paragraph_end_at_the_selection_end() {
+        let text = run("[es~p.]a[l]b[ee~p.]");
+        let (out, _) = join_lines(&text, 0, text.chars().count(), &|_| 0).unwrap();
+        assert_eq!(shown(&out), "[es~p.]a b[ee~p.]");
+    }
+
+    #[test]
+    fn join_lines_removes_character_style_codes() {
+        let text = run("a[es~b]x[ee~b][l]y");
+        let (out, _) = join_lines(&text, 0, text.chars().count(), &|_| 0).unwrap();
+        assert_eq!(shown(&out), "a x y");
+    }
+
+    #[test]
+    fn join_lines_code_at_text_end_gets_a_space() {
+        let text = run("ab[l]");
+        let (out, _) = join_lines(&text, 0, text.chars().count(), &|_| 0).unwrap();
+        assert_eq!(shown(&out), "ab ");
+    }
+
+    #[test]
+    fn new_paragraph_backward_selection_puts_both_breaks_at_the_end() {
+        let text = run("abcdefgh");
+        let (forward, caret) = new_paragraph(&text, 2, 6, &|_| 0);
+        assert_eq!(shown(&forward), "ab[p]cdef[p]gh");
+        assert_eq!(caret, 5);
+        let (backward, caret) = new_paragraph(&text, 6, 2, &|_| 0);
+        assert_eq!(shown(&backward), "abcdef[p][p]gh");
+        assert_eq!(caret, 9);
+    }
+
+    #[test]
+    fn new_paragraph_caret_after_the_codes_at_the_start() {
+        let text = run("[es~q.]abcd[ee~q.]");
+        let (out, caret) = new_paragraph(&text, 8, 10, &|_| 0);
+        assert_eq!(shown(&out), "[es~q.]a[ee~q.][es~q.]bc[ee~q.][es~q.]d[ee~q.]");
+        assert_eq!(caret, "[es~q.]a[ee~q.][es~q.]".chars().count());
     }
 }

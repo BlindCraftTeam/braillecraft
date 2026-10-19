@@ -2607,7 +2607,6 @@ export const DIALOGS = {
    },
    {
     "class": "wxChoice",
-    "style": "wxCB_SORT",
     "x": 50,
     "y": 124,
     "w": 168,
@@ -2760,7 +2759,6 @@ export const DIALOGS = {
    },
    {
     "class": "wxChoice",
-    "style": "wxCB_SORT",
     "x": 50,
     "y": 107,
     "w": 168,
@@ -7557,7 +7555,6 @@ export const DIALOGS = {
    },
    {
     "class": "wxChoice",
-    "style": "wxCB_SORT",
     "x": 50,
     "y": 107,
     "w": 168,
@@ -7645,7 +7642,6 @@ export const DIALOGS = {
    },
    {
     "class": "wxChoice",
-    "style": "wxCB_SORT",
     "x": 50,
     "y": 107,
     "w": 168,
@@ -12041,6 +12037,92 @@ export const DIALOGS = {
     "enabled": true,
     "id": 24,
     "kind": "text"
+   }
+  ]
+ },
+ "10005": {
+  "title": "New Braille Embosser(s) Found",
+  "w": 200,
+  "h": 137,
+  "panel": false,
+  "controls": [
+   {
+    "class": "wxButton",
+    "label": "OK",
+    "x": 75,
+    "y": 120,
+    "w": 50,
+    "h": 12,
+    "default": true,
+    "hidden": false,
+    "enabled": true,
+    "id": 1,
+    "kind": "button"
+   },
+   {
+    "class": "wxStaticText",
+    "label": "One or more braille printer drivers have been installed, but the devices are not yet set up for use with BrailleCraft.",
+    "x": 5,
+    "y": 5,
+    "w": 190,
+    "h": 16,
+    "default": false,
+    "hidden": false,
+    "enabled": true,
+    "id": 5,
+    "kind": "static"
+   },
+   {
+    "class": "wxStaticText",
+    "label": "Press OK to set up BrailleCraft for use with the braille printer(s) selected below.",
+    "x": 5,
+    "y": 21,
+    "w": 190,
+    "h": 16,
+    "default": false,
+    "hidden": false,
+    "enabled": true,
+    "id": 6,
+    "kind": "static"
+   },
+   {
+    "class": "wxStaticText",
+    "label": "You may click on any printer name from the list to deselect it.",
+    "x": 5,
+    "y": 37,
+    "w": 190,
+    "h": 16,
+    "default": false,
+    "hidden": false,
+    "enabled": true,
+    "id": 7,
+    "kind": "static"
+   },
+   {
+    "class": "wxStaticText",
+    "label": "Printers that you de-select will not be set up for use with BrailleCraft, and you will not be prompted again.",
+    "x": 5,
+    "y": 53,
+    "w": 190,
+    "h": 16,
+    "default": false,
+    "hidden": false,
+    "enabled": true,
+    "id": 8,
+    "kind": "static"
+   },
+   {
+    "class": "wxListBox",
+    "style": "wxLB_EXTENDED|wxLB_ALWAYS_SB",
+    "x": 5,
+    "y": 69,
+    "w": 190,
+    "h": 48,
+    "default": false,
+    "hidden": false,
+    "enabled": true,
+    "id": 9,
+    "kind": "list"
    }
   ]
  }

@@ -58,7 +58,17 @@ listed in cpp/CMakeLists.txt and the header included from cpp/include/wxdragon.h
   ATK text-remove and text-insert signals.
 - On Windows the window is created under a class of its own, "BrailleCraftEditor" (wxApp::GetRegisteredClassName and
   CreateUsingMSWClass), with the control id 0, so screen reader scripts can tell the editing area from every other
-  window by its class, as they do with the reference program's editing window.
+  window by its class.
+- A click's column (DocEditor::ClickColumn): the caret goes before the first character whose left edge is right of
+  the click less half a character width (spec 27 section 9, unknown 4); ColumnAt stays for the accessible text's
+  point-to-place.
+- wxd_App_HandlePendingEvents: wxApp::Yield, for the embossing progress window that stays open, its Cancel button
+  live, while the job is sent.
+- wxd_DocEditor_GetRawKey: the physical key of the key event being handed to the program (the scan code on Windows,
+  the hardware key code less 8 on Linux, the virtual key code on macOS), for six-key entry, which names keys by
+  their place on the keyboard.
+- wxd_ListBox_IsSelected (cpp/include/widgets/wxd_listbox.h, cpp/src/listbox.cpp): whether an item of a list box
+  that takes several choices is chosen, for the start-up embosser autoprobe's printer list.
 
 The Rust bindings are generated from the header when the crate builds, so no Rust file changed.
 The workspace Cargo.toml uses this copy through [patch.crates-io].
@@ -84,3 +94,26 @@ from cpp/include/wxdragon.h):
   Ctrl+Shift+Tab, Ctrl+W and Ctrl+Shift+Page Up and Page Down while the tab bar has the focus, and callbacks to the
   program for a selection change, a close request and a move; TabRect and CloseButtonRect give the screen
   rectangles for a program that drives the window (the control channel).
+- On Windows the tabs are drawn by the program (TCS_OWNERDRAWFIXED through an MSWGetStyle override, so DocTabs is
+  made with wxNotebook's default constructor and Create; the inside of each tab through MSWOnDraw, and in dark mode
+  the whole control through a paint handler, since wxNotebook then paints everything itself): the name, then the
+  close sign at the right of the text (a blank image of the sign's size keeps the room for it), with a hover and a
+  pressed background, closed when the click is let go on it; system colours, the highlight colours in high
+  contrast; padding and the image follow the DPI. A context menu on a tab (right button, Shift+F10, the
+  Applications key): Close Tab, Move Tab Left, Move Tab Right. CloseButtonRect gives the sign at the right.
+  wxd_DocTabs_ShowFocus puts the focus on the tab bar with the keyboard cues on (for the build checks' picture).
+
+Also added, in cpp/include/core/wxd_window_tabs.h, cpp/src/window_tabs_osx.mm (macOS only) and
+cpp/src/window_tabs.cpp (the other systems, where each function does nothing; both listed in cpp/CMakeLists.txt and
+the header included from cpp/include/wxdragon.h):
+- wxd_WindowTabs_Enable: window tabbing on for the program (wxApp::OSXEnableAutomaticTabbing, which wxWidgets turns
+  off at launch), the program's own AppleWindowTabbingMode default "manual" so its other windows are not tabbed, the
+  program frame never tabbed and its menu bar kept as the common menu bar (wxMenuBar::MacSetCommonMenuBar).
+- wxd_WindowTabs_Prepare: a document window, its tabbing identifier shared by the document windows, and the plus
+  button of its tab bar (newWindowForTab:, added to wxWidgets' window class at run time with class_addMethod,
+  calling back the program for the window it was given to and doing nothing for any other window).
+- wxd_WindowTabs_Add (the window as the last tab of another's tab group, addTabbedWindow:ordered:),
+  wxd_WindowTabs_ShowTabBar, wxd_WindowTabs_Select, wxd_WindowTabs_Step (selectNextTab: and selectPreviousTab:),
+  wxd_WindowTabs_Move (the tab to another place in its group), wxd_WindowTabs_GroupOrder (a group's windows in tab
+  order), wxd_WindowTabs_SetEdited (wxTopLevelWindow::OSXSetModified), wxd_WindowTabs_IsKey, and
+  wxd_WindowTabs_MenuDump (every main menu item, for the build checks).

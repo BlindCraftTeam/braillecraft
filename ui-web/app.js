@@ -78,7 +78,7 @@ async function documentEngine(braille = doc.kind === "braille") {
 // for a table the page has not fetched yet: it is fetched and the text translated again, until nothing new is
 // asked for; a table not in this copy stays on the current table, as an unknown code does.
 async function translateText(e, text, file, braille, running = false) {
-  const initial = doc.initialCodes ?? "";
+  const initial = file.initial_codes;
   const list = await languages();
   if (!list) return running ? e.translate_document_running(text, file, initial) : e.translate_document(text, file, initial);
   for (let pass = 0; ; pass++) {
@@ -347,6 +347,8 @@ const settings = {
   accessPatterns: store.get("AccessUseBraillePatterns") === "1",
   verbose: store.get("verbose") === "1",
   sixKeySet: store.get("sixkey.set") || "fdsjkl",
+  // Global, View Preferences: line numbers beside a braille page (printed; spec 24 3d).
+  lineNumbers: store.get("Display.ShowLineNumbers") === "yes",
 };
 
 // A new document's view, from Global, Default Views.
@@ -362,6 +364,8 @@ function newView(braille) {
 }
 
 const doc = { kind: "print", name: "Untitled Print Document 1", file: null, view: newView(false) };
+// Whether an opened file came from the recent documents list: the web build keeps no such list.
+const IN_RECENT_LIST = false;
 
 // A new document takes the default embosser setup and layout, as in the desktop program.
 function embosserDefaults() {
@@ -372,6 +376,16 @@ function embosserDefaults() {
   doc.lines = lines;
   // A print document's embosser page, kept apart from its print page (spec 05 section A10).
   doc.embPage = [cells, lines];
+  // A braille document's own Printer Setup page (spec A16.2): the Global, Printer Setup page size to start with.
+  doc.printPage = globalPrintPage();
+  doc.doubleSize = 0;
+}
+
+// The Global, Printer Setup page size, [lines per page, characters per line] (54 and 65 until it is changed).
+function globalPrintPage() {
+  if (!core) return [54, 65];
+  const view = JSON.parse(core.printer_setup_view(store.get("printer.setup") || ""));
+  return [view.lines, view.chars];
 }
 embosserDefaults();
 
@@ -513,11 +527,35 @@ function brailleFamily(kind) {
   return family;
 }
 
-// A view font's CSS family and point size (Global, Fonts).
+// A view font's CSS family and point size (Global, Fonts). A braille view font is shown in "RNIB Moon" when the
+// document's print-to-braille table is a Moon table (its name starts with "ENMOCP") and that font is installed
+// (spec A16.1).
 function faceOf(font) {
   const f = settings.fonts;
   if (font === "print") return [`"${f.print_face}", monospace`, f.print_size];
-  return [`"${brailleFamily(font === "braille" ? "Braille" : "SimBraille")}", monospace`, f.braille_size];
+  const own = `"${brailleFamily(font === "braille" ? "Braille" : "SimBraille")}", monospace`;
+  const table = doc.file?.tables?.[0] ?? "";
+  if (table.slice(0, 6).toUpperCase() === "ENMOCP" && moonInstalled()) return [`"RNIB Moon", ${own}`, f.braille_size];
+  return [own, f.braille_size];
+}
+
+// The Full-Page font size (spec 27 section 9, unknown 3), as the desktop program fits it: sizes 5 to 48 are tried
+// in turn; the first at which the window's width holds no more than the page's cells, or the editing area's height
+// no more than its lines, stops the search and the size before it is taken (never less than 5); 47 when none stops
+// it. INFERENCE: the character measured is "x"; the measured string is not known.
+function fullPageSize(face) {
+  const ctx = (fullPageSize.canvas ??= document.createElement("canvas")).getContext("2d");
+  if (!ctx) return 6;
+  for (let size = 5; size <= 48; size++) {
+    ctx.font = `${size}pt ${face}`;
+    const m = ctx.measureText("x");
+    const width = Math.max(m.width, 1);
+    const height = Math.max((m.fontBoundingBoxAscent ?? size) + (m.fontBoundingBoxDescent ?? size / 3), 1);
+    const cols = Math.floor(window.innerWidth / width);
+    const rows = Math.floor(editor.clientHeight / height);
+    if (cols <= doc.cells || rows <= doc.lines) return Math.max(size - 1, 5);
+  }
+  return 47;
 }
 
 // The document's view applied: its font (sized so one whole page fits the window in Full-Page view), the translated
@@ -526,11 +564,8 @@ function faceOf(font) {
 function applyView() {
   const v = doc.view;
   let [face, size] = faceOf(v.font);
-  if (v.full_page) {
-    const byHeight = Math.floor((editor.clientHeight * 72) / 96 / (doc.lines + 1));
-    const byWidth = Math.floor((((editor.clientWidth * 72) / 96) * 10) / 6 / (doc.cells + 1));
-    size = Math.max(4, Math.min(byHeight, byWidth));
-  }
+  // Fitted with Full-Page on: the print font only outside the coded view, the braille fonts in either view.
+  if (v.full_page && (v.font !== "print" || !v.codes)) size = fullPageSize(face);
   editor.style.fontFamily = face;
   editor.style.fontSize = `${size}pt`;
   const [lineFace, lineSize] = faceOf(doc.kind === "print" ? settings.views.translated_font : "print");
@@ -603,6 +638,10 @@ function showStatus() {
   // As in the desktop program, the text as it is shown (in the shown encoding) is laid out.
   const status = core.status_line(editorText(), doc.cells, doc.lines, doc.kind === "braille", editor.selectionStart, doc.view.codes, settings.verbose, doc.view.six_key, doc.highlight !== null && doc.highlight !== undefined);
   if (statusLine.textContent !== status) statusLine.textContent = status;
+  // Table, Create is enabled outside a table and Table Properties inside one (spec 33 unknown 6).
+  const inTable = core.editor_in_table(editor.selectionStart);
+  menubar.querySelector('[data-id="1501"]')?.setAttribute("aria-disabled", String(inTable));
+  menubar.querySelector('[data-id="1503"]')?.setAttribute("aria-disabled", String(!inTable));
 }
 
 // Edit, Highlight: from where it was turned on, the selection follows the caret.
@@ -613,18 +652,26 @@ function followHighlight() {
   if (at !== null && at !== anchor) editor.setSelectionRange(Math.min(at, anchor), Math.max(at, anchor), at < anchor ? "backward" : "forward");
 }
 
+// View, Translated Line, as the desktop program's: the caret's laid-out page line (the formatted view) or coded row
+// (the coded view), translated with the codes before it in force (bc_core::translated_line): those codes are
+// translated ahead of the line and what they write alone is left off. What they write alone is kept while the caret
+// moves among lines with the same codes before them. `lastLine` set to null asks for the line again.
 let lastLine = null;
+let lineLead = { key: null, lead: "" };
 async function showTranslatedLine() {
-  if (!doc.view.translated) {
+  if (!doc.view.translated || !core) {
     return;
   }
-  const { line, text } = caretLine();
-  const key = `${line}:${text}`;
+  if (lastLine === null) lineLead = { key: null, lead: "" };
+  const braille = doc.kind === "braille";
+  const width = braille ? 42 : 65;
+  const at = editor.selectionStart;
+  const parts = JSON.parse(core.translated_line_parts(at, doc.cells, doc.lines, braille, !!doc.view.codes, width));
+  const key = `${parts.carried}\u0000${parts.line}`;
   if (key === lastLine) {
     return;
   }
   lastLine = key;
-  if (!core) return;
   // The document's own tables, initial codes and styles, as the desktop program's translated line.
   const { e, file } = await documentEngine();
   if (!e) {
@@ -632,44 +679,130 @@ async function showTranslatedLine() {
     return;
   }
   try {
-    // The caret's line with the editor's codes; the result keeps its own codes apart from braille brackets.
-    const { start, end } = caretLine();
-    const part = core.editor_slice(start, end);
+    // The result keeps its own codes apart from braille brackets.
+    const run = async (text) =>
+      braille ? translateText(e, toNA(text), file, true, true) : translateText(e, text, file, false, true);
+    let out;
+    if (!parts.carried) {
+      out = await run(parts.line);
+    } else {
+      const leadKey = `${file.tables.join("+")}|${file.initial_codes}|${parts.carried}`;
+      if (lineLead.key !== leadKey) lineLead = { key: leadKey, lead: await run(parts.carried) };
+      out = core.leave_off_lead(lineLead.lead, await run(parts.whole));
+    }
     // A print document's braille, shown in a braille font, as Unicode braille patterns when they are preferred.
     const patterns = doc.kind === "print" && settings.preferPatterns && settings.views.translated_font !== "print";
-    const line = doc.kind === "print" ? fromNA(core.running_text(await translateText(e, part, file, false, true))) : core.running_text(await translateText(e, toNA(part), file, true, true));
+    const line = braille ? core.running_text(out) : fromNA(core.running_text(out));
     translated.textContent = patterns ? linePatterns(line) : line;
   } catch (err) {
     translated.textContent = String(err.message ?? err);
   }
 }
 
-// Six-key entry (View, Six-Key Entry, braille documents): the six keys of Global, View Preferences are dots 1 to 6;
-// the keys down together make a chord, entered as its cell when the last of them comes up.
-const sixDown = new Set();
-let chord = 0;
-const sixKeyDot = (e) => (e.key.length === 1 ? settings.sixKeySet.indexOf(e.key.toLowerCase()) : -1);
+// Six-key entry (bc_core::sixkey, through the core's SixKey): the six keys of Global, View Preferences are dots 1 to
+// 6, named by their place on the keyboard (KeyboardEvent.code). With View, Six-Key Entry on they chord with Shift up;
+// in a braille document with it off, Shift and the six keys chord. The cell is typed when the first chord key comes
+// up; Space during a chord types the cell at once and a space when the chord key comes up; a held chord key types
+// the cell again on each repeat; the other letter keys do nothing while chording. Control, Alt and Meta keys go on.
+let editorChord = null;
+function sixKeyTyped(r, field) {
+  const c = r === 64 ? " " : cellChar(r);
+  field.setRangeText(c, field.selectionStart, field.selectionEnd, "end");
+  field.dispatchEvent(new Event("input"));
+}
+function sixKeyDown(e, field, chord) {
+  if (!core || !chord || e.ctrlKey || e.altKey || e.metaKey) return;
+  const braille = doc.kind === "braille";
+  const r = chord.key_down(e.code, settings.sixKeySet, braille, !!doc.view.six_key, e.shiftKey, e.repeat);
+  if (r === -1) return;
+  e.preventDefault();
+  if (r >= 0) sixKeyTyped(r, field);
+}
+function sixKeyUp(e, field, chord) {
+  if (!core || !chord) return;
+  const r = chord.key_up(e.code, settings.sixKeySet);
+  if (r === -1) return;
+  e.preventDefault();
+  if (r >= 0) sixKeyTyped(r, field);
+}
 editor.addEventListener("keydown", (e) => {
-  if (!doc.view.six_key || e.ctrlKey || e.altKey || e.metaKey) return;
-  const dot = sixKeyDot(e);
-  if (dot >= 0) {
-    e.preventDefault();
-    sixDown.add(dot);
-    chord |= 1 << dot;
-  }
+  if (core && !editorChord) editorChord = new core.SixKey();
+  sixKeyDown(e, editor, editorChord);
 });
-editor.addEventListener("keyup", (e) => {
-  if (!doc.view.six_key) return;
-  const dot = sixKeyDot(e);
-  if (dot < 0) return;
-  sixDown.delete(dot);
-  if (sixDown.size === 0 && chord !== 0) {
-    const c = cellChar(chord);
-    chord = 0;
-    editor.setRangeText(c, editor.selectionStart, editor.selectionEnd, "end");
-    editor.dispatchEvent(new Event("input"));
-  }
+// Six-key entry in a dialog field: Edit, Find and the Header and Footer dialogs take the keys as the editing area
+// does, with a chord of their own; the other dialogs type as usual.
+function sixKeyField(field) {
+  if (!core || !field) return;
+  const chord = new core.SixKey();
+  field.addEventListener("keydown", (e) => sixKeyDown(e, field, chord));
+  field.addEventListener("keyup", (e) => sixKeyUp(e, field, chord));
+}
+// The one-line prompts (dialog 30070), as in the desktop program: F9 or Ctrl+[ a code, Ctrl+F9 or Ctrl+< a style
+// (Ctrl+Shift+Comma on US keyboards), Alt+F9 or Ctrl+] a character by its Unicode number.
+editor.addEventListener("keydown", (e) => {
+  if (!core || e.metaKey) return;
+  const ctrl = e.ctrlKey && !e.altKey;
+  let which = null;
+  if (e.key === "F9") {
+    if (e.altKey && !e.ctrlKey) which = "char";
+    else if (ctrl) which = "style";
+    else if (!e.ctrlKey && !e.altKey && !e.shiftKey) which = "code";
+  } else if (ctrl && e.key === "[") which = "code";
+  else if (ctrl && (e.key === "<" || (e.shiftKey && e.code === "Comma"))) which = "style";
+  else if (ctrl && e.key === "]") which = "char";
+  if (!which) return;
+  e.preventDefault();
+  promptKey(which);
 });
+
+// A prompt key: the prompt asks for one line, its default the code (or style) at the caret, which the answer then
+// replaces; else the answer goes in at the caret. An empty answer or Cancel puts nothing in; an answer refused gives
+// its message.
+async function promptKey(which) {
+  const [question, max] = JSON.parse(core.prompt_texts())[which];
+  const at = editor.selectionStart;
+  const def =
+    which === "char"
+      ? { text: "", from: null, to: null }
+      : JSON.parse(core.editor_prompt_default(which === "style", at, doc.view.codes));
+  const answer = await askText(question, def.text, max);
+  editor.focus();
+  if (answer === null) return;
+  const out = JSON.parse(core.prompt_answer(which, answer));
+  if (out.message) {
+    await message(out.message);
+    editor.focus();
+    return;
+  }
+  if (out.put === null) return;
+  if (def.from !== null) editor.setSelectionRange(def.from, def.to);
+  if (out.code) insertCodes(out.put);
+  else insertText(out.put);
+}
+
+// Dialog 30070: `prompt` in its label and `def` in its field, all of it selected, with focus there. Answers the text
+// typed, cut to `max` characters (the field itself takes any length), or null for Cancel. INFERENCE: the title is
+// the resource's (empty); whether a title is set as it opens is not known.
+async function askText(prompt, def, max) {
+  const { result, d } = await showDialog("30070", {
+    focus: 5,
+    setup(d) {
+      d.setText(4, prompt);
+      d.setText(5, def);
+      // With no title, the dialog is named by its prompt for screen readers.
+      const dialog = d.get(5)?.closest("dialog");
+      const heading = dialog?.querySelector("h2");
+      if (dialog && heading && !heading.textContent.trim()) {
+        heading.hidden = true;
+        dialog.removeAttribute("aria-labelledby");
+        dialog.setAttribute("aria-label", prompt);
+      }
+    },
+  });
+  return result === "ok" ? [...d.text(5)].slice(0, max).join("") : null;
+}
+
+editor.addEventListener("keyup", (e) => sixKeyUp(e, editor, editorChord));
 
 editor.addEventListener("input", () => {
   // The document takes the edit (the field may show braille patterns), then the codes follow it
@@ -1053,6 +1186,13 @@ function closedPromise(dialog) {
   });
 }
 
+// A shown dialog placed a third of the way down the room the window leaves below it, centred across.
+function placeThird(dialog) {
+  const room = Math.max(window.innerHeight - dialog.offsetHeight, 0);
+  dialog.style.marginTop = `${Math.floor(room / 3)}px`;
+  dialog.style.marginBottom = "auto";
+}
+
 function focusFirst(container) {
   const first = [...container.querySelectorAll("input:not([type=hidden]), select, textarea, button")].find(
     (el) => !el.disabled && !el.closest("[hidden]"),
@@ -1070,6 +1210,8 @@ function focusFirst(container) {
 // and radios (ids from the given one on, one per word) are written as the word at the chosen index; text as typed;
 // hundredths is a number shown with two decimals and kept in hundredths (the WordPerfect indent); seconds is shown as
 // mm:ss (the autosave time). The defaults are the settings descriptor table's (spec 18 section 18.2b).
+// The words of the HanScriptLanguage setting, by value (0 Mandarin to 3 Korean).
+const HAN_LANGUAGES = ["Mandarin", "Cantonese", "Japanese", "Korean"];
 const KEPT_SETTINGS = {
   1037: [
     ["choice", 7, "Hyperlinks.Action", ["url", "text", "both", "hyper"], 2],
@@ -1079,7 +1221,9 @@ const KEPT_SETTINGS = {
     ["flag", 21, "ImportOptions.RemoveDashSpaces", null, false],
     ["choice", 23, "Word.UnknownCharacters", ["ignore", "asterisc", "hex"], 0],
     ["flag", 24, "Word.HanScriptAuto", null, true],
-    ["radios", 26, "Word.HanScriptLanguage", ["Mandarin", "Cantonese", "Japanese", "Korean", "Zhuyin"], 0],
+    // The setting has four words; Zhuyin is reached only through the zhtwcp table (spec A15.11). INFERENCE: the
+    // dialog's fifth button, Zhuyin (30), has no word, so choosing it keeps the default.
+    ["radios", 26, "Word.HanScriptLanguage", HAN_LANGUAGES, 0],
   ],
   1035: [
     ["flag", 6, "WordPerfect.CBCForCourier", null, false],
@@ -1190,7 +1334,10 @@ function saveKept(d, kept) {
   }
 }
 
-async function showDialog(rid, { title, setup, onOk, memory, after, closes = [] } = {}) {
+// With `focus`, focus starts in that control (its text selected) in place of the first one; with `third`, the
+// dialog stands a third of the way down the room the window has below it, as the desktop program places
+// Code List, Page Numbering, Shortcut Preferences and the learning step list.
+async function showDialog(rid, { title, setup, onOk, memory, after, closes = [], focus, third } = {}) {
   const { dialog, form } = newDialog(title ?? DIALOGS[rid].title, `dlg${rid}`);
   const { controls, keys } = buildControls(rid, form);
   const d = dialogHelpers(controls);
@@ -1207,7 +1354,14 @@ async function showDialog(rid, { title, setup, onOk, memory, after, closes = [] 
   if (kept) restoreKept(d, kept);
   after?.(d);
   dialog.showModal();
-  focusFirst(form);
+  if (third) placeThird(dialog);
+  const start = focus !== undefined ? d.get(focus) : null;
+  if (start) {
+    start.focus();
+    start.select?.();
+  } else {
+    focusFirst(form);
+  }
   const result = await closed;
   if (result === "ok" && kept) saveKept(d, kept);
   if (result === "ok" && memory !== undefined) store.set(`dialog.${rid}.${memory}`, JSON.stringify(d.values()));
@@ -1249,9 +1403,11 @@ const message = (text) => messageBox(text, false);
 // A whole number field checked as a dialog checks one (an onOk): string 2644 when it is not a
 // number, else `low` or `high` with the limit for %d when it is out of 1 ... 2147483647. On a failure the message is
 // shown, the field gets focus with its text selected, and the dialog stays open.
-async function checkNumber(d, field, low, high) {
+// The number is read by the dialogs' whole-number rule (an optional "-" and digits, no spaces, no "+"), after the
+// first `width` characters when a width is given.
+async function checkNumber(d, field, low, high, width = 0) {
   const MAX = 0x7fffffff;
-  const n = d.number(field);
+  const n = numberField(d.text(field), width);
   const text = n === null ? "The number entered is not valid." : n < 1 ? low.replace("%d", "1") : n > MAX ? high.replace("%d", String(MAX)) : null;
   if (text === null) return true;
   await message(text);
@@ -1262,6 +1418,12 @@ async function checkNumber(d, field, low, high) {
 }
 const yesNo = (text) => messageBox(text, true);
 const okCancel = (text) => messageBox(text, false, false, true);
+// A number field's number by the whole-number rule (bc_core::number_field), or null.
+function numberField(text, width = 0) {
+  if (core) return core.number_field(text, width) ?? null;
+  const cut = width ? [...text].slice(0, width).join("") : text;
+  return /^-?\d+$/.test(cut) ? Number(cut) : null;
+}
 // Yes, No or Cancel: true, false, or null for Cancel.
 const yesNoCancel = async (text) => ({ ok: true, no: false })[await messageBox(text, true, true)] ?? null;
 
@@ -1368,9 +1530,11 @@ async function editSetup(setup, cat) {
   fillTranSend(transend, setup, lists);
   const hasModel = () => !(general.selected(5) ?? "(").startsWith("(");
   setTranSendTab(cat.flag(setup.model, "TranSend"));
-  const tigerModel = () => hasModel() && cat.driver(general.selected(5)) === "Emb_TigerEmbosserDriver";
-  showGeneral(general, hasModel());
-  showOutput(general, advanced, hasModel(), tigerModel());
+  // The model prints only through its system printer driver: the Tiger driver out of Legacy Mode (spec A17.6).
+  const printerOnly = () =>
+    hasModel() && cat.setup_driver(general.selected(5), device.checked(24)) === "Emb_TigerEmbosserDriver";
+  showGeneral(general, hasModel(), printerOnly());
+  showOutput(general, advanced, hasModel(), printerOnly());
   // The Device Settings groups shown again for the model, version and escape codes now chosen.
   const refreshDevice = () => {
     const model = hasModel() ? general.selected(5) : "";
@@ -1380,8 +1544,11 @@ async function editSetup(setup, cat) {
   device.get(6).addEventListener("change", refreshDevice);
   // The output controls follow the output and the port chosen and Initialize Serial Port.
   for (const cid of [13, 14, 15, 17, 21]) {
-    general.get(cid)?.addEventListener("change", () => showOutput(general, advanced, hasModel()));
+    general.get(cid)?.addEventListener("change", () => showOutput(general, advanced, hasModel(), printerOnly()));
   }
+  // Legacy Mode: out of it the output becomes Send to Printer again; Write to Port and Write to File are made usable
+  // or not only when the sheet opens or the model changes (spec A17.6).
+  device.get(24)?.addEventListener("change", () => showOutput(general, advanced, hasModel(), printerOnly()));
   // The setup the pages show for model `model` (whose forms the form list holds), over `base` for what no page shows.
   const readSheet = (base, model) => {
     const s = structuredClone(base);
@@ -1407,6 +1574,7 @@ async function editSetup(setup, cat) {
     s.et_speaks_manage = device.checked(7);
     s.et_speaks_on = device.checked(8);
     s.seek_top_of_form = device.checked(9);
+    s.tiger_legacy = device.checked(24);
     s.interpoint_enabled = device.checked(34);
     s.encoding = device.selected(37) ?? s.encoding;
     s.high_punctuation = device.chosenIn(39, lists.cases) === 1;
@@ -1447,8 +1615,8 @@ async function editSetup(setup, cat) {
       general.setItems(17, ports, -1);
       lastPorts = JSON.stringify(ports);
     }
-    showGeneral(general, !!model);
-    showOutput(general, advanced, !!model, tigerModel());
+    showGeneral(general, !!model, printerOnly());
+    showOutput(general, advanced, !!model, printerOnly());
     setTranSendTab(!!model && cat.flag(model, "TranSend"));
     refreshDevice();
   });
@@ -1476,27 +1644,27 @@ async function editSetup(setup, cat) {
   return (await closed) === "ok" ? answer : null;
 }
 
-// Page 10001 with or without a model, as the desktop program sets it (spec 25 15.3): with none, every control below
-// the model choice is greyed; with one, the setup name, the form and the output choices are usable again
-// (INFERENCE for Write to Port and Write to File, as in the desktop program).
-function showGeneral(general, hasModel) {
+// Page 10001 with or without a model, as the desktop program sets it when the sheet opens and on a change of model
+// (spec 25 15.3, spec A17.6): with none, every control below the model choice is greyed; with one, the setup name,
+// the configuration location and the form (6, 7, 10 to 13) are usable again, and Write to Port and Write to File
+// (14, 15) unless the model prints only through its printer driver.
+function showGeneral(general, hasModel, printerOnly = false) {
   if (!hasModel) {
     for (let cid = 6; cid <= 31; cid++) general.enable(cid, false);
     return;
   }
-  for (const cid of [6, 7, 10, 12, 13, 14, 15]) general.enable(cid, true);
+  for (const cid of [6, 7, 10, 11, 12, 13]) general.enable(cid, true);
+  general.enable(14, !printerOnly);
+  general.enable(15, !printerOnly);
 }
 
 // The output controls for the output now chosen (spec 25 16.3), as in the desktop program: only the chosen output's
 // own field is usable; the Serial group and Initialize Serial Port only for a port beginning "com", the serial
 // settings only while it is checked; Advanced's Send one character at a time (20) only for a port or a file.
-function showOutput(general, advanced, hasModel, tiger = false) {
-  // A model whose driver prints only through its system printer driver (the driver table marks the
-  // Tiger driver alone) can only be sent to a printer: Write to Port and Write to File are disabled and the output
-  // becomes Send to Printer (audit print-emboss E12).
-  general.enable(14, hasModel && !tiger);
-  general.enable(15, hasModel && !tiger);
-  if (tiger && general.radio([13, 14, 15]) !== 0) general.setRadio([13, 14, 15], 0);
+function showOutput(general, advanced, hasModel, printerOnly = false) {
+  // A model that prints only through its system printer driver (the driver table marks the Tiger driver alone, out
+  // of Legacy Mode) is sent to a printer: the output becomes Send to Printer (spec A17.6, audit print-emboss E12).
+  if (hasModel && printerOnly && general.radio([13, 14, 15]) !== 0) general.setRadio([13, 14, 15], 0);
   const kind = hasModel ? general.radio([13, 14, 15]) : null;
   general.enable(16, kind === 0);
   general.enable(17, kind === 1);
@@ -1572,6 +1740,7 @@ function fillSheet(general, device, advanced, s, cat, lists, models) {
   device.setChecked(7, !!s.et_speaks_manage);
   device.setChecked(8, !!s.et_speaks_on);
   device.setChecked(9, s.seek_top_of_form);
+  device.setChecked(24, !!s.tiger_legacy);
   device.setChecked(34, s.interpoint_enabled);
   let encodings = cat.encodings(s.model);
   if (!encodings.length) encodings = ["North American English"];
@@ -1920,8 +2089,46 @@ async function chosenPages(d, radios, fields, braille, caret, from, to) {
 
 // ------------------------------------------------------------------ File Print (dialog 1040)
 
+// Whether a font named "RNIB Moon" is installed: text measured in it differs from the generic fallbacks. Looked up
+// once.
+function moonInstalled() {
+  if (moonInstalled.found !== undefined) return moonInstalled.found;
+  const ctx = document.createElement("canvas").getContext("2d");
+  if (!ctx) return (moonInstalled.found = false);
+  const width = (family) => {
+    ctx.font = `24px ${family}`;
+    return ctx.measureText("abcdefghijklmnopqrstuvwxyz0123456789").width;
+  };
+  moonInstalled.found = ["monospace", "serif"].every((g) => width(`"RNIB Moon", ${g}`) !== width(g));
+  return moonInstalled.found;
+}
+
+// The CSS family a page prints in (spec A16.1): the view font's printing face, the Print font's face, "Braille",
+// "SimBraille", or "RNIB Moon" for a braille view font when the document's print-to-braille table name starts with
+// "ENMOCP" and the font is installed. The braille faces fall back to the program's own braille font.
+function printFaceOf(font, table) {
+  if (font === "print") return faceOf("print")[0];
+  const own = `"${brailleFamily(font === "braille" ? "Braille" : "SimBraille")}", monospace`;
+  if (moonInstalled() && table.slice(0, 6).toUpperCase() === "ENMOCP") return `"RNIB Moon", ${own}`;
+  // BrailleCraft's own braille or SimBraille font for the display encoding (the fonts the program ships).
+  return own;
+}
+
+// The height of a line of `family` at `points` (its ascent and descent), in CSS pixels; null when it cannot be
+// measured.
+function lineHeightOf(family, points) {
+  const ctx = (lineHeightOf.canvas ??= document.createElement("canvas")).getContext("2d");
+  if (!ctx) return null;
+  ctx.font = `${points}pt ${family}`;
+  const m = ctx.measureText("a");
+  const h = (m.fontBoundingBoxAscent ?? 0) + (m.fontBoundingBoxDescent ?? 0);
+  return h > 0 ? h : null;
+}
+
 // The document's chosen pages printed through the browser's print dialog, `copies` times, a page per sheet; a
-// braille document in the braille font, with each line's print under it when interline print is chosen.
+// braille document with each line's print above it, in 9-point Times New Roman, when interline print is chosen, and
+// with its line numbers in a column on each side, in the editing window's font, when Global, View Preferences shows
+// them (spec A16.5).
 async function print() {
   if (!core) {
     window.print();
@@ -1941,7 +2148,8 @@ async function print() {
       // No page-number range when two pages carry the same page number; Interline Print starts from the
       // document's embosser layout and is the job's choice only (spec 24).
       d.enable(12, !core.page_numbers_repeat(editorText(), doc.cells, doc.lines, braille));
-      d.setChecked(17, braille && doc.layout.interline !== 0);
+      // Interline Print starts checked when the layout has interline or DoubleSizePrint (spec A16.5).
+      d.setChecked(17, braille && (doc.layout.interline !== 0 || (doc.doubleSize ?? 0) !== 0));
       d.enable(17, braille);
     },
     async onOk(d) {
@@ -1958,22 +2166,46 @@ async function print() {
   const back = job.interline ? await documentEngine(true) : null;
   const area = $("print-area");
   area.replaceChildren();
-  // The pages print in the document's view font, at the Global, Fonts printed size unless that is set to be found.
-  area.style.fontFamily = faceOf(doc.view.font)[0];
-  area.style.fontSize = settings.fonts.print_auto ? "" : `${doc.view.font === "print" ? settings.fonts.print_output_size : settings.fonts.braille_output_size}pt`;
+  // The pages print in the document's view font in its printing face, at the Global, Fonts printed size unless that
+  // is set to be found.
+  const family = printFaceOf(doc.view.font, (await documentFile()).tables[0] ?? "");
+  const size = doc.view.font === "print" ? settings.fonts.print_output_size : settings.fonts.braille_output_size;
+  area.style.fontFamily = family;
+  area.style.fontSize = settings.fonts.print_auto ? "" : `${size}pt`;
+  // The Braille and SimBraille printing faces step nine tenths of a line from one line to the next.
+  const tight = doc.view.font !== "print" && !family.startsWith('"RNIB Moon"');
+  const height = tight ? lineHeightOf(family, settings.fonts.print_auto ? 12 : size) : null;
+  // Line numbers: a braille document with the setting on, in coded view too, in the editing window's font.
+  const numbers = braille && settings.lineNumbers;
+  // The number column is as wide as "25" in that font; the text starts half that width after it, and the right
+  // column half that width after the text block (spec 24, 3d).
+  const [windowFamily, windowSize] = faceOf(doc.view.font);
+  const ctx = document.createElement("canvas").getContext("2d");
+  if (ctx) ctx.font = `${windowSize}pt ${windowFamily}`;
+  const numberWidth = ctx ? ctx.measureText("25").width : 0;
+  const number = (n, side) => {
+    const span = document.createElement("span");
+    span.className = "printed-number";
+    span.style.fontFamily = windowFamily;
+    span.style.fontSize = `${windowSize}pt`;
+    span.style.width = `${numberWidth}px`;
+    span.style[side === "left" ? "marginRight" : "marginLeft"] = `${numberWidth / 2}px`;
+    span.textContent = String(n);
+    return span;
+  };
   for (let copy = 0; copy < job.copies; copy++) {
     for (const lines of pages) {
       const page = document.createElement("section");
       page.className = "printed-page";
-      for (const line of lines ?? []) {
-        const row = document.createElement("div");
-        row.className = "printed-line";
-        row.textContent = line || " ";
-        page.append(row);
+      for (const [i, line] of (lines ?? []).entries()) {
+        // The interline print goes above its braille line.
         if (back?.e && line.trim()) {
           const ink = document.createElement("div");
           ink.className = "printed-ink";
-          ink.style.fontFamily = faceOf("print")[0];
+          ink.style.fontFamily = '"Times New Roman", serif';
+          ink.style.fontSize = "9pt";
+          // From the line's first cell.
+          if (numbers) ink.style.marginLeft = `${numberWidth * 1.5}px`;
           try {
             // A laid-out line holds no codes: its brackets are braille cells.
             ink.textContent = core.running_text(await translateText(back.e, toNA(core.plain_text(line.trimEnd())), back.file, true, true));
@@ -1982,6 +2214,16 @@ async function print() {
           }
           page.append(ink);
         }
+        const row = document.createElement("div");
+        row.className = "printed-line";
+        if (height) row.style.lineHeight = `${height * 0.9}px`;
+        const text = document.createElement("span");
+        text.className = "printed-text";
+        text.style.width = `${doc.cells}ch`;
+        text.textContent = line || " ";
+        if (numbers) row.append(number(i + 1, "left"), text, number(i + 1, "right"));
+        else row.append(text);
+        page.append(row);
       }
       area.append(page);
     }
@@ -2002,14 +2244,15 @@ async function print() {
 const printerSetupOf = (global) => (!global && doc.printer) || store.get("printer.setup") || "";
 
 // Document, Printer Setup and Global, Printer Setup (dialog 1071, spec 24 2b): the paper, orientation and margins,
-// and the formatted page size. A print document takes its lines per page and characters per line from here; a
-// braille document takes its page size from Embosser Setup, so the two fields are shown but not changed here.
+// and the formatted page size. Every document keeps its own page size here: a print document is laid out again on
+// it; a braille document, laid out on its embosser page, only keeps it, and its file keeps it (spec A16.2).
 // The browser chooses the printer in its own print dialog, so Printer... says so (web build).
 async function printerSetup(global) {
   let setup = printerSetupOf(global);
   let size = [0, 0];
   const view = JSON.parse(core.printer_setup_view(setup));
-  const [lines, chars] = global ? [view.lines, view.chars] : [doc.lines, doc.cells];
+  const own = doc.kind === "print" ? [doc.lines, doc.cells] : doc.printPage ?? globalPrintPage();
+  const [lines, chars] = global ? [view.lines, view.chars] : own;
   const margins = [1155, 1156, 1157, 1158];
   const { result, d } = await showDialog(1071, {
     title: global ? "Global: Printer Setup..." : "Document: Printer Setup...",
@@ -2018,7 +2261,6 @@ async function printerSetup(global) {
       d.setItems(1138, ["Automatically Select"], 0);
       d.setRadio([1056, 1057], view.landscape ? 1 : 0);
       margins.forEach((c, i) => d.setText(c, view.margins[i]));
-      // The page size fields stay enabled for a braille document (only their values are ignored there).
       d.setText(2003, String(lines));
       d.setText(2005, String(chars));
       d.get(1026)?.addEventListener("click", () => message("In the browser, the printer and its own settings are chosen in the browser's print dialog when you print."));
@@ -2053,10 +2295,12 @@ async function printerSetup(global) {
   if (global) {
     store.set("printer.setup", core.printer_setup_page(setup, newLines, newChars));
   } else {
-    // The new size applies to a print document only.
+    // A print document is laid out on the new size; a braille document keeps it.
     if (doc.kind === "print") {
       doc.lines = newLines;
       doc.cells = newChars;
+    } else {
+      doc.printPage = [newLines, newChars];
     }
     doc.printer = setup;
   }
@@ -2065,26 +2309,132 @@ async function printerSetup(global) {
 
 // ------------------------------------------------------------------ File Emboss (dialog 1039)
 
-// Sends a job through Web Serial, the browser's serial port access, with the setup's serial settings.
-// INFERENCE (web build): XON/XOFF handshaking has no Web Serial setting, so the port runs without handshaking then.
-async function sendSerial(setup, bytes) {
+// Sends a job through Web Serial, the browser's serial port access, with the setup's serial settings (spec A17.10).
+// Hardware handshaking is the browser's RTS/CTS flow control (Web Serial has none by DTR and DSR). Software
+// handshaking (XON/XOFF) is done here: the port's answers are read while the job is written in pieces of 64 bytes,
+// and writing stops after XOFF (0x13) until XON (0x11) comes; RTS and DTR are on. With no handshaking RTS and DTR
+// are off. The job goes a page at a time (`job`: the page numbers and the pieces, start codes first and end codes
+// last), the progress window showing each page; a job cancelled there stops at the next page with "Cancelling...".
+async function sendSerial(setup, job, progress) {
   const port = await navigator.serial.requestPort();
   const options = { baudRate: setup.baud, dataBits: setup.data_bits, stopBits: setup.stop_bits };
+  const software = setup.serial_init && setup.handshaking === 1;
   if (setup.serial_init) {
     options.parity = ["none", "even", "odd", "none"][setup.parity] ?? "none";
     options.flowControl = setup.handshaking === 0 ? "hardware" : "none";
   }
   await port.open(options);
+  let reader = null;
+  let reading = null;
   try {
+    if (software) await port.setSignals({ dataTerminalReady: true, requestToSend: true });
+    if (setup.serial_init && setup.handshaking === 2) {
+      await port.setSignals({ dataTerminalReady: false, requestToSend: false });
+    }
+    // XON/XOFF: `paused` is set by XOFF and cleared by XON; `resume` wakes the writer waiting on it.
+    let paused = false;
+    let resume = null;
+    if (software && port.readable) {
+      reader = port.readable.getReader();
+      reading = (async () => {
+        for (;;) {
+          const { value, done } = await reader.read();
+          if (done) return;
+          for (const b of value ?? []) {
+            if (b === 0x13) paused = true;
+            else if (b === 0x11) {
+              paused = false;
+              resume?.();
+            }
+          }
+        }
+      })().catch(() => {});
+    }
     const writer = port.writable.getWriter();
+    const write = async (bytes) => {
+      if (!software) return writer.write(bytes);
+      for (let at = 0; at < bytes.length; at += 64) {
+        while (paused) await new Promise((r) => (resume = r));
+        await writer.write(bytes.subarray(at, at + 64));
+      }
+    };
     try {
-      await writer.write(bytes);
+      const pieces = job.pieces.map((p) => Uint8Array.from(p));
+      const last = pieces.length - 1;
+      await write(pieces[0]);
+      for (let k = 1; k < last; k++) {
+        if (progress.cancelled) {
+          progress.status(28004, 0);
+          break;
+        }
+        progress.status(28002, job.pages[k - 1] ?? k);
+        await write(pieces[k]);
+      }
+      if (last > 0) await write(pieces[last]);
     } finally {
       writer.releaseLock();
     }
   } finally {
+    if (reader) {
+      await reader.cancel().catch(() => {});
+      await reading;
+      reader.releaseLock();
+    }
     await port.close();
   }
+}
+
+// The embossing progress window (dialog 28000), shown without blocking the page while a job is sent: the job's name
+// (11) and its status (12, announced to screen readers as it changes). Cancel, Enter, Space and Escape cancel.
+function embossProgress(name) {
+  const { dialog, form } = newDialog(DIALOGS["28000"].title, "dlg28000");
+  const { controls } = buildControls("28000", form);
+  const d = dialogHelpers(controls);
+  let cancelled = false;
+  let done = false;
+  addButtons("28000", dialog, form, controls, null);
+  const status = d.get(12);
+  status?.setAttribute("role", "status");
+  status?.setAttribute("aria-live", "polite");
+  d.setText(11, name);
+  d.setText(12, "");
+  const cancel = () => {
+    if (cancelled) return;
+    cancelled = true;
+    d.setText(12, core.progress_text(28004, 0));
+  };
+  d.get(2)?.addEventListener("click", cancel, { capture: true });
+  dialog.addEventListener("keydown", (e) => {
+    if (["Escape", "Enter", " "].includes(e.key)) {
+      e.preventDefault();
+      cancel();
+    }
+  });
+  // The Cancel button would close the window; it stays until the job ends.
+  dialog.addEventListener("close", () => {
+    if (!done) {
+      cancel();
+      dialog.show();
+    }
+  });
+  $("dialogs").append(dialog);
+  dialog.show();
+  placeThird(dialog);
+  d.get(2)?.focus();
+  return {
+    get cancelled() {
+      return cancelled;
+    },
+    status(msgid, page) {
+      if (msgid === 28004) cancel();
+      else d.setText(12, core.progress_text(msgid, page));
+    },
+    close() {
+      done = true;
+      dialog.close();
+      dialog.remove();
+    },
+  };
 }
 
 // File, Emboss (dialog 1039, spec 25 2a): the checks before a job in the order of spec 25 9.1, then the
@@ -2096,7 +2446,8 @@ async function emboss() {
     await message("Embossing is not available in this copy of the web build.");
     return;
   }
-  // INFERENCE: a setup name that is no longer kept here is treated as no setup chosen.
+  // A document opened with a setup that is not kept has none (spec 25 10.1). INFERENCE: a document whose setup is
+  // removed while it is open is treated as having no setup chosen (spec A17.7).
   const setup = doc.embosser ? loadSetup(doc.embosser) : null;
   if (!setup) {
     await message(core.no_setup_message());
@@ -2145,17 +2496,25 @@ async function emboss() {
   for (const [n, side] of sides.entries()) {
     if (n > 0 && !(await okCancel("Please re-insert the stack of embossed sheets to emboss the second side."))) return;
     const text = job.text === null ? storedText() : braille ? toNA(job.text) : job.text;
-    const bytes = cat.job(setupJson, layoutJson, text, braille, doc.cells, doc.lines, job.copies, Int32Array.from(job.pages), codes, side);
+    const args = [setupJson, layoutJson, text, braille, doc.cells, doc.lines, job.copies, Int32Array.from(job.pages), codes, side];
     if (kind === "Port" && /^com/i.test(target) && "serial" in navigator) {
+      // Sent a page at a time with the progress window: "Starting Document", then "Embossing Page N".
+      const progress = embossProgress(doc.name);
+      progress.status(28000, 0);
       try {
-        await sendSerial(setup, bytes);
+        await sendSerial(setup, JSON.parse(cat.job_pieces(...args)), progress);
+        if (progress.cancelled) return;
         continue;
       } catch (err) {
         if (err?.name === "NotFoundError") return; // no port was chosen
+        progress.close();
         await message(String(err.message ?? err));
         return;
+      } finally {
+        progress.close();
       }
     }
+    const bytes = cat.job(...args);
     const named = kind === "File" && target.trim() ? target.trim().split(/[\\/]/).pop() : `${stem()}.brl`;
     download(named, bytes);
     if (kind !== "File") {
@@ -2169,15 +2528,10 @@ async function emboss() {
 // The kinds read through an import chain (kinds as the core names them).
 const CHAIN_KINDS = ["CodedText", "FormattedText", "CodedBraille", "FormattedBraille", "Orbit"];
 
-// What the desktop program says for a kind it cannot import.
-function importRefusal({ kind, filter }) {
-  if (kind === "Unsupported" || kind === "Music") {
-    return "This document cannot be imported into BrailleCraft.  It appears to be in an unsupported file format.";
-  }
-  if (kind === "Rtf") {
-    return "This document cannot be imported into BrailleCraft.  It appears to be in Rich Text Format (RTF).  If Microsoft® Word is installed, you can use it to convert your document to a native Word format and import that into BrailleCraft.";
-  }
-  return `BrailleCraft cannot import ${filter} files yet.`;
+// What the desktop program says for a kind it cannot import: the core's refusal (an older Excel workbook, RTF, any
+// other unsupported file), else BrailleCraft's own words for a kind with no importer yet.
+function importRefusal({ kind, filter }, bytes) {
+  return core.import_refusal(kind, bytes) || `BrailleCraft cannot import ${filter} files yet.`;
 }
 
 // The templates as File, New lists them (templates/index.tsv), in alphabetical order.
@@ -2314,10 +2668,11 @@ function newDocument(braille, template) {
   doc.kind = braille ? "braille" : "print";
   doc.name = braille ? "Untitled Braille Document 1" : "Untitled Print Document 1";
   doc.file = null;
+  doc.ebraille = null;
   doc.saved = false;
+  doc.documentFile = false;
   doc.printer = null;
   doc.hyphen = 2902;
-  doc.initialCodes = "";
   doc.template = template;
   doc.dirty = false;
   embosserDefaults();
@@ -2498,6 +2853,15 @@ async function northAmerican(bytes, encodingId) {
   });
 }
 
+// The print-to-braille table a document made from this template text names, for the Han script's language.
+function forwardTableOf(templateSource) {
+  try {
+    return core.new_document(false, "", templateSource).tables[0] ?? "";
+  } catch {
+    return "";
+  }
+}
+
 // A file as the import dialog's choice says to read it: { braille, running } (text with codes) or { braille, plain },
 // with the template chosen; null after saying why it cannot be read. A PDF becomes print with codes, its styles named
 // as the template names them; coded and formatted text, coded and formatted braille and Orbit braille go through the
@@ -2518,8 +2882,10 @@ async function readImport(bytes, choice) {
     let imported;
     try {
       await importFiles();
-      const map = core.word_map_name(await templateTextNamed(template));
-      imported = core.import_docx(bytes, JSON.stringify(wordOptions()), map, unknownCharacters());
+      const templateSource = await templateTextNamed(template);
+      const map = core.word_map_name(templateSource);
+      const options = JSON.stringify(wordOptions(forwardTableOf(templateSource)));
+      imported = core.import_docx(bytes, options, map, unknownCharacters());
     } catch (err) {
       statusLine.textContent = String(err.message ?? err);
       return null;
@@ -2533,7 +2899,8 @@ async function readImport(bytes, choice) {
     let imported;
     try {
       await importFiles();
-      imported = core.import_markdown(bytes, JSON.stringify(wordOptions()), unknownCharacters());
+      const options = wordOptions(forwardTableOf(await templateTextNamed(template)));
+      imported = core.import_markdown(bytes, JSON.stringify(options), unknownCharacters());
     } catch (err) {
       statusLine.textContent = String(err.message ?? err);
       return null;
@@ -2554,7 +2921,7 @@ async function readImport(bytes, choice) {
     if (imported.errors) await message(imported.errors);
     return { braille: forcedKind(imported, choice.braille), running: imported.running, template };
   }
-  await message(importRefusal(choice));
+  await message(importRefusal(choice, bytes));
   return null;
 }
 
@@ -2582,7 +2949,7 @@ async function templateTextNamed(name) {
 // The Word importer's settings as the Global Word Importer (1036) and Import Options (1037) dialogs last kept them
 // (showDialog memory), the defaults where a dialog was never confirmed; the JSON shape of the core's
 // Word options.
-function wordOptions() {
+function wordOptions(forwardTable = "") {
   const kept = (rid) => {
     try {
       return new Map(JSON.parse(store.get(`dialog.${rid}.`) ?? "[]"));
@@ -2598,6 +2965,7 @@ function wordOptions() {
   const linkItems = ["Text Only", "URLs Only", "Both Text and URLs", "Structured Hyperlinks"];
   const pages = Math.max(0, pageItems.indexOf(w.get(10)));
   const links = linkItems.indexOf(i.get(7));
+  const hanLanguage = (store.get("Word.HanScriptLanguage") ?? "").trim().toLowerCase();
   return {
     braille_fonts: flag(w, 11, false),
     cbc: flag(w, 6, false),
@@ -2616,6 +2984,10 @@ function wordOptions() {
     codes: flag(w, 12, true),
     add_spaces: flag(i, 20, false),
     remove_dash_spaces: flag(i, 21, false),
+    // The Han script: the language by the document's print-to-braille table (HanScriptAuto), else HanScriptLanguage.
+    han_auto: (store.get("Word.HanScriptAuto") ?? "yes").trim().toLowerCase() === "yes",
+    han_language: Math.max(0, HAN_LANGUAGES.findIndex((w) => w.toLowerCase() === hanLanguage)),
+    forward_table: forwardTable,
   };
 }
 
@@ -2671,7 +3043,6 @@ fileInput.addEventListener("change", async () => {
   embosserDefaults();
   doc.printer = null;
   doc.hyphen = 2902;
-  doc.initialCodes = "";
   doc.template = null;
   doc.dirty = false;
   if (d) {
@@ -2681,7 +3052,15 @@ fileInput.addEventListener("change", async () => {
     setEditorText(d.braille ? fromNA(text) : text);
     if (d.braille) core.editor_convert(editorText());
     doc.file = d;
+    // The document's eBraille metadata, as the file keeps it.
+    doc.ebraille = d.ebraille_metadata ? JSON.parse(d.ebraille_metadata) : null;
     doc.saved = true;
+    // Read from a document file: File, Save writes it again without asking (spec A15.10).
+    doc.documentFile = true;
+    // The caret where the document was saved (settings +22, spec 05 section A10), only for a file whose saved view
+    // is taken (see below); else the start.
+    const at = core.restores_view(IN_RECENT_LIST, d.view_font) ? d.caret : 0;
+    editor.setSelectionRange(at, at);
     // The document's own embosser setup and page layout, as the file keeps them; cells and lines are taken by a
     // braille document.
     // A setup no longer kept gives message 2358 and leaves the name empty (spec 25 10.1).
@@ -2697,6 +3076,8 @@ fileInput.addEventListener("change", async () => {
     if (d.embosser_layout) {
       const l = JSON.parse(d.embosser_layout);
       doc.layout = l.layout;
+      // The DoubleSizePrint byte (layout +11), for File, Print's Interline Print box.
+      doc.doubleSize = l.double_size ?? 0;
       if (d.braille) {
         doc.cells = l.cells;
         doc.lines = l.lines;
@@ -2704,10 +3085,12 @@ fileInput.addEventListener("change", async () => {
         doc.embPage = [l.cells, l.lines];
       }
     }
-    // A print document is laid out on its own Printer Setup page, 54 lines of 65 characters when the file holds
-    // none (spec 05 section A10).
-    if (!d.braille) {
-      const [lines, chars] = d.print_page;
+    // The document's own Printer Setup page, the Global, Printer Setup page size when the file holds none (spec
+    // A16.4 unknown 6). A print document is laid out on it; a braille document keeps it (spec A16.2).
+    const [lines, chars] = d.print_page(...globalPrintPage());
+    if (d.braille) {
+      doc.printPage = [lines, chars];
+    } else {
       doc.lines = lines;
       doc.cells = chars;
     }
@@ -2723,13 +3106,25 @@ fileInput.addEventListener("change", async () => {
       core?.editor_load_plain(editorText());
     }
     doc.file = null;
+    doc.ebraille = null;
     doc.saved = read.saved ?? false;
+    // An imported file is not a document file: File, Save asks (spec A15.10).
+    doc.documentFile = false;
     doc.template = read.template ?? null;
+    // An imported file is a new document: the caret at its start, as in the desktop program (setting a text
+    // field's value leaves the caret at the end).
+    editor.setSelectionRange(0, 0);
   }
   doc.name = file.name;
-  // A document opens in its kind's default view; a document file keeps whether its translated line shows.
+  // A document opens in its kind's default view (Global, Default Views). A document file's saved view (its
+  // translated line) is taken only when it is reopened from the recent documents list with a valid view font in it
+  // (spec 27 section 9, unknown 6); the web build keeps no recent documents list, so no file is in it.
   doc.view = newView(doc.kind === "braille");
-  if (doc.file) doc.view.translated = doc.file.translated_line;
+  if (doc.file && core.restores_view(IN_RECENT_LIST, doc.file.view_font)) {
+    doc.view.translated = doc.file.translated_line;
+    // Six-key entry is kept in the file for both kinds of document.
+    doc.view.six_key = doc.file.six_key;
+  }
   showTitle();
   editor.focus();
   applyView();
@@ -2766,6 +3161,8 @@ async function translateDocument() {
   doc.file = file.as_kind(toBraille, text);
   setEditorText(toBraille ? fromNA(text) : text);
   if (toBraille) core.editor_convert(editorText());
+  // The translation is a new document: the caret at its start, as in the desktop program.
+  editor.setSelectionRange(0, 0);
   doc.kind = toBraille ? "braille" : "print";
   doc.name = untitled ? `Untitled ${toBraille ? "Braille" : "Print"} Document 1` : `${stem()}${toBraille ? ".brf" : ".txt"}`;
   if (toBraille) doc.cells = 40;
@@ -2875,11 +3272,32 @@ async function documentFile() {
 }
 
 // Writes the document as a document file (.dxp or .dxb) in format `version` (1, or 0 for the older format), with
-// its embosser setup name and layout, then takes that file as its own.
+// its embosser setup name and layout. In the current format the document then takes that file as its own; a file
+// in the older format is a copy only, and the document keeps its earlier file and name (spec A15.10).
 async function writeDocument(name, version) {
   const file = await documentFile();
-  const bytes = file.save_version(storedText(), doc.embosser, doc.layout.form ? JSON.stringify(doc.layout) : "", doc.cells, doc.lines, version, doc.embPage[0], doc.embPage[1]);
+  // The view saved with the document: its translated line and six-key entry.
+  file.set_view(!!doc.view.translated, !!doc.view.six_key);
+  // The eBraille metadata, kept in the file's version 2 section.
+  file.set_ebraille(doc.ebraille ? JSON.stringify(doc.ebraille) : "");
+  const layout = doc.layout.form ? JSON.stringify(doc.layout) : "";
+  const [printLines, printChars] = doc.printPage ?? globalPrintPage();
+  const bytes = file.save_version(
+    storedText(),
+    doc.embosser,
+    layout,
+    doc.cells,
+    doc.lines,
+    version,
+    doc.embPage[0],
+    doc.embPage[1],
+    editor.selectionStart,
+    printLines,
+    printChars,
+  );
   download(name, bytes);
+  if (version === 0) return;
+  doc.documentFile = true;
   doc.file = core.read_document(bytes);
   doc.name = name;
   doc.saved = true;
@@ -2919,13 +3337,14 @@ async function formattedBytes(braille) {
 }
 
 // File, Save As: the name and type chosen, then the file written as that type and saved by the browser. A name
-// typed with the extension of another type gives the first type with that extension.
-async function saveAs() {
+// typed with the extension of another type gives the first type with that extension. The dialog is titled
+// "Save as:" for File, Save As and "Save:" when File, Save asks (spec A15.10).
+async function saveAs(title = "Save as:") {
   const braille = doc.kind === "braille";
   const types = SAVE_TYPES[braille ? "braille" : "print"];
   let nameField;
   let typeField;
-  const ok = await ownDialog("Save As", (form) => {
+  const ok = await ownDialog(title, (form) => {
     nameField = labelledRow(form, "save-name", "File name:", document.createElement("input"));
     nameField.type = "text";
     nameField.value = `${stem()}.${types[0][1]}`;
@@ -2994,11 +3413,14 @@ async function saveAs() {
         }
         break;
       default:
-        // LaTeX, or HTML with MathJax: the text export table and that type's own rule script.
+        // LaTeX, or HTML with MathJax: the text export table, with the document's styles and the language
+        // switches of the table list, and that type's own rule script.
         bytes = core[type[2]](
           editorText(),
           new TextDecoder().decode(await fetchBytes("tables/table-txxtxa-binary-forward.bmt")),
           await fetchBytes(`tables/rule-scripts/${type[2]}.rules`),
+          await documentFile(),
+          (await languages()) ?? new core.LanguageList(""),
         );
     }
     // The document itself keeps its own file and name.
@@ -3025,31 +3447,40 @@ function ebrailleMeta() {
   return doc.ebraille;
 }
 
-// The package bytes: the quality notice first (kept under Mutable, EBrailleQualityWarning until its box is checked;
-// Cancel stops the save), then the core builds the package from the document, its styles and its metadata.
-async function ebraillePackage() {
-  if (!(await onceNotice("EBrailleQualityWarning", EBRAILLE_QUALITY_WARNING))) return null;
-  const e = encodingNow();
-  const cells = e.cells.length ? e.cells : naCells();
-  return (await documentFile()).ebraille(editorText(), doc.kind === "braille", JSON.stringify(ebrailleMeta()), JSON.stringify(cells));
+// The document's translation table entry's eBraille language and braille system: [language, system], each null
+// when the entry sets none.
+async function ebrailleDefaults() {
+  const list = await languages();
+  if (!list) return [null, null];
+  return JSON.parse(list.ebraille_defaults((await documentFile()).tables));
 }
 
-// File, Save eBraille (1107): the package downloaded as eBraille for a braille document, EPUB 3 for a print one.
-async function saveEBraille() {
-  if (!core) return;
-  try {
-    const bytes = await ebraillePackage();
-    if (bytes) download(`${stem()}.${doc.kind === "braille" ? "ebrl" : "epub"}`, bytes);
-  } catch (err) {
-    await message(String(err.message ?? err));
-  }
+// The package bytes: the quality notice first (kept under Mutable, EBrailleQualityWarning until its box is checked;
+// Cancel stops the save), then Document, eBraille Metadata (Cancel stops the save), then the core builds the package
+// from the document, its styles, its metadata and its translation table's language and braille system.
+async function ebraillePackage() {
+  if (!(await onceNotice("EBrailleQualityWarning", EBRAILLE_QUALITY_WARNING))) return null;
+  if (!(await ebrailleMetadata())) return null;
+  const e = encodingNow();
+  const cells = e.cells.length ? e.cells : naCells();
+  const [language, system] = await ebrailleDefaults();
+  return (await documentFile()).ebraille(editorText(), doc.kind === "braille", JSON.stringify(ebrailleMeta()), JSON.stringify(cells), language ?? "", system ?? "", doc.name ?? "");
 }
+
+// File, Save eBraille (1107) is a developer build's test save (a file in a test folder named by a setting); the web
+// build is not one, so the item does nothing, as in a release build.
+async function saveEBraille() {}
 
 // Document, eBraille Metadata (2606): the fields of the desktop dialog's Required, Recommended and Additional pages
 // as labelled rows; lists are one entry per line, braille systems as "language grade specialization", properties
 // as name=value; the XML preview is shown from the fields.
 async function ebrailleMetadata() {
+  const stored = JSON.stringify(ebrailleMeta());
+  // The translation table's eBraille language and braille system where the metadata names none.
+  const [language, system] = await ebrailleDefaults();
   const m = ebrailleMeta();
+  if (!m.languages.some((l) => l.trim()) && language) m.languages = [language];
+  if (!m.braille_systems.some((s) => `${s.language}${s.grade}`.trim()) && system) m.braille_systems = [{ language: system, grade: "", specialization: "" }];
   const fields = {};
   const area = (form, id, label, value) => {
     const t = labelledRow(form, id, label, document.createElement("textarea"));
@@ -3075,7 +3506,8 @@ async function ebrailleMetadata() {
     fields.creators = area(form, "ebr-creator", "Creators (1 per line):", m.creators.join("\n"));
     fields.producers = area(form, "ebr-producer", "Producers (1 per line):", m.producers.join("\n"));
     fields.languages = area(form, "ebr-languages", "Languages (1 per line):", m.languages.join("\n"));
-    fields.systems = area(form, "ebr-systems", "Braille systems (language grade specialization, 1 per line):", m.braille_systems.map((s) => `${s.language} ${s.grade} ${s.specialization}`).join("\n"));
+    // A system with no grade is a system text taken as it is (a translation table's, or one read from a file).
+    fields.systems = area(form, "ebr-systems", "Braille systems (language grade specialization, 1 per line):", m.braille_systems.map((s) => (s.grade ? `${s.language} ${s.grade} ${s.specialization}` : s.language)).join("\n"));
     fields.date = input(form, "ebr-date", "Date:", m.date, "date");
     fields.idType = choice(form, "ebr-idtype", "ID type:", ["ISBN", "DOI", "UUID"], m.id_type);
     fields.identifier = input(form, "ebr-id", "Identifier:", m.identifier);
@@ -3091,14 +3523,19 @@ async function ebrailleMetadata() {
     fields.subjects = area(form, "ebr-subject", "Subjects (1 per line):", m.subjects.join("\n"));
     fields.properties = area(form, "ebr-properties", "Additional properties (name=value, 1 per line):", m.properties.map((p) => `${p.name}=${p.value}`).join("\n"));
   });
-  if (!ok) return;
+  if (!ok) {
+    doc.ebraille = JSON.parse(stored);
+    return false;
+  }
   const lines = (t) => t.value.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
   m.titles = lines(fields.titles);
   m.creators = lines(fields.creators);
   m.producers = lines(fields.producers);
   m.languages = lines(fields.languages);
+  const GRADES = ["grade0", "grade1", "grade2", "no-grade"];
   m.braille_systems = lines(fields.systems).map((l) => {
-    const [language = "", grade = "grade2", specialization = "None"] = l.split(/\s+/);
+    const [language = "", grade = "", specialization = "None", ...rest] = l.split(/\s+/);
+    if (!GRADES.includes(grade) || rest.length) return { language: l, grade: "", specialization: "" };
     return { language, grade, specialization };
   });
   m.date = fields.date.value;
@@ -3118,7 +3555,9 @@ async function ebrailleMetadata() {
     const at = l.indexOf("=");
     return at < 0 ? { name: l, value: "", attributes: [] } : { name: l.slice(0, at), value: l.slice(at + 1), attributes: [] };
   });
-  doc.dirty = true;
+  // The document is marked changed only when its metadata changed.
+  if (JSON.stringify(m) !== stored) doc.dirty = true;
+  return true;
 }
 
 // File, Save: a document read from or saved as a document file (.dxp, .dxb) is saved as that file again; any other
@@ -3128,12 +3567,13 @@ async function save(asNew) {
     download(`${stem()}.txt`, editorText(), "text/plain");
     return;
   }
-  const own = doc.kind === "braille" ? "dxb" : "dxp";
-  if (!asNew && doc.saved && doc.name.toLowerCase().endsWith(`.${own}`)) {
+  // A document read from or saved to a document file in the current format is written again, whatever its
+  // extension; any other asks with Save As, titled "Save:" (spec A15.10).
+  if (!asNew && doc.documentFile && doc.name) {
     await writeDocument(doc.name, 1);
     return;
   }
-  await saveAs();
+  await saveAs(asNew ? "Save as:" : "Save:");
 }
 
 // ------------------------------------------------------------------ View and Global
@@ -3141,6 +3581,34 @@ async function save(asNew) {
 function setView(change) {
   change(doc.view);
   applyView();
+}
+
+// Message 2634: a view switch or a font the editing area cannot hold one row of; message 2636: the translated line
+// turned on in an editing area that would then hold no row.
+const TOO_SMALL_FOR_FONT =
+  "The window is not large enough to use that font.  " +
+  "Make the window larger, or make the font size smaller, and try again.";
+const TOO_SMALL_FOR_LINE =
+  "The window is not large enough for a translated line.  " +
+  "Make the window larger, or make the font size smaller, and try again.";
+
+// The height of one row of the editing area's font.
+function rowHeight() {
+  const style = getComputedStyle(editor);
+  const line = parseFloat(style.lineHeight);
+  return Number.isFinite(line) ? line : parseFloat(style.fontSize) * 1.2;
+}
+
+// View, Full-Page, the fonts, Codes and Translated Line (spec 27 section 9): the view changes, and when the editing
+// area then holds no whole row the old view comes back with the message (none when `allowed` says the change is
+// never refused, as turning the translated line off).
+async function fittedView(change, allowed = false, refusal = TOO_SMALL_FOR_FONT) {
+  const old = { ...doc.view };
+  setView(change);
+  if (!core || core.translated_line_allowed(allowed, editor.clientHeight, Math.ceil(rowHeight()), 0)) return;
+  doc.view = old;
+  applyView();
+  await message(refusal);
 }
 
 const FONT_FACES = ["print", "braille", "simbraille"];
@@ -3438,28 +3906,36 @@ async function globalFonts() {
 }
 
 // Global, View Preferences (dialog 1034): verbose labels (the status line's character field gives the character's
-// Unicode value) and the six keys of six-key entry.
+// Unicode value), line numbers beside a printed braille page, and the six keys of six-key entry.
 async function viewPreferences() {
   const { result, d } = await showDialog(1034, {
     memory: "",
     setup(d) {
       d.setText(7, "0");
       d.setChecked(9, settings.verbose);
+      d.setChecked(10, settings.lineNumbers);
       d.setItems(17, ["Hide All", "Hide Idle", "Show All"], 0);
       d.setText(19, settings.sixKeySet);
+    },
+    // The six-key set, when changed from the one kept, is checked first (bc_core::sixkey): message 2768, the field
+    // selected, and the dialog stays open.
+    async onOk(d) {
+      const keys = d.text(19);
+      const problem = keys === settings.sixKeySet || !core ? "" : core.six_key_set_problem(keys);
+      if (!problem) return true;
+      await message(problem);
+      d.get(19)?.focus();
+      d.get(19)?.select?.();
+      return false;
     },
   });
   if (result !== "ok") return;
   settings.verbose = d.checked(9);
   store.set("verbose", settings.verbose ? "1" : "0");
+  settings.lineNumbers = d.checked(10);
+  store.set("Display.ShowLineNumbers", settings.lineNumbers ? "yes" : "no");
   showStatus();
   const keys = d.text(19);
-  if ([...keys].length !== 6) {
-    await message(
-      'You must type exactly six keys in as the "Six-Key Key Set."  The keys you type represent, in order, what you will type for Dots 1, 2, 3, 4, 5, and 6 when entering braille by six-key chording.',
-    );
-    return;
-  }
   settings.sixKeySet = keys.toLowerCase();
   store.set("sixkey.set", settings.sixKeySet);
 }
@@ -3487,7 +3963,18 @@ async function shortcutPreferences() {
   const s = settings.shortcuts;
   let chosen = null;
   await showDialog(1022, {
+    third: true,
+    focus: 7,
     setup(d) {
+      // The page-navigation radio buttons are kept as soon as one is clicked; Cancel does not take them back.
+      for (const [key, ids] of [["page_nav", [19, 20, 21]], ["control_page_nav", [23, 24, 25]]]) {
+        ids.forEach((id, k) =>
+          d.get(id)?.addEventListener("change", () => {
+            settings.shortcuts[key] = k;
+            store.set("shortcuts", JSON.stringify(settings.shortcuts));
+          }),
+        );
+      }
       d.setText(7, s.grade0);
       d.setText(9, s.flush_right_leader);
       d.setText(11, s.cbc);
@@ -3516,15 +4003,14 @@ async function shortcutPreferences() {
         new_line: d.text(13),
         new_page: d.text(15),
         new_ref_page: d.text(17),
-        page_nav: d.radio([19, 20, 21]) ?? s.page_nav,
-        control_page_nav: d.radio([23, 24, 25]) ?? s.control_page_nav,
       };
       return true;
     },
   });
   if (!chosen) return;
-  settings.shortcuts = chosen;
-  store.set("shortcuts", JSON.stringify(chosen));
+  // OK takes the six codes; the page-navigation choices were kept as they were clicked.
+  settings.shortcuts = { ...settings.shortcuts, ...chosen };
+  store.set("shortcuts", JSON.stringify(settings.shortcuts));
 }
 
 // ------------------------------------------------------------------ Edit and Layout
@@ -3557,7 +4043,8 @@ function insertCodes(codes) {
 }
 
 // Puts codes `before` at the start of the selection and `after` at its end, each as its own edit so the selected
-// text and its codes are left as they are; the caret goes after the start part.
+// text and its codes are left as they are; the same text stays selected between them (with no selection the caret
+// goes between the two).
 function wrapSelection(before, after) {
   editor.focus();
   const [from, to] = [editor.selectionStart, editor.selectionEnd];
@@ -3568,7 +4055,7 @@ function wrapSelection(before, after) {
   editor.setRangeText(b, from, from, "preserve");
   editor.dispatchEvent(new Event("input"));
   core?.editor_mark(from, before);
-  editor.setSelectionRange(to + b.length, to + b.length);
+  editor.setSelectionRange(from + b.length, to + b.length);
   lastLine = null;
   showStatus();
   showTranslatedLine();
@@ -3679,6 +4166,14 @@ function insertFile() {
         await message("This document cannot be imported into BrailleCraft.  It appears to be in an unsupported file format.");
         return;
       }
+    } else if (core.detect_file(file.name, bytes) === "Pef") {
+      // A PEF file is inserted as braille with no import dialog, as File, Open opens it (BrailleCraft's addition).
+      try {
+        read = { braille: true, plain: core.pef_open(new TextDecoder().decode(bytes)) };
+      } catch (err) {
+        await message(String(err.message ?? err));
+        return;
+      }
     } else {
       const choice = await importDialog(core.detect_file(file.name, bytes));
       if (!choice) return;
@@ -3707,36 +4202,68 @@ function insertFile() {
   input.click();
 }
 
-// Edit, Goto (dialog 1019): a page, line and column of the laid-out pages, as the status line counts them.
+// Edit, Goto (dialog 1019), as the desktop program does it: the fields start at the caret's page, line and column;
+// page, line and column are checked in the dialog (not a number, below 1, above the page count limit, the lines per
+// page or the cells per line), which stays open on a failure; "Use reference page number" (8) greys out 9 to 12 and
+// goes to that print page number; a place with no cell asks 1004 and goes to the closest one.
 async function gotoPosition() {
+  if (!core) return;
   const braille = doc.kind === "braille";
-  const status = core ? core.status_line(editorText(), doc.cells, doc.lines, braille, editor.selectionStart, false, false, false, false) : "";
-  const at = (label) => Number((new RegExp(`${label}:(\\d+)`).exec(status) ?? [])[1] ?? 1);
+  const text = editorText();
+  const lines = Math.max(1, doc.lines);
+  const cells = Math.max(1, doc.cells);
+  const [page0, line0, column0] = Array.from(core.locate(text, doc.cells, doc.lines, braille, editor.selectionStart));
+  const FIELDS = [
+    [7, "You cannot go to pages with numbers less than 1.", "The page number is too great.", 0x7fffffff],
+    [10, "You cannot go to lines with numbers less than 1.", "The line number is too great.", lines],
+    [12, "You cannot go to columns with numbers less than 1.", "The column is too great.", cells],
+  ];
   const { result, d } = await showDialog(1019, {
     setup(d) {
-      d.setText(7, String(at("Page")));
-      d.setText(10, String(at("Line")));
-      d.setText(12, String(at("Column")));
+      d.setText(7, String(page0));
+      d.setText(10, String(line0));
+      d.setText(12, String(column0));
+      d.setChecked(8, false);
+      d.get(8)?.addEventListener("change", () => {
+        for (let id = 9; id <= 12; id++) d.enable(id, !d.checked(8));
+      });
+    },
+    async onOk(d) {
+      for (const [field, low, high, max] of FIELDS) {
+        const n = numberField(d.text(field));
+        const problem = n === null ? "The number entered is not valid." : n < 1 ? low : n > max ? high : null;
+        if (problem === null) continue;
+        await message(problem);
+        const el = d.get(field);
+        el?.focus();
+        el?.select?.();
+        return false;
+      }
+      return true;
     },
   });
   if (result !== "ok") return;
-  const [page, line, column] = [d.number(7), d.number(10), d.number(12)];
-  if (page === null || line === null || column === null) {
-    await message("You cannot go to that location in the document.");
+  const [page, line, column, reference] = [numberField(d.text(7)), numberField(d.text(10)), numberField(d.text(12)), d.checked(8)];
+  const go = (offset) => {
+    editor.focus();
+    editor.setSelectionRange(Number(offset), Number(offset));
+    showStatus();
+  };
+  if (reference) {
+    const at = Number(core.reference_page_position(text, doc.cells, doc.lines, braille, page));
+    if (at < 0) await message(`Unable to go to reference page ${page}.`);
+    else go(at);
     return;
   }
-  if (page < 1 || line < 1 || column < 1) {
-    await message("You cannot go to pages with numbers less than 1.");
+  const exact = Number(core.exact_position(text, doc.cells, doc.lines, braille, page, line, column));
+  if (exact >= 0) {
+    go(exact);
     return;
   }
-  const offset = core.position_of(editorText(), doc.cells, doc.lines, braille, page, line, column);
-  if (offset < 0) {
-    await message("You cannot go to that location in the document.");
-    return;
-  }
-  editor.focus();
-  editor.setSelectionRange(Number(offset), Number(offset));
-  showStatus();
+  if (!(await yesNo("You cannot go to that location in the document.  Would you like to go to the closest location?"))) return;
+  const closest = Number(core.closest_position(text, doc.cells, doc.lines, braille, page, line, column));
+  if (closest < 0) await message("Unable to go to closest character.");
+  else go(closest);
 }
 
 // Edit, Find, Find Again and Replace (bc_core find, spec 32; the desktop program's find and
@@ -3828,6 +4355,8 @@ async function find(again) {
     setup(d) {
       d.setText(7, core.find_running_to_field(stored.text ?? "", codes));
       searchOptions(d, stored, 8, 10, [12, 13, 14]);
+      // Six-key entry works in the field to find.
+      sixKeyField(d.get(7));
     },
     onOk: async (d) => !(await fieldRefused(d, 7, core.find_field_problem(d.text(7), false))),
   });
@@ -3966,22 +4495,40 @@ async function styleNames() {
   return core ? (await documentFile()).style_names : [];
 }
 
-const STYLE_SHOW = ["Recommended and In-Use Styles", "All Styles", "Styles In-Use", "Only Recommended Styles"];
+// A style dialog's list `list` and Show choice `show` (bc_core::doctext::style_list): the choices in their order with
+// "Recommended and In-Use Styles" chosen; the list holds the styles the choice lets through in list order, after
+// `lead` (Add Style's "(No Style)"), `want` chosen (case ignored) when listed, else the first item. A change of the
+// choice fills the list again, keeping the chosen name when it is still listed. OK is enabled only while the list
+// holds an item.
+function styleShow(d, file, list, show, lead = null, want = null) {
+  if (!core) return;
+  d.setItems(show, core.style_show_choices(), core.style_show_default());
+  fillStyleList(d, file, list, show, lead, want, true);
+  d.get(show)?.addEventListener("change", () => fillStyleList(d, file, list, show, lead, d.selected(list), false));
+}
+function fillStyleList(d, file, list, show, lead, want, fold) {
+  const choice = d.get(show)?.selectedIndex ?? core.style_show_default();
+  const items = [...(lead ? [lead] : []), ...file.style_list(Math.max(choice, 0))];
+  const at = want === null ? -1 : items.findIndex((n) => (fold ? n.toLowerCase() === want.toLowerCase() : n === want));
+  d.setItems(list, items, items.length ? Math.max(at, 0) : -1);
+  d.enable(1, items.length > 0);
+}
 
-// Layout, Apply Style (dialog 1046): the chosen style's start and end codes around the selection.
+// Layout, Apply Style (dialog 1046): the chosen style's start and end codes around the selection. The dialog opens
+// on the style last applied in this document; with no style listed OK is disabled; a double click in the list is OK.
 async function applyStyle() {
-  const names = await styleNames();
-  if (!names.length) {
-    await message("This document has no styles yet. Use Document, Add Style to create one.");
-    return;
-  }
+  if (!core) return;
+  const file = await documentFile();
   const { result, d } = await showDialog(1046, {
     setup(d) {
-      d.setItems(7, names, 0);
-      d.setItems(9, STYLE_SHOW, 0);
+      styleShow(d, file, 7, 9, null, doc.lastApplied || null);
+      const list = d.get(7);
+      list?.addEventListener("dblclick", () => list.form?.requestSubmit());
     },
   });
-  if (result === "ok" && d.selected(7)) applyNamedStyle(d.selected(7));
+  if (result !== "ok" || !d.selected(7)) return;
+  doc.lastApplied = d.selected(7);
+  applyNamedStyle(d.selected(7));
 }
 
 // The style commands (the core's style_apply, spec 31) on the editor: "apply" (a style by name),
@@ -3992,7 +4539,7 @@ function styleCommand(what, name = "") {
   const forward = editor.selectionDirection !== "backward";
   const caret = forward ? editor.selectionEnd : editor.selectionStart;
   const anchor = forward ? editor.selectionStart : editor.selectionEnd;
-  const out = core.editor_style_command(what, name, anchor, caret);
+  const out = core.editor_style_command(what, name, anchor, caret, doc.cells, doc.lines, doc.kind === "braille");
   if (!out) return;
   const { text, caret: at } = JSON.parse(out);
   setEditorText(text);
@@ -4051,10 +4598,13 @@ function applyLastStyle() {
   if (name) applyNamedStyle(name);
 }
 
-// Document, Add Style (dialog 1025): a new style, its codes typed or taken from the style it is based on.
+// Document, Add Style (dialog 1025): a new style, its codes typed or taken from the style for basis ("(No Style)"
+// first, then the styles the Show choice lists; item k takes the style before, in the whole sorted list, the style
+// listed at k: bc_core::doctext::basis_style). A name the document has (case ignored) asks 'Replace existing
+// "NAME"?': Yes puts the new style in place of the old one, No gives message 2170.
 async function addStyle() {
   const file = await documentFile();
-  const names = file.style_names;
+  const bypass = store.get("BypassStyleNameValidityCheck") === "1";
   // The field is checked in the dialog; on a refusal the message is shown and the field selected again.
   const refuse = async (d, field, problem) => {
     if (!problem) return true;
@@ -4066,29 +4616,33 @@ async function addStyle() {
   const { result, d } = await showDialog(1025, {
     setup(d) {
       d.setText(7, "New Style Name");
-      d.setItems(10, ["(No Style)", ...names], 0);
-      d.setItems(12, STYLE_SHOW, 0);
+      styleShow(d, file, 10, 12, "(No Style)");
       // "Style can be nested" starts checked for a name without the period.
       d.setChecked(8, true);
       // Choosing a style for basis puts its codes in the code fields.
       d.get(10)?.addEventListener("change", () => {
-        const codes = file.style_codes(d.selected(10) ?? "");
+        const k = Math.max(d.get(10)?.selectedIndex ?? 0, 0);
+        const basis = file.basis_style(k, Math.max(d.get(12)?.selectedIndex ?? 0, 0));
+        const codes = basis ? file.style_codes(basis) : "";
         const [b, e] = codes ? JSON.parse(codes) : ["", ""];
         d.setText(14, b);
         d.setText(16, e);
       });
     },
-    onOk: (d) => refuse(d, 7, core.style_name_problem(d.text(7))),
+    onOk: (d) => refuse(d, 7, core.style_name_problem(d.text(7), bypass)),
   });
   if (result !== "ok") return;
   // A style that cannot be nested is one whose name ends in a period.
   let name = d.text(7);
   if (!d.checked(8) && !name.endsWith(".")) name += ".";
+  // A name the period makes 32 characters long runs into the beginning codes, which Edit Style Codes then shows
+  // empty.
+  const begin = core.style_name_overruns_codes(name) ? "" : d.text(14);
   // Then Edit Style Codes (1044).
   const codes = await showDialog(1044, {
     setup(e) {
       e.setText(6, `Edit codes for style: ${name}`);
-      e.setText(9, d.text(14));
+      e.setText(9, begin);
       e.setText(11, d.text(16));
     },
     async onOk(e) {
@@ -4097,11 +4651,11 @@ async function addStyle() {
     },
   });
   if (codes.result !== "ok") return;
-  const problem = file.add_style(name, "", codes.d.text(9), codes.d.text(11));
-  if (problem) {
-    await message(problem);
+  if (file.has_style(name) && !(await yesNo(`Replace existing "${name}"?`))) {
+    await message("Unable to add style to style list.");
     return;
   }
+  file.add_style(name, "", codes.d.text(9), codes.d.text(11));
   doc.dirty = true;
   lastLine = null;
   showTranslatedLine();
@@ -4127,8 +4681,7 @@ async function modifyStyle() {
   };
   const { result, d } = await showDialog(1026, {
     setup(d) {
-      d.setItems(8, file.style_names, 0);
-      d.setItems(10, STYLE_SHOW, 0);
+      styleShow(d, file, 8, 10);
       load(d);
       d.get(8)?.addEventListener("change", () => load(d));
       d.get(6)?.addEventListener("click", async () => {
@@ -4166,7 +4719,8 @@ async function modifyStyle() {
           editor.setSelectionRange(Math.min(from, editorText().length), Math.min(to, editorText().length));
         }
         doc.dirty = true;
-        d.setItems(8, file.style_names, file.style_names.indexOf(name));
+        // The list is filled again in its order, the renamed style chosen where it now stands.
+        fillStyleList(d, file, 8, 10, null, name, false);
         load(d);
         d.get(8)?.focus();
       });
@@ -4185,15 +4739,11 @@ async function modifyStyle() {
 // Document, Delete Style (dialog 1047): a document keeps at least one style (2172), and the style
 // chosen leaves the document only after Yes to 1026.
 async function deleteStyle() {
+  if (!core) return;
   const file = await documentFile();
-  if (!file.style_names.length) {
-    await message("This document has no styles yet. Use Document, Add Style to create one.");
-    return;
-  }
   const { result, d } = await showDialog(1047, {
     setup(d) {
-      d.setItems(7, file.style_names, 0);
-      d.setItems(9, STYLE_SHOW, 0);
+      styleShow(d, file, 7, 9);
     },
   });
   if (result !== "ok" || !d.selected(7)) return;
@@ -4217,23 +4767,44 @@ async function pageNumbering() {
     [19, 20, 21, 22, 23],
     [25, 26, 27, 28, 29],
   ];
+  // The first page field is read as its first five characters.
+  const WIDTH = 5;
   const file = await documentFile();
   const numbers = [...file.page_numbers];
+  // A corner one group has chosen is greyed in its partner group (even braille with even print, odd braille with
+  // odd print), redone on every click; None is never greyed.
+  const sync = (d) => {
+    const chosen = GROUPS.map((g) => d.radio(g) ?? 0);
+    const off = JSON.parse(core.page_number_disabled(Uint32Array.from(chosen)));
+    GROUPS.forEach((g, k) => g.forEach((id, c) => d.enable(id, !off[k][c])));
+  };
   const { result, d } = await showDialog(1031, {
+    third: true,
+    // Focus starts on the chosen corner of even braille pages.
+    focus: GROUPS[0][numbers[0]] ?? GROUPS[0][0],
     setup(d) {
       GROUPS.forEach((g, k) => d.setRadio(g, numbers[k]));
+      sync(d);
+      for (const id of GROUPS.flat()) d.get(id)?.addEventListener("change", () => sync(d));
       d.setText(31, String(numbers[4]));
+      d.get(31)?.select?.();
     },
     onOk: (d) =>
-      checkNumber(d, 31, "The first page to display page numbers must not be less than %d.", "The first page to display page numbers must not be greater than %d."),
+      checkNumber(
+        d,
+        31,
+        "The first page to display page numbers must not be less than %d.",
+        "The first page to display page numbers must not be greater than %d.",
+        WIDTH,
+      ),
   });
   if (result !== "ok") return;
   const chosen = GROUPS.map((g, k) => d.radio(g) ?? numbers[k]);
-  chosen.push(d.number(31));
-  if (chosen.some((n, k) => n !== numbers[k])) {
-    file.set_page_numbers(Uint32Array.from(chosen));
-    doc.dirty = true;
-  }
+  chosen.push(numberField(d.text(31), WIDTH));
+  // An accepted OK marks the document changed whether or not a value changed (there are no write-protected
+  // documents).
+  file.set_page_numbers(Uint32Array.from(chosen));
+  doc.dirty = true;
   showStatus();
 }
 
@@ -4359,6 +4930,8 @@ async function headerFooter(hf) {
   const { result, d } = await showDialog(hf.rid, {
     setup(d) {
       d.setRadio(RADIOS, 0);
+      // Six-key entry works in the header or footer field.
+      sixKeyField(d.get(7));
       RADIOS.forEach((id, k) =>
         d.get(id)?.addEventListener("change", () => {
           d.enable(6, k !== 3);
@@ -4390,48 +4963,60 @@ async function headerFooter(hf) {
 }
 
 // Layout, Code List (dialog 1041): the category boxes (All, then Page, Line, Tab, European, Greek
-// Letters, CBC, Math, Miscellaneous) choose the codes listed and are kept for the session from OK (at first All,
-// Page, Line and Tab); a double-click is OK; parameters with a space are refused in the dialog.
+// Letters, CBC, Math, Miscellaneous) choose the codes listed and are kept for the session from OK or a double-click,
+// before the parameters are checked; a double-click is OK; parameters with a space are refused in the dialog.
+// INFERENCE: the boxes at the start (All, Page, Line and Tab) are not known.
 const CODE_BOXES = [9, 10, 11, 12, 13, 14, 15, 16];
 let codeListKept = { all: true, mask: 7 };
 async function codeList() {
   const list = JSON.parse(core.code_list());
   let shown = [];
+  let insert = null;
+  const boxes = (d) => ({ all: d.checked(8), mask: CODE_BOXES.reduce((m, b, k) => (d.checked(b) ? m | (1 << k) : m), 0) });
+  // A box click refills the list; the code shown in 20 stays until another code is chosen.
   const fill = (d) => {
-    const mask = (d.checked(8) ? 0xffffffff : 0) | CODE_BOXES.reduce((m, b, k) => (d.checked(b) ? m | (1 << k) : m), 0);
-    shown = list.filter(([, cat]) => (cat & mask) !== 0);
+    const { all, mask } = boxes(d);
+    shown = [...core.code_list_shown(all, mask)].map((i) => list[i]);
     d.setItems(18, shown.map(([, , label]) => label), null);
-    d.setText(20, "");
   };
-  const refuse = async (d) => {
-    if (!d.text(22).includes(" ")) return true;
-    await message("The parameters to a code must not contain spaces.");
-    d.get(22)?.focus();
-    d.get(22)?.select?.();
-    return false;
+  // OK and a double-click: the boxes are kept first, then the parameters checked (bc_core::menu_codes). With a
+  // code chosen, a space in them is refused with the dialog left open; with none chosen the dialog closes first and
+  // the parameters alone go in as text.
+  const accept = async (d) => {
+    codeListKept = boxes(d);
+    const chosen = shown[d.get(18)?.selectedIndex ?? -1];
+    const outcome = JSON.parse(core.code_list_ok(chosen ? chosen[0] : "", d.text(22)));
+    if (outcome.close) insert = outcome.insert;
+    if (outcome.message) await message(outcome.message);
+    if (!outcome.close) {
+      d.get(22)?.focus();
+      d.get(22)?.select?.();
+    }
+    return outcome.close;
   };
-  const { result, d } = await showDialog(1041, {
-    closes: [6],
+  const { result } = await showDialog(1041, {
+    third: true,
+    // Focus starts in the list.
+    focus: 18,
     setup(d) {
       d.setChecked(8, codeListKept.all);
       CODE_BOXES.forEach((b, k) => d.setChecked(b, (codeListKept.mask & (1 << k)) !== 0));
       fill(d);
+      d.setText(20, "");
       d.setText(22, "");
       for (const b of [8, ...CODE_BOXES]) d.get(b)?.addEventListener("change", () => fill(d));
       const listBox = d.get(18);
       listBox?.addEventListener("change", () => d.setText(20, shown[listBox.selectedIndex] ? `[${shown[listBox.selectedIndex][0]}]` : ""));
       listBox?.addEventListener("dblclick", () => listBox.form?.requestSubmit());
+      // Help keeps the dialog open.
+      d.get(6)?.addEventListener("click", () => message(PLANNED_HELP));
     },
-    onOk: refuse,
+    onOk: accept,
   });
-  if (result === "6") {
-    await message(PLANNED_HELP);
-    return;
-  }
-  if (result !== "ok") return;
-  codeListKept = { all: d.checked(8), mask: CODE_BOXES.reduce((m, b, k) => (d.checked(b) ? m | (1 << k) : m), 0) };
-  const chosen = shown[d.get(18).selectedIndex];
-  if (chosen) insertCodes(`[${chosen[0]}${d.text(22)}]`);
+  if (result !== "ok" || !insert) return;
+  const [text, isCode] = insert;
+  if (isCode) insertCodes(text);
+  else insertText(text);
 }
 
 // Document, Hyphen Table: the document's table; a change lays the document out again and, as in the standard
@@ -4473,8 +5058,9 @@ async function syncHyphenation() {
 // browser as the desktop program keeps it.
 const region = () => Number(store.get("translation.region") ?? 1) >>> 0;
 const LANGUAGE_BASE = 9000;
+// Every course of the language gets an item, one id each from 9500 (the ids up to 9999 are free for them).
 const COURSE_BASE = 9500;
-const COURSE_MAX = 10;
+const COURSE_MAX = 500;
 
 // The menu items the program puts in a submenu at run time: removed, then `entries` put in before `before` (at
 // the end when null).
@@ -4502,7 +5088,7 @@ async function refreshTableMenus() {
     menubar.querySelector(`[data-id="${2701 + i}"]`)?.setAttribute("aria-checked", String(core.LanguageList.region_bit(i) === r));
   }
   const file = await documentFile();
-  const m = JSON.parse(list.menus(r, file.tables, doc.initialCodes ?? ""));
+  const m = JSON.parse(list.menus(r, file.tables, file.initial_codes));
   const tablesMenu = regionItem.closest("[role=menu]");
   setDynamicItems(
     tablesMenu,
@@ -4528,7 +5114,7 @@ async function refreshTableMenus() {
 async function setDocumentTables(tables, initial) {
   const file = await documentFile();
   if (tables) file.set_tables(tables);
-  doc.initialCodes = initial(doc.initialCodes ?? "");
+  file.set_initial_codes(initial(file.initial_codes));
   doc.dirty = true;
   lastLine = null;
   await refreshTableMenus();
@@ -4555,12 +5141,14 @@ async function setGrade(code) {
   const list = await languages();
   if (!list) return;
   const file = await documentFile();
-  const m = JSON.parse(list.menus(region(), file.tables, doc.initialCodes ?? ""));
+  const m = JSON.parse(list.menus(region(), file.tables, file.initial_codes));
   await setDocumentTables(m.active !== null ? list.tables(m.active) : null, (i) => core.regrade(i, code));
 }
 
-// Document, Learning Tables, a learning course: a list of its steps; the step chosen takes the place of the
-// print-to-braille rules table, the language's other three tables staying.
+// Document, Learning Tables, a learning course: dialog 1052 lists its steps ("Choose a contraction level:"), the step
+// in use chosen; OK gives the chosen step's table in place of the print-to-braille rules table, the language's
+// other three tables staying, and takes every grade code out of the initial codes. A double-click in the list does
+// nothing.
 async function chooseLearningStep(course) {
   const list = await languages();
   if (!list) return;
@@ -4568,22 +5156,55 @@ async function chooseLearningStep(course) {
   const s = list.steps(file.tables, course);
   if (!s) return;
   const steps = JSON.parse(s);
-  const i = await chooseFrom(steps.title, "Learning step:", steps.names, steps.selected);
-  if (i === null) return;
+  const { result, d } = await showDialog(1052, {
+    third: true,
+    focus: 7,
+    setup(d) {
+      d.setItems(7, steps.names, steps.selected);
+    },
+  });
+  if (result !== "ok") return;
+  const i = Math.max(d.get(7)?.selectedIndex ?? 0, 0);
   const tables = [...steps.language];
   tables[0] = steps.tables[i];
-  await setDocumentTables(tables, (codes) => codes);
+  await setDocumentTables(tables, (codes) => core.regrade(codes, ""));
 }
 
 // A Layout menu code item: its codes put in, or put around the selection.
-function insertCode(id) {
+// Puts `codes` before every line start inside the selection (a place after a line break, before its end) and at its
+// start, from the last place back; with no selection at the caret.
+function insertEachLine(codes) {
+  const [from, to] = [editor.selectionStart, editor.selectionEnd];
+  if (from === to) return insertCodes(codes);
+  editor.focus();
+  const text = editor.value;
+  const places = [];
+  for (let p = to - 1; p > from; p--) if (text[p - 1] === "\n") places.push(p);
+  places.push(from);
+  const shown = core.marked_text(codes);
+  for (const p of places) {
+    editor.setRangeText(shown, p, p, "preserve");
+    editor.dispatchEvent(new Event("input"));
+    core.editor_mark(p, codes);
+  }
+  editor.setSelectionRange(from + shown.length, from + shown.length);
+  lastLine = null;
+  showStatus();
+  showTranslatedLine();
+}
+
+// A Layout menu code item: a pair wraps the selection, an each-line item goes at each line start of it, and any
+// other item, with text selected, first asks whether the selection is to be replaced (No leaves it as it is).
+async function insertCode(id) {
+  const code = core ? core.menu_code(id) : "";
+  if (!code) return id === 1910 ? newParagraph() : undefined;
+  const c = JSON.parse(code);
+  if (c.pair) return wrapSelection(c.pair[0], c.pair[1]);
+  if (c.each_line !== undefined) return insertEachLine(c.each_line);
+  if (editor.selectionStart !== editor.selectionEnd && !(await yesNo(core.replace_question()))) return;
   // New Paragraph closes and opens the paragraph style it is in.
   if (id === 1910) return newParagraph();
-  const code = core ? core.menu_code(id) : "";
-  if (!code) return;
-  const c = JSON.parse(code);
   if (c.text !== undefined) insertCodes(c.text);
-  else if (c.pair) wrapSelection(c.pair[0], c.pair[1]);
   else if (c.setting === "termination_sign") {
     // The signs and the hard space are text; the rest are codes.
     insertText(doc.kind === "braille" ? ",'" : "&@");
@@ -4630,14 +5251,19 @@ const COMMANDS = {
   1411: () => headerFooter(FOOTER),
   1413: () => message(PLANNED_FORMATTER),
   1416: codeList,
-  1301: () => setView((v) => (v.full_page = !v.full_page)),
-  1303: () => setView((v) => (v.font = "print")),
-  1304: () => setView((v) => (v.font = "braille")),
-  1305: () => setView((v) => (v.font = "simbraille")),
+  1301: () => fittedView((v) => (v.full_page = !v.full_page)),
+  1303: () => fittedView((v) => (v.font = "print")),
+  1304: () => fittedView((v) => (v.font = "braille")),
+  1305: () => fittedView((v) => (v.font = "simbraille")),
   // Six-key entry in either kind of document.
   1307: () => setView((v) => (v.six_key = !v.six_key)),
-  1309: () => setView((v) => (v.codes = !v.codes)),
-  1310: () => setView((v) => (v.translated = !v.translated)),
+  1309: () => fittedView((v) => (v.codes = !v.codes)),
+  1310: () => {
+    // Turning the translated line on is refused with message 2636 when the editing area would then hold no row;
+    // turning it off never is.
+    const on = doc.view.translated;
+    fittedView((v) => (v.translated = !v.translated), on, TOO_SMALL_FOR_LINE);
+  },
   1103: closeDocument,
   1107: saveEBraille,
   1114: exitProgram,
@@ -4832,7 +5458,10 @@ function itemNode(entry, menuLabel, level) {
       item.append(s);
       item.setAttribute("aria-keyshortcuts", entry.shortcut.replace(/\s/g, "").replace(/\bDel\b/, "Delete"));
     }
-    item.addEventListener("click", () => run(entry.id, menuLabel, entry.label));
+    // A greyed item (aria-disabled) does nothing, as a greyed menu item.
+    item.addEventListener("click", () => {
+      if (item.getAttribute("aria-disabled") !== "true") run(entry.id, menuLabel, entry.label);
+    });
   }
   return li;
 }

@@ -3,12 +3,15 @@
 //! Printer Setup (dialog 1071, for the document or for the program) keeps the printer, the paper, the orientation,
 //! the margins with their unit and the formatted page size. File, Print (dialog 1040) takes the copies, the page
 //! range and, for a braille document, interline print, then prints the laid-out pages: one print job per copy, each
-//! line drawn in the document's view font at a size that fills the page (Global, Fonts: "Auto-determine point size")
-//! or at the size set there, with the line numbers of a braille page in a column on each side when Global, View
-//! Preferences shows line numbers, and under each braille line its print in a 9-point font when interline print is on.
+//! line drawn in the document's view font in its printing face (bc_core::print_geometry: the Print font, "Braille",
+//! "SimBraille" or "RNIB Moon"; bold, italic and underline with the Print font only) at a size that fills the page
+//! (Global, Fonts: "Auto-determine point size") or at the size set there, with the line numbers of a braille page in
+//! a column on each side, in the document window's font, when Global, View Preferences shows line numbers, and above
+//! each braille line its print in 9-point Times New Roman when interline print is on (spec A16.1, A16.5).
 //!
 //! BrailleCraft prints through wxWidgets printing (wxPrinter and a wxPrintout), not through the Windows printer
-//! directly, so the same pages print on Windows, macOS and Linux.
+//! directly, so the same pages print on Windows, macOS and Linux. The window that shows the printing's progress and
+//! cancels it is wxWidgets' own, so it has no text fields of its own to fill.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -20,6 +23,10 @@ use wxdragon::prelude::*;
 use wxdragon_sys as ffi;
 
 use bc_core::format::Page;
+use bc_core::print_geometry::{
+    auto_size, baseline, interline_baseline, interline_extra, line_step, margin_area, Device, Metrics, PageFont,
+    INTERLINE_FACE, INTERLINE_POINTS,
+};
 
 /// What Printer Setup keeps, shared with the web build (bc_core::printer_setup).
 pub use bc_core::printer_setup::{parse_margin, PrinterSetup, PAPERS};
@@ -170,26 +177,37 @@ pub struct Job {
     pub pages: Vec<Option<Rc<Page>>>,
     /// For each page and line, the line's print for interline print (braille documents only).
     pub interline: Vec<Vec<Option<String>>>,
+    /// The page font (bc_core::print_geometry::PageFont) and the face it prints in.
+    pub page_font: PageFont,
     pub face: String,
     /// The point size to print at; None to find the largest that fits the page.
     pub size: Option<i32>,
-    pub print_face: String,
     pub lines: usize,
     pub chars: usize,
     pub line_numbers: bool,
-    pub margins: [i32; 4],
+    /// The font the line numbers print in: the document window's face at its screen point size.
+    pub number_face: String,
+    pub number_size: i32,
+    /// The margins in thousandths of an inch; None for a setup that never stored them.
+    pub margins: Option<[i32; 4]>,
     /// The font attribute of each document position (bc_core::format::text_attributes): bit 1 bold, 2 italic, 4
-    /// underline; a line is drawn in runs of one attribute, each in that font style (spec 24 3c).
+    /// underline; a line is drawn in runs of one attribute, each in that font style, with the Print font only
+    /// (spec 24 3c, A16.1).
     pub attributes: Vec<u8>,
 }
 
 /// The page geometry and fonts found for a job on its first page.
 struct Fit {
     size: i32,
+    /// The width of "a" in the page font.
     char_w: i32,
-    text_h: i32,
-    line_h: i32,
+    metrics: Metrics,
+    /// The interline extra space (0 without interline print) and the line step.
+    extra: i32,
+    step: i32,
     number_w: i32,
+    number_ascent: i32,
+    interline_ascent: i32,
 }
 
 struct Proxy {
@@ -261,41 +279,44 @@ fn draw_page<D: DeviceContext>(job: &Job, fit_found: &mut Option<Fit>, dc: &D, g
     dc.set_user_scale(sx, sy);
     let lx = |v: i32| (v as f64 / sx).round() as i32;
     let ly = |v: i32| (v as f64 / sy).round() as i32;
-    let m = job.margins;
-    let margin_x = |t: i32| (t as f64 * psx / 1000.0).round() as i32;
-    let margin_y = |t: i32| (t as f64 * psy / 1000.0).round() as i32;
-    // The text starts at the larger of the printable area's edge and the margin from the paper's edge (spec 24, 3c).
-    let left = (lx(rx) + margin_x(m[0])).max(0);
-    let top = (ly(ry) + margin_y(m[1])).max(0);
-    let right = (lx(rx + rw) - margin_x(m[2])).min(lx(pw)).max(left + 1);
-    let bottom = (ly(ry + rh) - margin_y(m[3])).min(ly(ph)).max(top + 1);
+    // The margin rectangle in printable-area pixels, as the printer object gives it (spec A16.4 unknown 3): the
+    // text starts at its left and top; its right and bottom bound the space the point size is found for.
+    let device = Device { paper: (rw, rh), offset: (-rx, -ry), printable: (pw, ph), ppi: (ppx, ppy) };
+    let [l, t, r, b] = margin_area(&device, job.margins);
+    let (left, top) = (lx(l), ly(t));
+    let (right, bottom) = (lx(r).max(left + 1), ly(b).max(top + 1));
     if fit_found.is_none() {
         *fit_found = Some(fit(dc, job, right - left, bottom - top));
     }
     let Some(f) = fit_found.as_ref() else { return };
     let Some(Some(page)) = job.pages.get(n - 1) else { return };
-    // The text font in each attribute style met (bold, italic, underline), built once.
+    // The text font in each attribute style met (bold, italic, underline: the Print font only), built once.
     let mut text_fonts: HashMap<u8, Option<Font>> = HashMap::new();
-    let number_font = crate::app::font(&job.print_face, f.size);
-    let interline_font = crate::app::font(&job.print_face, 9);
+    let number_font = crate::app::font(&job.number_face, job.number_size);
+    let interline_font = crate::app::font(INTERLINE_FACE, INTERLINE_POINTS);
     // Line numbers: one column at the left edge, the text moved right by the width of "25" and a half, and one
     // column after the text block (spec 24, 3d).
     let text_x = if job.line_numbers { left + f.number_w + f.number_w / 2 } else { left };
     let right_numbers = text_x + job.chars as i32 * f.char_w + f.number_w / 2;
     for (i, line) in page.lines.iter().enumerate().take(job.lines) {
-        let y = top + i as i32 * f.line_h;
+        // Text is placed by its baseline (spec A16.5): the page font's ascent below the line's top, with the
+        // interline extra space and a tenth of it above it.
+        let base = baseline(top, f.metrics, f.extra, f.step, i as i32);
         if job.line_numbers {
             if let Some(font) = &number_font {
                 dc.set_font(font);
             }
             let number = (i + 1).to_string();
-            dc.draw_text(&number, left, y);
-            dc.draw_text(&number, right_numbers, y);
+            dc.draw_text(&number, left, base - f.number_ascent);
+            dc.draw_text(&number, right_numbers, base - f.number_ascent);
         }
         if !line.text.trim().is_empty() {
             // The line in runs of one font attribute, each drawn in its style where the one before ended (spec 24 3c).
             let text: Vec<char> = line.text.trim_end().chars().collect();
-            let attr_of = |k: usize| line.sources.get(k).and_then(|s| job.attributes.get(s).copied()).unwrap_or(0);
+            let attr_of = |k: usize| {
+                let attr = line.sources.get(k).and_then(|s| job.attributes.get(s).copied()).unwrap_or(0);
+                job.page_font.run_attribute(attr)
+            };
             let (mut x, mut k) = (text_x, 0);
             while k < text.len() {
                 let attr = attr_of(k);
@@ -307,63 +328,69 @@ fn draw_page<D: DeviceContext>(job: &Job, fit_found: &mut Option<Fit>, dc: &D, g
                 if let Some(font) = text_fonts.entry(attr).or_insert_with(|| crate::app::styled_font(&job.face, f.size, attr)) {
                     dc.set_font(font);
                 }
-                dc.draw_text(&run, x, y);
+                dc.draw_text(&run, x, base - f.metrics.ascent);
                 x += dc.get_text_extent(&run).0;
                 k = e;
             }
         }
+        // The interline print above its braille, in the extra space, from the line's first cell.
         if let Some(Some(print)) = job.interline.get(n - 1).and_then(|l| l.get(i)) {
             if let Some(font) = &interline_font {
                 dc.set_font(font);
             }
-            dc.draw_text(print, text_x, y + f.text_h);
+            dc.draw_text(print, text_x, interline_baseline(base, f.metrics, f.extra) - f.interline_ascent);
         }
     }
 }
 
-/// The point size and line height for the job: its own size, or the largest from 1 to 48 points at which its
-/// characters per line and lines per page (with the line-number columns and interline print) fit the space
-/// (spec 24, 3c).
+/// A font's ascent, descent and external leading on this device context, measured on `sample`.
+fn metrics_of<D: DeviceContext>(dc: &D, font: &Font, sample: &str) -> (i32, Metrics) {
+    dc.set_font(font);
+    let (w, h, descent, leading) = dc.get_full_text_extent(sample, None);
+    (w, Metrics { ascent: h - descent, descent, leading })
+}
+
+/// The point size and line step for the job: its own size, or the size Auto-determine finds (sizes 1 to 48 while
+/// its characters per line, measured by "a", and lines per page fit the space beside the line-number columns,
+/// which are measured once in the window font; spec A16.5).
 fn fit<D: DeviceContext>(dc: &D, job: &Job, width: i32, height: i32) -> Fit {
     let interline = job.interline.iter().flatten().any(Option::is_some);
-    let extra = if interline {
-        crate::app::font(&job.print_face, 9).map(|f| {
-            dc.set_font(&f);
-            dc.get_text_extent("Xg").1
+    let interline_font = if interline { crate::app::font(INTERLINE_FACE, INTERLINE_POINTS) } else { None };
+    let interline_metrics = interline_font.map(|f| metrics_of(dc, &f, "X").1);
+    let extra = interline_extra(interline_metrics);
+    let interline_ascent = interline_metrics.map_or(0, |m| m.ascent);
+    let (number_w, number_ascent) = if job.line_numbers {
+        crate::app::font(&job.number_face, job.number_size).map_or((0, 0), |nf| {
+            let (w, m) = metrics_of(dc, &nf, "25");
+            (w, m.ascent)
         })
     } else {
-        None
-    }
-    .unwrap_or(0);
+        (0, 0)
+    };
+    let numbers = if job.line_numbers { number_w * 2 + number_w / 2 } else { 0 };
     let measure = |size: i32| -> Option<Fit> {
         let font = crate::app::font(&job.face, size)?;
-        dc.set_font(&font);
-        let (w, h) = dc.get_text_extent(&"x".repeat(job.chars.max(1)));
-        let number_w = if job.line_numbers {
-            crate::app::font(&job.print_face, size).map(|nf| {
-                dc.set_font(&nf);
-                dc.get_text_extent("25").0
-            })?
-        } else {
-            0
-        };
-        let line_h = h + extra + extra / 10;
-        Some(Fit { size, char_w: w / job.chars.max(1) as i32, text_h: h, line_h, number_w })
+        let (a, metrics) = metrics_of(dc, &font, "a");
+        let step = line_step(metrics, extra, job.page_font);
+        Some(Fit { size, char_w: a.max(1), metrics, extra, step, number_w, number_ascent, interline_ascent })
     };
-    if let Some(size) = job.size {
-        if let Some(f) = measure(size.max(1)) {
-            return f;
+    let size = match job.size {
+        Some(size) => size.max(1),
+        None => {
+            let (chars, lines) = (job.chars as i32, job.lines as i32);
+            auto_size(|s| measure(s).map(|f| (f.char_w, f.step)), width, height, numbers, chars, lines)
         }
-    }
-    for size in (1..=48).rev() {
-        if let Some(f) = measure(size) {
-            let used_w = f.char_w * job.chars as i32 + if job.line_numbers { f.number_w * 2 + f.number_w / 2 } else { 0 };
-            if used_w <= width && f.line_h * job.lines as i32 <= height {
-                return f;
-            }
-        }
-    }
-    measure(1).unwrap_or(Fit { size: 1, char_w: 1, text_h: 1, line_h: 1, number_w: 0 })
+    };
+    measure(size).unwrap_or(Fit {
+        size,
+        char_w: 1,
+        metrics: Metrics { ascent: 1, descent: 0, leading: 0 },
+        extra,
+        step: 1,
+        number_w,
+        number_ascent,
+        interline_ascent,
+    })
 }
 
 /// How a print ended.

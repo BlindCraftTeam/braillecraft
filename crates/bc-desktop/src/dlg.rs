@@ -693,6 +693,12 @@ impl Dlg {
         }
     }
 
+    /// Whether item `index` of a list that takes several choices is chosen.
+    pub fn is_selected(&self, cid: i32, index: u32) -> bool {
+        let Some(l) = self.win(cid).and_then(|w| w.as_widget::<ListBox>()) else { return false };
+        unsafe { wxdragon_sys::wxd_ListBox_IsSelected(l.handle_ptr().cast(), index as i32) }
+    }
+
     /// The chosen item's text; None when nothing is chosen (wxWidgets answers an empty text then).
     pub fn selected_text(&self, cid: i32) -> Option<String> {
         let w = self.win(cid)?;
@@ -815,15 +821,43 @@ impl Dlg {
         });
     }
 
+    /// Places the dialog centred across the main window and a third of the way down the room the main window has
+    /// below it (the room left when the dialog's height is taken from the main window's), as the dialogs that use
+    /// this placement are put: Code List, Page Numbering, Shortcut Preferences, the learning step list and the
+    /// embossing progress window.
+    pub fn place_third(&self) {
+        let frame = crate::app::frame();
+        let (fp, fs) = (frame.get_position(), frame.get_size());
+        let s = self.dialog.get_size();
+        let x = fp.x + (fs.width - s.width) / 2;
+        let y = fp.y + ((fs.height - s.height) / 3).max(0);
+        self.dialog.move_window(x, y);
+    }
+
     /// Shows the dialog and waits for it to close. Focus starts in the first field (a text field, list, choice,
     /// check box or radio button), so typing goes straight into it. Returns the closing control id:
     /// 1 for OK, 2 for Cancel (also Escape and the close box), or the id given to `closes_with`.
     pub fn show(&self) -> i32 {
-        let first = self.controls().iter().find(|(cid, kind)| {
-            matches!(kind, Ctl::Text | Ctl::List | Ctl::Combo | Ctl::Check | Ctl::Radio)
-                && self.win(*cid).is_some_and(|w| w.is_shown() && w.is_enabled())
-                && (*kind != Ctl::Radio || self.checked(*cid) || !self.group_has_choice(*cid))
-        });
+        self.show_from(None)
+    }
+
+    /// As `show`, with focus starting in control `cid` (its text all selected when it is a text field).
+    pub fn show_focused(&self, cid: i32) -> i32 {
+        if let Some(t) = self.win(cid).and_then(|w| w.as_widget::<TextCtrl>()) {
+            t.select_all();
+        }
+        self.show_from(Some(cid))
+    }
+
+    fn show_from(&self, focus: Option<i32>) -> i32 {
+        let first = match focus {
+            Some(cid) => self.controls().iter().find(|(c, _)| *c == cid),
+            None => self.controls().iter().find(|(cid, kind)| {
+                matches!(kind, Ctl::Text | Ctl::List | Ctl::Combo | Ctl::Check | Ctl::Radio)
+                    && self.win(*cid).is_some_and(|w| w.is_shown() && w.is_enabled())
+                    && (*kind != Ctl::Radio || self.checked(*cid) || !self.group_has_choice(*cid))
+            }),
+        };
         if let Some(w) = first.and_then(|(cid, _)| self.win(*cid)) {
             w.set_focus();
             // GTK leaves focus where it puts it when the dialog comes up (on a button), whatever was asked before; so
@@ -1054,6 +1088,19 @@ fn report_layout(d: &Dlg, name: &str, out: &mut String) {
         }
     }
     let _ = writeln!(out, "{name}: {found} found");
+}
+
+/// The one-line prompt (dialog 30070): `prompt` in its label, `default` in its field with all of it selected and
+/// focus there. OK answers the text typed, cut to `max` characters (the field itself takes any length); Cancel
+/// answers None. INFERENCE: the title is the resource's (empty); whether a title is set as it opens is not known.
+pub fn ask_text(parent: &dyn WxWidget, prompt: &str, default: &str, max: usize) -> Option<String> {
+    let d = Dlg::open(parent, 30070, None);
+    d.set_text(4, prompt);
+    d.set_text(5, default);
+    let ok = d.show_focused(5) == 1;
+    let text: String = d.text(5).chars().take(max).collect();
+    d.destroy();
+    ok.then_some(text)
 }
 
 /// Remembered values of settings dialogs, by dialog id (and a key, for dialogs opened in two roles).

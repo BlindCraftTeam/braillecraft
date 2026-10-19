@@ -103,7 +103,8 @@ The keys, each with the Option key, in a BrailleCraft document window:
   7  the translated line
   8  the current style; twice quickly in a table, the row and column
   9  the location: page, line and column
-  0  the document name and the status line
+  0  the document name, its place among the window's tabs ("tab 2 of 3") when there are several,
+     and the status line
   ,  the position on the line; twice quickly, the characters to the end of the line
   .  the number of characters on the line; twice quickly, the left spaces
   L  the last word on the line
@@ -111,6 +112,13 @@ The keys, each with the Option key, in a BrailleCraft document window:
   T  the current table entry
   C  whether a braille keyboard is connected
   H  this list
+
+The open documents are tabs of the window, as in the system's own programs: Command+Shift+Right
+Bracket and Left Bracket, or Control+Tab and Control+Shift+Tab, move between them (Control+Tab works
+with every keyboard layout); Command+W closes one, as does the close button on its tab; the plus
+button at the end of the tab bar is File, New. The Window menu has Show Next Tab, Show Previous Tab,
+Move Tab to New Window and Merge All Windows. These are the program's keys, not VoiceOver's, so the
+Command Assignments file has nothing for them; VoiceOver reads the tab bar itself as a tab group.
 """
 
 

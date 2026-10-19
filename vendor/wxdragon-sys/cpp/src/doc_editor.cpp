@@ -1,6 +1,6 @@
 // Added for BrailleCraft: the drawn document editing window (wxd_doc_editor.h).
 //
-// The reference program draws its own editing window: rows of text, a row with a line across after each formatted
+// BrailleCraft draws its own editing window: rows of text, a row with a line across after each formatted
 // page, the caret where the program puts it, and a line number column on the left when that is on; it gives screen
 // readers its own text for the window (spec 27 sections 3 and 6). This window does the same with rows the program
 // gives it. Columns are measured with the font's partial text extents, so a proportional print font places the caret
@@ -22,9 +22,21 @@
 static const int kCacheRows = 1024;
 
 // The window's Windows class name and its control id. Screen reader scripts tell the editing area apart from every
-// other window by its class (the reference program registers a class of its own for its editing window) and test
+// other window by its class (BrailleCraft registers a class of its own for its editing window) and test
 // its control id against 0 (spec 17 section 6); wxWidgets' shared "wxWindow" class and generated ids would hide it
 // among the panels.
+// The physical key of a key event (wxd_DocEditor_GetRawKey).
+static int RawKeyOf(const wxKeyEvent& e)
+{
+#if defined(__WXMSW__)
+    return (int)((e.GetRawKeyFlags() >> 16) & 0xff);
+#elif defined(__WXOSX__)
+    return (int)e.GetRawKeyCode();
+#else
+    return (int)e.GetRawKeyFlags() - 8;
+#endif
+}
+
 static const long kEditorStyle = wxWANTS_CHARS | wxVSCROLL | wxHSCROLL | wxBORDER_THEME | wxFULL_REPAINT_ON_RESIZE;
 static const wxWindowID kEditorId = 0;
 
@@ -54,6 +66,7 @@ DocEditor::DocEditor(wxWindow* parent, void* data, wxd_DocEditor_KeyFn key, wxd_
     Bind(wxEVT_KEY_DOWN, &DocEditor::OnKeyDown, this);
     Bind(wxEVT_CHAR, &DocEditor::OnChar, this);
     Bind(wxEVT_KEY_UP, [this](wxKeyEvent& e) {
+        m_rawKey = RawKeyOf(e);
         if (m_key) m_key(m_data, -e.GetKeyCode(), (int)e.GetUnicodeKey(), e.GetModifiers());
         e.Skip();
     });
@@ -121,7 +134,7 @@ wxRect DocEditor::CaretRect()
 
 // The Cursor Locator (spec 24 2d.2): around a square one row high at the caret, rectangles from three rows out closing
 // in by half a row a step, each shown and taken away again with a pause of the caret blink time / 28 between; the
-// border a fifth of a row wide, in the window text colour. The reference draws it in its editing window.
+// border a fifth of a row wide, in the window text colour.
 void DocEditor::ShowCursorLocator()
 {
     ShowRow(m_caretRow, -1);
@@ -151,7 +164,7 @@ bool DocEditor::SetFont(const wxFont& font)
     m_rowHeight = wxMax(h + leading, 1);
     m_ascent = h - descent;
     m_charWidth = wxMax(w, 1);
-    // The code font (spec 27 4a; the reference's font setup makes it from the default font): the box padding is a
+    // The code font (spec 27 4a; made from the default font): the box padding is a
     // twentieth of the row; starting at the text font's point size, the size goes down a point at a time, to 4 at
     // the least, until the code font's ascent and descent fit the text font's less the box border (2 x padding + 1)
     // above and below; a code's baseline is then raised by half of what is left, less that border.
@@ -294,8 +307,8 @@ const wxString& DocEditor::Label(int row)
 }
 
 // The x of each character boundary of row `row` (0 .. length), from the row's start: text measured in the window
-// font, a code in the code font with the box padding twice on each side of it (the reference draws a code's text
-// 2 x padding in from the box's start and ends the box 2 x padding after it).
+// font, a code in the code font with the box padding twice on each side of it (a code's text starts
+// 2 x padding in from the box's start and the box ends 2 x padding after it).
 const std::vector<int>& DocEditor::Extents(int row)
 {
     static const std::vector<int> none{0};
@@ -342,8 +355,8 @@ int DocEditor::ColumnX(int row, int col)
     return m_gutter + m_margin + x;
 }
 
-// The column at x (in the virtual area) in row `row`: the last character that starts at or left of x, as the
-// standard program places it (spec 30 section 12 unknown 11); past the row's end, whole characters on.
+// The column at x (in the virtual area) in row `row`: the last character that starts at or left of x
+// (spec 30 section 12 unknown 11); past the row's end, whole characters on.
 int DocEditor::ColumnAt(int row, int x)
 {
     const auto& e = Extents(row);
@@ -354,6 +367,22 @@ int DocEditor::ColumnAt(int row, int x)
         if (e[k] > x) return k - 1;
     }
     return last + (x - e[last]) / m_charWidth;
+}
+
+// The caret's column for a click at x (in the virtual area) in row `row` (spec 27 section 9, unknown 4;
+// bc_core::fview::click_column): the click is taken half a character to the left, so the caret goes before the
+// first character whose left edge is right of that point; a click on a character's left half puts the caret before
+// it, on its right half (or exactly on its middle) after it, and past the middle of the last character after that.
+int DocEditor::ClickColumn(int row, int x)
+{
+    const auto& e = Extents(row);
+    x -= m_gutter + m_margin;
+    const int last = (int)e.size() - 1;
+    const int at = x - m_charWidth / 2;
+    for (int k = 0; k < last; ++k) {
+        if (e[k] > at) return k;
+    }
+    return wxMax(last, 0);
 }
 
 void DocEditor::SetCaretPlace(int row, int col, int anchorRow, int anchorCol, int keepFromTop, const wxString* caretRowText)
@@ -461,8 +490,8 @@ void DocEditor::OnPaint(wxPaintEvent&)
     for (int row = top; row <= last; ++row) {
         const int y = row * m_rowHeight;
         if (IsBreakRow(row)) {
-            // The page break row: one line across the whole width at the text's baseline (spec 30); the pen is the
-            // standard program's: solid, two pixels, black (spec 30 section 12 unknown 2).
+            // The page break row: one line across the whole width at the text's baseline (spec 30); the pen is
+            // solid, two pixels, black (spec 30 section 12 unknown 2).
             dc.SetPen(wxPen(*wxBLACK, 2));
             dc.DrawLine(0, y + m_ascent, width, y + m_ascent);
             continue;
@@ -527,8 +556,7 @@ void DocEditor::OnPaint(wxPaintEvent&)
     }
 }
 
-// Draws columns `from` to `to` of row `row` (top at `y`): text in the window font; each code (spec 27 4a, the
-// reference's row drawing and code box) in the code font, raised, inside a rounded box with corners a fifth of the
+// Draws columns `from` to `to` of row `row` (top at `y`): text in the window font; each code (spec 27 4a) in the code font, raised, inside a rounded box with corners a fifth of the
 // row, filled with the button face colour and framed with the window frame colour a padding wide (the highlight
 // colours when selected), its text in the button text colour (the window text colour when selected). A code is drawn
 // whole with the part its start is in.
@@ -574,6 +602,7 @@ void DocEditor::DrawPart(wxDC& dc, int row, int from, int to, bool selected, int
 
 void DocEditor::OnKeyDown(wxKeyEvent& e)
 {
+    m_rawKey = RawKeyOf(e);
     if (m_key && m_key(m_data, e.GetKeyCode(), (int)e.GetUnicodeKey(), e.GetModifiers())) return;
     e.Skip();
 }
@@ -606,7 +635,7 @@ void DocEditor::OnMouse(wxMouseEvent& e)
     int x = 0, y = 0;
     CalcUnscrolledPosition(e.GetX(), e.GetY(), &x, &y);
     const int row = wxMax(y / m_rowHeight, 0);
-    const int col = ColumnAt(wxMin(row, m_rowCount - 1), x);
+    const int col = ClickColumn(wxMin(row, m_rowCount - 1), x);
     int kind = -1;
     if (e.GetEventType() == wxEVT_LEFT_DOWN) {
         SetFocus();
@@ -789,6 +818,17 @@ void wxd_DocEditor_SetCaret(wxd_Window_t* editor, int row, int col, int anchor_r
     } else {
         e->SetCaretPlace(row, col, anchor_row, anchor_col, keep_from_top, nullptr);
     }
+}
+
+void wxd_App_HandlePendingEvents(void)
+{
+    if (wxTheApp) wxTheApp->Yield(true);
+}
+
+int wxd_DocEditor_GetRawKey(wxd_Window_t* editor)
+{
+    DocEditor* e = Ed(editor);
+    return e ? e->RawKey() : 0;
 }
 
 int wxd_DocEditor_GetTopRow(wxd_Window_t* editor)

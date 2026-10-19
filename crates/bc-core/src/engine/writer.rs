@@ -711,7 +711,7 @@ mod tests {
     /// A line standing for several codes: the Unicode form steps with the code; the small letter steps only when it
     /// is above 0x60 (or the code is below 0x61), and only a small letter above 0x60 gets a capital.
     #[test]
-    fn a_counted_line_steps_its_small_letters_as_the_reference_does() {
+    fn a_counted_line_steps_its_small_letters() {
         let t = Chitab::parse_characters("b230\tb231\t100\t3\n9c5b\t5b\t-\t3\n");
         assert_eq!((t.lower2[&0xb230], t.lower2[&0xb232]), (0xb231, 0xb233));
         assert_eq!((t.upper2[&0xb231], t.upper2[&0xb233]), (0xb230, 0xb232));

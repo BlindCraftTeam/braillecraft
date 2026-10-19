@@ -208,6 +208,19 @@ impl Translator {
         self.run(text, styles, languages, false)
     }
 
+    /// The text export step of Save As LaTeX and HTML with MathJax (spec 22, A15.9): a document's running text with
+    /// its styles and language table switches, written in the rule table's own output mode (-1); the result as
+    /// bytes, one for each character the engine writes.
+    pub fn text_export(
+        &self,
+        running: &str,
+        styles: Option<&StyleTable>,
+        languages: Option<&Languages>,
+    ) -> Result<Vec<u8>, EngineError> {
+        let text = self.run_in_mode(running, styles, languages, false, -1)?;
+        Ok(text.chars().map(|c| c as u32 as u8).collect())
+    }
+
     fn run(
         &self,
         text: &str,
@@ -215,13 +228,24 @@ impl Translator {
         languages: Option<&Languages>,
         brackets: bool,
     ) -> Result<String, EngineError> {
+        self.run_in_mode(text, styles, languages, brackets, self.output_mode)
+    }
+
+    fn run_in_mode(
+        &self,
+        text: &str,
+        styles: Option<&StyleTable>,
+        languages: Option<&Languages>,
+        brackets: bool,
+        output_mode: i64,
+    ) -> Result<String, EngineError> {
         let mut w = writer::Writer::new(
             &self.chitab,
             self.rules.tail[2],
             self.rules.tail[3],
             self.scan.flag,
             self.line_flags,
-            self.output_mode,
+            output_mode,
         );
         // The engine's codes go to the writer as they come: no vector of the whole output between them.
         self.engine_run(text, styles, languages, brackets, &mut |c| w.put(c))?;
@@ -477,6 +501,31 @@ mod tests {
 
     fn shipped_set() -> TableSet {
         TableSet::open(format!("{}/../../tables", env!("CARGO_MANIFEST_DIR"))).unwrap()
+    }
+
+    /// The text export runs txxtxa in the table's own output mode with the document's styles, and a LaTeX file
+    /// keeps a line feed from the input as a bare LF (the LaTeX script reads and writes bytes as they are).
+    #[test]
+    fn text_export_runs_in_the_table_output_mode_with_the_document_styles() {
+        let root = format!("{}/../..", env!("CARGO_MANIFEST_DIR"));
+        let set = shipped_set();
+        let t = set.translator_with_scan("txxtxa", "binary").unwrap();
+        let templates = crate::templates::Templates::open(format!("{root}/templates")).unwrap();
+        let text = templates.text(templates.by_name(crate::templates::BUILT_IN_DEFAULT).unwrap()).unwrap();
+        let styles = crate::templates::styles(&text);
+        let body = "\u{1c}es~para.\u{1f}One line\u{1c}ee~para.\u{1f}\nnext";
+        let source = std::fs::read_to_string(format!("{root}/tables/table-txxtxa-binary-forward.bmt")).unwrap();
+        let mut own = Translator::from_source(&source).unwrap();
+        own.output_mode = -1;
+        let translated = own.translate_marked(body, Some(&styles), None).unwrap();
+        let want: Vec<u8> = translated.chars().map(|c| c as u8).collect();
+        assert_eq!(t.text_export(body, Some(&styles), None).unwrap(), want);
+        let script = std::fs::read(format!("{root}/tables/rule-scripts/latex.rules")).unwrap();
+        let middle = t.text_export("a\nb", None, None).unwrap();
+        let latex = crate::rule_script::RuleScript::from_bytes(&script, None).unwrap().run(&middle).unwrap();
+        // The script's own line ends are CR LF; the input's line feed stays bare.
+        assert!(latex.windows(3).any(|w| w == b"a\nb"), "{:?}", String::from_utf8_lossy(&latex));
+        assert!(latex.windows(2).any(|w| w == b"\r\n"), "{:?}", String::from_utf8_lossy(&latex));
     }
 
     /// The shipped template's styles and the table list's language codes, with the shipped tables: the same

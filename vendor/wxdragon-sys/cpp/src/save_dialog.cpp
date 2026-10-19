@@ -1,5 +1,5 @@
-// Added for BrailleCraft: Save As with the file's encoding chosen in the dialog itself, as the original program
-// shows its encoding box inside its Save As dialog for formatted braille and formatted text.
+// Added for BrailleCraft: Save As with the file's encoding chosen in the dialog itself, with the encoding box inside
+// the Save As dialog for formatted braille and formatted text.
 //
 // The label and the choice are added through wxWidgets' file dialog customisation, which every system supports.
 // Windows and macOS tell the customisation each time the file type changes; GTK does not, so on Linux the file

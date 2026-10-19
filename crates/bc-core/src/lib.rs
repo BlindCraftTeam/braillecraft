@@ -37,15 +37,20 @@ pub mod markdown;
 pub mod memory;
 pub mod paths;
 pub mod menu_codes;
+pub mod number_field;
+pub mod page_numbering;
+pub mod print_geometry;
 pub mod printer_setup;
 pub mod range;
 pub mod rule_script;
+pub mod sixkey;
 pub mod status;
 pub mod style_apply;
 pub mod style_level;
 pub mod table_cmd;
 pub mod table_list;
 pub mod templates;
+pub mod translated_line;
 pub mod unimap;
 
 /// The two kinds of document. A print document holds ink text; a braille document holds braille cells.

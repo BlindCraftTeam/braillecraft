@@ -5,6 +5,7 @@
 
 use std::io::Write;
 use std::path::{Path, PathBuf};
+#[cfg(not(windows))]
 use std::process::{Command, Stdio};
 
 /// Serial port settings of an embosser setup.
@@ -17,6 +18,126 @@ pub struct Serial {
     pub stop_bits: u32,
     /// 0 hardware (RTS/CTS), 1 software (XON/XOFF), 2 none.
     pub handshaking: usize,
+    /// The model's serial port block for this handshaking (HardwareDCB for hardware, SoftwareDCB for software;
+    /// none otherwise), as name = value lines.
+    pub block: Vec<(String, String)>,
+}
+
+/// The serial port's control settings a job sets (spec A17.10), by the names of the Windows DCB: the RTS and DTR
+/// line control (0 disable, 1 enable, 2 handshake, 3 toggle for RTS), output flow by CTS and by DSR, XON/XOFF flow
+/// on input and on output, and the other DCB flags a model's block may name, with the XON/XOFF limits and
+/// characters.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Dcb {
+    pub binary: bool,
+    pub parity_check: bool,
+    pub outx_cts_flow: bool,
+    pub outx_dsr_flow: bool,
+    pub dtr_control: u8,
+    pub dsr_sensitivity: bool,
+    pub tx_continue_on_xoff: bool,
+    pub out_x: bool,
+    pub in_x: bool,
+    pub error_char: bool,
+    pub null: bool,
+    pub rts_control: u8,
+    pub abort_on_error: bool,
+    pub xon_lim: u16,
+    pub xoff_lim: u16,
+    pub xon_char: u8,
+    pub xoff_char: u8,
+}
+
+/// The control settings for `serial` (spec A17.10): binary mode, XON/XOFF limits 0x800 and 0x200; hardware
+/// handshaking RTS and DTR by handshake with output flow by CTS and by DSR; software handshaking RTS and DTR enabled,
+/// XON/XOFF on input and output with the characters 0x11 and 0x13; no handshaking everything off. Then the lines of
+/// the model's block (`serial.block`) over them: TRUE and FALSE, a number, or for the line controls Disable, Enable,
+/// Handshake and Toggle, without regard to case; a name or value not known is passed over.
+pub fn dcb_for(serial: &Serial) -> Dcb {
+    let mut d = Dcb {
+        binary: true,
+        parity_check: false,
+        outx_cts_flow: false,
+        outx_dsr_flow: false,
+        dtr_control: 0,
+        dsr_sensitivity: false,
+        tx_continue_on_xoff: false,
+        out_x: false,
+        in_x: false,
+        error_char: false,
+        null: false,
+        rts_control: 0,
+        abort_on_error: false,
+        xon_lim: 0x800,
+        xoff_lim: 0x200,
+        xon_char: 0x11,
+        xoff_char: 0x13,
+    };
+    match serial.handshaking {
+        0 => {
+            (d.rts_control, d.dtr_control) = (2, 2);
+            (d.outx_cts_flow, d.outx_dsr_flow) = (true, true);
+        }
+        1 => {
+            (d.rts_control, d.dtr_control) = (1, 1);
+            (d.in_x, d.out_x) = (true, true);
+        }
+        _ => {}
+    }
+    for (name, value) in &serial.block {
+        let v = value.trim().to_ascii_lowercase();
+        let number = match v.as_str() {
+            "true" | "enable" => Some(1),
+            "false" | "disable" => Some(0),
+            "handshake" => Some(2),
+            "toggle" => Some(3),
+            n => n.strip_prefix("0x").map_or_else(|| n.parse::<u32>().ok(), |h| u32::from_str_radix(h, 16).ok()),
+        };
+        let Some(n) = number else { continue };
+        let on = n != 0;
+        match name.trim().to_ascii_lowercase().as_str() {
+            "fbinary" => d.binary = on,
+            "fparity" => d.parity_check = on,
+            "foutxctsflow" => d.outx_cts_flow = on,
+            "foutxdsrflow" => d.outx_dsr_flow = on,
+            "fdtrcontrol" => d.dtr_control = (n & 3) as u8,
+            "fdsrsensitivity" => d.dsr_sensitivity = on,
+            "ftxcontinueonxoff" => d.tx_continue_on_xoff = on,
+            "foutx" => d.out_x = on,
+            "finx" => d.in_x = on,
+            "ferrorchar" => d.error_char = on,
+            "fnull" => d.null = on,
+            "frtscontrol" => d.rts_control = (n & 3) as u8,
+            "fabortonerror" => d.abort_on_error = on,
+            "xonlim" => d.xon_lim = n as u16,
+            "xofflim" => d.xoff_lim = n as u16,
+            "xonchar" => d.xon_char = n as u8,
+            "xoffchar" => d.xoff_char = n as u8,
+            _ => {}
+        }
+    }
+    d
+}
+
+impl Dcb {
+    /// The DCB flag word with these settings put in, the bits they do not cover kept from `old`.
+    pub fn bits(&self, old: u32) -> u32 {
+        let b = |on: bool, at: u32| u32::from(on) << at;
+        let set = b(self.binary, 0)
+            | b(self.parity_check, 1)
+            | b(self.outx_cts_flow, 2)
+            | b(self.outx_dsr_flow, 3)
+            | (u32::from(self.dtr_control & 3) << 4)
+            | b(self.dsr_sensitivity, 6)
+            | b(self.tx_continue_on_xoff, 7)
+            | b(self.out_x, 8)
+            | b(self.in_x, 9)
+            | b(self.error_char, 10)
+            | b(self.null, 11)
+            | (u32::from(self.rts_control & 3) << 12)
+            | b(self.abort_on_error, 14);
+        (old & !0x7fff) | set
+    }
 }
 
 /// Where the bytes go.
@@ -67,6 +188,55 @@ pub fn send(target: &Target, title: &str, bytes: &[u8]) -> Result<(), Failure> {
             f.write_all(bytes).and_then(|_| f.flush()).map_err(|_| Failure::Port)
         }
         Target::Printer(name) => send_to_printer(name, title, bytes),
+    }
+}
+
+/// A job sent a piece at a time (a page at a time, so the progress window follows it and Cancel can stop it between
+/// pages): a file or a port is opened once and written as the pieces come; a printer queue takes a job whole, so
+/// its pieces are kept and sent at the end. Joined, the pieces go out as `send` would send them.
+pub enum Output {
+    File(std::fs::File),
+    Port(std::fs::File),
+    Printer { name: String, title: String, bytes: Vec<u8> },
+}
+
+impl Output {
+    /// Opens `target` for a job titled `title` (a file is made empty).
+    pub fn open(target: &Target, title: &str) -> Result<Output, Failure> {
+        match target {
+            Target::File(path) => std::fs::File::create(path).map(Output::File).map_err(|_| Failure::File),
+            Target::Port { name, serial } => {
+                let device = port_device(name).ok_or(Failure::Port)?;
+                if let Some(s) = serial.as_ref().filter(|_| name.to_ascii_lowercase().starts_with("com")) {
+                    set_serial(&device, s)?;
+                }
+                std::fs::OpenOptions::new().write(true).open(&device).map(Output::Port).map_err(|_| Failure::Port)
+            }
+            Target::Printer(name) => {
+                Ok(Output::Printer { name: name.clone(), title: title.to_string(), bytes: Vec::new() })
+            }
+        }
+    }
+
+    /// Writes one piece of the job.
+    pub fn write(&mut self, piece: &[u8]) -> Result<(), Failure> {
+        match self {
+            Output::File(f) => f.write_all(piece).map_err(|_| Failure::File),
+            Output::Port(f) => f.write_all(piece).and_then(|_| f.flush()).map_err(|_| Failure::Port),
+            Output::Printer { bytes, .. } => {
+                bytes.extend_from_slice(piece);
+                Ok(())
+            }
+        }
+    }
+
+    /// Ends the job: a file or port is flushed, a printer queue gets the whole job.
+    pub fn finish(self) -> Result<(), Failure> {
+        match self {
+            Output::File(mut f) => f.flush().map_err(|_| Failure::File),
+            Output::Port(mut f) => f.flush().map_err(|_| Failure::Port),
+            Output::Printer { name, title, bytes } => send_to_printer(&name, &title, &bytes),
+        }
     }
 }
 
@@ -133,48 +303,64 @@ pub fn port_device(name: &str) -> Option<PathBuf> {
     }
 }
 
-/// Sets a serial device's speed, framing and handshaking with the system's own tool.
+/// Sets a serial device's speed, framing and handshaking: the system's settings for the speed and framing, then the
+/// control settings of dcb_for, through the port's state (GetCommState, SetCommState).
+#[cfg(windows)]
 fn set_serial(device: &Path, s: &Serial) -> Result<(), Failure> {
-    let run = |cmd: &mut Command| cmd.stdout(Stdio::null()).stderr(Stdio::null()).status().map(|st| st.success()).unwrap_or(false);
-    let ok = if cfg!(windows) {
-        let port = device.to_string_lossy().trim_start_matches(r"\\.\").to_string();
-        let parity = ["n", "e", "o", "m"][s.parity.min(3)];
-        let (xon, rts) = match s.handshaking {
-            0 => ("off", "hs"),
-            1 => ("on", "on"),
-            _ => ("off", "on"),
-        };
-        run(Command::new("mode").args([
-            format!("{port}:"),
-            format!("baud={}", s.baud),
-            format!("parity={parity}"),
-            format!("data={}", s.data_bits),
-            format!("stop={}", s.stop_bits),
-            format!("xon={xon}"),
-            format!("rts={rts}"),
-        ]))
-    } else {
-        let flag = if cfg!(target_os = "macos") { "-f" } else { "-F" };
-        let mut args: Vec<String> = vec![flag.into(), device.to_string_lossy().into(), s.baud.to_string(), "raw".into(), format!("cs{}", s.data_bits)];
-        args.push(if s.stop_bits == 2 { "cstopb".into() } else { "-cstopb".into() });
-        match s.parity {
-            1 => args.extend(["parenb".into(), "-parodd".into()]),
-            2 => args.extend(["parenb".into(), "parodd".into()]),
-            // Mark parity has no setting of its own here; the line runs without parity.
-            _ => args.push("-parenb".into()),
+    use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::Devices::Communication::{BuildCommDCBW, GetCommState, SetCommState, DCB};
+    let file = std::fs::OpenOptions::new().read(true).write(true).open(device);
+    let file = file.or_else(|_| std::fs::OpenOptions::new().write(true).open(device)).map_err(|_| Failure::Port)?;
+    let parity = ["n", "e", "o", "m"][s.parity.min(3)];
+    let text = format!("baud={} parity={parity} data={} stop={}", s.baud, s.data_bits, s.stop_bits);
+    let wide: Vec<u16> = text.encode_utf16().chain(std::iter::once(0)).collect();
+    let d = dcb_for(s);
+    unsafe {
+        let handle = file.as_raw_handle();
+        let mut dcb: DCB = std::mem::zeroed();
+        dcb.DCBlength = std::mem::size_of::<DCB>() as u32;
+        if GetCommState(handle, &mut dcb) == 0 || BuildCommDCBW(wide.as_ptr(), &mut dcb) == 0 {
+            return Err(Failure::Port);
         }
-        match s.handshaking {
-            0 => args.extend(["crtscts".into(), "-ixon".into(), "-ixoff".into()]),
-            1 => args.extend(["-crtscts".into(), "ixon".into(), "ixoff".into()]),
-            _ => args.extend(["-crtscts".into(), "-ixon".into(), "-ixoff".into()]),
+        dcb._bitfield = d.bits(dcb._bitfield);
+        dcb.XonLim = d.xon_lim;
+        dcb.XoffLim = d.xoff_lim;
+        dcb.XonChar = d.xon_char as i8;
+        dcb.XoffChar = d.xoff_char as i8;
+        if SetCommState(handle, &dcb) == 0 {
+            return Err(Failure::Port);
         }
-        run(Command::new("stty").args(&args))
-    };
-    if ok { Ok(()) } else { Err(Failure::Port) }
+    }
+    Ok(())
 }
 
-/// Sends the bytes to a printer queue as raw data: through the spooler with the data type RAW on Windows, and with
-/// lp's raw option elsewhere.
+/// Sets a serial device's speed, framing and handshaking with stty. The control settings of dcb_for are mapped onto
+/// the terminal flags, which is BrailleCraft's own choice: output flow by CTS is crtscts, XON/XOFF on output ixon and
+/// on input ixoff.
+#[cfg(not(windows))]
+fn set_serial(device: &Path, s: &Serial) -> Result<(), Failure> {
+    let run = |cmd: &mut Command| {
+        cmd.stdout(Stdio::null()).stderr(Stdio::null()).status().map(|st| st.success()).unwrap_or(false)
+    };
+    let flag = if cfg!(target_os = "macos") { "-f" } else { "-F" };
+    let device = device.to_string_lossy().to_string();
+    let mut args: Vec<String> = vec![flag.into(), device, s.baud.to_string(), "raw".into(), format!("cs{}", s.data_bits)];
+    args.push(if s.stop_bits == 2 { "cstopb".into() } else { "-cstopb".into() });
+    match s.parity {
+        1 => args.extend(["parenb".into(), "-parodd".into()]),
+        2 => args.extend(["parenb".into(), "parodd".into()]),
+        // Mark parity has no setting of its own here; the line runs without parity.
+        _ => args.push("-parenb".into()),
+    }
+    let d = dcb_for(s);
+    let on = |set: bool, name: &str| if set { name.to_string() } else { format!("-{name}") };
+    args.extend([on(d.outx_cts_flow, "crtscts"), on(d.out_x, "ixon"), on(d.in_x, "ixoff")]);
+    if run(Command::new("stty").args(&args)) { Ok(()) } else { Err(Failure::Port) }
+}
+
+/// Sends the bytes to a printer queue as raw data: through the spooler with the data type RAW on Windows (one
+/// document, its bytes written in pieces of at most 512, no page of its own), and with lp's raw option elsewhere,
+/// which is BrailleCraft's own choice.
 #[cfg(not(windows))]
 fn send_to_printer(name: &str, title: &str, bytes: &[u8]) -> Result<(), Failure> {
     let mut cmd = Command::new("lp");
@@ -202,8 +388,7 @@ fn send_to_printer(name: &str, title: &str, bytes: &[u8]) -> Result<(), Failure>
 #[cfg(windows)]
 fn send_to_printer(name: &str, title: &str, bytes: &[u8]) -> Result<(), Failure> {
     use windows_sys::Win32::Graphics::Printing::{
-        ClosePrinter, EndDocPrinter, EndPagePrinter, GetDefaultPrinterW, OpenPrinterW, StartDocPrinterW, StartPagePrinter,
-        WritePrinter, DOC_INFO_1W,
+        ClosePrinter, EndDocPrinter, GetDefaultPrinterW, OpenPrinterW, StartDocPrinterW, WritePrinter, DOC_INFO_1W,
     };
     fn wide(s: &str) -> Vec<u16> {
         s.encode_utf16().chain(std::iter::once(0)).collect()
@@ -233,12 +418,12 @@ fn send_to_printer(name: &str, title: &str, bytes: &[u8]) -> Result<(), Failure>
         let info = DOC_INFO_1W { pDocName: doc_name.as_mut_ptr(), pOutputFile: std::ptr::null_mut(), pDatatype: data_type.as_mut_ptr() };
         let mut result = Err(fail());
         if StartDocPrinterW(handle, 1, &info) != 0 {
-            if StartPagePrinter(handle) != 0 {
+            let ok = bytes.chunks(512).all(|piece| {
                 let mut written: u32 = 0;
-                let ok = WritePrinter(handle, bytes.as_ptr().cast(), bytes.len() as u32, &mut written) != 0 && written as usize == bytes.len();
-                result = if ok { Ok(()) } else { Err(fail()) };
-                EndPagePrinter(handle);
-            }
+                let sent = WritePrinter(handle, piece.as_ptr().cast(), piece.len() as u32, &mut written);
+                sent != 0 && written as usize == piece.len()
+            });
+            result = if ok { Ok(()) } else { Err(fail()) };
             EndDocPrinter(handle);
         }
         ClosePrinter(handle);
@@ -352,6 +537,27 @@ mod tests {
         assert_eq!(typewriter_send(&mut e, &[line.clone()]), Err(Failure::Port));
         let mut e = Scripted { answers: [6, 0, 0, 0x15].into_iter().collect(), sent: Vec::new() };
         assert_eq!(typewriter_send(&mut e, &[line]), Err(Failure::Port));
+    }
+
+    #[test]
+    fn dcb_follows_the_handshaking_and_the_model_block() {
+        let s = Serial { baud: 9600, parity: 0, data_bits: 8, stop_bits: 1, handshaking: 0, block: Vec::new() };
+        let d = dcb_for(&s);
+        let flow = |d: &Dcb| (d.outx_cts_flow, d.outx_dsr_flow, d.in_x, d.out_x);
+        assert_eq!((d.rts_control, d.dtr_control, flow(&d)), (2, 2, (true, true, false, false)));
+        assert_eq!((d.xon_lim, d.xoff_lim, d.binary), (0x800, 0x200, true));
+        let block = [("fRtsControl", "Toggle"), ("fDtrControl", "Disable"), ("fOutxDsrFlow", "FALSE")];
+        let with = Serial { block: block.iter().map(|(a, b)| (a.to_string(), b.to_string())).collect(), ..s.clone() };
+        let d = dcb_for(&with);
+        assert_eq!((d.rts_control, d.dtr_control, d.outx_dsr_flow, d.outx_cts_flow), (3, 0, false, true));
+        // Software: RTS and DTR on, XON/XOFF both ways; none: everything off.
+        let d = dcb_for(&Serial { handshaking: 1, ..s.clone() });
+        assert_eq!((d.rts_control, d.dtr_control, d.in_x, d.out_x, d.outx_cts_flow), (1, 1, true, true, false));
+        let d = dcb_for(&Serial { handshaking: 2, ..s });
+        assert_eq!((d.rts_control, d.dtr_control, flow(&d)), (0, 0, (false, false, false, false)));
+        // The flag word: binary bit 0, DTR bits 4-5, RTS bits 12-13; bits above 14 are kept.
+        assert_eq!(d.bits(0xffff_8000), 0xffff_8001);
+        assert_eq!(dcb_for(&with).bits(0), 0x1 | 0x4 | (3 << 12));
     }
 
     #[test]

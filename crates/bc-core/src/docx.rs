@@ -74,12 +74,46 @@ pub fn part<'a>(parts: &'a [Part], name: &str) -> Option<&'a [u8]> {
 
 /// A zip with stored (uncompressed) entries, for tests and for files written here.
 pub fn stored_zip(entries: &[(&str, &[u8])]) -> Vec<u8> {
+    zip(entries, false)
+}
+
+/// A zip whose entries are deflated at the default level, each written as it is compressed; an entry whose name
+/// ends with "/" is a folder and is stored empty.
+pub fn deflated_zip(entries: &[(&str, &[u8])]) -> Vec<u8> {
+    zip(entries, true)
+}
+
+/// The save time in UTC as a zip entry's DOS time and date: hours, minutes and seconds / 2; years from 1980, month
+/// 1-12, day 1-31. A clock before 1980 gives 1980-01-01 00:00 (the earliest date a zip entry can hold).
+pub fn dos_time_now() -> (u16, u16) {
+    let (y, m, d, h, mi, s) = crate::ebraille::utc_now();
+    if y < 1980 {
+        return (0, (1 << 5) | 1);
+    }
+    let time = ((h as u16) << 11) | ((mi as u16) << 5) | (s as u16 / 2);
+    let date = (((y - 1980).min(127) as u16) << 9) | ((m as u16) << 5) | d as u16;
+    (time, date)
+}
+
+fn zip(entries: &[(&str, &[u8])], deflate: bool) -> Vec<u8> {
+    // Every entry carries the save time as a valid DOS date (month 1-12, day 1-31); a zero date (1980-00-00) is not
+    // a date and some readers refuse it.
+    let (time, date) = dos_time_now();
     let mut out = Vec::new();
     let mut directory = Vec::new();
     for (name, data) in entries {
         let offset = out.len() as u32;
         let crc = crc32(data);
         let name_bytes = name.as_bytes();
+        let packed = (deflate && !name.ends_with('/')).then(|| {
+            use std::io::Write;
+            let mut e = flate2::write::DeflateEncoder::new(Vec::new(), flate2::Compression::default());
+            e.write_all(data).and_then(|_| e.finish()).unwrap_or_default()
+        });
+        let (method, stored): (u16, &[u8]) = match &packed {
+            Some(p) => (8, p.as_slice()),
+            None => (0, data),
+        };
         for (buf, sig) in [(&mut out, 0x0403_4b50u32), (&mut directory, 0x0201_4b50u32)] {
             buf.extend_from_slice(&sig.to_le_bytes());
             if sig == 0x0201_4b50 {
@@ -87,11 +121,11 @@ pub fn stored_zip(entries: &[(&str, &[u8])]) -> Vec<u8> {
             }
             buf.extend_from_slice(&20u16.to_le_bytes());
             buf.extend_from_slice(&0u16.to_le_bytes());
-            buf.extend_from_slice(&0u16.to_le_bytes());
-            buf.extend_from_slice(&0u16.to_le_bytes());
-            buf.extend_from_slice(&0u16.to_le_bytes());
+            buf.extend_from_slice(&method.to_le_bytes());
+            buf.extend_from_slice(&time.to_le_bytes());
+            buf.extend_from_slice(&date.to_le_bytes());
             buf.extend_from_slice(&crc.to_le_bytes());
-            buf.extend_from_slice(&(data.len() as u32).to_le_bytes());
+            buf.extend_from_slice(&(stored.len() as u32).to_le_bytes());
             buf.extend_from_slice(&(data.len() as u32).to_le_bytes());
             buf.extend_from_slice(&(name_bytes.len() as u16).to_le_bytes());
             buf.extend_from_slice(&0u16.to_le_bytes());
@@ -99,12 +133,13 @@ pub fn stored_zip(entries: &[(&str, &[u8])]) -> Vec<u8> {
                 buf.extend_from_slice(&0u16.to_le_bytes());
                 buf.extend_from_slice(&0u16.to_le_bytes());
                 buf.extend_from_slice(&0u16.to_le_bytes());
-                buf.extend_from_slice(&0u32.to_le_bytes());
+                // A folder entry carries the folder attribute.
+                buf.extend_from_slice(&(if name.ends_with('/') { 0x10u32 } else { 0 }).to_le_bytes());
                 buf.extend_from_slice(&offset.to_le_bytes());
             }
             buf.extend_from_slice(name_bytes);
         }
-        out.extend_from_slice(data);
+        out.extend_from_slice(stored);
     }
     let dir_offset = out.len() as u32;
     let dir_len = directory.len() as u32;
@@ -427,6 +462,33 @@ pub fn xml_part(parts: &[Part], name: &str) -> Result<Option<Element>, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Every entry of a written zip, in its local header and its directory entry, carries a valid DOS date and
+    /// time (month 1-12, day 1-31, hour 0-23, minute 0-59, seconds 0-58).
+    #[test]
+    fn zip_entry_dates_are_valid_dos_dates() {
+        let valid = |time: u16, date: u16| {
+            let (month, day) = ((date >> 5) & 0x0f, date & 0x1f);
+            let (hour, minute, half) = (time >> 11, (time >> 5) & 0x3f, time & 0x1f);
+            (1..=12).contains(&month) && (1..=31).contains(&day) && hour < 24 && minute < 60 && half < 30
+        };
+        for zip in [stored_zip(&[("mimetype", b"application/epub+zip"), ("a/b.xml", b"<a/>")]), deflated_zip(&[("f/", b""), ("f/c.xml", b"<c/>")])] {
+            let eocd = zip.len() - 22;
+            let count = u16_at(&zip, eocd + 10).unwrap() as usize;
+            let mut at = u32_at(&zip, eocd + 16).unwrap() as usize;
+            assert_eq!(count, 2);
+            for _ in 0..count {
+                let (time, date) = (u16_at(&zip, at + 12).unwrap(), u16_at(&zip, at + 14).unwrap());
+                assert!(valid(time, date), "directory entry: time {time:#06x} date {date:#06x}");
+                let local = u32_at(&zip, at + 42).unwrap() as usize;
+                let (time, date) = (u16_at(&zip, local + 10).unwrap(), u16_at(&zip, local + 12).unwrap());
+                assert!(valid(time, date), "local header: time {time:#06x} date {date:#06x}");
+                at += 46 + u16_at(&zip, at + 28).unwrap() as usize + u16_at(&zip, at + 30).unwrap() as usize + u16_at(&zip, at + 32).unwrap() as usize;
+            }
+        }
+        let (time, date) = dos_time_now();
+        assert!(valid(time, date) && date >> 9 >= 46, "{time:#06x} {date:#06x}");
+    }
 
     #[test]
     fn a_stored_zip_is_read_back_and_a_deflated_part_inflated() {

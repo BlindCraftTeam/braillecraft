@@ -1,24 +1,32 @@
-//! The font lists of Global, Fonts: symbol, dingbat, braille and
-//! vertical (@) fonts are left out; the print font list puts the typewriter fonts (Courier New, any name with
-//! "courier" or "consolas") before the others. Each group is in alphabetical order (INFERENCE: the list
-//! added to is taken to be a sorted one).
+//! The font lists of Global, Fonts: symbol, dingbat, braille and vertical (@) fonts are left out; the print font
+//! list puts the typewriter fonts (a name holding "Courier New", or named "Courier" or "Consolas") before the others.
+//! Every test of a name ignores case. Each group is a sorted list: a name goes in before the first name that sorts
+//! after it, case ignored, and a name equal to one already in its group, case ignored, is not added again. Not
+//! known: the order of names with letters outside ASCII (the comparison follows the C runtime's locale); here they
+//! sort by their lower-case form.
 
-/// Whether a font is listed at all (the test of its name).
+/// Whether a font is listed at all (the test of its name, case ignored): out when it holds "RNIB Moon" or "dings",
+/// or "Braille" unless it also holds "ASCII", or "Symbol", "Fences", "Drummer", "MegaDots" or "extra", or when it
+/// starts with "@".
 pub fn listed(name: &str) -> bool {
-    if name.starts_with('@') {
+    let low = name.to_lowercase();
+    if ["rnib moon", "dings"].iter().any(|w| low.contains(w)) {
         return false;
     }
-    if ["RNIB Moon", "dings", "Symbol", "Fences", "Drummer", "MegaDots", "extra"].iter().any(|w| name.contains(w)) {
+    if low.contains("braille") && !low.contains("ascii") {
         return false;
     }
-    // A braille font is left out, unless it is an ASCII one.
-    !name.contains("Braille") || name.contains("ASCII")
+    if ["symbol", "fences", "drummer", "megadots", "extra"].iter().any(|w| low.contains(w)) {
+        return false;
+    }
+    !name.starts_with('@')
 }
 
-/// A typewriter font, listed first for the print font.
+/// A typewriter font, listed first for the print font: a name holding "Courier New", or the whole name
+/// "Courier" or "Consolas", case ignored.
 pub fn typewriter(name: &str) -> bool {
     let low = name.to_lowercase();
-    name.contains("Courier New") || low.contains("courier") || low.contains("consolas")
+    low.contains("courier new") || low == "courier" || low == "consolas"
 }
 
 /// The list of `names` (the system's fonts) for the print font (`print`) or the status line font.
@@ -27,12 +35,12 @@ pub fn font_list(names: &[String], print: bool) -> Vec<String> {
     let mut rest: Vec<String> = Vec::new();
     for n in names.iter().filter(|n| listed(n)) {
         let group = if print && typewriter(n) { &mut first } else { &mut rest };
-        if !group.contains(n) {
-            group.push(n.clone());
+        let key = n.to_lowercase();
+        if group.iter().any(|g| g.to_lowercase() == key) {
+            continue;
         }
-    }
-    for g in [&mut first, &mut rest] {
-        g.sort_by_key(|n| n.to_lowercase());
+        let at = group.iter().position(|g| g.to_lowercase() > key).unwrap_or(group.len());
+        group.insert(at, n.clone());
     }
     first.extend(rest);
     first
@@ -50,5 +58,33 @@ mod tests {
             .collect();
         assert_eq!(font_list(&names, true), ["Consolas", "Courier New", "Arial", "SimBraille ASCII", "Verdana"]);
         assert_eq!(font_list(&names, false), ["Arial", "Consolas", "Courier New", "SimBraille ASCII", "Verdana"]);
+    }
+
+    #[test]
+    fn the_tests_ignore_case() {
+        assert!(!listed("Arial Nova ExtraBold"));
+        assert!(!listed("Segoe UI Extralight"));
+        assert!(!listed("SYMBOL Pro"));
+        assert!(!listed("Webdings"));
+        assert!(!listed("my braille"));
+        assert!(listed("SimBraille ascii"));
+        assert!(!listed("@Arial"));
+    }
+
+    #[test]
+    fn typewriter_is_courier_new_or_exact_names() {
+        assert!(!typewriter("Courier Prime"));
+        assert!(!typewriter("Consolas Nerd Font"));
+        assert!(typewriter("COURIER"));
+        assert!(typewriter("consolas"));
+        assert!(typewriter("Courier New Baltic"));
+        let names: Vec<String> = ["Courier Prime", "Arial", "COURIER"].iter().map(|s| s.to_string()).collect();
+        assert_eq!(font_list(&names, true), ["COURIER", "Arial", "Courier Prime"]);
+    }
+
+    #[test]
+    fn a_name_differing_only_in_case_is_listed_once() {
+        let names: Vec<String> = ["Arial", "ARIAL", "arial", "Verdana"].iter().map(|s| s.to_string()).collect();
+        assert_eq!(font_list(&names, false), ["Arial", "Verdana"]);
     }
 }

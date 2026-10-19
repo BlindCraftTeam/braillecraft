@@ -196,9 +196,20 @@ pub fn job_options(s: &Setup, model: &Model, layout: &Layout, cells: u32, lines:
     bc_core::emboss_setup::job_options(s, model, layout, cells, lines, copies, encoding_codes(&s.encoding))
 }
 
-/// Where a setup's output goes; None for Write to File with no name (the file is asked for each time).
-pub fn target(s: &Setup) -> Option<bc_core::emboss_out::Target> {
+/// Where a setup's output goes; None for Write to File with no name (the file is asked for each time). A serial port
+/// takes the setup's serial settings and `model`'s serial port block for its handshaking (spec A17.10).
+pub fn target(s: &Setup, model: &Model) -> Option<bc_core::emboss_out::Target> {
+    use bc_core::embossers::Value;
     use bc_core::emboss_out::{Serial, Target};
+    let block = match s.handshaking {
+        0 => model.get("HardwareDCB"),
+        1 => model.get("SoftwareDCB"),
+        _ => None,
+    };
+    let block = match block {
+        Some(Value::Block(lines)) => lines.clone(),
+        _ => Vec::new(),
+    };
     Some(match &s.output {
         Output::File(f) if f.trim().is_empty() => return None,
         Output::File(f) => Target::File(f.trim().into()),
@@ -211,9 +222,31 @@ pub fn target(s: &Setup) -> Option<bc_core::emboss_out::Target> {
                 data_bits: s.data_bits,
                 stop_bits: s.stop_bits,
                 handshaking: s.handshaking,
+                block,
             }),
         },
     })
+}
+
+// ------------------------------------------------------------------ the start-up autoprobe
+
+/// The settings section of the printers the user chose not to set up when the autoprobe offered them (one value
+/// per printer name, 1); where it is kept is BrailleCraft's own choice.
+const AUTOPROBE_SECTION: &str = "Embosser\\Autoprobe";
+
+/// Whether the user chose not to set up printer `name`.
+pub fn autoprobe_ignored(name: &str) -> bool {
+    settings_store::get(AUTOPROBE_SECTION, name).is_some_and(|v| v.trim() == "1")
+}
+
+/// Keeps printer `name` from being offered again.
+pub fn autoprobe_ignore(name: &str) {
+    settings_store::set(AUTOPROBE_SECTION, name, "1");
+}
+
+/// The setup the autoprobe makes for `printer` of model `label` (bc_core::emboss_setup::autoprobe_setup).
+pub fn autoprobe_setup(cat: &Catalog, label: &str, printer: &str) -> Setup {
+    bc_core::emboss_setup::autoprobe_setup(cat, label, printer, european())
 }
 
 // ------------------------------------------------------------------ the setup sheet
@@ -280,6 +313,7 @@ fn fill_sheet(general: &Dlg, device: &Dlg, advanced: &Dlg, s: &Setup, cat: &Cata
     device.set_checked(7, s.et_speaks_manage);
     device.set_checked(8, s.et_speaks_on);
     device.set_checked(9, s.seek_top_of_form);
+    device.set_checked(24, s.tiger_legacy);
     device.set_checked(34, s.interpoint_enabled);
     let encodings: Vec<&str> = model.map(|m| m.encodings()).unwrap_or_default();
     let encodings = if encodings.is_empty() { vec!["North American English"] } else { encodings };
@@ -321,38 +355,43 @@ fn fill_ports(general: &Dlg, model: Option<&Model>, port: Option<&str>) {
     general.set_items(17, &refs, chosen.map(|i| i as u32));
 }
 
-/// Page 10001 with or without a model, as it is set on a change of model (spec 25 15.3): with none,
-/// every control below the model choice is greyed; with one, the setup name (6, 7), the form (10, 12) and Send to
-/// Printer (13) are usable again. INFERENCE: Write to Port and Write to File (14, 15) are made usable with them
-/// on a change of model, which spec 25 15.3 does not say.
-fn show_general(general: &Dlg, has_model: bool) {
+/// Whether the model chosen on the sheet, with Legacy Mode (Device Settings 24) as checked, prints only through its
+/// system printer driver: the Tiger driver, which the driver table marks alone, when not in Legacy Mode (spec
+/// A17.6, audit print-emboss E12).
+fn printer_only(general: &Dlg, device: &Dlg) -> bool {
+    with_catalog(|cat| {
+        let model = cat.ok().and_then(|cat| find_model(cat, &general.selected_text(5).unwrap_or_default()));
+        let legacy = device.checked(24);
+        model.is_some_and(|m| bc_core::emboss_setup::driver_for(m, legacy) == bc_core::emboss_setup::TIGER_DRIVER)
+    })
+}
+
+/// Page 10001 with or without a model, as it is set when the sheet opens and on a change of model (spec 25 15.3,
+/// spec A17.6): with none, every control below the model choice is greyed; with one, the setup name (6, 7), the
+/// configuration location and the form (10 to 13) are usable again, and Write to Port and Write to File (14, 15)
+/// unless the model prints only through its printer driver (`printer_only`).
+fn show_general(general: &Dlg, has_model: bool, printer_only: bool) {
     if !has_model {
         for cid in 6..=31 {
             general.enable(cid, false);
         }
         return;
     }
-    for cid in [6, 7, 10, 12, 13, 14, 15] {
+    for cid in [6, 7, 10, 11, 12, 13] {
         general.enable(cid, true);
     }
+    general.enable(14, !printer_only);
+    general.enable(15, !printer_only);
 }
 
 /// The output controls for the output now chosen (spec 25 16.3): only the chosen
 /// output's own field is usable (the printer list, the port list, or the file name and its note); the Serial group
 /// and Initialize Serial Port only for a port whose name begins with "com", and the serial settings below it only
 /// while it is checked; Advanced's Send one character at a time (20) only for a port or a file. With no model none
-/// of them is usable.
-fn show_output(general: &Dlg, advanced: &Dlg, has_model: bool) {
-    // A model whose driver prints only through its system printer driver (the driver table marks the
-    // Tiger driver alone) can only be sent to a printer: Write to Port and Write to File are disabled and the output
-    // becomes Send to Printer (audit print-emboss E12).
-    let tiger = has_model
-        && with_catalog(|cat| {
-            cat.ok().and_then(|cat| find_model(cat, &general.selected_text(5).unwrap_or_default())).is_some_and(|m| m.driver() == "Emb_TigerEmbosserDriver")
-        });
-    general.enable(14, has_model && !tiger);
-    general.enable(15, has_model && !tiger);
-    if tiger && general.radio(&[13, 14, 15]) != Some(0) {
+/// of them is usable. A model that prints only through its printer driver (`printer_only`) is sent to a printer:
+/// the output becomes Send to Printer (spec A17.6).
+fn show_output(general: &Dlg, advanced: &Dlg, has_model: bool, printer_only: bool) {
+    if has_model && printer_only && general.radio(&[13, 14, 15]) != Some(0) {
         general.set_radio(&[13, 14, 15], 0);
     }
     let kind = general.radio(&[13, 14, 15]).filter(|_| has_model);
@@ -577,8 +616,8 @@ pub fn edit(setup: &mut Setup, cat: &Catalog) -> bool {
     let advanced = &p[3];
     let opened = find_model(cat, &setup.model);
     Dlg::set_sheet_page(&p, 2, "TranSend SE", has_transend(opened));
-    show_general(general, opened.is_some());
-    show_output(general, advanced, opened.is_some());
+    show_general(general, opened.is_some(), printer_only(general, device));
+    show_output(general, advanced, opened.is_some(), printer_only(general, device));
     // A new printer choice shows the printers it allows, keeping the printer chosen when it is still among them.
     if let Some(filter) = transend_page.win(5).and_then(|w| w.as_widget::<Choice>()) {
         let tp = handle(transend_page);
@@ -589,10 +628,10 @@ pub fn edit(setup: &mut Setup, cat: &Catalog) -> bool {
     }
     // The output controls follow the output and the port chosen and Initialize Serial Port.
     let output_changed = || {
-        let (g, adv) = (handle(general), handle(advanced));
+        let (g, adv, dv) = (handle(general), handle(advanced), handle(device));
         move || {
             let has_model = !g.selected_text(5).unwrap_or_default().starts_with('(');
-            show_output(&g, &adv, has_model);
+            show_output(&g, &adv, has_model, printer_only(&g, &dv));
         }
     };
     for cid in [13, 14, 15] {
@@ -605,6 +644,12 @@ pub fn edit(setup: &mut Setup, cat: &Catalog) -> bool {
     if let Some(init) = general.win(21).and_then(|w| w.as_widget::<CheckBox>()) {
         let changed = output_changed();
         init.on_toggled(move |_| changed());
+    }
+    // Legacy Mode of a Tiger model: out of it the output becomes Send to Printer again; Write to Port and Write to
+    // File are made usable or not only when the sheet opens or the model changes (spec A17.6).
+    if let Some(legacy) = device.win(24).and_then(|w| w.as_widget::<CheckBox>()) {
+        let changed = output_changed();
+        legacy.on_toggled(move |_| changed());
     }
     // The ports the list was last made from: it is made again only when the model's kinds of port
     // change, and then has nothing in it chosen (spec 25 16.1).
@@ -635,8 +680,8 @@ pub fn edit(setup: &mut Setup, cat: &Catalog) -> bool {
                     pages[0].set_items(17, &refs, None);
                     *last_ports.borrow_mut() = ports;
                 }
-                show_general(&pages[0], model.is_some());
-                show_output(&pages[0], &pages[3], model.is_some());
+                show_general(&pages[0], model.is_some(), printer_only(&pages[0], &pages[1]));
+                show_output(&pages[0], &pages[3], model.is_some(), printer_only(&pages[0], &pages[1]));
                 Dlg::set_sheet_page(&pages, 2, "TranSend SE", has_transend(model));
             });
         });
@@ -701,6 +746,7 @@ fn read_sheet(p: &[Dlg], base: &Setup, cat: &Catalog, model: &str) -> Setup {
     s.et_speaks_manage = device.checked(7);
     s.et_speaks_on = device.checked(8);
     s.seek_top_of_form = device.checked(9);
+    s.tiger_legacy = device.checked(24);
     s.interpoint_enabled = device.checked(34);
     s.encoding = device.selected_text(37).unwrap_or(s.encoding);
     s.high_punctuation = device.chosen_in(39, CASES) == Some(1);

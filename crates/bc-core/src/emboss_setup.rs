@@ -90,13 +90,41 @@ pub struct Setup {
     pub et_speaks_manage: bool,
     #[serde(default)]
     pub et_speaks_on: bool,
+    /// Device Settings: Legacy Mode (24) of a Tiger model, which then is driven as the Generic driver drives an
+    /// embosser (spec A17.6).
+    #[serde(default)]
+    pub tiger_legacy: bool,
+}
+
+/// The driver that sends a job.
+pub const TIGER_DRIVER: &str = "Emb_TigerEmbosserDriver";
+pub const GENERIC_DRIVER: &str = "Emb_GenericEmbosserDriver";
+
+/// The driver a setup of `model` uses with Legacy Mode `tiger_legacy`: the Generic driver for a Tiger model in
+/// Legacy Mode, else the model's (spec A17.6).
+pub fn driver_for(model: &Model, tiger_legacy: bool) -> &str {
+    if tiger_legacy && model.driver() == TIGER_DRIVER {
+        GENERIC_DRIVER
+    } else {
+        model.driver()
+    }
 }
 
 impl Setup {
     /// A number field of the Device Settings page as the setup holds it (0 when empty or not a number): 27 the
     /// leftmost cell placement, 30 the rightmost cell placement, 33 the top margin setting.
     pub fn device_number(&self, cid: i32) -> u32 {
-        self.device_other.iter().find(|(c, _)| *c == cid).and_then(|(_, v)| v.trim().parse().ok()).unwrap_or(0)
+        self.device_field(cid).unwrap_or(0)
+    }
+
+    /// A number field of the Device Settings page; None when the setup holds no number there.
+    pub fn device_field(&self, cid: i32) -> Option<u32> {
+        self.device_other.iter().find(|(c, _)| *c == cid).and_then(|(_, v)| v.trim().parse().ok())
+    }
+
+    /// The driver that sends this setup's jobs on `model` (driver_for).
+    pub fn driver<'a>(&self, model: &'a Model) -> &'a str {
+        driver_for(model, self.tiger_legacy)
     }
 }
 
@@ -465,7 +493,8 @@ impl Setup {
             reverse_order: false,
             z_fold: false,
             seek_top_of_form: false,
-            device_other: Vec::new(),
+            // The rightmost cell placement starts at the model's MaximumCells (spec A17.1).
+            device_other: vec![(30, number("MaximumCells", 42).to_string())],
             custom_codes: false,
             start_codes: String::new(),
             end_codes: String::new(),
@@ -486,6 +515,7 @@ impl Setup {
             ink_adjust_v: 0,
             et_speaks_manage: false,
             et_speaks_on: false,
+            tiger_legacy: false,
         }
     }
 
@@ -495,7 +525,7 @@ impl Setup {
     /// the new model has it, else the model's default; Embosser Version the model's single version, else the old one
     /// when the model's range holds it, else unspecified. Everything else stays as it was: the name, the output,
     /// Initialize Serial Port, parity, the left and top margins, line space, reverse page order, Z-fold, seek top of
-    /// form, the custom codes and the TranSend SE values.
+    /// form, the custom codes and the TranSend SE values. Legacy Mode takes the new model's (off).
     pub fn with_model(&self, cat: &Catalog, label: &str, european: bool) -> Setup {
         let new = Setup::for_model(cat, label, european);
         let model = find_model(cat, label);
@@ -507,7 +537,14 @@ impl Setup {
         };
         // Device Settings fields kept from the setup: line space (16), left margin (27), top margin (33); the
         // signature sheet counts (21, 23), the rightmost cell (30) and the PRINT55 location (43) take the model's.
-        let device_other = self.device_other.iter().filter(|(cid, _)| [16, 27, 33].contains(cid)).cloned().collect();
+        let kept = |cid: &i32| [16, 27, 33].contains(cid);
+        let device_other = self
+            .device_other
+            .iter()
+            .filter(|(cid, _)| kept(cid))
+            .chain(new.device_other.iter().filter(|(cid, _)| !kept(cid)))
+            .cloned()
+            .collect();
         Setup {
             model: label.to_string(),
             form,
@@ -532,6 +569,7 @@ impl Setup {
             one_at_a_time: new.one_at_a_time,
             text_delay: new.text_delay,
             control_delay: new.control_delay,
+            tiger_legacy: new.tiger_legacy,
             ..self.clone()
         }
     }
@@ -556,6 +594,10 @@ pub struct Layout {
     pub banner: bool,
     /// 0 off, 1 ink and braille, 2 braille-only pass.
     pub interline: u32,
+    /// The document's double-size print (the file's DoubleSizePrint byte): the form check then takes the form's
+    /// interline sizes too (spec A17.14 list 7 item 1).
+    #[serde(default)]
+    pub double_size: bool,
 }
 
 /// Whether the setup is "automated" as the drivers count it: escape codes allowed, the model uses escape
@@ -568,23 +610,29 @@ pub fn automated(s: &Setup, model: &Model) -> bool {
 /// 4 interpoint asked for and not allowed, 1 interline print asked for and not allowed; for the lines and the cells
 /// each, 8 the margin below the embosser's own margin (16 when equal, not a fault), 4 the margin past the form's
 /// maximum, 2 margin and text past it, 1 the text alone past it. None when the form is not one of the model's (its
-/// id compared without regard to case). The interline maximums apply when interline print is on; with interpoint on
-/// and allowed the model's LessLinesInterpoint comes off the lines.
+/// id compared without regard to case). The interline maximums apply when interline print or double-size print is
+/// on; then an Enabling model with TranSend SE active (an ink printer named) takes its lines from the form's length:
+/// at 490 lines to 100 tenths of an inch for the Large Interline font with interline print on, else at 400 (spec
+/// A17.14 9.3 item 2). With interpoint on and allowed the model's LessLinesInterpoint comes off the lines.
 pub fn fit_flags(s: &Setup, model: &Model, layout: &Layout, cells: u32, lines: u32) -> Option<(u32, u32, u32)> {
     let form = model.forms.iter().find(|f| f.id.eq_ignore_ascii_case(&layout.form))?;
     let auto = automated(s, model);
     let can = model.flag("CanDoInterpoint");
     let interpoint_ok = (auto && can) || (can && s.interpoint_enabled);
-    let interline_ok = model.flag("Interline") || (model.flag("TranSend") && !s.ink_printer.trim().is_empty());
+    let transend = model.flag("TranSend") && !s.ink_printer.trim().is_empty();
+    let interline_ok = model.flag("Interline") || transend;
     let (left, top) = if auto { (0, 0) } else { (s.device_number(27), s.device_number(33)) };
     let mut whole = if layout.interpoint && !interpoint_ok { 4 } else { 0 };
     let (mut max_cells, mut max_lines) = form.maximum;
-    if layout.interline != 0 {
-        if !interline_ok {
-            whole |= 1;
-        }
+    if layout.interline != 0 && !interline_ok {
+        whole |= 1;
+    }
+    if layout.interline != 0 || layout.double_size {
         if let Some((pair, _)) = form.interline {
             (max_cells, max_lines) = pair;
+        }
+        if transend && s.driver(model).contains("Enabling") {
+            max_lines = form.length * 100 / transend_lines_per(s, layout);
         }
     }
     if layout.interpoint && interpoint_ok {
@@ -780,21 +828,29 @@ fn index_level(s: &Setup) -> u8 {
     s.version.min(6) as u8
 }
 
+/// The TranSend SE lines to 100 tenths of an inch of form length: 490 for the Large Interline font size, else 400.
+/// A job of Large Interline on a document with interline print off is made as Large Overlapped (spec A17.14 9.3
+/// item 2), so 490 needs interline print on.
+fn transend_lines_per(s: &Setup, layout: &Layout) -> u32 {
+    if s.transend_font_size == 1 && layout.interline != 0 { 490 } else { 400 }
+}
+
 /// The byte pipeline's options for a job of `copies` copies of a document laid out `cells` by `lines` with
 /// `layout`, on `setup` and its `model`: the driver's job start (spec 25 section 8), padding, line and page ends, as
-/// the drivers make them (audit print-emboss E2 to E5). An Index V3 or later makes the copies itself (MC).
-/// INFERENCE: the keywords RotatePaperSizings, IndexPagemm and LabellerROM are the names of the model flags
-/// read by number (0x55, 0x3d, 0x56).
+/// the drivers make them (audit print-emboss E2 to E5). An Index V3 or later makes the copies itself (MC): its
+/// parameter string carries the count, and the pages go once (spec A17.12).
 pub fn job_options(s: &Setup, model: &Model, layout: &Layout, cells: u32, lines: u32, copies: u32, encoding: Option<[u8; 64]>) -> Options {
     let form = model.forms.iter().find(|f| f.id.eq_ignore_ascii_case(&layout.form));
-    let driver = model.driver();
+    let driver = s.driver(model);
     let (index, enabling) = (driver.contains("Index"), driver.contains("Enabling"));
     let interpoint = layout.interpoint && s.interpoint_enabled;
     let binding = layout.binding + form.map_or(0, |f| f.cell_offset);
     let level = if index { index_level(s) } else { 0 };
     let booklet = form.is_some_and(|f| f.double_page);
-    // 8-dot line spacing: a TranSend SE ink printer named, interline print on, the large interline font.
-    let eight_dot = !s.ink_printer.trim().is_empty() && layout.interline != 0 && s.transend_font_size == 1;
+    // TranSend SE interline: a TranSend SE ink printer named and interline print on; with the Large Interline font,
+    // the large interline font (8-dot line spacing).
+    let ink_interline = !s.ink_printer.trim().is_empty() && layout.interline != 0;
+    let eight_dot = ink_interline && s.transend_font_size == 1;
     let mut start = Vec::new();
     if index {
         start = index_start(&IndexStart {
@@ -821,7 +877,7 @@ pub fn job_options(s: &Setup, model: &Model, layout: &Layout, cells: u32, lines:
         // Lines per page: the form's largest number of lines (with a TranSend SE ink printer, its length at 400 or
         // 490 to the inch), less the model's LessLinesInterpoint when interpoint.
         let form_lines = match form {
-            Some(f) if !s.ink_printer.trim().is_empty() => f.length * 100 / if s.transend_font_size == 1 { 490 } else { 400 },
+            Some(f) if !s.ink_printer.trim().is_empty() => f.length * 100 / transend_lines_per(s, layout),
             Some(f) => f.maximum.1,
             None => lines + layout.top_margin,
         };
@@ -832,7 +888,7 @@ pub fn job_options(s: &Setup, model: &Model, layout: &Layout, cells: u32, lines:
             seek_top_of_form: s.seek_top_of_form,
             voice: s.et_speaks_manage,
             voice_on: s.et_speaks_on,
-            dot_table: eight_dot,
+            dot_table: ink_interline,
             eight_dot,
             perforation_skip: model.flag("CanDoInterpoint"),
             interpoint,
@@ -841,10 +897,11 @@ pub fn job_options(s: &Setup, model: &Model, layout: &Layout, cells: u32, lines:
             lines: form_lines.saturating_sub(less),
             cells,
             binding,
-            init: String::new(),
+            // The custom start codes go through the Enabling start once, their tags taking the codes' places.
+            init: if s.custom_codes { s.start_codes.clone() } else { String::new() },
         });
     }
-    if s.custom_codes {
+    if s.custom_codes && !(enabling && s.escape_codes) {
         start.extend(parse_codes(&s.start_codes));
     }
     let puma = s.encoding.to_ascii_lowercase().contains("puma");
@@ -858,7 +915,10 @@ pub fn job_options(s: &Setup, model: &Model, layout: &Layout, cells: u32, lines:
         automated: automated(s, model),
         no_pad: (index && level >= 5) || (booklet && index && level >= 4) || driver.contains("ThielAdvanced"),
         device_left: s.device_number(27),
-        device_right: s.device_number(30),
+        // The rightmost cell placement as set, else the model's MaximumCells (spec A17.1).
+        device_right: s
+            .device_field(30)
+            .unwrap_or_else(|| model.number("MaximumCells").map_or(42, |n| n.max(0) as u32)),
         device_top: s.device_number(33),
         letters_upper: s.upper_case,
         high_punctuation: s.high_punctuation,
@@ -867,7 +927,6 @@ pub fn job_options(s: &Setup, model: &Model, layout: &Layout, cells: u32, lines:
         end_of_page: s.end_of_page.min(6) as u8,
         eol_on_full_line: s.eol_on_full_line,
         eop_on_full_page: s.eop_on_full_page,
-        pad_lines: s.pad_lines,
         make_up_sides: !model.flag("NoMakeupSides"),
         start,
         end: if s.custom_codes { parse_codes(&s.end_codes) } else { Vec::new() },
@@ -877,8 +936,51 @@ pub fn job_options(s: &Setup, model: &Model, layout: &Layout, cells: u32, lines:
         copies_by_embosser: index && level >= 4 && copies > 1,
         typewriter: driver == "Emb_Typewriter_EmbosserDriver",
         form_lines: form.map_or(lines + layout.top_margin, |f| f.maximum.1),
-        page_wrap: model.flag("PageWrap"),
+        // The setup's PageWrap: its full page choice off (a new setup takes the model's, spec A17.9).
+        page_wrap: !s.eop_on_full_page,
     }
+}
+
+/// The printers the start-up autoprobe offers to set up (spec A18.3), from the system's printers as (name, driver
+/// name) in the system's order: each printer whose driver name is a model's WindowsDriverName (the whole name,
+/// without regard to case; the first such model in the catalog's order), unless a kept setup already sends to a
+/// target of that name (`kept_targets`, the target names of every kind of output) or the printer is one the user
+/// chose not to set up (`ignored`), both compared without regard to case. Each comes with the model's label: its
+/// first name with its firmware versions.
+pub fn autoprobe_candidates(
+    printers: &[(String, String)],
+    cat: &Catalog,
+    kept_targets: &[String],
+    ignored: &[String],
+) -> Vec<(String, String)> {
+    let same = |a: &str, b: &str| a.eq_ignore_ascii_case(b);
+    printers
+        .iter()
+        .filter(|(name, _)| !kept_targets.iter().any(|t| same(t, name)) && !ignored.iter().any(|i| same(i, name)))
+        .filter_map(|(name, driver)| {
+            let model = cat.models.iter().find(|m| m.text("WindowsDriverName").is_some_and(|w| same(w, driver)))?;
+            let first = model.names.first()?;
+            let label = match &first.versions {
+                Some(v) => format!("{} {}", first.name, v),
+                None => first.name.clone(),
+            };
+            Some((name.clone(), label))
+        })
+        .collect()
+}
+
+/// The target name of a setup's output: the printer, the port or the file name.
+pub fn target_name(s: &Setup) -> &str {
+    match &s.output {
+        Output::Printer(t) | Output::Port(t) | Output::File(t) => t,
+    }
+}
+
+/// The setup the autoprobe makes for printer `printer` of model `label`: a new setup of the model named after the
+/// printer, sent to that printer.
+pub fn autoprobe_setup(cat: &Catalog, label: &str, printer: &str, european: bool) -> Setup {
+    let new = Setup::for_model(cat, label, european);
+    Setup { name: printer.to_string(), output: Output::Printer(printer.to_string()), ..new }
 }
 
 #[cfg(test)]
@@ -891,7 +993,7 @@ mod tests {
     }
 
     #[test]
-    fn form_names_are_the_references_texts() {
+    fn form_names_are_the_shipped_texts() {
         assert_eq!(form_name("11_w"), "11.5 by 11 inches");
         // Ids match without regard to case; a form not in the table shows its id.
         assert_eq!(form_name("nbp"), "38 by 28 Braille Page used by NBP");
@@ -925,7 +1027,7 @@ mod tests {
     }
 
     #[test]
-    fn the_checks_before_a_job_come_in_the_reference_order() {
+    fn the_checks_before_a_job_come_in_their_order() {
         let cat = catalog();
         let model = find_model(&cat, "Index Everest-D V5").unwrap();
         let setup = Setup::for_model(&cat, "Index Everest-D V5", false);
@@ -979,7 +1081,7 @@ mod tests {
     }
 
     #[test]
-    fn a_change_of_model_takes_and_keeps_what_the_reference_does() {
+    fn a_change_of_model_takes_some_fields_and_keeps_others() {
         let cat = catalog();
         let mut s = Setup::for_model(&cat, "Enabling Juliet Pro 60", false);
         s.name = "Mine".into();
@@ -994,7 +1096,7 @@ mod tests {
         assert_eq!(t.model, "Enabling Marathon");
         // Kept.
         assert_eq!((t.name.as_str(), &t.output, t.parity, t.custom_codes, t.ink_adjust_h), ("Mine", &Output::Port("com3".into()), 2, true, 5));
-        assert_eq!(t.device_other, vec![(27, "3".to_string())]);
+        assert_eq!(t.device_other, vec![(27, "3".to_string()), (30, fresh.device_number(30).to_string())]);
         // The model's.
         assert_eq!((t.baud, t.data_bits, t.stop_bits, t.handshaking), (fresh.baud, fresh.data_bits, fresh.stop_bits, fresh.handshaking));
         assert_eq!((t.end_of_line, t.end_of_page, t.encoding.as_str()), (fresh.end_of_line, fresh.end_of_page, fresh.encoding.as_str()));
@@ -1045,7 +1147,7 @@ mod tests {
     }
 
     #[test]
-    fn the_shipped_transend_list_matches_as_the_reference_does() {
+    fn the_shipped_transend_list_matches_printer_names() {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../embossers/transend-printers.txt");
         let list = transend_printers(&std::fs::read_to_string(path).unwrap()).unwrap();
         assert_eq!((list.supported.len(), list.compatible.len()), (27, 3));
@@ -1067,7 +1169,135 @@ mod tests {
     }
 
     #[test]
-    fn the_transend_list_reader_keeps_the_references_line_rules() {
+    fn rightmost_cell_starts_at_the_models_maximum_cells() {
+        let cat = catalog();
+        let model = find_model(&cat, "Enabling Juliet Pro 60").unwrap();
+        let mut s = Setup::for_model(&cat, "Enabling Juliet Pro 60", false);
+        assert_eq!(s.device_field(30), Some(40));
+        let layout = Layout { form: "11_w".into(), ..Layout::default() };
+        assert_eq!(job_options(&s, model, &layout, 40, 25, 1, None).device_right, 40);
+        // A field with no number takes the model's value; a 0 set stays 0.
+        s.device_other = vec![(30, String::new())];
+        assert_eq!(job_options(&s, model, &layout, 40, 25, 1, None).device_right, 40);
+        s.device_other = vec![(30, "0".into())];
+        assert_eq!(job_options(&s, model, &layout, 40, 25, 1, None).device_right, 0);
+    }
+
+    #[test]
+    fn tiger_legacy_mode_uses_the_generic_driver() {
+        let cat = catalog();
+        let model = find_model(&cat, "ViewPlus Tiger Max").unwrap();
+        let mut s = Setup::for_model(&cat, "ViewPlus Tiger Max", false);
+        assert_eq!(s.driver(model), TIGER_DRIVER);
+        s.tiger_legacy = true;
+        assert_eq!(s.driver(model), GENERIC_DRIVER);
+        // Legacy Mode changes nothing for another driver.
+        let index = find_model(&cat, "Index Everest-D V5").unwrap();
+        assert_eq!(s.driver(index), "Emb_IndexEmbosserDriver");
+    }
+
+    #[test]
+    fn enabling_job_start_from_the_setup() {
+        let cat = catalog();
+        let model = find_model(&cat, "Enabling Juliet Pro 60").unwrap();
+        let mut s = Setup::for_model(&cat, "Enabling Juliet Pro 60", false);
+        assert!(s.escape_codes);
+        s.ink_printer = "Epson LQ-590".into();
+        let layout = Layout { form: "11_w".into(), interline: 1, ..Layout::default() };
+        // TranSend SE interline with the Small font: dots 7 and 8 ignored and DBS mode, 27 lines at 400 to the inch.
+        let start = job_options(&s, model, &layout, 40, 25, 1, None).start;
+        assert!(start.starts_with(b"\x1bK@\x1b[\x1bW@\x1bH@\x1b&@\x1bS@\x1bs@\x1bTK\x1bQ[\x1bLA"), "{start:?}");
+        // The custom start codes go in once, a tag taking its code's place.
+        s.ink_printer.clear();
+        s.custom_codes = true;
+        s.start_codes = "<FormLength><esc>Z".into();
+        let plain = Layout { interline: 0, ..layout };
+        let start = job_options(&s, model, &plain, 40, 25, 1, None).start;
+        assert!(start.ends_with(&[0x1b, 0x54, 0x4b, 0x1b, 0x5a]), "{start:?}");
+        assert_eq!(start.windows(3).filter(|w| *w == b"\x1bTK").count(), 1);
+    }
+
+    #[test]
+    fn transend_lines_follow_the_font_and_interline() {
+        let cat = catalog();
+        let model = find_model(&cat, "Enabling Juliet Pro 60").unwrap();
+        let mut s = Setup::for_model(&cat, "Enabling Juliet Pro 60", false);
+        s.ink_printer = "Epson LQ-590".into();
+        s.transend_font_size = 1;
+        let layout = Layout { form: "11_w".into(), interline: 1, ..Layout::default() };
+        // Large Interline with interline print: 110 x 100 / 490 = 22 lines.
+        let (_, lines, _) = fit_flags(&s, model, &layout, 40, 25).unwrap();
+        assert_eq!(lines & 3, 3);
+        assert!(job_options(&s, model, &layout, 40, 22, 1, None).start.windows(3).any(|w| w == b"\x1bQV"));
+        // Double-size print alone: at 400, 27 lines.
+        let double = Layout { interline: 0, double_size: true, ..layout };
+        let (_, lines, _) = fit_flags(&s, model, &double, 40, 25).unwrap();
+        assert_eq!(lines & 3, 0);
+    }
+
+    #[test]
+    fn double_size_takes_the_interline_sizes() {
+        let text = "\"X\"\n{\n  Interline\n  Form \"a\" = 85 x 110 ; SinglePage ; BrailleOnly = 34 x 27 ; 32 x 25 ; \
+                    Interline = 30 x 20 ; 30 x 18\n}\n";
+        let cat = Catalog::from_texts(text, None).unwrap();
+        let model = &cat.models[0];
+        let s = Setup::for_model(&cat, "X", false);
+        let layout = Layout { form: "a".into(), ..Layout::default() };
+        assert_eq!(fit_flags(&s, model, &layout, 30, 25).unwrap().1 & 3, 0);
+        let double = Layout { double_size: true, ..layout };
+        assert_eq!(fit_flags(&s, model, &double, 30, 25).unwrap().1 & 3, 3);
+    }
+
+    #[test]
+    fn typewriter_page_wrap_comes_from_the_setup() {
+        let cat = catalog();
+        let model = find_model(&cat, "EBrailler Cosmo").unwrap();
+        let mut s = Setup::for_model(&cat, "EBrailler Cosmo", false);
+        let form = model.forms[0].id.clone();
+        let layout = Layout { form, ..Layout::default() };
+        s.eop_on_full_page = true;
+        let o = job_options(&s, model, &layout, 30, 25, 1, None);
+        assert!(o.typewriter && !o.page_wrap);
+        let full = vec![Some(vec!["a".to_string(); o.form_lines as usize])];
+        let m = crate::emboss::typewriter_job(&o, &full, 1, crate::emboss::Sides::All);
+        assert_eq!(m.last(), Some(&vec![0x00, 0x0a, 0xff]));
+        s.eop_on_full_page = false;
+        assert!(job_options(&s, model, &layout, 30, 25, 1, None).page_wrap);
+    }
+
+    #[test]
+    fn autoprobe_offers_printers_with_a_model_driver() {
+        let cat = catalog();
+        let given = [("Everest", "Everest"), ("Office", "HP LaserJet"), ("Tiger1", "tiger max")];
+        let printers: Vec<(String, String)> = given
+            .iter()
+            .map(|(a, b)| (a.to_string(), b.to_string()))
+            .collect();
+        // The first model in the file with that driver name, without regard to case.
+        let all = autoprobe_candidates(&printers, &cat, &[], &[]);
+        let pair = |a: &str, b: &str| (a.to_string(), b.to_string());
+        assert_eq!(all, vec![pair("Everest", "Index Everest-D V2"), pair("Tiger1", "ViewPlus Tiger Max")]);
+        // A kept setup's target, and a printer not to be set up, are left out without regard to case.
+        let kept = autoprobe_candidates(&printers, &cat, &["everest".to_string()], &["TIGER1".to_string()]);
+        assert!(kept.is_empty());
+        // A driver name two models share gives the first.
+        let basic = autoprobe_candidates(&[("B".into(), "Basic-D".into())], &cat, &[], &[]);
+        assert_eq!(basic[0].1, "Index Basic-D V2");
+    }
+
+    #[test]
+    fn autoprobe_setup_sends_to_the_printer() {
+        let cat = catalog();
+        let s = autoprobe_setup(&cat, "Index Everest-D V2", "Everest", false);
+        assert_eq!((s.name.as_str(), target_name(&s)), ("Everest", "Everest"));
+        assert_eq!(s.output, Output::Printer("Everest".into()));
+        let model = find_model(&cat, "Index Everest-D V2").unwrap();
+        assert_eq!(s.interpoint_enabled, model.flag("CanDoInterpoint"));
+        assert_eq!(s.model, "Index Everest-D V2");
+    }
+
+    #[test]
+    fn the_transend_list_reader_keeps_its_line_rules() {
         let text = "| note\r\n-TranSendSE 1\r\nSupported:\r\nEpson A-1 | a note after the name\r\nBar||Name\r\n\r\nEpson B-2\r\n";
         let list = transend_printers(text).unwrap();
         // A note after a name is left off, two bars are one bar, and the blank line ends the reading.

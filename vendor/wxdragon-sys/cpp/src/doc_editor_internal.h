@@ -25,6 +25,8 @@ public:
     void SetCaretPlace(int row, int col, int anchorRow, int anchorCol, int keepFromTop, const wxString* caretRowText);
     void PlaceCaret();
     int GetTopRow() const;
+    // The physical key of the key event being handled (wxd_DocEditor_GetRawKey).
+    int RawKey() const { return m_rawKey; }
     int GetVisibleRows() const;
     int CaretRow() const { return m_caretRow; }
     int CaretCol() const { return m_caretCol; }
@@ -56,6 +58,7 @@ public:
     int RowOfLine(int line) const;
     wxRect RowRect(int row, int from, int to);
     int ColumnAt(int row, int x);
+    int ClickColumn(int row, int x);
     int ColumnX(int row, int col);
     // Hands a typed character on as the keyboard does (screen readers that type through the accessible text).
     void TypeText(const wxString& text)
@@ -117,6 +120,7 @@ private:
     void DrawPart(wxDC& dc, int row, int from, int to, bool selected, int y);
 
     void* m_data;
+    int m_rawKey = 0;
     wxd_DocEditor_KeyFn m_key;
     wxd_DocEditor_CharFn m_char;
     wxd_DocEditor_MouseFn m_mouse;

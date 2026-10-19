@@ -60,10 +60,12 @@ fn shifted(m: usize, s: usize, e: usize, new_len: usize) -> usize {
     }
 }
 
-/// The most levels the [hi] in force at `caret` allows, as Style Level reads it (spec 34 3.2, 8.1): the 7th
-/// parameter of the last [hi] before the caret, read as an unsigned byte; -1 or not given reads as 255 (no limit),
-/// so 0 lets no level through and 256 wraps to 0.
-pub fn max_level(running: &str, caret: usize) -> u32 {
+/// The most levels the [hi] in force at `line_start` allows, as Style Level reads it (spec 34 3.2, 8.1): the 7th
+/// parameter of the last [hi] before the start of the caret's formatted line (the callers give that place, as the
+/// limit is the one in force when the line was laid out), read as an unsigned byte; -1 or not given reads as 255
+/// (no limit), so 0 lets no level through and 256 wraps to 0.
+pub fn max_level(running: &str, line_start: usize) -> u32 {
+    let caret = line_start;
     let r: Vec<char> = running.chars().collect();
     let mut m: i64 = -1;
     let mut p = 0;
@@ -86,7 +88,8 @@ pub fn max_level(running: &str, caret: usize) -> u32 {
 }
 
 /// The paragraph style open at `page_start` and the place of its start code (the page fields, spec 34
-/// 8.2): the last [es~NAME.] before the page start with no [ee~NAME.] after it.
+/// 8.2, A12.2 item 4): the last [es~NAME.] before the page start with no paragraph style end after it; an end of
+/// any paragraph style ([ee~X.], whatever X) closes it.
 pub fn page_style(running: &str, page_start: usize) -> Option<(String, usize)> {
     let r: Vec<char> = running.chars().collect();
     let mut open: Option<(String, usize)> = None;
@@ -95,10 +98,8 @@ pub fn page_style(running: &str, page_start: usize) -> Option<(String, usize)> {
         if let Some((name, after)) = code_at(&r, p) {
             if let Some(n) = name.strip_prefix("es~").filter(|n| n.ends_with('.')) {
                 open = Some((n.to_string(), p));
-            } else if let Some(n) = name.strip_prefix("ee~").filter(|n| n.ends_with('.')) {
-                if open.as_ref().is_some_and(|(o, _)| o == n) {
-                    open = None;
-                }
+            } else if name.strip_prefix("ee~").is_some_and(|n| n.ends_with('.')) {
+                open = None;
             }
             p = after;
         } else {
@@ -345,6 +346,23 @@ mod tests {
         assert_eq!((o.beep, o.changed), (true, false));
         assert_eq!(max_level("\x1chi\x1f", 4), 255);
         assert_eq!(max_level("\x1chi1:1:0:0:0:0:256\x1f", 20), 0);
+    }
+
+    #[test]
+    fn max_level_from_line_start() {
+        let t = "\x1chi1:1:0:0:0:0:2\x1fone \x1chi1:1:0:0:0:0:3\x1ftwo";
+        // The line starts at "one": the second [hi], after the line start and before the caret, does not count.
+        let line_start = "\x1chi1:1:0:0:0:0:2\x1f".chars().count();
+        assert_eq!(max_level(t, line_start), 2);
+        assert_eq!(max_level(t, t.chars().count()), 3);
+    }
+
+    #[test]
+    fn page_style_cleared_by_any_paragraph_end() {
+        let t = "\x1ces~h.\x1fone\x1cee~q.\x1ftwo";
+        assert_eq!(page_style(t, t.chars().count()), None);
+        let t = "\x1ces~h.\x1fone\x1cee~b\x1ftwo";
+        assert_eq!(page_style(t, t.chars().count()), Some(("h.".into(), 0)));
     }
 
     #[test]

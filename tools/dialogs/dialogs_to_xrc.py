@@ -53,9 +53,10 @@ def xrc_dialogs(path, mapping_path):
 # Licensing, activation, registration and vendor-specific prompts are not part of BrailleCraft.
 SKIP = {1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009, 1010, 1011, 1012, 1013, 1014, 1015,
         1056, 1057, 1059, 1070}
-# The embosser setup's printer-driver installation and first-run wizard pages (10005 to 10016) are a later queue line
-# (BrailleCraft queue line 10, M3b); the setup sheet itself is 10000 to 10004.
-SKIP |= set(range(10005, 10017))
+# The embosser setup's printer-driver installation and first-run wizard pages (10006 to 10016) are a later queue line
+# (BrailleCraft queue line 10, M3b); the setup sheet itself is 10000 to 10004, and 10005 is the start-up autoprobe's
+# list of embossers found.
+SKIP |= set(range(10006, 10017))
 # The embosser setup sheet's pages, shown as tabs of the sheet (10000): written as panels, not dialogs.
 PANELS = {10001, 10002, 10003, 10004}
 
@@ -94,13 +95,21 @@ TEXTS = {
     (10001, 19): "(BrailleCraft will prompt if this is blank)",
     (10003, 19): "If you want to add interline Print and Braille capabilities to BrailleCraft using your Enabling "
                  "Technologies Braille Embosser please contact:",
+    # Embossers found at start-up.
+    (10005, 5): "One or more braille printer drivers have been installed, but the devices are not yet set up for use "
+                "with BrailleCraft.",
+    (10005, 6): "Press OK to set up BrailleCraft for use with the braille printer(s) selected below.",
+    (10005, 8): "Printers that you de-select will not be set up for use with BrailleCraft, and you will not be "
+                "prompted again.",
 }
 
 
 # Lists whose resource asks for sorting but which are filled by inserting each item at a set place
 # (CB_INSERTSTRING), which keeps the order given: the TranSend SE printer choice keeps Supported, Supported or
-# Compatible, any printer, the order of the values it stands for (re/spec/25-emboss.md section 14.7 item 6).
-UNSORTED = {(10003, 5)}
+# Compatible, any printer, the order of the values it stands for (re/spec/25-emboss.md section 14.7 item 6); the Show
+# choice of Add Style, Modify Style, Apply Style and Delete Style keeps Only Recommended Styles, Styles In-Use,
+# Recommended and In-Use Styles, All Styles.
+UNSORTED = {(10003, 5), (1025, 12), (1026, 10), (1046, 9), (1047, 9)}
 
 
 def name_of(c):
