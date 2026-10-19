@@ -7,6 +7,7 @@ name: Build
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
@@ -426,3 +427,28 @@ jobs:
           name: braillecraft-web
           if-no-files-found: error
           path: site
+
+  # A pushed tag v* publishes the installers of this run as a GitHub Release (git tag v0.1.0 && git push origin v0.1.0),
+  # with the web build zipped beside them. A tag with a hyphen (v0.2.0-rc1) is marked a pre-release.
+  release:
+    name: release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build, web]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          path: artifacts
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir release
+          cp artifacts/braillecraft-windows-installer/*.msi artifacts/braillecraft-linux-packages/* artifacts/braillecraft-macos-installer/*.dmg release/
+          (cd artifacts/braillecraft-web && zip -qr ../../release/BrailleCraft-web-${GITHUB_REF_NAME#v}.zip .)
+          (cd release && sha256sum * > SHA256SUMS.txt)
+          pre=""; case "$GITHUB_REF_NAME" in *-*) pre="--prerelease" ;; esac
+          gh release create "$GITHUB_REF_NAME" release/* --repo "$GITHUB_REPOSITORY" --title "BrailleCraft ${GITHUB_REF_NAME#v}" --generate-notes $pre
