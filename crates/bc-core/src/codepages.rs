@@ -119,6 +119,15 @@ fn windows(name: &str) -> Option<&'static WindowsPage> {
 }
 
 /// The names in the order Save As lists them; the first is chosen every time.
+/// The name `decode` takes for a Windows code page number; None for a number no listed name stands for.
+pub fn name_of_page(page: u32) -> Option<&'static str> {
+    // ISO-8859-1 is read as Latin-1 without a Windows page.
+    if page == 28591 {
+        return Some("ISO-8859-1");
+    }
+    NAMES.iter().copied().find(|n| windows_page(n) == Some(page))
+}
+
 pub const NAMES: [&str; 82] = [
     "ISO-8859-1", "ISO-8859-2", "ISO-8859-3", "ISO-8859-4", "ISO-8859-5", "ISO-8859-6", "ISO-8859-7", "ISO-8859-8",
     "ISO-8859-9", "ISO-8859-10", "ISO-8859-11", "ISO-8859-12", "ISO-8859-13", "ISO-8859-14", "ISO-8859-15", "KOI8-R",

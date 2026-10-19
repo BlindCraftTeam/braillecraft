@@ -1,7 +1,7 @@
 //! What kind of file is being opened, decided first by a short table of
 //! extensions, then by the file's content: a document file by its signature, the containers and binary formats by
-//! their marks, and a text file by counts over its first 512 bytes (coded text, coded braille, formatted braille,
-//! formatted text). A sample holding a control byte other than tab, line feed, carriage return or form feed is not
+//! their marks, HTML or SGML by its end tags and comments, and a text file by counts over its first 512 bytes (coded
+//! text, coded braille, formatted braille, formatted text). A sample holding a control byte other than tab, line feed, carriage return or form feed is not
 //! a supported file.
 
 /// The kinds of file an import can be (the import methods, by their numbers).
@@ -217,10 +217,15 @@ pub fn detect(name: &str, bytes: &[u8]) -> FileKind {
     if ext == "pef" || has_head(b"<pef") {
         return FileKind::Pef;
     }
+    // HTML or SGML written in UTF-16: more than 3 "</" or "<!--" among its first UTF-16 units.
+    if crate::sgml::is_utf16_markup(bytes) {
+        return FileKind::Sgml;
+    }
     if has_head(b"<dtbook") || has_head(b"DTD DTBook") {
         return FileKind::Daisy;
     }
-    if has_head(b"<!DOCTYPE") || has_head(b"<html") || has_head(b"<HTML") {
+    // HTML or SGML: text with more than 3 "</" or "<!--" in its first 2048 bytes.
+    if crate::sgml::is_markup(bytes) {
         return FileKind::Sgml;
     }
     if has_head(b"\\documentclass") || has_head(b"\\documentstyle") {
@@ -541,7 +546,7 @@ mod tests {
     #[test]
     fn refusal_none_for_docx() {
         assert_eq!(refusal(FileKind::Docx, b"PK\x03\x04word/"), None);
-        assert_eq!(not_yet(FileKind::Sgml), "BrailleCraft cannot import SGML/ICADD/HTML files yet.");
+        assert_eq!(refusal(FileKind::Sgml, b"<html></html>"), None);
     }
 
     /// An eBraille or EPUB 3 package is a zip with no word/, xl/ or OpenDocument part: it is not opened.

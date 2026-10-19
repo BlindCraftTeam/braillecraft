@@ -89,6 +89,9 @@ pub struct Doc {
     /// (bc_core::dxfile::saves_in_place, spec A15.10). An imported document and an older-format Save As do not set it.
     pub document_file: bool,
     pub dirty: bool,
+    /// The document's autosave numbers (autosave.rs): the file the last pass wrote it in and the one before, -1 for
+    /// none.
+    pub autosave: [i32; 2],
     pub path: Option<PathBuf>,
     /// The document's tables by code: print-to-braille rules and scan table, braille-to-print rules and scan table.
     pub tables: [String; 4],
@@ -672,6 +675,7 @@ impl App {
         self.sync_edited();
         let names: Vec<String> = self.docs.iter().map(|d| d.full_name()).collect();
         self.menus.set_documents(&names, self.active);
+        self.menus.set_recent(&crate::recent::labels());
         self.refresh_table_menus();
         let Some(d) = self.doc() else {
             // With no document, Table, Create and Table Properties are both greyed (spec 33 unknown 6).

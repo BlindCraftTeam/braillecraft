@@ -64,6 +64,9 @@ pub struct Options {
     pub han_language: u8,
     /// The print-to-braille table name of the document the import goes into, for `han_auto`.
     pub forward_table: String,
+    /// The style names of the document the import goes into (its template's styles): the Word recipe's math steps
+    /// run by whether it has the styles math and math-NLE.
+    pub styles: Vec<String>,
 }
 
 impl Default for Options {
@@ -96,6 +99,7 @@ impl Default for Options {
             han_auto: true,
             han_language: 0,
             forward_table: String::new(),
+            styles: Vec::new(),
         }
     }
 }
@@ -1624,7 +1628,7 @@ impl Numbering {
     }
 }
 
-fn roman(mut n: i64) -> String {
+pub(crate) fn roman(mut n: i64) -> String {
     if n <= 0 {
         return format!("{n}");
     }
@@ -1654,12 +1658,8 @@ struct Open {
 /// The tag processor's state (spec 28 6c).
 struct Processor<'a> {
     map: &'a StyleMap,
-    /// The Word package, for the style names a class is mapped through; none for the HTML and SGML chain.
+    /// The Word package, for the style names a class is mapped through.
     pkg: Option<&'a Package>,
-    /// The SGML flag of the tag processor (the recipe's third flag): the text's ampersands and angle
-    /// brackets are written as the entities the later scripts expect, since the tags of unmapped elements are
-    /// copied as text beside them.
-    sgml: bool,
     numbering: Numbering,
     opt: &'a Options,
     out: String,
@@ -1679,7 +1679,7 @@ struct Processor<'a> {
 }
 
 /// What the tag processor reads of an element: its name, its attributes, and whether it has content (children in
-/// the tree; in the event stream, a tag that neither closes itself nor is followed at once by its end tag).
+/// the tree).
 struct TagView<'a> {
     name: &'a str,
     attrs: &'a [(String, String)],
@@ -1735,12 +1735,7 @@ impl<'a> Processor<'a> {
                 }
                 c => {
                     self.flush_pending();
-                    match c {
-                        '&' if self.sgml => self.out.push_str("&amp;"),
-                        '<' if self.sgml => self.out.push_str("&lt;"),
-                        '>' if self.sgml => self.out.push_str("&gt;"),
-                        c => self.out.push(c),
-                    }
+                    self.out.push(c);
                     self.text_seen = true;
                     self.after_tag = false;
                 }
@@ -1819,7 +1814,7 @@ impl<'a> Processor<'a> {
                 self.table_col = 1;
             }
             "bc:mathtype" | "bc:equation" => {}
-            n if n.starts_with("bcml:") => self.code(&n[6..]),
+            n if n.starts_with("bcml:") => self.code(&n[5..]),
             _ => self.mapped_start(e),
         }
     }
@@ -2018,81 +2013,6 @@ impl<'a> Processor<'a> {
             self.end(&view);
         }
     }
-
-    /// The text as the reader gives it (the HTML and SGML chain): the same steps as over the tree, element by
-    /// element as its events arrive, so the text is never held as a tree. The control characters step runs on
-    /// each text as it comes.
-    fn stream(&mut self, reader: &mut docx::XmlReader) -> Result<(), String> {
-        while let Some(event) = reader.next_event()? {
-            match event {
-                docx::Event::Start { name, attrs, self_closing } => self.stream_element(name, attrs, self_closing, reader)?,
-                docx::Event::End(name) => return Err(format!("end tag {name} with nothing open")),
-                docx::Event::Text(t) | docx::Event::Cdata(t) => self.text(&controls_stripped(&t)),
-            }
-        }
-        Ok(())
-    }
-
-    /// One element of the stream, its start tag read; its content follows in the reader.
-    fn stream_element(&mut self, name: String, attrs: Vec<(String, String)>, self_closing: bool, reader: &mut docx::XmlReader) -> Result<(), String> {
-        // An end tag right after the start tag: the tree gave such an element no children, as a self-closing tag.
-        let mut has_content = !self_closing;
-        if has_content {
-            if let Some(docx::Event::End(n)) = reader.peek()? {
-                if *n == name {
-                    has_content = false;
-                    reader.next_event()?;
-                }
-            }
-        }
-        let page_text = name == "bc:pagebreak" && self.scanned;
-        // The content of the elements handled whole at their start, and of a scanned page break, read ahead.
-        let content = if has_content && (Self::whole_at_start(&name) || page_text) { subtree_text(reader, &name)? } else { String::new() };
-        let view = TagView { name: &name, attrs: &attrs, has_content };
-        self.start(&view, &|| content.clone());
-        if page_text && has_content {
-            self.text(&content);
-        } else if has_content && !Self::whole_at_start(&name) {
-            loop {
-                match reader.next_event()?.ok_or_else(|| format!("element {name} not closed"))? {
-                    docx::Event::Start { name: n, attrs: a, self_closing: s } => self.stream_element(n, a, s, reader)?,
-                    docx::Event::End(n) => {
-                        if n != name {
-                            return Err(format!("end tag {n} closes {name}"));
-                        }
-                        break;
-                    }
-                    docx::Event::Text(t) | docx::Event::Cdata(t) => self.text(&controls_stripped(&t)),
-                }
-            }
-        }
-        if has_content || !Self::by_name(&name) {
-            self.end(&view);
-        }
-        Ok(())
-    }
-}
-
-/// The text inside the element whose start tag was just read, up to and including its end tag.
-fn subtree_text(reader: &mut docx::XmlReader, name: &str) -> Result<String, String> {
-    let mut out = String::new();
-    let mut depth = 0usize;
-    loop {
-        match reader.next_event()?.ok_or_else(|| format!("element {name} not closed"))? {
-            docx::Event::Start { self_closing: false, .. } => depth += 1,
-            docx::Event::Start { .. } => {}
-            docx::Event::End(n) => {
-                if depth == 0 {
-                    if n != name {
-                        return Err(format!("end tag {n} closes {name}"));
-                    }
-                    return Ok(out);
-                }
-                depth -= 1;
-            }
-            docx::Event::Text(t) | docx::Event::Cdata(t) => out.push_str(&controls_stripped(&t)),
-        }
-    }
 }
 
 // ------------------------------------------------------------------ the import
@@ -2137,7 +2057,6 @@ pub fn import(bytes: &[u8], map_text: &str, opt: &Options) -> Result<Processed, 
     let mut p = Processor {
         map: &map,
         pkg: Some(&pkg),
-        sgml: false,
         numbering,
         opt,
         out: String::new(),
@@ -2166,40 +2085,6 @@ pub fn import(bytes: &[u8], map_text: &str, opt: &Options) -> Result<Processed, 
         }
     }
     Ok(Processed { text: p.out, scrub_rules: map.scrub_rules() })
-}
-
-/// The tag processor over HTML or SGML text (the HTML import chain's xmlproc step with the recipe's SGML flag and
-/// no style map, since the map file named for it does not ship: every element is copied as its tag
-/// text for the chain's later scripts to turn into codes; the processing instructions, numeric entities, line ends
-/// and spaces are treated as for Word). The text must read as XML (every tag closed), which the Markdown
-/// conversion guarantees; the control-character step runs first.
-pub fn process_html(html: &str, opt: &Options) -> Result<Processed, String> {
-    let map = StyleMap::default();
-    let mut p = Processor {
-        map: &map,
-        pkg: None,
-        sgml: true,
-        numbering: Numbering::new(None),
-        opt,
-        out: String::new(),
-        stack: Vec::new(),
-        text_seen: false,
-        after_tag: false,
-        pending_newline: false,
-        pending_spaces: 0,
-        note_mode: false,
-        scanned: opt.print_pages == PrintPages::Scanned,
-        parity: 1,
-        last_lng: String::new(),
-        last_font: String::new(),
-        level_written: false,
-        table_row: 1,
-        table_col: 1,
-    };
-    // The reader walks the text element by element: no tree of the whole document, no copy of its text.
-    let mut reader = docx::XmlReader::new(html);
-    p.stream(&mut reader)?;
-    Ok(Processed { text: p.out, scrub_rules: String::new() })
 }
 
 #[cfg(test)]

@@ -364,8 +364,8 @@ function newView(braille) {
 }
 
 const doc = { kind: "print", name: "Untitled Print Document 1", file: null, view: newView(false) };
-// Whether an opened file came from the recent documents list: the web build keeps no such list.
-const IN_RECENT_LIST = false;
+// Whether the document file last opened was in the recent documents list.
+let inRecentList = false;
 
 // A new document takes the default embosser setup and layout, as in the desktop program.
 function embosserDefaults() {
@@ -859,7 +859,7 @@ function plain(label) {
   return (label ?? "").replace(/&(.)/g, "$1");
 }
 function mnemonic(label) {
-  const m = /&([^&])/.exec(label ?? "");
+  const m = /(?<!&)&([^&])/.exec(label ?? "");
   return m ? m[1].toUpperCase() : null;
 }
 
@@ -1248,17 +1248,42 @@ const KEPT_SETTINGS = {
     ["flag", 16, "Word.IgnoreUnderline", null, false],
     ["flag", 17, "Word.IgnoreLanguageSwitches", null, true],
   ],
-  // The autosaved file location's default folder is made when autosave is built (plan line B2).
+  // Global, File Locations. The two folders are kept as settings only: the browser's file pickers cannot be
+  // started in a typed folder, and the autosaved documents are kept by the browser (IndexedDB), not in a folder.
   1060: [
     ["text", 7, "AutoSave.openPath", null, ""],
     ["text", 9, "AutoSave.savePath", null, ""],
     ["flag", 10, "AutoSave.Enabled", null, true],
-    ["text", 12, "AutoSave.path", null, ""],
+    ["text", 12, "AutoSave.path", null, "[MYDOCS]\\BrailleCraft Autosaves"],
     ["seconds", 14, "AutoSave.Time", null, 300],
   ],
 };
 
 const two = (n) => String(n).padStart(2, "0");
+
+// The autosave time as File Locations shows it: whole minutes alone (300 is "5"), any other time as minutes and
+// two-digit seconds (90 is "1:30").
+const secondsText = (s) => (s % 60 === 0 ? String(s / 60) : `${Math.trunc(s / 60)}:${two(Math.abs(s % 60))}`);
+
+// A time typed as "m:s" or as minutes alone, read as C's "%d:%d" and "%d" read it (text after the numbers is left);
+// null when it starts with no number.
+function parseSeconds(text) {
+  const m = /^\s*([-+]?\d+)(?::\s*([-+]?\d+))?/.exec(text);
+  return m ? Number(m[1]) * 60 + (m[2] === undefined ? 0 : Number(m[2])) : null;
+}
+
+// Global, File Locations: the autosave controls (11 to 14) only while Enable autosave (10) is checked, and OK only
+// while it is unchecked or the time reads as more than no time, checked again on every change of the time.
+function fileLocationsEnabling(d) {
+  const update = () => {
+    const on = d.checked(10);
+    for (let id = 11; id <= 14; id++) d.enable(id, on);
+    d.enable(1, !on || (parseSeconds(d.text(14)) ?? 0) > 0);
+  };
+  update();
+  d.get(10)?.addEventListener("change", update);
+  d.get(14)?.addEventListener("input", update);
+}
 
 // The dialog's controls set from the kept settings, or their defaults.
 function restoreKept(d, kept) {
@@ -1289,11 +1314,9 @@ function restoreKept(d, kept) {
         d.setText(id, `${Math.trunc(n / 100)}.${two(Math.abs(n % 100))}`);
         break;
       }
-      case "seconds": {
-        const s = Math.max(v !== null && /^\d+$/.test(v.trim()) ? Number(v) : dflt, 0);
-        d.setText(id, `${two(Math.trunc(s / 60))}:${two(s % 60)}`);
+      case "seconds":
+        d.setText(id, secondsText(v !== null && /^-?\d+$/.test(v.trim()) ? Number(v) : dflt));
         break;
-      }
     }
   }
 }
@@ -1323,13 +1346,9 @@ function saveKept(d, kept) {
         store.set(key, String(Number.isFinite(x) && d.text(id).trim() !== "" ? Math.round(x * 100) : dflt));
         break;
       }
-      case "seconds": {
-        const t = d.text(id).trim();
-        const m = /^(\d+):(\d+)$/.exec(t);
-        const s = m ? Number(m[1]) * 60 + Number(m[2]) : /^\d+$/.test(t) ? Number(t) : dflt;
-        store.set(key, String(Math.max(s, 0)));
+      case "seconds":
+        store.set(key, String(parseSeconds(d.text(id)) ?? dflt));
         break;
-      }
     }
   }
 }
@@ -2660,11 +2679,12 @@ async function fileNew() {
   });
   if (result !== "ok") return;
   const template = all.find((t) => t.name === state?.current) ?? null;
-  newDocument(d.radio([7, 8]) === 1, template);
+  await newDocument(d.radio([7, 8]) === 1, template);
 }
 
 // A new empty document of a kind, from `template` (its file and name) or the default template.
-function newDocument(braille, template) {
+async function newDocument(braille, template) {
+  await letGo();
   doc.kind = braille ? "braille" : "print";
   doc.name = braille ? "Untitled Braille Document 1" : "Untitled Print Document 1";
   doc.file = null;
@@ -2862,6 +2882,15 @@ function forwardTableOf(templateSource) {
   }
 }
 
+// The style names a document made from this template text has, for the Word recipe's math steps.
+function styleNamesOf(templateSource) {
+  try {
+    return core.new_document(false, "", templateSource).style_names;
+  } catch {
+    return [];
+  }
+}
+
 // A file as the import dialog's choice says to read it: { braille, running } (text with codes) or { braille, plain },
 // with the template chosen; null after saying why it cannot be read. A PDF becomes print with codes, its styles named
 // as the template names them; coded and formatted text, coded and formatted braille and Orbit braille go through the
@@ -2884,7 +2913,7 @@ async function readImport(bytes, choice) {
       await importFiles();
       const templateSource = await templateTextNamed(template);
       const map = core.word_map_name(templateSource);
-      const options = JSON.stringify(wordOptions(forwardTableOf(templateSource)));
+      const options = JSON.stringify(wordOptions(forwardTableOf(templateSource), styleNamesOf(templateSource)));
       imported = core.import_docx(bytes, options, map, unknownCharacters());
     } catch (err) {
       statusLine.textContent = String(err.message ?? err);
@@ -2893,14 +2922,15 @@ async function readImport(bytes, choice) {
     if (imported.errors) await message(imported.errors);
     return { braille: forcedKind(imported, false), running: imported.running, template };
   }
-  // A Markdown file becomes HTML and goes through the HTML recipe, with the Word importer's hyperlink and
-  // unknown-character settings.
-  if (choice.kind === "Markdown") {
+  // A Markdown file becomes HTML and goes through the HTML recipe; an HTML or SGML file goes through it as it is.
+  // Both with the Word importer's hyperlink and unknown-character settings.
+  if (choice.kind === "Markdown" || choice.kind === "Sgml") {
     let imported;
     try {
       await importFiles();
       const options = wordOptions(forwardTableOf(await templateTextNamed(template)));
-      imported = core.import_markdown(bytes, JSON.stringify(options), unknownCharacters());
+      const run = choice.kind === "Sgml" ? core.import_html : core.import_markdown;
+      imported = run(bytes, JSON.stringify(options), unknownCharacters());
     } catch (err) {
       statusLine.textContent = String(err.message ?? err);
       return null;
@@ -2949,7 +2979,7 @@ async function templateTextNamed(name) {
 // The Word importer's settings as the Global Word Importer (1036) and Import Options (1037) dialogs last kept them
 // (showDialog memory), the defaults where a dialog was never confirmed; the JSON shape of the core's
 // Word options.
-function wordOptions(forwardTable = "") {
+function wordOptions(forwardTable = "", styles = []) {
   const kept = (rid) => {
     try {
       return new Map(JSON.parse(store.get(`dialog.${rid}.`) ?? "[]"));
@@ -2988,6 +3018,7 @@ function wordOptions(forwardTable = "") {
     han_auto: (store.get("Word.HanScriptAuto") ?? "yes").trim().toLowerCase() === "yes",
     han_language: Math.max(0, HAN_LANGUAGES.findIndex((w) => w.toLowerCase() === hanLanguage)),
     forward_table: forwardTable,
+    styles,
   };
 }
 
@@ -3006,10 +3037,13 @@ const fileInput = $("file-input");
 fileInput.addEventListener("change", async () => {
   const file = fileInput.files[0];
   fileInput.value = "";
-  if (!file) {
-    return;
-  }
-  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (file) await openBytes(file.name, new Uint8Array(await file.arrayBuffer()));
+});
+
+// A file opened in place of the document (File, Open; a recent document; with `recovered`, an autosaved document
+// from the recovery wizard, given back what it was). The document it replaces is let go of first (letGo).
+async function openBytes(name, bytes, recovered = null) {
+  const file = { name };
   const ext = file.name.split(".").pop().toLowerCase();
   // The file's kind from its name and first bytes, as the desktop program finds it; a file that is not a document
   // file goes through the import dialog. The open document is left as it is until the file has been read.
@@ -3040,6 +3074,13 @@ fileInput.addEventListener("change", async () => {
     // With no core, any file as text, a braille one by its name.
     read = { braille: /^(brf|brl|bru)$/.test(ext), plain: decodeTextFile(bytes).replaceAll("\f", "\n") };
   }
+  await letGo();
+  // A document file opened leaves the recent documents; its bytes are kept to reopen it from there later.
+  if (d && !recovered) {
+    inRecentList = recent.includes(name);
+    recentRemove(name);
+    keepRecentBytes(name, bytes);
+  }
   embosserDefaults();
   doc.printer = null;
   doc.hyphen = 2902;
@@ -3059,7 +3100,7 @@ fileInput.addEventListener("change", async () => {
     doc.documentFile = true;
     // The caret where the document was saved (settings +22, spec 05 section A10), only for a file whose saved view
     // is taken (see below); else the start.
-    const at = core.restores_view(IN_RECENT_LIST, d.view_font) ? d.caret : 0;
+    const at = core.restores_view(inRecentList, d.view_font) ? d.caret : 0;
     editor.setSelectionRange(at, at);
     // The document's own embosser setup and page layout, as the file keeps them; cells and lines are taken by a
     // braille document.
@@ -3118,17 +3159,25 @@ fileInput.addEventListener("change", async () => {
   doc.name = file.name;
   // A document opens in its kind's default view (Global, Default Views). A document file's saved view (its
   // translated line) is taken only when it is reopened from the recent documents list with a valid view font in it
-  // (spec 27 section 9, unknown 6); the web build keeps no recent documents list, so no file is in it.
+  // (spec 27 section 9, unknown 6).
   doc.view = newView(doc.kind === "braille");
-  if (doc.file && core.restores_view(IN_RECENT_LIST, doc.file.view_font)) {
+  if (doc.file && core.restores_view(inRecentList, doc.file.view_font)) {
     doc.view.translated = doc.file.translated_line;
     // Six-key entry is kept in the file for both kinds of document.
     doc.view.six_key = doc.file.six_key;
   }
+  inRecentList = false;
+  if (recovered) {
+    // Its document file (Save writes it again), the file it was imported from (Save asks), or untitled; changed.
+    doc.name = recovered.kind === "untitled" ? `Untitled ${recovered.braille ? "Braille" : "Print"} Document ${recovered.untitled}` : recovered.name;
+    doc.documentFile = recovered.kind === "saved";
+    doc.saved = recovered.kind !== "untitled";
+    doc.dirty = true;
+  }
   showTitle();
   editor.focus();
   applyView();
-});
+}
 
 // File, Translate: a new document made from this one, as the desktop program does: the whole text through the
 // document's own rules table with its initial codes and styles; the new document keeps the tables, initial codes,
@@ -3275,6 +3324,23 @@ async function documentFile() {
 // its embosser setup name and layout. In the current format the document then takes that file as its own; a file
 // in the older format is a copy only, and the document keeps its earlier file and name (spec A15.10).
 async function writeDocument(name, version) {
+  const bytes = await documentBytes(version);
+  download(name, bytes);
+  if (version === 0) return;
+  doc.documentFile = true;
+  doc.file = core.read_document(bytes);
+  doc.name = name;
+  doc.saved = true;
+  doc.dirty = false;
+  showTitle();
+  // The bytes kept to reopen the file from the recent documents; Save As onto a name takes it out of them.
+  keepRecentBytes(name, bytes);
+  recentRemove(name);
+}
+
+// The document as a document file in format `version` (1, or 0 for the older format): what Save writes and what
+// autosave keeps.
+async function documentBytes(version) {
   const file = await documentFile();
   // The view saved with the document: its translated line and six-key entry.
   file.set_view(!!doc.view.translated, !!doc.view.six_key);
@@ -3295,14 +3361,7 @@ async function writeDocument(name, version) {
     printLines,
     printChars,
   );
-  download(name, bytes);
-  if (version === 0) return;
-  doc.documentFile = true;
-  doc.file = core.read_document(bytes);
-  doc.name = name;
-  doc.saved = true;
-  doc.dirty = false;
-  showTitle();
+  return bytes;
 }
 
 // Formatted braille (.brf): the encoding of the file chosen from "12.4 Compatible (CAPS)", the national encodings
@@ -4888,13 +4947,14 @@ async function confirmDiscard() {
 
 // File, Close: the web build holds one document, so a closed document gives way to a new empty one.
 async function closeDocument() {
-  if (await confirmDiscard()) newDocument(false, null);
+  if (await confirmDiscard()) await newDocument(false, null);
 }
 
-// File, Exit: after the save question, the page is closed where the browser allows it; else the browser's tab closes
-// BrailleCraft.
+// File, Exit: after the save question, the document is let go of and the page is closed where the browser allows
+// it; else the browser's tab closes BrailleCraft.
 async function exitProgram() {
   if (!(await confirmDiscard())) return;
+  await letGo();
   doc.dirty = false;
   window.close();
   await message("To leave BrailleCraft, close its browser tab or window.");
@@ -5219,8 +5279,15 @@ async function insertCode(id) {
 const COMMANDS = {
   1101: fileNew,
   1102: () => fileInput.click(),
-  1105: () => save(false),
-  1106: () => save(true),
+  // An autosave pass after Save, and after Save As that leaves the document unchanged.
+  1105: async () => {
+    await save(false);
+    await autosavePass();
+  },
+  1106: async () => {
+    await save(true);
+    if (!doc.dirty) await autosavePass();
+  },
   1109: translateDocument,
   1111: print,
   1112: emboss,
@@ -5306,7 +5373,7 @@ const COMMANDS = {
     ),
   3101: async () => (await onceNotice("GlobalEmbosserWarning", GLOBAL_EMBOSSER_WARNING)) && embosserSetup(true),
   3102: async () => (await onceNotice("GlobalPrinterWarning", GLOBAL_PRINTER_WARNING)) && printerSetup(true),
-  3104: () => showDialog(1060, { memory: "" }),
+  3104: () => showDialog(1060, { memory: "", focus: 7, after: fileLocationsEnabling }),
   3105: defaultViews,
   3106: internationalization,
   3107: globalFonts,
@@ -5394,6 +5461,8 @@ async function run(id, menuLabel, itemLabel) {
     await chooseLanguage(id - LANGUAGE_BASE);
   } else if (id >= COURSE_BASE && id < COURSE_BASE + COURSE_MAX) {
     await chooseLearningStep(id - COURSE_BASE);
+  } else if (id >= RECENT_FIRST && id < RECENT_FIRST + RECENT_MAX) {
+    await openRecent(id - RECENT_FIRST);
   } else if (COMMANDS[id]) {
     await COMMANDS[id]();
   } else {
@@ -5433,7 +5502,7 @@ function itemNode(entry, menuLabel, level) {
   }
   const text = document.createElement("span");
   const label = entry.label;
-  const at = label.search(/&[^&]/);
+  const at = label.search(/(?<!&)&[^&]/);
   if (at >= 0) {
     text.append(document.createTextNode(plain(label.slice(0, at))));
     const mn = document.createElement("span");
@@ -5652,17 +5721,258 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
+// ------------------------------------------------------------------ recent documents and autosave
+
+// IndexedDB database `name` (its object stores made at first use), opened once; then one transaction on `store` in
+// which `act` makes its requests, answering the last request's result once the transaction is complete.
+const databases = new Map();
+async function inDatabase(name, store, mode, act) {
+  if (!databases.has(name)) {
+    databases.set(
+      name,
+      new Promise((resolve, reject) => {
+        const r = indexedDB.open(name, 1);
+        r.onupgradeneeded = () => r.result.createObjectStore(store);
+        r.onsuccess = () => resolve(r.result);
+        r.onerror = () => reject(r.error);
+      }),
+    );
+  }
+  const db = await databases.get(name);
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, mode);
+    const request = act(tx.objectStore(store));
+    tx.oncomplete = () => resolve(request?.result);
+    tx.onerror = tx.onabort = () => reject(tx.error);
+  });
+}
+
+// File, the recent documents (items 1116 to 1120, after Exit and a separator): the last five document files the
+// page let go of, newest first, by name, kept as RecentDocs.0 to RecentDocs.4. A browser file has no path to open
+// again, so the bytes each was last read or saved with are kept by the browser (IndexedDB "braillecraft", store
+// "recent", by name). The list is read only once a page has ended a run (ConfigInUse, set as the page goes away).
+const RECENT_FIRST = 1116;
+const RECENT_MAX = 5;
+const recent = [];
+if ((store.get("ConfigInUse") ?? "").trim().toLowerCase() === "yes") {
+  for (let i = 0; i < RECENT_MAX; i++) {
+    const name = store.get(`RecentDocs.${i}`);
+    if (!name) break;
+    recent.push(name);
+  }
+}
+const recentStore = (mode, act) => inDatabase("braillecraft", "recent", mode, act);
+
+function keepRecent() {
+  for (let i = 0; i < RECENT_MAX; i++) store.set(`RecentDocs.${i}`, recent[i] ?? "");
+  const file = menubar.querySelector('[data-id="1114"]')?.closest("[role=menu]");
+  const items = recent.map((name, i) => ({ id: RECENT_FIRST + i, label: `${i + 1} ${name}`.replaceAll("&", "&&") }));
+  if (file) setDynamicItems(file, items.length ? [{ separator: true }, ...items] : [], null, "&File");
+}
+
+// A document file's name put at the front (the last dropped when the list is full), or every entry of it taken out.
+function recentAdd(name) {
+  recent.unshift(name);
+  recent.length = Math.min(recent.length, RECENT_MAX);
+  keepRecent();
+}
+function recentRemove(name) {
+  for (let i = recent.length - 1; i >= 0; i--) if (recent[i] === name) recent.splice(i, 1);
+  keepRecent();
+}
+
+async function keepRecentBytes(name, bytes) {
+  try {
+    await recentStore("readwrite", (s) => s.put(bytes, name));
+  } catch {
+    // Kept by name only: opening it from the list then says it cannot be opened.
+  }
+}
+
+// File, recent document `i`: opened as File, Open opens it. A name whose bytes the browser no longer has gives
+// message 2428 and stays listed.
+async function openRecent(i) {
+  const name = recent[i];
+  let bytes = null;
+  try {
+    bytes = await recentStore("readonly", (s) => s.get(name));
+  } catch {
+    bytes = null;
+  }
+  if (bytes) await openBytes(name, bytes);
+  else await message(`Unable to open file: ${name}`);
+}
+
+// The document given up (File, New, Open and Close, a recent document, Exit): with a document file it goes to the
+// front of the recent documents; with no document left, every autosaved document goes.
+async function letGo() {
+  if (doc.documentFile && doc.name) recentAdd(doc.name);
+  await autosaveRemoveAll();
+}
+
+// The page going away ends the run, as Exit does in the desktop program; the bytes are kept already.
+window.addEventListener("pagehide", () => {
+  if (doc.documentFile && doc.name) recentAdd(doc.name);
+  store.set("ConfigInUse", "yes");
+});
+
+// Autosave, as the desktop program does it (Global, File Locations: AutoSave.Enabled and AutoSave.Time): a timer
+// ticks every second and a pass runs once the time has gone by since the last one (the first at the first tick),
+// and after File Save, after Save As that leaves the document unchanged, and when the document is given up. The
+// browser keeps the documents (IndexedDB "braillecraft-autosave", store "files"): one record per autosave number
+// {number, kind (saved, unsaved or untitled), name, braille, untitled number, bytes of the .dxp or .dxb file} and the
+// record "index", the numbers the last pass wrote. Autosave runs in the first BrailleCraft page only (a Web Lock),
+// so two pages never write the same records.
+const WRITE_FAILED = "BrailleCraft encountered an error while writing autosave information.  Autosave will be disabled.";
+const autosave = { started: false, last: null, failed: false, running: false, number: [-1, -1], kept: [] };
+const autosaveStore = (mode, act) => inDatabase("braillecraft-autosave", "files", mode, act);
+
+async function autosaveFailed() {
+  if (autosave.failed) return;
+  autosave.failed = true;
+  await message(WRITE_FAILED);
+}
+
+// What the document is to the recovery wizard: its document file, the file it was imported from, or untitled.
+function autosaveKind() {
+  if (doc.documentFile) return "saved";
+  return !doc.saved && /^Untitled (Braille|Print) Document \d+$/.test(doc.name) ? "untitled" : "unsaved";
+}
+
+async function autosavePass() {
+  if (!autosave.started || autosave.running) return;
+  autosave.running = true;
+  try {
+    // A changed document is written again every pass under the lowest number not in use; one not changed has its
+    // record taken away.
+    let record = null;
+    if (doc.dirty) {
+      autosave.number[1] = autosave.number[0];
+      const used = [...autosave.number, ...autosave.kept];
+      let n = 0;
+      while (used.includes(n)) n += 1;
+      autosave.number[0] = n;
+      const braille = doc.kind === "braille";
+      record = { number: n, kind: autosaveKind(), name: doc.name, braille, untitled: Number(/\d+$/.exec(doc.name)?.[0] ?? 1), bytes: await documentBytes(1) };
+    }
+    const old = record ? autosave.number[1] : autosave.number[0];
+    if (!record) autosave.number[0] = -1;
+    autosave.number[1] = -1;
+    const entries = [...(record ? [record.number] : []), ...autosave.kept];
+    await autosaveStore("readwrite", (s) => {
+      if (record) s.put(record, record.number);
+      if (old >= 0) s.delete(old);
+      if (entries.length) s.put({ entries }, "index");
+      else s.delete("index");
+    });
+  } catch {
+    await autosaveFailed();
+  } finally {
+    autosave.running = false;
+  }
+}
+
+// Every autosaved document taken away, but those the wizard left for the next page (`kept`).
+async function autosaveRemoveAll() {
+  if (!autosave.started) return;
+  autosave.number = [-1, -1];
+  try {
+    await autosaveStore("readwrite", (s) => {
+      const keys = s.getAllKeys();
+      keys.onsuccess = () => {
+        for (const k of keys.result) if (!autosave.kept.includes(k)) s.delete(k);
+        if (autosave.kept.length) s.put({ entries: autosave.kept }, "index");
+      };
+    });
+  } catch {
+    await autosaveFailed();
+  }
+}
+
+function autosaveTick() {
+  if ((store.get("AutoSave.Enabled") ?? "yes").trim().toLowerCase() !== "yes") return;
+  const seconds = Number(store.get("AutoSave.Time") ?? 300);
+  if (autosave.last !== null && Date.now() - autosave.last < seconds * 1000) return;
+  autosave.last = Date.now();
+  autosavePass();
+}
+
+// The Autosave Recovery Wizard (dialog 1061), when the last page left autosaved documents: Open (4) opens the first
+// of them, as the web build holds one document (the desktop program opens each in a window of its own); the others
+// stay for the wizard at the next page load (BrailleCraft's choice until the web build holds several documents).
+// Finish (5) asks twice and takes them all away; Exit (6, and Escape) asks, keeps them and ends as Exit does.
+// Answers whether autosave starts.
+async function recoveryWizard(records) {
+  const labels = records.map((r) => (r.kind === "untitled" ? `Untitled ${r.braille ? "Braille" : "Print"} Document ${r.untitled}` : r.name));
+  for (;;) {
+    const { result } = await showDialog(1061, { closes: [4, 5, 6], focus: 8, setup: (d) => d.setItems(8, labels, 0) });
+    if (result === "4") {
+      autosave.kept = records.slice(1).map((r) => r.number);
+      await openBytes(records[0].name, records[0].bytes, records[0]);
+      await autosaveStore("readwrite", (s) => (autosave.kept.length ? s.put({ entries: autosave.kept }, "index") : s.delete("index")));
+      return true;
+    }
+    if (result === "5") {
+      if (
+        (await yesNo("You have not recovered all autosaved documents.  Are you sure you want to finish the BrailleCraft recovery wizard?")) &&
+        (await yesNo("Finishing the recovery wizard before all documents have been processed is not reversible.  The remaining documents cannot later be recovered.  Proceed?"))
+      ) {
+        await autosaveStore("readwrite", (s) => s.clear());
+        return true;
+      }
+    } else if (await okCancel("BrailleCraft will now exit.  The recovery wizard will be displayed again when BrailleCraft is next launched.")) {
+      window.close();
+      await message("To leave BrailleCraft, close its browser tab or window.");
+      return false;
+    }
+  }
+}
+
+// At page load, once the document area is ready: the wizard when the index names documents, then the timer. Not
+// without the core (it reads the documents) or IndexedDB, and not in a second BrailleCraft page.
+async function autosaveStart() {
+  if (!core || !(await firstPage())) return;
+  let records = [];
+  try {
+    const index = await autosaveStore("readonly", (s) => s.get("index"));
+    records = (await Promise.all((index?.entries ?? []).map((n) => autosaveStore("readonly", (s) => s.get(n))))).filter(Boolean);
+  } catch {
+    return;
+  }
+  if (records.length && !(await recoveryWizard(records))) return;
+  autosave.started = true;
+  setInterval(autosaveTick, 1000);
+}
+
+// Whether this is the first BrailleCraft page of the browser: it holds a Web Lock for as long as it is open.
+function firstPage() {
+  if (!navigator.locks) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    navigator.locks.request("braillecraft-autosave", { ifAvailable: true }, (lock) => {
+      resolve(lock !== null);
+      return lock ? new Promise(() => {}) : undefined;
+    });
+  });
+}
+
 // ------------------------------------------------------------------ start
 
 showTitle();
 showStatus();
 applyView();
+keepRecent();
+// Unlisted bytes from earlier pages go.
+recentStore("readwrite", (s) => {
+  const keys = s.getAllKeys();
+  keys.onsuccess = () => keys.result.filter((k) => !recent.includes(k)).forEach((k) => s.delete(k));
+}).catch(() => {});
 loadCore().then(async () => {
   await loadEncoding();
   applyView();
   if (core) {
     await embosserSetupAtStart();
   }
+  await autosaveStart();
 });
 
 // ------------------------------------------------------------------ reading toolbar

@@ -114,6 +114,14 @@ pub fn import_markdown(bytes: &[u8], options: &str, unknown: u8) -> Result<Impor
     Ok(imported_of(got, false, false))
 }
 
+/// An HTML or SGML file through the HTML recipe, with the settings import_markdown takes.
+#[wasm_bindgen]
+pub fn import_html(bytes: &[u8], options: &str, unknown: u8) -> Result<Imported, JsError> {
+    let opt: bc_core::word::Options = serde_json::from_str(options).map_err(error)?;
+    let got = bc_core::import_chain::run(bytes, &bc_core::import_chain::Recipe::Html(opt, unknown), &Fetched);
+    Ok(imported_of(got, false, false))
+}
+
 /// The Word style map a template text names (its "word:mws" pseudo-style), as a program data file name.
 #[wasm_bindgen]
 pub fn word_map_name(template_text: &str) -> String {

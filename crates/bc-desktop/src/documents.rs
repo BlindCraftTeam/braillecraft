@@ -91,6 +91,7 @@ pub fn new_document(kind: DocKind, name: Option<String>, shown: &Shown) -> u64 {
         saved: false,
         document_file: false,
         dirty: false,
+        autosave: [-1, -1],
         path: None,
         // A new document is made with the default template: its tables and its styles.
         tables: crate::translation::template_tables(&crate::translation::default_template())

@@ -2,22 +2,81 @@
 //! turned into HTML and then goes through the HTML import chain, so a Markdown document imports exactly as the
 //! same content would import from HTML.
 
-use pulldown_cmark::{html, Options, Parser};
+use pulldown_cmark::{html, Event, LinkType, Options, Parser, Tag, TagEnd};
 
-/// The HTML of a Markdown text: CommonMark with tables, footnotes, strikethrough and task lists. Headings become
-/// h1 to h6, paragraphs p, lists ul and ol with li, emphasis em and strong, code and pre, links a, images their
-/// alt text inside img, block quotes blockquote, rules hr, line breaks br, tables table, thead, tbody, tr, th and
-/// td, footnotes sup and div; every tag is closed, so the HTML reads as XML.
+/// The HTML of a Markdown text: CommonMark with tables, footnotes, strikethrough and task lists, and the dialects of
+/// plan line D45. Headings become h1 to h6, paragraphs p, lists ul and ol with li, emphasis em and strong, code and
+/// pre, links a, images their alt text inside img, block quotes blockquote, rules hr, line breaks br, tables table,
+/// thead, tbody, tr, th and td, footnotes sup and div; every tag is closed, so the HTML reads as XML. D45: YAML
+/// (---) and TOML (+++) front matter is left out; $...$ and $$...$$ math is kept as its TeX source in code (shortcut:
+/// read as computer braille, until the MathML path of D19 turns it into math codes); a wikilink [[Page]] or
+/// [[Page|Shown]] is its shown text; a callout "> [!kind] Title" (GitHub alerts, Obsidian callouts) starts its
+/// quote with the title, or the kind, as a bold paragraph.
 pub fn to_html(markdown: &str) -> String {
     let mut options = Options::empty();
     options.insert(Options::ENABLE_TABLES);
     options.insert(Options::ENABLE_FOOTNOTES);
     options.insert(Options::ENABLE_STRIKETHROUGH);
     options.insert(Options::ENABLE_TASKLISTS);
-    let parser = Parser::new_ext(markdown, options);
+    options.insert(Options::ENABLE_YAML_STYLE_METADATA_BLOCKS);
+    options.insert(Options::ENABLE_PLUSES_DELIMITED_METADATA_BLOCKS);
+    options.insert(Options::ENABLE_MATH);
+    options.insert(Options::ENABLE_WIKILINKS);
+    let source = callouts(markdown);
+    let mut in_wikilink = false;
+    let parser = Parser::new_ext(&source, options).filter_map(|event| match event {
+        Event::InlineMath(t) | Event::DisplayMath(t) => Some(Event::Code(t)),
+        Event::Start(Tag::Link { link_type: LinkType::WikiLink { .. }, .. }) => {
+            in_wikilink = true;
+            None
+        }
+        Event::End(TagEnd::Link) if in_wikilink => {
+            in_wikilink = false;
+            None
+        }
+        e => Some(e),
+    });
     let mut out = String::with_capacity(markdown.len() * 2);
     html::push_html(&mut out, parser);
     out
+}
+
+/// The text with each callout line "> [!kind]+ Title" made "> **Title**" and a quote line of its own after it
+/// (the kind with a capital when there is no title), outside fenced code.
+fn callouts(markdown: &str) -> std::borrow::Cow<'_, str> {
+    if !markdown.contains("[!") {
+        return std::borrow::Cow::Borrowed(markdown);
+    }
+    let mut out = String::with_capacity(markdown.len() + 64);
+    let mut fence: Option<&str> = None;
+    for line in markdown.split_inclusive('\n') {
+        let trimmed = line.trim_start();
+        let marker = ["```", "~~~"].into_iter().find(|m| trimmed.starts_with(m));
+        match (fence, marker) {
+            (None, Some(m)) => fence = Some(m),
+            (Some(f), Some(m)) if f == m => fence = None,
+            _ => {}
+        }
+        let quote_end = trimmed.len() - trimmed.trim_start_matches(|c: char| c == '>' || c == ' ').len();
+        let body = &trimmed[quote_end..];
+        let callout = (fence.is_none() && marker.is_none() && trimmed.starts_with('>'))
+            .then(|| body.strip_prefix("[!"))
+            .flatten()
+            .and_then(|r| r.split_once(']'))
+            .filter(|(kind, _)| !kind.is_empty() && kind.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_'));
+        match callout {
+            Some((kind, rest)) => {
+                let prefix = &line[..line.len() - trimmed.len() + quote_end];
+                let title = rest.trim_start_matches(['+', '-']).trim();
+                let mut chars = kind.chars();
+                let named = chars.next().map(|c| c.to_uppercase().chain(chars.flat_map(char::to_lowercase)).collect()).unwrap_or_default();
+                let title = if title.is_empty() { named } else { title.to_string() };
+                out.push_str(&format!("{prefix}**{title}**\n{}\n", prefix.trim_end()));
+            }
+            None => out.push_str(line),
+        }
+    }
+    std::borrow::Cow::Owned(out)
 }
 
 /// A braille document as Markdown (BrailleCraft's own addition): each laid-out page's lines, already as Unicode
@@ -479,6 +538,20 @@ mod tests {
     fn headings_paragraphs_lists_and_links_become_closed_tags() {
         let h = to_html("# Title\n\nSome *text* and a [link](http://example.org/).\n\n- a\n- b\n");
         assert_eq!(h, "<h1>Title</h1>\n<p>Some <em>text</em> and a <a href=\"http://example.org/\">link</a>.</p>\n<ul>\n<li>a</li>\n<li>b</li>\n</ul>\n");
+    }
+
+    #[test]
+    fn the_dialects_of_d45() {
+        let md = "---\ntitle: Notes\ntags: [a]\n---\n# Head\n\nArea $\\pi r^2$ here.\n\nSee [[Other note]] and [[Page|that page]].\n\n> [!note]\n> Body text.\n\n> [!tip]- Read this\n> More.\n\n```\n> [!warning] kept\n```\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\nText[^1].\n\n[^1]: The note.\n";
+        let html = to_html(md);
+        assert!(!html.contains("title: Notes"), "{html}");
+        assert!(html.contains("<code>\\pi r^2</code>"), "{html}");
+        assert!(html.contains("See Other note and that page."), "{html}");
+        assert!(!html.contains("href=\"Other") && !html.contains("href=\"Page"), "{html}");
+        assert!(html.contains("<blockquote>\n<p><strong>Note</strong></p>\n<p>Body text.</p>"), "{html}");
+        assert!(html.contains("<p><strong>Read this</strong></p>\n<p>More.</p>"), "{html}");
+        assert!(html.contains("&gt; [!warning] kept"), "{html}");
+        assert!(html.contains("<td>1</td>") && html.contains("footnote-definition"), "{html}");
     }
 
     #[test]

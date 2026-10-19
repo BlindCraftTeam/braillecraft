@@ -4,6 +4,7 @@
 //! tables shipped beside the program (translation.rs).
 
 mod app;
+mod autosave;
 mod bell;
 mod codes;
 mod command_line;
@@ -25,6 +26,7 @@ mod page_sample;
 mod pdf_options;
 mod python_options;
 mod print;
+mod recent;
 mod settings_store;
 mod speech;
 mod tabs;
@@ -199,6 +201,8 @@ fn main() {
         // The settings kept from earlier runs, before the menus are built from them.
         let mut settings = app::Settings::default();
         settings_store::load(&mut settings);
+        // File, the recent documents the last run kept.
+        recent::load();
         // Global, Internationalization, Support UI Automation, for the editing windows (spec 15).
         unsafe { wxdragon_sys::wxd_DocEditor_SetSupportUIAutomation(settings.reader.uia) };
         if let Some(region) = settings_store::load_region() {
@@ -233,6 +237,12 @@ fn main() {
             busy: false,
             known: Vec::new(),
         });
+        // Windows: the JAWS script set shipped beside the program is offered for installing first, on every start,
+        // before the command line is acted on (a command line that runs without the editor included).
+        #[cfg(windows)]
+        if let Some(dir) = resource_dir("jaws", "../../scripts/jaws", "braillecraft-desktop.jss") {
+            commands::jaws_start_up(&dir);
+        }
         // The command line is read now: --control PORT starts the control channel (control.rs) with the window,
         // as does the Global, MCP Server setting; the files it names are opened once the window is up.
         let cl = command_line::read();
@@ -244,14 +254,6 @@ fn main() {
             return;
         }
         control::start_at_launch(cl.control);
-        // Windows: the JAWS script set shipped beside the program is offered for installing first (not on a
-        // command line that runs without the editor, which no one is there to answer).
-        #[cfg(windows)]
-        if !cl.is_batch() {
-            if let Some(dir) = resource_dir("jaws", "../../scripts/jaws", "braillecraft-desktop.jss") {
-                commands::jaws_start_up(&dir);
-            }
-        }
 
         frame.on_menu(|e| {
             let id = menu::command_id(e.get_id());
@@ -289,7 +291,12 @@ fn main() {
             // Taken once, by the first window to become active (documents::run_start_hook).
             documents::set_start_hook(Box::new(move || match run_for_picture {
                 Some(cmd) => wxdragon::call_after(Box::new(move || commands::run(cmd, false))),
-                None => wxdragon::call_after(Box::new(commands::embosser_setup_at_start)),
+                // Then the Autosave Recovery Wizard, when the last run left autosaved documents, and the autosave
+                // timer (autosave.rs).
+                None => wxdragon::call_after(Box::new(|| {
+                    commands::embosser_setup_at_start();
+                    autosave::start();
+                })),
             }));
         }
         if run_for_picture.is_some() {

@@ -1,0 +1,35 @@
+| Math separation codes placed round technical notation and the math style (before the text is reversed)
+
+| states
+| state 1: outside of pass-through-in-math section.
+| state 2: inside of pass-through-in-math section.
+| state 3 - after [idle~its] and before [idle~ite]
+| state 4 - after OneWordBridge style and before [ts]
+
+|028idle|~ptims|031 ~|028ts|031|028te|031|028idle|~its|031~1~2~
+|028idle|~ptims|031~|028ts|031|028te|031|028idle|~its|031~1~2~
+| |028idle|~ptims|031 ~|028es|~math|031|028te|031|028idle|~its|031~1~2~
+| |028idle|~ptims|031~|028es|~math|031|028te|031|028idle|~its|031~1~2~
+| |028es|~BoxBottomText.|031|028idle|~ptime|031~|028es|~BoxBottomText.|031|028x|031|028idle|~ite|031|028ts|031|028te|031~2~1~
+ |028idle|~ptime|031~|028idle|~ite|031|028ts|031|028te|031~2~1~
+|028idle|~ptime|031~|028idle|~ite|031|028ts|031|028te|031~2~1~
+|  |028idle|~ptime|031~|028idle|~ite|031|028es|~math|031|028es|~math|031~2~1~
+| |028idle|~ptime|031~|028idle|~ite|031|028es|~math|031|028ee|~math|031~2~1~
+|028te|031|028idle|~ets|031~|028es|~math-TextInMath|031~1~
+|028te|031|028idle|~ets|031~|028es|~math-TextInMath|031~2~
+|028te|031~|028te|031|028idle|~its|031~2~
+|028ee|~math|031|028idle|~ets|031~|028es|~math-TextInMath|031~1~
+|028ee|~math|031|028idle|~ets|031~|028es|~math-TextInMath|031~2~
+|028ee|~math|031~|028te|031|028idle|~its|031~2~
+|028idle|~ete|031|028ts|031~|028ee|~math-TextInMath|031~~
+|028ts|031~|028idle|~ite|031|028ts|031~2~
+|028idle|~ete|031|028es|~math|031~|028ee|~math-TextInMath|031~~
+|028es|~math|031~|028idle|~ite|031|028ts|031~2~
+|028idle|~ete|031|028ts|031~|028ee|~math-TextInMath|031~~
+|028ts|031~|028idle|~ite|031|028ts|031~2~
+|028idle|~ete|031|028es|~math|031~|028ee|~math-TextInMath|031~~
+|028es|~math|031~|028idle|~ite|031|028ts|031~2~
+|028ee|~OneWordBridge|031~|028ee|~OneWordBridge|031~1~4~
+| |028ts|031~|028idle|~ite|031|028ts|031~2~
+|028ts|031~|028idle|~ite|031|028ts|031~4~1~
+|028es|~math|031~|028idle|~ite|031|028ts|031~4~1~

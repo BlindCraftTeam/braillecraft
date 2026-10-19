@@ -1,0 +1,10 @@
+| A math separation start placed where one is needed (run on the reversed text)
+
+| states 1 and 2
+| state 1 - initial state
+| state 2 - following [idle~its] 
+
+|028idle|~its|031~~1~2~
+|028es|~OneWordBridge|031~|028es|~OneWordBridge|031~1~2~
+|028te|031~|028idle|~its|031|028te|031~2~1~
+|028ee|~math|031~|028idle|~its|031|028te|031~2~1~

@@ -4,6 +4,7 @@
 //! engine, document templates, braille page formatting, import and export, and the embosser job layer. The
 //! desktop shell and the web build both call into this crate.
 
+pub mod autosave;
 pub mod cmdline;
 pub mod command_table;
 pub mod codepages;
@@ -43,6 +44,7 @@ pub mod print_geometry;
 pub mod printer_setup;
 pub mod range;
 pub mod rule_script;
+pub mod sgml;
 pub mod sixkey;
 pub mod status;
 pub mod style_apply;

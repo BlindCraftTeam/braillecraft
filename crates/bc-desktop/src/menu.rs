@@ -59,6 +59,7 @@ const COURSE_SEPARATORS: [i32; 2] = [9498, 9499];
 
 pub struct Menus {
     pub items: HashMap<i32, MenuItem>,
+    pub file: Menu,
     pub view: Menu,
     pub documents: Vec<i32>,
     /// Document, Translation Tables and Document, Learning Tables, and the items the program put in them.
@@ -71,6 +72,7 @@ pub struct Menus {
     /// check marks are set. Rebuilding deletes menu items, and macOS can still hold an item it showed (its menu bar
     /// runs apart from the program), so a deleted item chosen afterwards crashed the program in wxWidgets.
     shown_documents: Vec<String>,
+    shown_recent: Vec<String>,
     shown_languages: Vec<(usize, String)>,
     shown_courses: Vec<String>,
 }
@@ -122,6 +124,27 @@ impl Menus {
                 item.check(Some(i) == active);
             }
             self.documents.push(id);
+        }
+    }
+
+    /// The recent documents after Exit at the end of the File menu (recent.rs): a separator, then one item per
+    /// entry, ids 1116 on, labelled as recent::label makes them.
+    pub fn set_recent(&mut self, labels: &[String]) {
+        if self.shown_recent == labels {
+            return;
+        }
+        let first = crate::recent::FIRST_ID;
+        for i in 0..self.shown_recent.len() {
+            remove(&self.file, first + i as i32);
+        }
+        remove(&self.file, first - 1);
+        self.shown_recent = labels.to_vec();
+        if labels.is_empty() {
+            return;
+        }
+        self.file.append(first - 1, "-", "", ItemKind::Separator);
+        for (i, label) in labels.iter().enumerate() {
+            self.file.append(first + i as i32, label, "", ItemKind::Normal);
         }
     }
 
@@ -260,9 +283,11 @@ pub fn install(frame: &Frame) -> Menus {
     let bar = builder.build();
     let view_index = MENU_BAR.iter().position(|(l, _)| *l == "&View").unwrap_or(2);
     let view = bar.get_menu(view_index).expect("View menu");
+    let file = bar.get_menu(0).expect("File menu");
     frame.set_menu_bar(bar);
     Menus {
         items,
+        file,
         view,
         documents: Vec::new(),
         tables: found.tables,
@@ -271,6 +296,7 @@ pub fn install(frame: &Frame) -> Menus {
         languages: Vec::new(),
         courses: Vec::new(),
         shown_documents: Vec::new(),
+        shown_recent: Vec::new(),
         shown_languages: Vec::new(),
         shown_courses: Vec::new(),
     }

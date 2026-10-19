@@ -306,9 +306,11 @@ impl Headless {
             None => None,
         };
         let map = template_text.as_deref().map(|t| bc_core::word::map_file_name(&templates::styles(t).lookup(b"word:mws", 0).map(|b| String::from_utf8_lossy(&b).into_owned()).unwrap_or_default())).unwrap_or_else(|| "default".into());
-        // The Word importer's defaults, with the template's print-to-braille table for the Han script's language.
+        // The Word importer's defaults, with the template's print-to-braille table for the Han script's language and its
+        // style names for the Word recipe's math steps (the PDF import's styles too).
         let forward = template_text.as_deref().and_then(templates::tables).map(|t| t[0].clone()).unwrap_or_default();
-        let word = bc_core::word::Options { forward_table: forward, ..bc_core::word::Options::default() };
+        let styles: Vec<String> = template_text.as_deref().map(|t| templates::styles(t).entries().map(|(n, _, _)| n.to_string()).collect()).unwrap_or_default();
+        let word = bc_core::word::Options { forward_table: forward, styles: styles.clone(), ..bc_core::word::Options::default() };
         let chain = |recipe: Recipe, braille: bool| -> Result<(bool, Shown, Option<DxDocument>), String> {
             let got = import_chain::run(&bytes, &recipe, &files);
             if !got.errors.is_empty() {
@@ -329,7 +331,6 @@ impl Headless {
                 Ok((true, Shown::marked(&text), None))
             }
             FileKind::Pdf => {
-                let styles: Vec<String> = template_text.as_deref().map(|t| templates::styles(t).entries().map(|(n, _, _)| n.to_string()).collect()).unwrap_or_default();
                 let running = bc_core::pdf_import::import(&bytes, &Default::default(), &styles)?;
                 Ok((false, Shown::from_running(&running), None))
             }

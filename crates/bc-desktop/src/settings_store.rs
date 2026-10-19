@@ -408,6 +408,36 @@ pub fn load(s: &mut Settings) {
     }
 }
 
+/// The mark a kept folder starts with in place of the user's Documents folder.
+const MYDOCS: &str = "[MYDOCS]";
+
+/// A kept folder with a leading "[MYDOCS]" replaced by `documents`.
+pub fn expand_mydocs(value: &str, documents: &str) -> String {
+    match value.strip_prefix(MYDOCS) {
+        Some(rest) => format!("{documents}{rest}"),
+        None => value.to_string(),
+    }
+}
+
+/// A folder to keep, with "[MYDOCS]" put back in place of `documents` when it starts with it.
+pub fn contract_mydocs(value: &str, documents: &str) -> String {
+    match value.strip_prefix(documents).filter(|_| !documents.is_empty()) {
+        Some(rest) if rest.is_empty() || rest.starts_with(['/', '\\']) => format!("{MYDOCS}{rest}"),
+        _ => value.to_string(),
+    }
+}
+
+/// A folder setting (AutoSave openPath, savePath and path) as the program uses it, "[MYDOCS]" expanded; `default`
+/// when it is not kept.
+pub fn get_folder(section: &str, key: &str, default: &str) -> String {
+    let documents = wxdragon::prelude::StandardPaths::documents_dir();
+    expand_mydocs(&get(section, key).unwrap_or_else(|| default.to_string()), &documents)
+}
+
+pub fn set_folder(section: &str, key: &str, value: &str) {
+    set(section, key, &contract_mydocs(value, &wxdragon::prelude::StandardPaths::documents_dir()));
+}
+
 /// The region Document, Translation Tables lists, from an earlier run.
 pub fn load_region() -> Option<u32> {
     get_number(ROOT, "TranslationRegion").and_then(|n| u32::try_from(n).ok()).filter(|n| *n != 0)
@@ -647,6 +677,14 @@ mod tests {
         assert_eq!(Shortcuts::PAGE_NAV, ["screen", "page", "pageTop"]);
         let d = crate::app::Settings::default().shortcuts;
         assert_eq!((Shortcuts::PAGE_NAV[d.page_nav], Shortcuts::PAGE_NAV[d.control_page_nav]), ("screen", "page"));
+    }
+
+    #[test]
+    fn mydocs_is_expanded_and_put_back() {
+        assert_eq!(expand_mydocs("[MYDOCS]\\BrailleCraft Autosaves", "C:\\Users\\a\\Documents"), "C:\\Users\\a\\Documents\\BrailleCraft Autosaves");
+        assert_eq!(contract_mydocs("C:\\Users\\a\\Documents\\BrailleCraft Autosaves", "C:\\Users\\a\\Documents"), "[MYDOCS]\\BrailleCraft Autosaves");
+        assert_eq!(contract_mydocs("/home/a/Documents2/x", "/home/a/Documents"), "/home/a/Documents2/x");
+        assert_eq!(expand_mydocs("/srv/x", "/home/a/Documents"), "/srv/x");
     }
 
     #[test]

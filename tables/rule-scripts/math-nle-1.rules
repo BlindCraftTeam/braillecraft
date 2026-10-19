@@ -1,0 +1,23 @@
+| The style math changed to math-NLE where it ends a paragraph or a line (before the text is reversed)
+
+|028l|031|028es|~math-separation|031|028ee|~math-separation|031|028ee|~math|031~|028l|031|028es|~math-separation|031|028ee|~math-separation|031|028ee|~math-NLE|031~
+|028p|031|028es|~math-separation|031|028ee|~math-separation|031|028ee|~math|031~|028p|031|028es|~math-separation|031|028ee|~math-separation|031|028ee|~math-NLE|031~
+|028hl1|031|028es|~math-separation|031|028ee|~math-separation|031|028ee|~math|031~|028hl1|031|028es|~math-separation|031|028ee|~math-separation|031|028ee|~math-NLE|031~
+|028hl2|031|028es|~math-separation|031|028ee|~math-separation|031|028ee|~math|031~|028hl2|031|028ee|~math-separation|031|028ee|~math-separation|031|028ee|~math-NLE|031~
+|028hl3|031|028es|~math-separation|031|028ee|~math-separation|031|028ee|~math|031~|028hl3|031|028ee|~math-separation|031|028ee|~math-separation|031|028ee|~math-NLE|031~
+.|031|028es|~math-separation|031|028ee|~math-separation|031|028ee|~math|031~.|031|028es|~math-separation|031|028ee|~math-separation|031|028ee|~math-NLE|031~
+| again with end math-separation end math
+|028l|031|028ee|~math-separation|031|028ee|~math|031~|028l|031|028ee|~math-separation|031|028ee|~math-NLE|031~
+|028p|031|028ee|~math-separation|031|028ee|~math|031~|028p|031|028ee|~math-separation|031|028ee|~math-NLE|031~
+|028hl1|031|028ee|~math-separation|031|028ee|~math|031~|028hl1|031|028ee|~math-separation|031|028ee|~math-NLE|031~
+|028hl2|031|028ee|~math-separation|031|028ee|~math|031~|028hl2|031|028ee|~math-separation|031|028ee|~math-NLE|031~
+|028hl3|031|028ee|~math-separation|031|028ee|~math|031~|028hl3|031|028ee|~math-separation|031|028ee|~math-NLE|031~
+.|031|028ee|~math-separation|031|028ee|~math|031~.|031|028ee|~math-separation|031|028ee|~math-NLE|031~
+| again with just math
+|028l|031|028ee|~math|031~|028l|031|028ee|~math-NLE|031~
+|028p|031|028ee|~math|031~|028p|031|028ee|~math-NLE|031~
+|028hl1|031|028ee|~math|031~|028hl1|031|028ee|~math-NLE|031~
+|028hl2|031|028ee|~math|031~|028hl2|031|028ee|~math-NLE|031~
+|028hl3|031|028ee|~math|031~|028hl3|031|028ee|~math-NLE|031~
+.|031|028ee|~math|031~.|031|028ee|~math-NLE|031~
+

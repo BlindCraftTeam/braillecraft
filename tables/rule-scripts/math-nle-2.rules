@@ -1,0 +1,7 @@
+| A math style started after a math-NLE end made math-NLE (run on the reversed text)
+| states 1 and 2
+| state 1 - not after a style end math-NLE that has not yet been closed with a style begin math.
+| state 2 - after style end math-NLE and before style begin math.
+
+|028ee|~math-NLE|031~|028ee|~math-NLE|031~1~2~
+|028es|~math|031~|028es|~math-NLE|031~2~1~

@@ -1,0 +1,18 @@
+| Reference page styles adjusted inside and outside Nemeth
+| states 1 and 2
+| state 1 - outside of Nemeth context
+| state 2 - inside of Nemeth context
+|028es|~RefPageNumber.|031~|028es|~RefPageNemeth.|031~2~
+|028ee|~RefPageNumber.|031~|028ee|~.Nemeth|031~2~
+|028es|~RefPageNumberEmbed|031~|028es|~NemethEmbed|031~2~
+|028ee|~RefPageNumberEmbed|031~|028ee|~RefPageNemeth.|031~2~
+|028es|~RefPageNemeth.|031~|028es|~RefPageNumber.|031~1~
+|028ee|~RefPageNemeth.|031~|028ee|~RefPageNumber.|031~1~
+|028ee|~RefPageNemeth.|031~|028ee|~RefPageNumber.|031~1~
+|028ee|~RefPageNemeth.|031~|028ee|~RefPageNumber.|031~1~
+|028es|~Uncontracted|031~|028es|~math-separation|031~2~
+|028ee|~Uncontracted|031~|028ee|~math-separation|031~2~
+|028es|~math|031~|028es|~math|031~1~2~
+|028es|~math-NLE|031~|028es|~math-NLE|031~1~2~
+|028ee|~math|031~|028ee|~math|031~2~1~
+|028ee|~math-NLE|031~|028ee|~math-NLE|031~2~1~

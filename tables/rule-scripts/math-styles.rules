@@ -1,0 +1,27 @@
+| Math translation codes turned into style codes
+| states
+| state 1: outside of ImportStayInMath section.
+| state 2: inside of ImportStayInMath section.
+
+|028te|031|028idle|~its|031~|028es|~math-separation|031~
+|028ee|~math|031|028idle|~its|031~|028es|~math-separation|031~
+|028ee|~math|031|028idle|~its|031~|028es|~math-separation|031~
+|028idle|~ite|031~~1~2~
+|028ts|031~|028ee|~math-separation|031~2~1~
+|028es|~math|031~|028ee|~math-separation|031~2~1~
+|028idle|~ite|031|028ts|031~|028ee|~math-separation|031~2~1~
+|028idle|~ite|031|028es|~math|031|028ee|~math|031~|028ee|~math-separation|031|028ee|~math|031~2~1~
+|028idle|~ite|031|028es|~math|031|028ee|~math|031~|028ee|~math-separation|031|028ee|~math|031~2~1~
+|028idle|~ite|031|028es|~math|031~|028ee|~math-separation|031~2~1~
+|028idle|~ite|031|028es|~math|031~|028ee|~math-separation|031~~1~
+|028te|031|028idle|~its|031|028idle|~ite|031|028ts|031~|028es|~math-separation|031|028ee|~math-separation|031~
+|028ee|~math|031|028idle|~its|031|028idle|~ite|031|028es|~math|031~|028es|~math-separation|031|028ee|~math-separation|031~
+|028te|031|028idle|~ets|031~|028es|~math-TextInMath|031~
+|028ee|~math|031|028idle|~ets|031~|028es|~math-TextInMath|031~
+|028idle|~ete|031|028ts|031~|028ee|~math-TextInMath|031~
+|028idle|~ete|031|028es|~math|031~|028ee|~math-TextInMath|031~
+|028ts|031~|028es|~math|031~
+|028te|031~|028ee|~math|031~
+|028idle|~its|031~~
+|028idle|~ite|031~~
+

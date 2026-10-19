@@ -13,7 +13,8 @@
 //! - On yes: in each folder, keeps a copy of every file it replaces (name_bak), copies the shipped files, and runs
 //!   scompile.exe on each .jss whose .jsb is missing or older than the .jss or the headers and messages it uses,
 //!   in that folder, with no window, waiting for it to finish.
-//! - Then asks whether to restart BrailleCraft, since JAWS takes up new scripts when the program starts again.
+//! - Then, when every folder was installed into and a screen reader is running (SPI_GETSCREENREADER), asks whether
+//!   to restart BrailleCraft, since JAWS takes up new scripts when the program starts again.
 //! Every step is written to install.log in the shipped "jaws" folder, or nowhere when that cannot be written.
 #![cfg(windows)]
 
@@ -94,7 +95,19 @@ pub fn at_start_up(
     for t in out_of_date {
         all &= install(t, &files, &mut log);
     }
-    all && offer_restart()
+    all && screen_reader_running() && offer_restart()
+}
+
+/// Whether Windows reports a screen reader running (SystemParametersInfoW with SPI_GETSCREENREADER).
+fn screen_reader_running() -> bool {
+    const SPI_GETSCREENREADER: u32 = 0x46;
+    #[link(name = "user32")]
+    extern "system" {
+        fn SystemParametersInfoW(action: u32, param: u32, value: *mut std::ffi::c_void, ini: u32) -> i32;
+    }
+    let mut on: i32 = 0;
+    let ok = unsafe { SystemParametersInfoW(SPI_GETSCREENREADER, 0, (&mut on as *mut i32).cast(), 0) };
+    ok != 0 && on == 1
 }
 
 /// The shipped script files: every .jss with the .jsh, .jsm and other files beside it.
@@ -115,13 +128,14 @@ fn shipped_files(source: &Path, log: &mut Log) -> Vec<PathBuf> {
 }
 
 /// The key the "Do not ask this again" answer is kept under: "jaws-" and, in eight hexadecimal digits, the newest
-/// modification time (seconds since 1970) of the shipped script files, so a new script set asks again.
+/// modification time of the shipped script files as a file date and time (date in the high 16 bits, time in the low;
+/// bc_core::autosave::dos_stamp), so a new script set asks again.
 pub fn answer_key(files: &[PathBuf]) -> String {
     let newest = files
         .iter()
         .filter_map(|f| modified(f))
         .filter_map(|t| t.duration_since(SystemTime::UNIX_EPOCH).ok())
-        .map(|d| d.as_secs() as u32)
+        .filter_map(|d| bc_core::autosave::dos_stamp(d.as_secs() as i64))
         .max()
         .unwrap_or(0);
     format!("jaws-{newest:08x}")

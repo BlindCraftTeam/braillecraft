@@ -1,7 +1,7 @@
 //! Imports one file through its recipe and reports the time it took, the size of the result and the process's peak
 //! memory, for the large-document measurements (plan line L1). Usage:
 //!
-//!   cargo run --release -p bc-core --example import_file -- <file> [markdown|html|docx|brf|text|coded-text|coded-braille]
+//!   cargo run --release -p bc-core --example import_file -- <file> [markdown|html|docx|brf|text|coded-text|coded-braille] [out]
 //!
 //! The kind defaults to the file's extension. The rule scripts, scan tables and character maps are read from the
 //! repository's tables folder.
@@ -101,4 +101,8 @@ fn main() {
         println!("warnings: long page {}, wide line {}", got.warnings.long_page, got.warnings.wide_line);
     }
     println!("first 300 characters: {:?}", text.chars().take(300).collect::<String>());
+    // A third argument names a file the whole internal text is written to (to compare two builds' results).
+    if let Some(out) = args.get(3) {
+        std::fs::write(out, &got.text).unwrap_or_else(|e| eprintln!("{out}: {e}"));
+    }
 }

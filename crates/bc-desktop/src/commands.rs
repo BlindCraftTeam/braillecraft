@@ -71,7 +71,7 @@ pub fn reset_file_folder(save: bool) {
     dialog.show_modal();
 }
 
-fn yes_no(text: &str) -> bool {
+pub(crate) fn yes_no(text: &str) -> bool {
     let f = app::frame();
     MessageDialog::builder(&f, text, "BrailleCraft")
         .with_style(MessageDialogStyle::YesNo | MessageDialogStyle::IconQuestion)
@@ -81,7 +81,7 @@ fn yes_no(text: &str) -> bool {
 }
 
 /// OK or Cancel: true for OK.
-fn ok_cancel(text: &str) -> bool {
+pub(crate) fn ok_cancel(text: &str) -> bool {
     let f = app::frame();
     MessageDialog::builder(&f, text, "BrailleCraft")
         .with_style(MessageDialogStyle::OK | MessageDialogStyle::Cancel | MessageDialogStyle::IconInformation)
@@ -248,11 +248,11 @@ enum Kept {
     Choice(i32, &'static str, &'static str, &'static [&'static str], &'static [&'static str], usize),
     /// Radio buttons with ids from this one on, one per word: the chosen one's word.
     Radios(i32, &'static str, &'static str, &'static [&'static str], usize),
-    /// A text field kept as typed.
-    Text(i32, &'static str, &'static str, &'static str),
     /// A number shown with two decimals and kept in hundredths (the WordPerfect indent, 25 shown as 0.25).
     Hundredths(i32, &'static str, &'static str, i64),
-    /// Seconds shown as mm:ss (the autosave time).
+    /// A folder, shown with "[MYDOCS]" as the Documents folder and kept with it put back (settings_store).
+    Folder(i32, &'static str, &'static str, &'static str),
+    /// Seconds shown as minutes, or minutes and seconds (the autosave time; seconds_text).
     Seconds(i32, &'static str, &'static str, i64),
 }
 
@@ -308,13 +308,13 @@ const KEPT_WORD: &[Kept] = &[
     Kept::Flag(17, "Word", "IgnoreLanguageSwitches", true),
 ];
 
-/// Global, File Locations (1060): the two folders and the autosave settings under the AutoSave section. The
-/// autosaved file location's default folder is made when autosave is built (plan line B2).
+/// Global, File Locations (1060): the two folders and the autosave settings under the AutoSave section
+/// (autosave.rs).
 const KEPT_FILE_LOCATIONS: &[Kept] = &[
-    Kept::Text(7, "AutoSave", "openPath", ""),
-    Kept::Text(9, "AutoSave", "savePath", ""),
+    Kept::Folder(7, "AutoSave", "openPath", ""),
+    Kept::Folder(9, "AutoSave", "savePath", ""),
     Kept::Flag(10, "AutoSave", "Enabled", true),
-    Kept::Text(12, "AutoSave", "path", ""),
+    Kept::Folder(12, "AutoSave", "path", crate::autosave::DEFAULT_FOLDER),
     Kept::Seconds(14, "AutoSave", "Time", 300),
 ];
 
@@ -332,7 +332,7 @@ impl Kept {
             }
             Kept::Choice(cid, section, key, words, items, default) => d.select_text(cid, items[index(section, key, words, default)]),
             Kept::Radios(first, section, key, words, default) => d.set_checked(first + index(section, key, words, default) as i32, true),
-            Kept::Text(cid, section, key, default) => d.set_text(cid, &kept(section, key).unwrap_or_else(|| default.to_string())),
+            Kept::Folder(cid, section, key, default) => d.set_text(cid, &settings_store::get_folder(section, key, default)),
             Kept::Hundredths(cid, section, key, default) => {
                 let n = kept(section, key).and_then(|v| v.parse::<i64>().ok()).unwrap_or(default);
                 d.set_text(cid, &hundredths_text(n));
@@ -356,7 +356,7 @@ impl Kept {
                 let i = (0..words.len()).find(|&k| d.checked(first + k as i32)).unwrap_or(default);
                 settings_store::set(section, key, words[i]);
             }
-            Kept::Text(cid, section, key, _) => settings_store::set(section, key, &d.text(cid)),
+            Kept::Folder(cid, section, key, _) => settings_store::set_folder(section, key, &d.text(cid)),
             Kept::Hundredths(cid, section, key, default) => {
                 settings_store::set(section, key, &parse_hundredths(&d.text(cid)).unwrap_or(default).to_string());
             }
@@ -377,20 +377,25 @@ fn parse_hundredths(text: &str) -> Option<i64> {
     text.trim().parse::<f64>().ok().filter(|x| x.is_finite()).map(|x| (x * 100.0).round() as i64)
 }
 
-/// Seconds shown as mm:ss (300 is "05:00").
-fn seconds_text(s: i64) -> String {
-    let s = s.max(0);
-    format!("{:02}:{:02}", s / 60, s % 60)
+/// Seconds shown as File Locations shows the autosave time: whole minutes as the minutes alone (300 is "5"), any
+/// other time as minutes and two-digit seconds (90 is "1:30").
+pub fn seconds_text(s: i64) -> String {
+    if s % 60 == 0 {
+        format!("{}", s / 60)
+    } else {
+        format!("{}:{:02}", s / 60, s % 60)
+    }
 }
 
-/// A time typed as mm:ss, or as plain seconds, read back as seconds; None when it is neither.
-fn parse_seconds(text: &str) -> Option<i64> {
-    let t = text.trim();
-    let s = match t.split_once(':') {
-        Some((m, s)) => m.trim().parse::<i64>().ok().zip(s.trim().parse::<i64>().ok()).map(|(m, s)| m * 60 + s)?,
-        None => t.parse::<i64>().ok()?,
-    };
-    Some(s.max(0))
+/// A time typed as "m:s" or as minutes alone ("5" is 300), read as C's "%d:%d" and "%d" read it (text after the
+/// numbers is left); None when it starts with no number. The dialog takes it only when it is above 0.
+pub fn parse_seconds(text: &str) -> Option<i64> {
+    use bc_core::autosave::leading_number;
+    let (m, rest) = leading_number(text)?;
+    match rest.strip_prefix(':').and_then(leading_number) {
+        Some((s, _)) => Some(m * 60 + s),
+        None => Some(m * 60),
+    }
 }
 
 #[cfg(test)]
@@ -398,7 +403,7 @@ mod kept_tests {
     use super::*;
 
     #[test]
-    fn hundredths_and_seconds_round_trip() {
+    fn hundredths_round_trip() {
         assert_eq!(hundredths_text(25), "0.25");
         assert_eq!(hundredths_text(150), "1.50");
         assert_eq!(hundredths_text(-5), "-0.05");
@@ -406,12 +411,18 @@ mod kept_tests {
         assert_eq!(parse_hundredths(" 1.5 "), Some(150));
         assert_eq!(parse_hundredths("2"), Some(200));
         assert_eq!(parse_hundredths("cm"), None);
-        assert_eq!(seconds_text(300), "05:00");
-        assert_eq!(seconds_text(61), "01:01");
-        assert_eq!(seconds_text(-4), "00:00");
-        assert_eq!(parse_seconds("05:00"), Some(300));
+    }
+
+    #[test]
+    fn file_locations_time_display_and_parse() {
+        assert_eq!(seconds_text(300), "5");
+        assert_eq!(seconds_text(90), "1:30");
+        assert_eq!(seconds_text(61), "1:01");
         assert_eq!(parse_seconds("1:30"), Some(90));
-        assert_eq!(parse_seconds("45"), Some(45));
+        assert_eq!(parse_seconds("5"), Some(300));
+        assert_eq!(parse_seconds(" 05:00"), Some(300));
+        assert_eq!(parse_seconds("2:"), Some(120));
+        assert_eq!(parse_seconds("0"), Some(0));
         assert_eq!(parse_seconds("five"), None);
     }
 
@@ -423,7 +434,10 @@ mod kept_tests {
             let mut keys = std::collections::HashSet::new();
             for k in table {
                 let (section, key) = match *k {
-                    Kept::Flag(_, s, k, _) | Kept::Text(_, s, k, _) | Kept::Hundredths(_, s, k, _) | Kept::Seconds(_, s, k, _) => (s, k),
+                    Kept::Flag(_, s, k, _)
+                    | Kept::Folder(_, s, k, _)
+                    | Kept::Hundredths(_, s, k, _)
+                    | Kept::Seconds(_, s, k, _) => (s, k),
                     Kept::Choice(_, s, k, words, items, default) => {
                         assert!(default < words.len() && words.len() == items.len(), "dialog {dialog}: {s}.{k} words and items");
                         (s, k)
@@ -458,6 +472,42 @@ fn kept_settings_dialog(id: i32, kept: &[Kept], setup: impl FnOnce(&Dlg)) {
         }
         let values = d.values();
         app::with(|a| a.memory.put(id, "", values));
+    }
+    d.destroy();
+}
+
+/// Global, File Locations (1060), a kept settings dialog with its own enabling: the autosave controls (11 to 14)
+/// only while Enable autosave (10) is checked, and OK only while it is unchecked or the time (14) reads as more than
+/// no time, checked again on every change of the time; no message is shown. Focus starts in the open folder (7)
+/// with its text selected.
+fn file_locations() {
+    let d = open_dialog(1060, None);
+    if let Some(v) = app::with(|a| a.memory.get(1060, "").cloned()) {
+        d.restore(&v);
+    }
+    for k in KEPT_FILE_LOCATIONS {
+        k.restore(&d);
+    }
+    let dialog = d.dialog;
+    let enabling = move || {
+        let d = Dlg { id: 1060, dialog, page: None };
+        let on = d.checked(10);
+        for cid in 11..=14 {
+            d.enable(cid, on);
+        }
+        d.enable(1, !on || parse_seconds(&d.text(14)).is_some_and(|s| s > 0));
+    };
+    enabling();
+    d.on_check(10, enabling);
+    if let Some(t) = d.win(14).and_then(|w| w.as_widget::<TextCtrl>()) {
+        t.on_text_updated(move |_| enabling());
+    }
+    if d.show_focused(7) == 1 {
+        for k in KEPT_FILE_LOCATIONS {
+            k.save(&d);
+        }
+        let values = d.values();
+        app::with(|a| a.memory.put(1060, "", values));
     }
     d.destroy();
 }
@@ -672,12 +722,18 @@ pub fn run(id: i32, checked: bool) {
     match id {
         1101 => file_new(),
         1102 => open_file(),
+        crate::recent::FIRST_ID..=1120 => open_recent((id - crate::recent::FIRST_ID) as usize),
         1103 => close_document(None),
+        // An autosave pass after Save, and after Save As that leaves the document unchanged (autosave.rs).
         1105 if has_doc => {
             save(None, false);
+            crate::autosave::pass();
         }
         1106 if has_doc => {
             save(None, true);
+            if app::with(|a| a.doc().is_some_and(|d| !d.dirty)) {
+                crate::autosave::pass();
+            }
         }
         1107 if has_doc => crate::ebraille::save_ebraille(),
         1109 => translate_document(),
@@ -803,7 +859,7 @@ pub fn run(id: i32, checked: bool) {
                 printer_setup(true);
             }
         }
-        3104 => kept_settings_dialog(1060, KEPT_FILE_LOCATIONS, |_| {}),
+        3104 => file_locations(),
         3105 => default_views(),
         3106 => internationalization(),
         3107 => global_fonts(),
@@ -1058,8 +1114,9 @@ fn file_new() {
 
 /// The file dialog of File, Open (`insert` false) and Edit, Insert File (`insert` true), with the
 /// type lists in a set order, the last (All Files) chosen; the type does not limit what opens, the file's content
-/// decides. PEF is BrailleCraft's addition, before All Files. The dialog starts in the folder last opened from
-/// (AutoSave, openPath) and keeps the new one.
+/// decides. PEF is BrailleCraft's addition, before All Files. The dialog starts in Global, File Locations' open
+/// folder (AutoSave, openPath) when one is set and it exists, else where the system's file dialog starts; the
+/// folder opened from is not kept.
 fn pick_file(insert: bool) -> Option<std::path::PathBuf> {
     const DOCUMENTS: &str = "BrailleCraft Files (*.dxp; *.dxb)|*.dxp;*.dxb";
     const BRF: &str = "Formatted Braille Files (*.brf)|*.brf";
@@ -1076,7 +1133,7 @@ fn pick_file(insert: bool) -> Option<std::path::PathBuf> {
     } else {
         ("Open", &[DOCUMENTS, BRF, PDF, WORD, WORDPERFECT, PEF, MARKDOWN, ALL])
     };
-    let folder = settings_store::get("AutoSave", "openPath").filter(|f| std::path::Path::new(f).is_dir());
+    let folder = Some(settings_store::get_folder("AutoSave", "openPath", "")).filter(|f| !f.is_empty() && Path::new(f).is_dir());
     let f = app::frame();
     let mut builder = FileDialog::builder(&f)
         .with_message(title)
@@ -1090,21 +1147,14 @@ fn pick_file(insert: bool) -> Option<std::path::PathBuf> {
     if dialog.show_modal() != wxdragon::id::ID_OK {
         return None;
     }
-    let path: std::path::PathBuf = dialog.get_path()?.into();
-    if let Some(dir) = path.parent() {
-        settings_store::set("AutoSave", "openPath", &dir.to_string_lossy());
-    }
-    Some(path)
+    dialog.get_path().map(Into::into)
 }
 
 /// A .dxp (print) or .dxb (braille) document; its key.
-fn open_dx_document(path: &Path) -> Option<u64> {
-    let bytes = match std::fs::read(path) {
-        Ok(b) => b,
-        Err(e) => {
-            message(&format!("{}: {e}", path.display()));
-            return None;
-        }
+pub(crate) fn open_dx_document(path: &Path) -> Option<u64> {
+    let Ok(bytes) = std::fs::read(path) else {
+        message(&unable_to_open(path));
+        return None;
     };
     let doc = match bc_core::dxfile::read(&bytes) {
         Ok(d) => d,
@@ -1194,9 +1244,9 @@ fn open_dx_document(path: &Path) -> Option<u64> {
             // The view it was saved in (coded or formatted view, view font, translated line, six-key entry) and its
             // caret are taken only for a file reopened from the recent documents list with a valid view font in it;
             // any other file opens in the Global, Default Views settings (which new_document gave it) with the caret
-            // at the start (spec 27 section 9, unknown 6). BrailleCraft keeps no recent documents list yet, so no
-            // file is in it.
-            let in_recent = false;
+            // at the start (spec 27 section 9, unknown 6). The file opened leaves the list.
+            let in_recent = crate::recent::contains(path);
+            crate::recent::remove(path);
             let restore = bc_core::dxfile::restores_view(in_recent, doc.view_font);
             if restore {
                 d.view.translated = doc.translated_line;
@@ -1267,12 +1317,9 @@ pub fn open_path(path: &Path) -> Option<u64> {
 
 pub fn open_path_asking(path: &Path, ask: bool) -> Option<u64> {
     let path = path.to_path_buf();
-    let bytes = match std::fs::read(&path) {
-        Ok(b) => b,
-        Err(e) => {
-            message(&format!("{}: {e}", path.display()));
-            return None;
-        }
+    let Ok(bytes) = std::fs::read(&path) else {
+        message(&unable_to_open(&path));
+        return None;
     };
     let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
     let detected = bc_core::filekind::detect(&name, &bytes);
@@ -1309,6 +1356,23 @@ pub fn open_path_asking(path: &Path, ask: bool) -> Option<u64> {
         apply_template(key, t);
     }
     Some(key)
+}
+
+/// Message 2428 for a file that cannot be read, with its full name (2426 when it has none).
+fn unable_to_open(path: &Path) -> String {
+    if path.as_os_str().is_empty() {
+        "Unable to open file.".to_string()
+    } else {
+        format!("Unable to open file: {}", path.display())
+    }
+}
+
+/// File, recent document `index` (items 1116 to 1120): opened as File, Open opens it.
+fn open_recent(index: usize) {
+    let Some(path) = crate::recent::entry(index) else { return };
+    if let Some(key) = open_path_asking(&path, true) {
+        locator_after_open(key);
+    }
 }
 
 use bc_core::filekind::FileKind;
@@ -1539,9 +1603,9 @@ fn read_import(bytes: &[u8], choice: &ImportChoice) -> Option<(Shown, Option<boo
             }
             Some(shown_of(&imported))
         }
-        // A Markdown file becomes HTML and goes through the HTML recipe, with the Word importer's hyperlink and
-        // unknown-character settings.
-        FileKind::Markdown => {
+        // A Markdown file becomes HTML and goes through the HTML recipe; an HTML or SGML file goes through it as it
+        // is. Both with the Word importer's hyperlink and unknown-character settings.
+        FileKind::Markdown | FileKind::Sgml => {
             let files = match translation::import_files() {
                 Ok(f) => f,
                 Err(e) => {
@@ -1550,7 +1614,8 @@ fn read_import(bytes: &[u8], choice: &ImportChoice) -> Option<(Shown, Option<boo
                 }
             };
             let options = word_options(&translation::default_template());
-            let recipe = Recipe::Markdown(options, settings_store::load_unknown_characters());
+            let unknown = settings_store::load_unknown_characters();
+            let recipe = if choice.kind == FileKind::Sgml { Recipe::Html(options, unknown) } else { Recipe::Markdown(options, unknown) };
             let imported = bc_core::import_chain::run(bytes, &recipe, &files);
             if !imported.errors.is_empty() {
                 message(&imported.errors.join("\n"));
@@ -1566,7 +1631,7 @@ fn read_import(bytes: &[u8], choice: &ImportChoice) -> Option<(Shown, Option<boo
 
 /// The Word importer's settings from the Global Word Importer (1036) and Import Options (1037) dialogs as they were
 /// last kept, the defaults where a dialog was never confirmed; the Han script settings, with the print-to-braille
-/// table of the document the import goes into (made with `template`).
+/// table and the style names of the document the import goes into (made with `template`).
 fn word_options(template: &str) -> bc_core::word::Options {
     use crate::dlg::Value;
     let mut o = bc_core::word::Options::default();
@@ -1601,6 +1666,7 @@ fn word_options(template: &str) -> bc_core::word::Options {
         .map_or(o.han_language, |n| n as u8);
     o.forward_table = translation::template_tables(template)
         .map_or_else(|| translation::DEFAULT_TABLES[0].to_string(), |t| t[0].clone());
+    o.styles = translation::template_style_names(template);
     o
 }
 
@@ -1777,7 +1843,11 @@ fn save(key: Option<u64>, as_new: bool) -> bool {
     let (title, wildcard, dir, file, label, list) = (
         c(if as_new { bc_core::dxfile::SAVE_AS_TITLE } else { bc_core::dxfile::SAVE_TITLE }),
         c(&wildcard),
-        c(&path.as_ref().and_then(|p| p.parent()).map(|d| d.to_string_lossy().into_owned()).unwrap_or_default()),
+        // Global, File Locations' save folder when one is set, else the document's own folder.
+        c(&Some(settings_store::get_folder("AutoSave", "savePath", ""))
+            .filter(|f| !f.is_empty())
+            .or_else(|| path.as_ref().and_then(|p| p.parent()).map(|d| d.to_string_lossy().into_owned()))
+            .unwrap_or_default()),
         c(&format!("{stem}.{own}")),
         c("Encoding"),
         c(&items.join("\n")),
@@ -1831,7 +1901,18 @@ fn save(key: Option<u64>, as_new: bool) -> bool {
         SaveType::EBraille => crate::ebraille::save_as(key, &chosen),
         SaveType::Pef => write_pef(key, &chosen),
         SaveType::OlderDocument => write_document(key, &chosen, 0),
-        SaveType::Document => write_document(key, &chosen, 1),
+        SaveType::Document => {
+            // A new document file name: the new name leaves the recent documents and the old document file goes in.
+            if path.as_ref() != Some(&chosen) {
+                crate::recent::remove(&chosen);
+                if let Some(old) = path.as_ref().filter(|_| document_file) {
+                    crate::recent::add(old);
+                }
+            }
+            let saved = write_document(key, &chosen, 1);
+            app::with(|a| a.refresh_menus());
+            saved
+        }
     }
 }
 
@@ -1839,7 +1920,46 @@ fn save(key: Option<u64>, as_new: bool) -> bool {
 /// current format the document then takes that file as its own (File, Save writes there again); a file in the older
 /// format is a copy only: the document keeps its earlier file, name and state (spec A15.10).
 pub(crate) fn write_document(key: u64, path: &Path, version: u16) -> bool {
-    let Some(doc) = app::with(|a| {
+    let Some(bytes) = document_bytes(key, version) else { return false };
+    if let Err(e) = std::fs::write(path, &bytes) {
+        message(&format!("{}: {e}", path.display()));
+        return false;
+    }
+    // An older-format file is not the document's own (INFERENCE: the document's changed mark stays as it was).
+    if version == 0 {
+        return true;
+    }
+    app::with(|a| {
+        if let Some(i) = a.index_of(key) {
+            let d = &mut a.docs[i];
+            d.document_file = true;
+            d.path = Some(path.to_path_buf());
+            d.name = path.file_name().map_or_else(|| d.name.clone(), |n| n.to_string_lossy().into_owned());
+            d.untitled = false;
+            d.saved = true;
+            d.dirty = false;
+            d.file_settings = bytes[10..234].to_vec();
+            // As written: read back, the file gives its own order and index values.
+            if let Ok(back) = bc_core::dxfile::read(&bytes) {
+                d.file_sections = back.sections.clone();
+                d.file_styles = back.styles.iter().map(|s| s.0.clone()).zip(back.style_index.iter().copied()).collect();
+                d.styles = back
+                    .styles
+                    .iter()
+                    .map(|(name, begin, end)| Style { name: name.clone(), nested: !name.ends_with('.'), begin: begin.clone(), end: end.clone() })
+                    .collect();
+            }
+            child_title_update(d);
+        }
+        a.set_title();
+    });
+    true
+}
+
+/// The document as a document file in format `version` (1, or 0 for the older format): what File, Save writes and
+/// what autosave writes in its .asv files.
+pub(crate) fn document_bytes(key: u64, version: u16) -> Option<Vec<u8>> {
+    let doc = app::with(|a| {
         let i = a.index_of(key)?;
         let d = &a.docs[i];
         let braille = d.kind == DocKind::Braille;
@@ -1914,43 +2034,8 @@ pub(crate) fn write_document(key: u64, path: &Path, version: u16) -> bool {
                 (l.min(u32::from(u16::MAX)) as u16, c.min(u32::from(u16::MAX)) as u16)
             },
         })
-    }) else {
-        return false;
-    };
-    let bytes = bc_core::dxfile::write(&doc);
-    if let Err(e) = std::fs::write(path, &bytes) {
-        message(&format!("{}: {e}", path.display()));
-        return false;
-    }
-    // An older-format file is not the document's own (INFERENCE: the document's changed mark stays as it was).
-    if version == 0 {
-        return true;
-    }
-    app::with(|a| {
-        if let Some(i) = a.index_of(key) {
-            let d = &mut a.docs[i];
-            d.document_file = true;
-            d.path = Some(path.to_path_buf());
-            d.name = path.file_name().map_or_else(|| d.name.clone(), |n| n.to_string_lossy().into_owned());
-            d.untitled = false;
-            d.saved = true;
-            d.dirty = false;
-            d.file_settings = bytes[10..234].to_vec();
-            // As written: read back, the file gives its own order and index values.
-            if let Ok(back) = bc_core::dxfile::read(&bytes) {
-                d.file_sections = back.sections.clone();
-                d.file_styles = back.styles.iter().map(|s| s.0.clone()).zip(back.style_index.iter().copied()).collect();
-                d.styles = back
-                    .styles
-                    .iter()
-                    .map(|(name, begin, end)| Style { name: name.clone(), nested: !name.ends_with('.'), begin: begin.clone(), end: end.clone() })
-                    .collect();
-            }
-            child_title_update(d);
-        }
-        a.set_title();
-    });
-    true
+    })?;
+    Some(bc_core::dxfile::write(&doc))
 }
 
 fn child_title_update(d: &app::Doc) {
@@ -2270,13 +2355,27 @@ pub(crate) fn write_markdown_braille(key: u64, path: &Path) -> bool {
 }
 
 /// File, Close (and the close box of a document window).
+/// File, Close (and the close box of a document window). A document with a document file goes to the front of the
+/// recent documents; then an autosave pass runs (with no document left it takes every autosave file away).
 pub fn close_document(key: Option<u64>) {
     let Some(key) = key.or_else(|| app::with(|a| a.doc().map(|d| d.key))) else { return };
     if confirm_discard(key) {
+        add_to_recent(key);
         documents::destroy(key);
+        crate::autosave::pass();
     }
 }
 
+/// A closing document's file put in the recent documents, when it has a document file.
+fn add_to_recent(key: u64) {
+    let file = app::with(|a| a.index_of(key).and_then(|i| a.docs[i].path.clone().filter(|_| a.docs[i].document_file)));
+    if let Some(path) = file {
+        crate::recent::add(&path);
+    }
+}
+
+/// File, Exit: every document is closed after its save question (Cancel stops), each with a document file put in the
+/// recent documents; the recent documents are kept, the autosave files are taken away, and the program ends.
 pub fn exit_program() {
     crate::control::stop();
     let keys: Vec<u64> = app::with(|a| a.docs.iter().map(|d| d.key).collect());
@@ -2286,6 +2385,17 @@ pub fn exit_program() {
             return;
         }
     }
+    let keys: Vec<u64> = app::with(|a| a.docs.iter().map(|d| d.key).collect());
+    for key in keys {
+        add_to_recent(key);
+    }
+    crate::recent::save();
+    crate::autosave::at_exit();
+    end_program();
+}
+
+/// Every document window and the main window gone, which ends the program; nothing is asked.
+pub(crate) fn end_program() {
     app::with(|a| {
         for d in a.docs.drain(..) {
             d.page.destroy();
@@ -5246,7 +5356,9 @@ fn shortcuts_after(now: &app::Shortcuts, codes: Option<[String; 6]>) -> app::Sho
 
 /// At start-up on Windows: offers the JAWS script set in `source` for installing (jaws_install.rs), with the
 /// question of dialog 1058 (Yes 4, No 5, "Do not ask this again" 8). A kept answer is kept as the answer plus one in
-/// the settings section AddIns (1 no, 2 yes). After installing, Yes to the restart question starts the program again.
+/// the settings section AddIns (1 no, 2 yes); the dialog opens with focus on Yes. After installing, Yes to the
+/// restart question starts the program again with the same arguments and this run ends ("Restart failed" first when
+/// it cannot be started).
 #[cfg(windows)]
 pub fn jaws_start_up(source: &std::path::Path) {
     use crate::jaws_install::{self, OfferAnswer};
@@ -5259,7 +5371,7 @@ pub fn jaws_start_up(source: &std::path::Path) {
             let d = open_dialog(1058, None);
             d.closes_with(4);
             d.closes_with(5);
-            let closed = d.show();
+            let closed = d.show_focused(4);
             let answer = OfferAnswer { install: closed == 4, do_not_ask_again: d.checked(8) };
             d.destroy();
             answer
@@ -5267,11 +5379,11 @@ pub fn jaws_start_up(source: &std::path::Path) {
         || yes_no(jaws_install::RESTART_TEXT),
     );
     if restart {
-        if let Ok(exe) = std::env::current_exe() {
-            if std::process::Command::new(exe).spawn().is_ok() {
-                std::process::exit(0);
-            }
+        let started = std::env::current_exe().and_then(|exe| std::process::Command::new(exe).args(std::env::args_os().skip(1)).spawn());
+        if started.is_err() {
+            message("Restart failed");
         }
+        std::process::exit(0);
     }
 }
 

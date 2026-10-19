@@ -76,6 +76,22 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   files (.txt, .brf, .brl), PEF (.pef) files and PDF files. A PDF becomes a print document: a tagged PDF through
   its structure (headings, paragraphs, lists, tables as styles and codes), any other PDF from its page layout
   (paragraphs, line breaks, and ledger tables of dates, text and amounts).
+- **Recent files.** The File menu lists, after Exit, the last five document files closed (File, Close or Exit),
+  newest first, as "1 name" to "5 name"; Save As to a new document file name puts the old name there. Choosing one
+  opens it as File, Open does, in the view and at the place it was saved in; a file opened leaves the list. The list
+  is kept between runs (RecentDocs). The web build keeps the list in the browser, with the bytes of each file, and
+  adds a document when the page gives it up (File, New, Open, Close, Exit, or the page closing).
+- **File Locations and autosave.** Global, File Locations sets the folder File, Open starts in and the folder Save
+  and Save As start in (each only when set; the system's file dialog remembers its own folder otherwise), whether
+  autosave is on, the autosaved file location ("[MYDOCS]" is the Documents folder; by default the hidden folder
+  BrailleCraft Autosaves in it) and the time between saves, typed as minutes ("5") or minutes and seconds ("1:30").
+  While autosave is on, every changed document is written to that folder at that interval, and after Save and every
+  close; a saved document's autosave file goes. Exit takes the files away. When BrailleCraft did not end that way,
+  the Autosave Recovery Wizard at the next start lists the documents it left: Open opens all of them (each again
+  with its own file name, or untitled, and marked changed), Finish takes them away, Exit ends BrailleCraft and keeps
+  them for the next start. Only the first copy of BrailleCraft running autosaves. The web build autosaves into the
+  browser (IndexedDB) in the same way; its wizard opens the first document and keeps the others for the next page
+  load, as it holds one document at a time.
 - **Formatted and coded views.** The editing area is drawn by BrailleCraft itself, and
   its caret is a place in the document, not in the text on the screen. A document opens in the formatted view: its
   laid-out page lines with the codes hidden and a line across after each page. The caret can stand on a space the
@@ -117,11 +133,27 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   defaults: hard page breaks kept, language switches ignored, codes typed in Word as `[[*code*]]` taken as codes,
   duplicate hyperlinks removed and URLs tagged as computer notation) and the Global,
   Import Options settings (hyperlinks as text, URLs, both or hyperlink codes, duplicates removed, URLs tagged as
-  computer notation, spaces around signs of comparison, spaces around dashes, unknown characters). Markdown files
+  computer notation, spaces around signs of comparison, spaces around dashes, unknown characters). After the Word
+  import's own steps the text is cleaned up (emphasis regularised, stray codes and spaces taken out), the math steps
+  run when the template has the math and math-NLE styles, and a page break at the very end of the document is
+  dropped. Markdown files
   (.md, .markdown) are imported too (a BrailleCraft addition): the Markdown becomes HTML and goes through the HTML
   import steps, so headings become heading styles, paragraphs and lists their styles, emphasis and strong the
   emphasis codes, inline code the computer-notation style, and links their text with the URL as the Import Options
-  hyperlink setting says. The Han script readings of the Word import (Japanese, Korean, pinyin, Cantonese and
+  hyperlink setting says; an empty table cell gives its cell codes and a line break its line-break code. The
+  Markdown of note apps is read as well: YAML or TOML front matter is left out, `$...$` and `$$...$$` math is kept
+  as its TeX source in computer notation, a wikilink `[[Page]]` or `[[Page|shown text]]` is its shown text, and a
+  callout `> [!note] Title` (GitHub and Obsidian) starts its quote with the title, or the kind, in bold; GitHub
+  tables and footnotes are read too. The HTML
+  import steps read the page as bytes and copy its tags as they are written, so real web pages import whether or
+  not their tags are closed (paragraphs and list items left open, `<br>` without its slash, attributes without
+  quotes); named character references such as `&eacute;` become their characters, comments are dropped and a
+  `<?bc ...?>` instruction gives the codes written in it with `$` and a backquote. A file is taken as HTML when its
+  first 2048 bytes hold more than three end tags or comments, or when it is written in UTF-16; the character set its
+  `charset=` names is looked up (tables/import/html-charsets.txt), and a UTF-16 page is read as UTF-16 and a page in another named
+  character set (windows-1251, KOI8-R, ISO-8859-5, Shift-JIS, EUC-JP, Big5 and the rest of that list) is read in
+  that character set. HTML files are imported this way by File, Open and Edit, Insert File on the
+  desktop and the web, and by the MCP server's `import_file`. The Han script readings of the Word import (Japanese, Korean, pinyin, Cantonese and
   zhuyin) ship as rule scripts; text with Chinese characters is read in the language the new document's
   print-to-braille table names (Import Options, "automatic") or the one chosen in Import Options (Mandarin,
   Cantonese, Japanese or Korean; zhuyin through the zhtwcp table). A file that holds a
@@ -246,7 +278,10 @@ Exit, each with its keyboard shortcut.](docs/screenshots/web-file-menu.png)
   line each), the caret, the selection and every change: through UI Automation on Windows while Global,
   Internationalization, Support UI Automation is on; through the macOS accessibility
   interface for VoiceOver; through ATK and AT-SPI for Orca on Linux. On Windows a set of JAWS scripts comes with the
-  program, and BrailleCraft offers to install them when it starts; the editing window carries its own window class,
+  program, and BrailleCraft offers to install them first thing at every start (a command line run included) when
+  a JAWS installation lacks the current files, into those installations only, with "Do not ask this again" kept for
+  that set of files; after installing, while a screen reader is running, it offers to restart with the same command
+  line; the editing window carries its own window class,
   BrailleCraftEditor, so the scripts tell it from every other window. An NVDA add-on comes with the program too (the
   `nvda` folder of the Windows download; open the `.nvda-addon` file to install it, or use NVDA's Add-on Store,
   Install from external source). It gives NVDA what the scripts give JAWS, key for key: Alt+7 the translated line,

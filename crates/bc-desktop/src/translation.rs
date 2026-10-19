@@ -218,6 +218,15 @@ pub fn template_tables(name: &str) -> Option<[String; 4]> {
     })
 }
 
+/// A template's style names, by its name (none for an unknown template).
+pub fn template_style_names(name: &str) -> Vec<String> {
+    with_templates(|t| {
+        let t = t?;
+        Some(templates::styles(&t.text(t.by_name(name)?).ok()?).entries().map(|(n, _, _)| n.to_string()).collect())
+    })
+    .unwrap_or_default()
+}
+
 /// A template's page numbering, by its name (the order bc_core::templates::page_numbers gives); the default
 /// for an unknown template.
 /// A template's Hyphenation (0 None to 4 French 1103); 2 for an unknown template.

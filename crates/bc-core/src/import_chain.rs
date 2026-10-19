@@ -50,10 +50,12 @@ pub enum Recipe {
     /// A Word document (.docx): the Word importer's settings, the Word style map's file name (`word::map_file_name`
     /// of the template's "word:mws" text) and the Unknown Characters setting.
     Docx(crate::word::Options, String, u8),
-    /// HTML or SGML text that reads as XML (the HTML recipe: the tag processor with the SGML flag, then the entity,
-    /// element, space, emphasis, code and post scripts, the character map, the Han script, the character step, the
-    /// quotes script, the hyperlinks step with the Word importer's hyperlink settings, the optional tables script
-    /// and spaces normalised three times), with the Unknown Characters setting.
+    /// HTML or SGML text (the HTML recipe: the character-set step when the file reads as UTF-16 or names a
+    /// character set, the control character script, the tag scanner (`sgml::scan`, which copies tags as they are
+    /// written and needs no well-formed markup), then the entity, element, space, emphasis, code and post scripts,
+    /// the character map, the Han script, the character step, the quotes script, the hyperlinks step with the Word
+    /// importer's hyperlink settings, the optional tables script and spaces normalised three times), with the
+    /// Unknown Characters setting.
     Html(crate::word::Options, u8),
     /// A Markdown file (BrailleCraft's own addition): turned into HTML (`markdown::to_html`) and run as `Html`.
     Markdown(crate::word::Options, u8),
@@ -123,7 +125,7 @@ pub const RULE_SCRIPTS: [&str; 7] = [
     "orbit-lines.rules",
 ];
 /// The Word recipe's rule scripts, in its order (the character map and the character steps come between them).
-pub const WORD_RULE_SCRIPTS: [&str; 22] = [
+pub const WORD_RULE_SCRIPTS: [&str; 33] = [
     // The Han scripts word-han-chars.rules loads in its states 2 to 6.
     "han-japanese.rules",
     "han-korean.rules",
@@ -147,6 +149,17 @@ pub const WORD_RULE_SCRIPTS: [&str; 22] = [
     "word-dashes.rules",
     "word-tables.rules",
     "word-control-chars.rules",
+    "word-post.rules",
+    "math-separation-1.rules",
+    "math-separation-off.rules",
+    "math-separation-2.rules",
+    "math-styles.rules",
+    "math-nle-1.rules",
+    "math-nle-2.rules",
+    "math-ref-pages.rules",
+    "math-bridge-off.rules",
+    "end-of-text-1.rules",
+    "end-of-text-2.rules",
 ];
 /// The Word style maps shipped as data (tables/word-styles), by their program names.
 pub const WORD_MAPS: [&str; 6] = ["default", "australian", "bana", "french", "russian", "uk-basic"];
@@ -170,12 +183,9 @@ pub fn run_with(bytes: &[u8], recipe: &Recipe, files: &dyn Files, progress: &mut
             return out;
         }
         Recipe::Html(opt, unknown) => {
-            let html = String::from_utf8_lossy(bytes);
-            let html = match html {
-                std::borrow::Cow::Borrowed(h) => std::borrow::Cow::Borrowed(h.strip_prefix('\u{feff}').unwrap_or(h)),
-                std::borrow::Cow::Owned(h) => std::borrow::Cow::Owned(h.strip_prefix('\u{feff}').map(str::to_string).unwrap_or(h)),
-            };
-            html_chain(html, opt, *unknown, files, &mut out, progress);
+            // The value the kind test gives the file: UTF-16, or the code page its charset= names.
+            let submethod = crate::sgml::submethod(bytes);
+            html_chain(std::borrow::Cow::Borrowed(bytes), submethod, opt, *unknown, files, &mut out, progress);
             return out;
         }
         Recipe::Markdown(opt, unknown) => {
@@ -183,7 +193,8 @@ pub fn run_with(bytes: &[u8], recipe: &Recipe, files: &dyn Files, progress: &mut
             let markdown = markdown.strip_prefix('\u{feff}').unwrap_or(&markdown);
             let html = crate::markdown::to_html(markdown);
             progress("markdown to html", html.len());
-            html_chain(std::borrow::Cow::Owned(html), opt, *unknown, files, &mut out, progress);
+            // The HTML is BrailleCraft's own UTF-8: no character-set step.
+            html_chain(std::borrow::Cow::Owned(html.into_bytes()), 0, opt, *unknown, files, &mut out, progress);
             return out;
         }
         _ => {}
@@ -276,11 +287,20 @@ pub fn run_with(bytes: &[u8], recipe: &Recipe, files: &dyn Files, progress: &mut
     out
 }
 
-/// The HTML recipe (spec 28 section 15, imp-sgml): the tag processor over the text with the SGML flag and no style
-/// map (so no scrub rules), then the entity, element, space, emphasis, code and post scripts, the character map, the
-/// Han script, the character step (no apostrophe override) with the quotes script, the hyperlinks step, the optional
-/// tables script, and spaces normalised three times. The control-character step runs inside the tag processor.
-fn html_chain(html: std::borrow::Cow<str>, opt: &crate::word::Options, unknown: u8, files: &dyn Files, out: &mut Imported, progress: &mut dyn FnMut(&str, usize)) {
+/// The HTML recipe (spec 28 section 15; spec B22): the character-set step when `submethod` is not 0, the
+/// control character script on the bytes, the tag scanner, then the entity, element, space, emphasis, code and post
+/// scripts, the character map, the Han script, the character step (no apostrophe override) with the quotes script,
+/// the hyperlinks step, the optional tables script, and spaces normalised three times. Each step's input is let go
+/// once its output is made.
+fn html_chain(
+    input: std::borrow::Cow<[u8]>,
+    submethod: u32,
+    opt: &crate::word::Options,
+    unknown: u8,
+    files: &dyn Files,
+    out: &mut Imported,
+    progress: &mut dyn FnMut(&str, usize),
+) {
     let script = |name: &str, text: &mut Vec<u8>, errors: &mut Vec<String>, progress: &mut dyn FnMut(&str, usize)| {
         match files.rule_script(name) {
             Ok(mut s) => match s.run(text) {
@@ -291,17 +311,26 @@ fn html_chain(html: std::borrow::Cow<str>, opt: &crate::word::Options, unknown: 
         }
         progress(name, text.len());
     };
-    let processed = match crate::word::process_html(&html, opt) {
-        Ok(p) => p,
+    let input = if submethod != 0 {
+        let t = crate::sgml::charset_step(&input, submethod);
+        progress("character set", t.len());
+        std::borrow::Cow::Owned(t)
+    } else {
+        input
+    };
+    const CONTROLS: &str = "word-control-chars.rules";
+    let controlled = match files.rule_script(CONTROLS).map_err(|e| e.to_string()).and_then(|mut s| s.run(&input).map_err(|e| e.to_string())) {
+        Ok(t) => t,
         Err(e) => {
-            out.errors.push(e);
-            return;
+            out.errors.push(format!("{CONTROLS}: {e}"));
+            input.to_vec()
         }
     };
-    // The HTML text (the Markdown conversion's own string) is not held through the steps that follow.
-    drop(html);
-    let mut text = processed.text.into_bytes();
-    progress("tag processor", text.len());
+    drop(input);
+    progress(CONTROLS, controlled.len());
+    let mut text = crate::sgml::scan(&controlled, opt);
+    drop(controlled);
+    progress("tag scanner", text.len());
     for name in ["word-entities.rules", "word-elements.rules", "sgml-spaces.rules", "word-emphasis.rules", "word-codes.rules", "sgml-post.rules"] {
         script(name, &mut text, &mut out.errors, progress);
     }
@@ -339,7 +368,9 @@ fn html_chain(html: std::borrow::Cow<str>, opt: &crate::word::Options, unknown: 
 /// scripts, the character step with its apostrophe override (U+0027 to U+02BC) and the quotes script, the
 /// publishers' page script when print pages are the publishers', the user codes script when codes are allowed,
 /// the hyperlinks step, the math spacing scripts when spaces are added, the function spacing script, the dashes
-/// script when dash spaces are removed, the tables script, and spaces normalised once.
+/// script when dash spaces are removed, the tables script, spaces normalised three times, the post-import clean-up
+/// script, the math scripts by the document's styles with the text reversed between them, and the end-of-text
+/// scripts (a page break at the very end dropped).
 fn docx(bytes: &[u8], opt: &crate::word::Options, map: &str, unknown: u8, files: &dyn Files, out: &mut Imported, progress: &mut dyn FnMut(&str, usize)) {
     let script = |name: &str, text: &mut Vec<u8>, errors: &mut Vec<String>, progress: &mut dyn FnMut(&str, usize)| {
         match files.rule_script(name) {
@@ -412,7 +443,40 @@ fn docx(bytes: &[u8], opt: &crate::word::Options, map: &str, unknown: u8, files:
     }
     // The tables script is optional in the recipe and is shipped, so it runs.
     script("word-tables.rules", &mut text, &mut out.errors, progress);
-    script("normalize-spaces.rules", &mut text, &mut out.errors, progress);
+    for _ in 0..3 {
+        script("normalize-spaces.rules", &mut text, &mut out.errors, progress);
+    }
+    script("word-post.rules", &mut text, &mut out.errors, progress);
+    // The math steps run by the styles of the document the import goes into (names matched without regard to
+    // case): with math-NLE, the separation, math-NLE and reference page scripts; without it, the scripts that take
+    // their codes out; the math styles script when the style math is there. The text is reversed four times
+    // whatever runs between.
+    let has = |style: &str| opt.styles.iter().any(|s| s.eq_ignore_ascii_case(style));
+    let nle = has("math-NLE");
+    let reverse = |text: &mut Vec<u8>, progress: &mut dyn FnMut(&str, usize)| {
+        *text = reversed(text);
+        progress("reversed", text.len());
+    };
+    script(if nle { "math-separation-1.rules" } else { "math-separation-off.rules" }, &mut text, &mut out.errors, progress);
+    reverse(&mut text, progress);
+    if nle {
+        script("math-separation-2.rules", &mut text, &mut out.errors, progress);
+    }
+    reverse(&mut text, progress);
+    if has("math") {
+        script("math-styles.rules", &mut text, &mut out.errors, progress);
+    }
+    if nle {
+        script("math-nle-1.rules", &mut text, &mut out.errors, progress);
+    }
+    reverse(&mut text, progress);
+    if nle {
+        script("math-nle-2.rules", &mut text, &mut out.errors, progress);
+    }
+    reverse(&mut text, progress);
+    script(if nle { "math-ref-pages.rules" } else { "math-bridge-off.rules" }, &mut text, &mut out.errors, progress);
+    script("end-of-text-1.rules", &mut text, &mut out.errors, progress);
+    script("end-of-text-2.rules", &mut text, &mut out.errors, progress);
     out.text = text;
 }
 
