@@ -539,8 +539,9 @@ mod tests {
     #[test]
     fn write_dxt_matches_shipped_template() {
         // The shipped Esperanto template, read and written again, gives the same lines from its header on.
+        // A checkout may give the file CR LF line ends (git on Windows); the template's lines are compared as LF.
         let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../templates/esperanto-basic.template");
-        let bytes = std::fs::read(&path).unwrap();
+        let bytes = String::from_utf8_lossy(&std::fs::read(&path).unwrap()).replace("\r\n", "\n").into_bytes();
         let out = rewritten(&bytes);
         assert_eq!(String::from_utf8_lossy(from_tables_on(&out)), String::from_utf8_lossy(from_tables_on(&bytes)));
         assert!(out.starts_with(b"| Esperanto - basic.dxt\n-braillecraft-template 1\nTranslationTables: "));
