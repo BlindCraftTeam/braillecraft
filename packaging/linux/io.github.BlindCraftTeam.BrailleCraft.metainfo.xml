@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The AppStream data of the Flatpak (build-flatpak.sh fills in the version and date). -->
+<component type="desktop-application">
+  <id>io.github.BlindCraftTeam.BrailleCraft</id>
+  <name>BrailleCraft</name>
+  <summary>Braille translation, formatting and embossing</summary>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT OR Apache-2.0</project_license>
+  <developer id="io.github.blindcraftteam">
+    <name>BlindCraft Team</name>
+  </developer>
+  <description>
+    <p>BrailleCraft translates print to braille and back, lays out braille pages, and prints and embosses documents.</p>
+  </description>
+  <launchable type="desktop-id">io.github.BlindCraftTeam.BrailleCraft.desktop</launchable>
+  <url type="homepage">https://github.com/BlindCraftTeam/braillecraft</url>
+  <categories>
+    <category>Office</category>
+    <category>Accessibility</category>
+  </categories>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="@VERSION@" date="@DATE@"/>
+  </releases>
+</component>
